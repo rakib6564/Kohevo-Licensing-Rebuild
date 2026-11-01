@@ -211,9 +211,8 @@ if ($hasForms && !$shopOnly) {
                 $walk(is_array($b['children'] ?? null) ? $b['children'] : []);
             }
         };
-        foreach ((array) (json_decode((string) $row['document_json'], true)['sections'] ?? []) as $section) {
-            $walk(is_array($section['blocks'] ?? null) ? $section['blocks'] : []);
-        }
+        $document = json_decode((string) $row['document_json'], true);
+        $walk((array) (\Slate\Module\StudioBuilder\Document\DocumentUpgrader::structure(is_array($document) ? $document : [])['containers'] ?? []));
     }
     $gone = [];
     foreach (Database::all("SELECT d.id, d.slug FROM forms_definitions d WHERE d.tenant_id = ? AND d.slug LIKE 'sb-blk%' AND NOT EXISTS (SELECT 1 FROM forms_submissions s WHERE s.form_id = d.id)", [$tid]) as $def) {

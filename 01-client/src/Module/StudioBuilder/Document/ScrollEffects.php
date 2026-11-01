@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Document;
 
 /**
- * Sticky and parallax, the two scroll effects a block or a section may carry in its `interactions`.
+ * Sticky and parallax, the two scroll effects a block may carry in its `interactions`.
  *
  *   interactions.sticky   = {edge: top|bottom, offset: 0-400 (px), devices: [desktop, tablet, mobile],
  *                            shadow: bool, background: colour, hide_on_scroll: bool, shrink: bool}

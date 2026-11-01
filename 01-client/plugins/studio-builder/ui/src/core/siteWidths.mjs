@@ -1,4 +1,4 @@
-// The site's widths (Site settings › Layout): the content width a section set to Default and a boxed container keep to,
+// The site's widths (Site settings › Layout): the content width a boxed Container keeps to by default,
 // and what Narrow, Normal and Wide mean on this site. The manifest carries the resolved tokens, so the Inspector labels
 // a width with the size the page really uses ("Wide · 1170px"), not the platform's default.
 
@@ -6,7 +6,7 @@ import { asList } from './doc.mjs';
 import { formatSize, sizedLabel } from './optionValues.mjs';
 import { optionLabel } from './optionLabels.mjs';
 
-/** Section width word => its Layout token. */
+/** Boxed width word => its Layout token. */
 export const WIDTH_TOKENS = Object.freeze({ default: 'layout.content', narrow: 'layout.narrow', normal: 'layout.normal', wide: 'layout.wide' });
 
 /** The site's value of a Layout token ("1170px"), or null when the manifest does not carry it. */
@@ -16,10 +16,10 @@ export function siteToken(manifest, ref) {
 }
 
 /** "Wide · 1170px" with this site's value; `full` and `custom` (and a manifest without tokens) keep the plain label. */
-export function sectionWidthLabel(manifest, width) {
+export function boxWidthLabel(manifest, width) {
   const ref = WIDTH_TOKENS[width];
   const value = ref ? siteToken(manifest, ref) : null;
-  return value ? `${optionLabel(width)} · ${formatSize(value)}` : sizedLabel('section.width', width);
+  return value ? `${optionLabel(width)} · ${formatSize(value)}` : sizedLabel('container.width', width);
 }
 
 /** The site's content width as a bare pixel count ("1280"), for a size field's placeholder; null when it is not in px or rem. */
@@ -29,10 +29,20 @@ export function siteContentPx(manifest) {
   return m ? m[1] : null;
 }
 
-/** The widths a section offers, in order: the manifest's `section_widths`, or (an older server) its page widths plus Custom. */
-export function sectionWidths(vocab) {
-  const own = asList(vocab && vocab.section_widths);
-  if (own.length) return own;
-  const pages = asList(vocab && vocab.container_widths);
-  return [...pages, 'custom'];
+const CUSTOM_WIDTH = 'custom';
+
+/** The widths `style.layout.content_size` can name when the manifest lists none. */
+export const BOX_WIDTHS = Object.freeze(['default', 'narrow', 'normal', 'wide', 'full']);
+
+/** What a boxed Container offers, in order: the manifest's widths (`default` is no `content_size`), then `custom`, an own `content_max`. */
+export function boxWidths(manifest) {
+  const listed = asList(manifest && manifest.vocabulary && manifest.vocabulary.container_widths);
+  return [...(listed.length ? listed : BOX_WIDTHS), CUSTOM_WIDTH];
+}
+
+/** Which of BOX_WIDTHS a Container's `style.layout` says. */
+export function boxWidthOf(layout) {
+  const l = layout && typeof layout === 'object' ? layout : {};
+  if (l.content_max !== undefined) return CUSTOM_WIDTH;
+  return BOX_WIDTHS.includes(l.content_size) ? l.content_size : 'default';
 }

@@ -180,7 +180,7 @@ unit('data integrity integration: page lists, archived addresses, archived pages
             // ── M13: an archived page takes no draft, publish or restore (a builder tab left open on it) ───
             $tab = sbdi_page($rt, $publisher, 'open-tab');
             $doc = sbdi_ok(sbdi_call($rt, $publisher, 'operations', ['page_id' => $tab['id'], 'expected_revision_id' => $tab['rev'], 'operations' => [
-                ['op' => 'insert_section', 'payload' => ['index' => 0, 'section' => ['label' => 'Main']]],
+                ['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Main']]]],
             ]]), 'edit before archiving');
             $rev = (int) $doc['revision']['id'];
             sbdi_ok(sbdi_call($rt, $publisher, 'archive_page', ['page_id' => $tab['id']]), 'archive it elsewhere');
@@ -192,7 +192,7 @@ unit('data integrity integration: page lists, archived addresses, archived pages
             // ── H7: Restore (rollback) goes through the revision service: checked against the current draft, with dependencies ──
             $restore = sbdi_page($rt, $editor, 'restore-me');
             $r = sbdi_ok(sbdi_call($rt, $editor, 'operations', ['page_id' => $restore['id'], 'expected_revision_id' => $restore['rev'], 'operations' => [
-                ['op' => 'insert_section', 'payload' => ['index' => 0, 'section' => ['label' => 'Main']]],
+                ['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Main']]]],
             ]]), 'a second revision');
             $stale = false;
             try {

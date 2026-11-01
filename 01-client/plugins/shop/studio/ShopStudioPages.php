@@ -44,33 +44,32 @@ final class ShopStudioPages
                 'children'   => $children,
             ];
         };
-        $section = static fn(string $label, array $blocks, string $width = 'default'): array => [
-            'id'         => CanonicalDocumentSchema::newSectionId(),
-            'label'      => $label,
-            'global_ref' => null,
-            'layout'     => ['background_token' => 'surface.primary', 'columns' => ['base' => 1, 'md' => 1], 'gap' => 'md', 'padding_y' => ['base' => 'md', 'md' => 'lg'], 'width' => $width],
-            'visibility' => ['auth_state' => 'any', 'devices' => ['base', 'sm', 'md', 'lg']],
-            'blocks'     => $blocks,
-        ];
+        $container = static fn(string $label, array $blocks, ?string $size = null): array => CanonicalDocumentSchema::newContainer([
+            'metadata'   => ['label' => $label],
+            'props'      => ['gap' => 'md'],
+            'style'      => ['surface_token' => 'surface.primary', 'layout' => ['content_width' => 'boxed', 'gutter' => 'site', 'padding_y' => 'lg'] + ($size !== null ? ['content_size' => $size] : [])],
+            'responsive' => ['mobile' => ['style' => ['layout' => ['padding_y' => 'md']]]],
+            'children'   => $blocks,
+        ]);
         $t = static fn(string $key, string $en): string => function_exists('__') ? (string) __($key, $en) : $en;
 
         $pages = [
-            [\ShopStoreAPI::setting('cart_page'), $t('shop_cart', 'Cart'), 'page', [], [$section('Cart', [
+            [\ShopStoreAPI::setting('cart_page'), $t('shop_cart', 'Cart'), 'page', [], [$container('Cart', [
                 $b('core.heading', ['text' => $t('shop_cart', 'Cart'), 'level' => 'h1']),
                 $b('shop.cart'),
             ])]],
-            [\ShopStoreAPI::setting('checkout_page'), $t('shop_checkout', 'Checkout'), 'page', [], [$section('Checkout', [
+            [\ShopStoreAPI::setting('checkout_page'), $t('shop_checkout', 'Checkout'), 'page', [], [$container('Checkout', [
                 $b('core.heading', ['text' => $t('shop_checkout', 'Checkout'), 'level' => 'h1']),
                 $b('shop.checkout'),
             ])]],
-            [\ShopStoreAPI::setting('thanks_page'), $t('shop_order_received', 'Order received'), 'page', [], [$section('Order', [
+            [\ShopStoreAPI::setting('thanks_page'), $t('shop_order_received', 'Order received'), 'page', [], [$container('Order', [
                 $b('core.heading', ['text' => $t('shop_order_received', 'Order received'), 'level' => 'h1']),
                 $b('shop.order_confirmation'),
             ])]],
             [self::TEMPLATE_SLUG, '[Theme] ' . $t('shop_product_page', 'Product page'), 'system',
                 ['template_type' => 'single', 'conditions' => ['rules' => [['action' => 'include', 'condition' => 'singular', 'value' => 'product']]]],
                 [
-                    $section('Product', [
+                    $container('Product', [
                         $b('layout.grid', ['columns' => 2, 'gap' => 'lg', 'align' => 'start'], [
                             $b('shop.product_image'),
                             $b('core.container', ['direction' => 'vertical', 'gap' => 'sm'], [
@@ -83,19 +82,19 @@ final class ShopStudioPages
                             ]),
                         ]),
                     ], 'wide'),
-                    $section('Description', [$b('shop.product_description')]),
+                    $container('Description', [$b('shop.product_description')]),
                 ]],
         ];
 
         $out = [];
-        foreach ($pages as [$slug, $title, $pageType, $settings, $sections]) {
+        foreach ($pages as [$slug, $title, $pageType, $settings, $containers]) {
             $existing = $runtime->pages->findBySlug($slug, $pageType);
             if ($existing !== null) {
                 $out[] = ['slug' => $slug, 'title' => $title, 'id' => (int) $existing['id'], 'created' => false];
                 continue;
             }
             $doc = CanonicalDocumentSchema::emptyDocument($pageType, 'default', $title);
-            $doc['sections'] = $sections;
+            $doc['containers'] = $containers;
             $doc['settings'] = array_replace($doc['settings'], $settings);
             // A shop's own pages and a template's page are never search results.
             $doc['seo']['robots'] = 'noindex,follow';

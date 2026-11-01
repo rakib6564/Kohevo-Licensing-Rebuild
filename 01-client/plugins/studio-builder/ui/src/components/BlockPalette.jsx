@@ -7,7 +7,7 @@ import { useEditor, useEngineState } from './EditorContext.jsx';
 import { t } from '../core/messages.mjs';
 import { asList } from '../core/doc.mjs';
 import { isAiRevision } from '../core/review.mjs';
-import { SectionPresetsPanel } from './SectionPresetsPanel.jsx';
+import { ContainerPresetsPanel } from './ContainerPresetsPanel.jsx';
 import { isDynamicBlock } from './blockKinds.mjs';
 import { isOffered } from '../core/addPanel.mjs';
 import { ElementsPanel } from './ElementsPanel.jsx';
@@ -115,9 +115,9 @@ function AiPanel({ boot, onReview }) {
 }
 
 export const BlockPalette = memo(function BlockPalette({ compact = false }) {
-  const { boot, manifest, insertBlock, insertSection, insertBlockWithProps, openAiReview, panelRequest } = useEditor();
+  const { boot, manifest, insertBlock, insertBlockWithProps, openAiReview, panelRequest } = useEditor();
   const [query, setQuery] = useState('');
-  const [categoryTab, setCategoryTab] = useState(compact ? 'sections' : 'elements'); // the docked Add panel opens on Elements; the small palette inside Layers keeps Sections
+  const [categoryTab, setCategoryTab] = useState(compact ? 'containers' : 'elements'); // the docked Add panel opens on Elements; the small palette inside Layers keeps Containers
   const [favorites, setFavorites] = useState(new Set());
   // A button on the canvas (an empty container's Add, AI) can ask for a sub-tab.
   useEffect(() => {
@@ -160,7 +160,7 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
         value={categoryTab}
         onChange={setCategoryTab}
         options={[
-          { value: 'sections', label: t('pal_tab_sections') },
+          { value: 'containers', label: t('pal_tab_containers') },
           { value: 'elements', label: t('pal_tab_elements') },
           { value: 'components', label: t('pal_tab_components') },
           { value: 'dynamic', label: t('palette_dynamic') },
@@ -173,7 +173,7 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
         <AddSearchResults query={query} favorites={favorites} onToggleFavorite={toggleFavorite} />
       ) : (
         <>
-          {categoryTab === 'sections' && <SectionPresetsPanel query="" favorites={favorites} onToggleFavorite={toggleFavorite} />}
+          {categoryTab === 'containers' && <ContainerPresetsPanel query="" favorites={favorites} onToggleFavorite={toggleFavorite} />}
           {categoryTab === 'elements' && <ElementsPanel />}
           {categoryTab === 'components' && <ComponentsPanel />}
 

@@ -1,4 +1,4 @@
-// CL-01: the page "Width" setting never reached the page (sections choose their own width), so the Page
+// CL-01: the page "Width" setting never reached the page (Containers choose their own width), so the Page
 // inspector no longer offers it, and the Site settings hint says where widths are really chosen.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,7 +10,7 @@ test('the Page inspector offers no page width', () => {
   assert.doesNotMatch(src, /container_width/);
 });
 
-test('the Site settings hint says sections pick their width', () => {
-  assert.match(t('ss_hint_layout'), /Each section picks/);
+test('the Site settings hint says Containers pick their width', () => {
+  assert.match(t('ss_hint_layout'), /Each Container picks/);
   assert.doesNotMatch(t('ss_hint_layout'), /Page settings/);
 });

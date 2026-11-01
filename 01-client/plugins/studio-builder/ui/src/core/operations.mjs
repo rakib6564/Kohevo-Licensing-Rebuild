@@ -9,23 +9,15 @@
 // server's document (reconciliation).
 //
 // Updates are immutable with structural sharing: only the path to the edited
-// node is copied, so untouched sections/blocks keep their identity and the
+// node is copied, so untouched blocks keep their identity and the
 // UI re-renders just what changed.
 
-import { asList, asObject } from './doc.mjs';
+import { CONTAINER_TYPE, asList, asObject } from './doc.mjs';
 import { isLikelySafeUrl } from './fields.mjs';
 
 export const OPS = Object.freeze({
   UPDATE_SETTINGS: 'update_settings',
   UPDATE_SEO: 'update_seo',
-  INSERT_SECTION: 'insert_section',
-  REMOVE_SECTION: 'remove_section',
-  MOVE_SECTION: 'move_section',
-  DUPLICATE_SECTION: 'duplicate_section',
-  UPDATE_SECTION_LABEL: 'update_section_label',
-  UPDATE_SECTION_LAYOUT: 'update_section_layout',
-  UPDATE_SECTION_VISIBILITY: 'update_section_visibility',
-  UPDATE_SECTION_LOCKED: 'update_section_locked',
   INSERT_BLOCK: 'insert_block',
   REMOVE_BLOCK: 'remove_block',
   MOVE_BLOCK: 'move_block',
@@ -45,14 +37,10 @@ export const OPS = Object.freeze({
   UPDATE_BLOCK_TAG: 'update_block_tag',
   UPDATE_BLOCK_CUSTOM_CSS: 'update_block_custom_css',
   RESET_BLOCK_STYLE_PROPERTY: 'reset_block_style_property',
-  UPDATE_SECTION_STYLE: 'update_section_style',
-  UPDATE_SECTION_ANIMATION: 'update_section_animation',
-  UPDATE_SECTION_INTERACTIONS: 'update_section_interactions',
 });
 
 /** Operations that change the tree's shape are sent right away, not debounced. */
 export const STRUCTURAL = new Set([
-  OPS.INSERT_SECTION, OPS.REMOVE_SECTION, OPS.MOVE_SECTION, OPS.DUPLICATE_SECTION,
   OPS.INSERT_BLOCK, OPS.REMOVE_BLOCK, OPS.MOVE_BLOCK, OPS.DUPLICATE_BLOCK,
 ]);
 
@@ -67,15 +55,9 @@ const REPLACE_TARGET = {
   [OPS.UPDATE_BLOCK_ATTRIBUTES]: 'block_id',
   [OPS.UPDATE_BLOCK_ANIMATION]: 'block_id',
   [OPS.UPDATE_BLOCK_INTERACTIONS]: 'block_id',
-  [OPS.UPDATE_SECTION_LABEL]: 'section_id',
-  [OPS.UPDATE_SECTION_LAYOUT]: 'section_id',
-  [OPS.UPDATE_SECTION_VISIBILITY]: 'section_id',
   [OPS.UPDATE_BLOCK_STYLE_STATES]: 'block_id',
   [OPS.UPDATE_BLOCK_STYLE_PARTS]: 'block_id',
   [OPS.UPDATE_BLOCK_TAG]: 'block_id',
-  [OPS.UPDATE_SECTION_STYLE]: 'section_id',
-  [OPS.UPDATE_SECTION_ANIMATION]: 'section_id',
-  [OPS.UPDATE_SECTION_INTERACTIONS]: 'section_id',
 };
 
 export const DEFAULT_VISIBILITY = Object.freeze({ auth_state: 'any', devices: ['base', 'sm', 'md', 'lg'] });
@@ -83,24 +65,30 @@ export const DEFAULT_BLOCK_STYLE = Object.freeze({
   align: { base: 'left' }, font_token: null, radius_token: null, shadow_token: null,
   spacing_token: null, surface_token: null, text_token: null,
 });
-export const DEFAULT_SECTION_LAYOUT = Object.freeze({
-  background_token: 'surface.primary', columns: { base: 1, md: 12 }, gap: 'md',
-  padding_y: { base: 'md', md: 'lg' }, width: 'default',
-});
+/** A new Container as the server's `CanonicalDocumentSchema::newContainer` writes one (the server mints the id). */
+export function newContainer(overrides = {}) {
+  return {
+    type: CONTAINER_TYPE, tag: 'section', props: {}, style: { surface_token: 'surface.primary', layout: { content_width: 'boxed', gutter: 'site' } },
+    visibility: DEFAULT_VISIBILITY, bindings: {}, children: [], ...overrides,
+  };
+}
+
+/** A whole block for a subtree (a new Container's child): a subtree is stored as given, so nothing may be left to the server's defaults. */
+export function newBlock(def, props = null, bindings = null) {
+  return {
+    type: def.type, version: def.version, props: props || asObject(def.default_props), style: DEFAULT_BLOCK_STYLE,
+    visibility: DEFAULT_VISIBILITY, bindings: bindings || {}, children: [],
+  };
+}
 
 // ── Builders ────────────────────────────────────────────────────────────────
 
 const op = (name, payload) => ({ op: name, payload });
 
-export const insertSection = (index, section = {}) => op(OPS.INSERT_SECTION, { index, section });
-/** A LIVE reference to a global component: the section owns no blocks; the server renders the component's published content. */
-export const insertGlobalSection = (index, ref, label = '') => op(OPS.INSERT_SECTION, { index, section: { label, global_ref: ref, blocks: [] } });
-export const removeSection = (sectionId) => op(OPS.REMOVE_SECTION, { section_id: sectionId });
-export const moveSection = (sectionId, toIndex) => op(OPS.MOVE_SECTION, { section_id: sectionId, to_index: toIndex });
-export const updateSectionLayout = (sectionId, layout) => op(OPS.UPDATE_SECTION_LAYOUT, { section_id: sectionId, layout });
-export const updateSectionVisibility = (sectionId, visibility) => op(OPS.UPDATE_SECTION_VISIBILITY, { section_id: sectionId, visibility });
-export const updateSectionLabel = (sectionId, label) => op(OPS.UPDATE_SECTION_LABEL, { section_id: sectionId, label });
-export const duplicateSection = (sectionId) => op(OPS.DUPLICATE_SECTION, { section_id: sectionId });
+/** A new top-level Container, with the server's defaults. `overrides.children` carries a subtree in the same one step. */
+export const insertContainer = (index, overrides = {}) => insertBlock(null, index, newContainer(overrides));
+/** A LIVE reference to a global component: the Container owns no children; the server renders the component's published content. */
+export const insertGlobalContainer = (index, ref, label = '') => insertBlock(null, index, { ...newContainer({ global_ref: ref }), ...(label ? { metadata: { label } } : {}) });
 export const insertBlock = (parentId, index, block) => op(OPS.INSERT_BLOCK, { parent_id: parentId, index, block });
 export const removeBlock = (blockId) => op(OPS.REMOVE_BLOCK, { block_id: blockId });
 export const moveBlock = (blockId, parentId, index) => op(OPS.MOVE_BLOCK, { block_id: blockId, parent_id: parentId, index });
@@ -123,8 +111,6 @@ export const updateBlockAttributes = (blockId, attributes) => op(OPS.UPDATE_BLOC
  */
 export const updateBlockAnimation = (blockId, animation) => op(OPS.UPDATE_BLOCK_ANIMATION, { block_id: blockId, animation });
 export const updateBlockInteractions = (blockId, interactions) => op(OPS.UPDATE_BLOCK_INTERACTIONS, { block_id: blockId, interactions });
-/** Lock or unlock a section (the layer lock; see layerLock.mjs). */
-export const updateSectionLocked = (sectionId, locked) => op(OPS.UPDATE_SECTION_LOCKED, { section_id: sectionId, locked: !!locked });
 /**
  * Patch a block's editor metadata: `label` (display name; null clears) and/or
  * `locked`. Keys left out are untouched, so these are NOT coalesced in the queue.
@@ -138,12 +124,6 @@ export const updateBlockStyleParts = (blockId, styleParts) => op(OPS.UPDATE_BLOC
 /** `link` ({url, new_tab}) is only for the `a` tag: where the linked wrapper points. */
 export const updateBlockCustomCss = (blockId, css) => op(OPS.UPDATE_BLOCK_CUSTOM_CSS, { block_id: blockId, css });
 export const updateBlockTag = (blockId, tag, link) => op(OPS.UPDATE_BLOCK_TAG, link ? { block_id: blockId, tag, link } : { block_id: blockId, tag });
-/** Replace a section's style ({background, padding}); `{}` clears it. */
-/** Replace a section's entrance animation; `{}` clears it. */
-export const updateSectionAnimation = (sectionId, animation) => op(OPS.UPDATE_SECTION_ANIMATION, { section_id: sectionId, animation });
-/** Replace a section's interactions (trigger, optional animation); `{}` clears them. */
-export const updateSectionInteractions = (sectionId, interactions) => op(OPS.UPDATE_SECTION_INTERACTIONS, { section_id: sectionId, interactions });
-export const updateSectionStyle = (sectionId, style) => op(OPS.UPDATE_SECTION_STYLE, { section_id: sectionId, style });
 /**
  * Remove ONE style property by dotted path (`typography.size`), from the block's style or, with `state`,
  * from one interaction state. Not coalesced: each reset is its own step.
@@ -152,12 +132,25 @@ export const resetBlockStyleProperty = (blockId, property, state = null) => op(O
 export const updateSettings = (settings) => op(OPS.UPDATE_SETTINGS, { settings });
 export const updateSeo = (seo) => op(OPS.UPDATE_SEO, { seo });
 
+/**
+ * The one operation that puts a new `block` ({type, props?, bindings?}) at `where` ({parentId, index}). Only a Container can
+ * sit at the top level: a widget there gets its own, in the same operation, so the two are one undo step.
+ */
+export function insertOperation(def, where, block) {
+  if (where.parentId !== null) return insertBlock(where.parentId, where.index, block);
+  if (block.type === CONTAINER_TYPE) return insertContainer(where.index, block.props ? { props: block.props } : {});
+  return insertContainer(where.index, { children: [newBlock(def, block.props, block.bindings)] });
+}
+
+/** Where the new block itself landed: inside the wrapping Container when `insertOperation` made one. */
+export const insertedId = (where, type, provisionalId) => (where.parentId === null && type !== CONTAINER_TYPE ? `${provisionalId}_0` : provisionalId);
+
 // ── Id bookkeeping ──────────────────────────────────────────────────────────
 
 // Keys an inserted block may carry besides its core fields (the server keeps the same list).
-const INSERT_BLOCK_EXTRAS = ['responsive', 'attributes', 'classNames', 'conditions', 'metadata', 'interactions', 'animation', 'style_states', 'style_parts', 'tag'];
+const INSERT_BLOCK_EXTRAS = ['responsive', 'attributes', 'classNames', 'conditions', 'metadata', 'interactions', 'animation', 'style_states', 'style_parts', 'tag', 'global_ref'];
 
-const ID_KEYS = ['section_id', 'block_id', 'parent_id'];
+const ID_KEYS = ['block_id', 'parent_id'];
 
 /** Ids an operation references (targets and parents). */
 export function referencedIds(operation) {
@@ -221,79 +214,6 @@ export function applyLocal(doc, operation, ctx = {}) {
       return { ...doc, settings: { ...asObject(doc.settings), ...asObject(p.settings) } };
     case OPS.UPDATE_SEO:
       return { ...doc, seo: { ...asObject(doc.seo), ...asObject(p.seo) } };
-    case OPS.INSERT_SECTION: {
-      const given = asObject(p.section);
-      const { id: _givenId, ...givenRest } = given;
-      const section = {
-        ...givenRest,
-        blocks: asList(given.blocks),
-        global_ref: given.global_ref ?? null,
-        id: ctx.provisionalId || provisionalId('sec'),
-        label: given.label ?? 'New Section',
-        layout: Object.keys(asObject(given.layout)).length ? given.layout : DEFAULT_SECTION_LAYOUT,
-        visibility: Object.keys(asObject(given.visibility)).length ? given.visibility : DEFAULT_VISIBILITY,
-      };
-      const sections = [...asList(doc.sections)];
-      sections.splice(clamp(p.index, sections.length), 0, section);
-      return { ...doc, sections };
-    }
-    case OPS.REMOVE_SECTION: {
-      const sections = asList(doc.sections);
-      const out = sections.filter((s) => s.id !== p.section_id);
-      if (out.length === sections.length) throw notFound(p.section_id);
-      return { ...doc, sections: out };
-    }
-    case OPS.MOVE_SECTION: {
-      const sections = [...asList(doc.sections)];
-      const from = sections.findIndex((s) => s.id === p.section_id);
-      if (from < 0) throw notFound(p.section_id);
-      const [moved] = sections.splice(from, 1);
-      sections.splice(clamp(p.to_index, sections.length), 0, moved);
-      return { ...doc, sections };
-    }
-    case OPS.UPDATE_SECTION_LABEL: {
-      let hit = false;
-      const sections = asList(doc.sections).map((s) => {
-        if (s.id !== p.section_id) return s;
-        hit = true;
-        return { ...s, label: String(p.label ?? '') };
-      });
-      if (!hit) throw notFound(p.section_id);
-      return { ...doc, sections };
-    }
-    case OPS.DUPLICATE_SECTION: {
-      const sections = [...asList(doc.sections)];
-      const from = sections.findIndex((s) => s.id === p.section_id);
-      if (from < 0) throw notFound(p.section_id);
-      const source = sections[from];
-      const cloned = cloneWithProvisionalIds(source, 'sec', ctx.provisionalId || null);
-      cloned.label = `${source.label || 'Section'} (Copy)`;
-      sections.splice(from + 1, 0, cloned);
-      return { ...doc, sections };
-    }
-    case OPS.UPDATE_SECTION_LAYOUT:
-    case OPS.UPDATE_SECTION_VISIBILITY: {
-      const field = operation.op === OPS.UPDATE_SECTION_LAYOUT ? 'layout' : 'visibility';
-      let hit = false;
-      const sections = asList(doc.sections).map((s) => {
-        if (s.id !== p.section_id) return s;
-        hit = true;
-        return { ...s, [field]: asObject(p[field]) };
-      });
-      if (!hit) throw notFound(p.section_id);
-      return { ...doc, sections };
-    }
-    case OPS.UPDATE_SECTION_LOCKED: {
-      let hit = false;
-      const sections = asList(doc.sections).map((s) => {
-        if (s.id !== p.section_id) return s;
-        hit = true;
-        const { locked: _drop, ...rest } = s;
-        return p.locked === true ? { ...rest, locked: true } : rest;
-      });
-      if (!hit) throw notFound(p.section_id);
-      return { ...doc, sections };
-    }
     case OPS.UPDATE_BLOCK_META: {
       let hit = false;
       const next = mapBlocks(doc, (b) => {
@@ -362,13 +282,9 @@ export function applyLocal(doc, operation, ctx = {}) {
         }
         return out;
       };
-      const sections = asList(doc.sections).map((s) => {
-        if (hit) return s;
-        const nextBlocks = cloneBlockTree(s.blocks);
-        return hit ? { ...s, blocks: nextBlocks } : s;
-      });
+      const containers = cloneBlockTree(doc.containers);
       if (!hit) throw notFound(p.block_id);
-      return { ...doc, sections };
+      return { ...doc, containers };
     }
     case OPS.UPDATE_BLOCK_PROPS:
     case OPS.UPDATE_BLOCK_STYLE:
@@ -377,6 +293,7 @@ export function applyLocal(doc, operation, ctx = {}) {
     case OPS.UPDATE_BLOCK_ANIMATION:
     case OPS.UPDATE_BLOCK_INTERACTIONS: {
       const field = operation.op.replace('update_block_', '');
+      if (p[field] === null || typeof p[field] !== 'object') throw new Error(`${field} must be an object`); // DocumentOperationApplier::requireObject
       let hit = false;
       const next = mapBlocks(doc, (b) => {
         if (b.id !== p.block_id) return b;
@@ -458,33 +375,6 @@ export function applyLocal(doc, operation, ctx = {}) {
       });
       if (!hit) throw notFound(p.block_id);
       return next;
-    }
-    case OPS.UPDATE_SECTION_STYLE: {
-      let hit = false;
-      const sections = asList(doc.sections).map((s) => {
-        if (s.id !== p.section_id) return s;
-        hit = true;
-        const { style: _old, ...rest } = s;
-        const style = asObject(p.style);
-        return Object.keys(style).length ? { ...rest, style } : rest;
-      });
-      if (!hit) throw notFound(p.section_id);
-      return { ...doc, sections };
-    }
-    case OPS.UPDATE_SECTION_ANIMATION:
-    case OPS.UPDATE_SECTION_INTERACTIONS: {
-      const field = operation.op === OPS.UPDATE_SECTION_ANIMATION ? 'animation' : 'interactions';
-      const value = p[field];
-      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${field} must be an object`);
-      let hit = false;
-      const sections = asList(doc.sections).map((s) => {
-        if (s.id !== p.section_id) return s;
-        hit = true;
-        const { [field]: _old, ...rest } = s;
-        return Object.keys(value).length ? { ...rest, [field]: value } : rest;
-      });
-      if (!hit) throw notFound(p.section_id);
-      return { ...doc, sections };
     }
     case OPS.RESET_BLOCK_STYLE_PROPERTY: {
       if (typeof p.property !== 'string' || !PROPERTY_PATH.test(p.property)) throw new Error('Invalid style property path');
@@ -570,14 +460,8 @@ function mapBlocks(doc, fn) {
     });
     return changed ? out : blocks;
   };
-  let changed = false;
-  const sections = asList(doc.sections).map((s) => {
-    const blocks = mapList(s.blocks);
-    if (blocks === s.blocks) return s;
-    changed = true;
-    return { ...s, blocks };
-  });
-  return changed ? { ...doc, sections } : doc;
+  const containers = mapList(doc.containers);
+  return containers === doc.containers ? doc : { ...doc, containers };
 }
 
 function extract(doc, blockId) {
@@ -601,27 +485,18 @@ function extract(doc, blockId) {
     });
     return changed ? out : blocks;
   };
-  const sections = asList(doc.sections).map((s) => {
-    if (removed) return s;
-    const blocks = strip(s.blocks);
-    return blocks === s.blocks ? s : { ...s, blocks };
-  });
-  return { doc: removed ? { ...doc, sections } : doc, removed };
+  const containers = strip(doc.containers);
+  return { doc: removed ? { ...doc, containers } : doc, removed };
 }
 
 function insertInto(doc, parentId, index, block) {
+  if (parentId === null || parentId === undefined) {
+    if (block.type !== CONTAINER_TYPE) throw new Error('Only a Container can sit at the top level of a page');
+    const containers = [...asList(doc.containers)];
+    containers.splice(clamp(index, containers.length), 0, block);
+    return { ...doc, containers };
+  }
   let inserted = false;
-  const sections = asList(doc.sections).map((s) => {
-    if (inserted) return s;
-    if (s.id === parentId) {
-      inserted = true;
-      const blocks = [...asList(s.blocks)];
-      blocks.splice(clamp(index, blocks.length), 0, block);
-      return { ...s, blocks };
-    }
-    return s;
-  });
-  if (inserted) return { ...doc, sections };
   const next = mapBlocks(doc, (b) => {
     if (inserted || b.id !== parentId) return b;
     inserted = true;
@@ -641,9 +516,6 @@ function cloneWithProvisionalIds(node, prefix = 'blk', rootId = null) {
   const cloned = JSON.parse(JSON.stringify(node));
   const remint = (item, pfx, id) => {
     item.id = id || provisionalId(pfx);
-    if (Array.isArray(item.blocks)) {
-      item.blocks.forEach((child, i) => remint(child, 'blk', id ? `${id}_${i}` : null));
-    }
     if (Array.isArray(item.children)) {
       item.children.forEach((child, i) => remint(child, 'blk', id ? `${id}_${i}` : null));
     }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Unit tests for Kohevo Studio (studio-builder) — the composed section preset catalogue.
+ * Unit tests for Kohevo Studio (studio-builder) — the composed Container preset catalogue.
  *
  * Autoloader only, no database. Every preset is a real, valid, deterministic canonical
  * document built from registered blocks; none is a bare primitive; names and descriptions
@@ -23,10 +23,10 @@ if (!function_exists('unit')) {
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
-use Slate\Module\StudioBuilder\Presets\SectionPresetCatalog;
+use Slate\Module\StudioBuilder\Presets\ContainerPresetCatalog;
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 
-/** Blocks that on their own would be a bare primitive, not a composed section. */
+/** Blocks that on their own would be a bare primitive, not a composed Container. */
 const SBSP_PRIMITIVES = ['core.heading', 'core.text', 'core.button', 'core.image', 'core.rich_text', 'core.video'];
 
 /** @return list<array<string, mixed>> flat list of every block in a document */
@@ -39,47 +39,47 @@ function sbsp_blocks(array $document): array
             $walk(is_array($b['children'] ?? null) ? $b['children'] : []);
         }
     };
-    foreach ($document['sections'] as $s) {
-        $walk($s['blocks']);
+    foreach ($document['containers'] as $s) {
+        $walk($s['children']);
     }
     return $out;
 }
 
-unit('section presets: the catalogue has the planned categories and unique, reserved keys', function (): void {
-    $all = SectionPresetCatalog::all();
+unit('container presets: the catalogue has the planned categories and unique, reserved keys', function (): void {
+    $all = ContainerPresetCatalog::all();
     assert_true(count($all) >= 16, 'at least 16 composed presets');
     $keys = array_column($all, 'key');
     assert_eq(count($keys), count(array_unique($keys)), 'keys are unique');
     foreach ($all as $p) {
-        assert_true(str_starts_with($p['key'], SectionPresetCatalog::KEY_PREFIX), "{$p['key']} is reserved");
+        assert_true(str_starts_with($p['key'], ContainerPresetCatalog::KEY_PREFIX), "{$p['key']} is reserved");
         assert_true(preg_match(CanonicalDocumentSchema::TEMPLATE_KEY_PATTERN, $p['key']) === 1, "{$p['key']} is a valid template key");
-        assert_true(in_array($p['category'], SectionPresetCatalog::CATEGORIES, true), "{$p['key']} category {$p['category']}");
+        assert_true(in_array($p['category'], ContainerPresetCatalog::CATEGORIES, true), "{$p['key']} category {$p['category']}");
         assert_true(trim($p['name']) !== '' && trim($p['description']) !== '', "{$p['key']} has copy");
         assert_true(mb_strlen($p['description']) <= 80, "{$p['key']} description stays one line");
     }
     $present = array_unique(array_column($all, 'category'));
-    foreach (SectionPresetCatalog::CATEGORIES as $c) {
+    foreach (ContainerPresetCatalog::CATEGORIES as $c) {
         assert_true(in_array($c, $present, true), "category {$c} has a preset");
     }
 });
 
-unit('section presets: every preset validates through the real pipeline and normalizes idempotently', function (): void {
+unit('container presets: every preset validates through the real pipeline and normalizes idempotently', function (): void {
     $registry = ModuleBlockDefinitions::studioRegistry();
-    foreach (SectionPresetCatalog::all() as $p) {
+    foreach (ContainerPresetCatalog::all() as $p) {
         $once  = ValidatedDocument::from($p['document'], $registry, [])->toArray();
         $twice = ValidatedDocument::from($once, $registry, [])->toArray();
         assert_eq(CanonicalJson::encode($once), CanonicalJson::encode($twice), "{$p['key']} normalizes idempotently");
-        assert_eq('section_preset', $once['document_type']);
-        assert_eq(1, count($once['sections']), "{$p['key']} holds exactly one section");
-        assert_true(empty($once['sections'][0]['global_ref']), "{$p['key']} owns its content (no live reference)");
+        assert_eq('container_preset', $once['document_type']);
+        assert_eq(1, count($once['containers']), "{$p['key']} holds exactly one Container");
+        assert_true(empty($once['containers'][0]['global_ref']), "{$p['key']} owns its content (no live reference)");
     }
 });
 
-unit('section presets: no preset is a bare primitive, and every block type is registered', function (): void {
+unit('container presets: no preset is a bare primitive, and every block type is registered', function (): void {
     $registry = ModuleBlockDefinitions::studioRegistry();
-    foreach (SectionPresetCatalog::all() as $p) {
+    foreach (ContainerPresetCatalog::all() as $p) {
         $blocks = sbsp_blocks($p['document']);
-        $top = $p['document']['sections'][0]['blocks'];
+        $top = $p['document']['containers'][0]['children'];
         assert_true(!(count($top) === 1 && $blocks[0]['children'] === [] && in_array($top[0]['type'], SBSP_PRIMITIVES, true)), "{$p['key']} is not a bare primitive");
         foreach ($blocks as $b) {
             assert_true($registry->get((string) $b['type']) !== null, "{$p['key']}: {$b['type']} is registered");
@@ -88,28 +88,28 @@ unit('section presets: no preset is a bare primitive, and every block type is re
     }
 });
 
-unit('section presets: deterministic — rebuilding gives byte-identical documents with unique ids', function (): void {
+unit('container presets: deterministic — rebuilding gives byte-identical documents with unique ids', function (): void {
     $first = [];
-    foreach (SectionPresetCatalog::all() as $p) {
+    foreach (ContainerPresetCatalog::all() as $p) {
         $first[$p['key']] = CanonicalJson::encode($p['document']);
     }
-    $ref = new \ReflectionProperty(SectionPresetCatalog::class, 'memo');
+    $ref = new \ReflectionProperty(ContainerPresetCatalog::class, 'memo');
     $ref->setValue(null, null);
-    foreach (SectionPresetCatalog::all() as $p) {
+    foreach (ContainerPresetCatalog::all() as $p) {
         assert_eq($first[$p['key']], CanonicalJson::encode($p['document']), "{$p['key']} is stable across rebuilds");
         $ids = array_map(static fn(array $b): string => (string) $b['id'], sbsp_blocks($p['document']));
-        $ids[] = (string) $p['document']['sections'][0]['id'];
+        $ids[] = (string) $p['document']['containers'][0]['id'];
         assert_eq(count($ids), count(array_unique($ids)), "{$p['key']} ids are unique");
         foreach ($ids as $id) {
-            assert_true(preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $id) === 1 || preg_match(CanonicalDocumentSchema::SECTION_ID_PATTERN, $id) === 1, "{$p['key']} id {$id} matches the id pattern");
+            assert_true(preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $id) === 1, "{$p['key']} id {$id} matches the id pattern");
         }
     }
 });
 
-unit('section presets: every preset has a French name and description, and there are no stale French keys', function (): void {
+unit('container presets: every preset has a French name and description, and there are no stale French keys', function (): void {
     $fr = require SLATE_ROOT . '/plugins/studio-builder/lang/fr.php';
     $slugs = [];
-    foreach (SectionPresetCatalog::all() as $p) {
+    foreach (ContainerPresetCatalog::all() as $p) {
         $slug = str_replace('-', '_', $p['slug']);
         $slugs[$slug] = true;
         foreach (['name', 'desc'] as $suffix) {
@@ -125,9 +125,9 @@ unit('section presets: every preset has a French name and description, and there
     assert_eq([], $stale);
 });
 
-unit('section presets: the wireframe outline is structure only, bounded, and the UI fixture matches it (no drift)', function (): void {
+unit('container presets: the wireframe outline is structure only, bounded, and the UI fixture matches it (no drift)', function (): void {
     $live = [];
-    foreach (SectionPresetCatalog::all() as $p) {
+    foreach (ContainerPresetCatalog::all() as $p) {
         $outline = \Slate\Module\StudioBuilder\Presets\WireframeOutline::fromDocument($p['document']);
         $json = (string) json_encode($outline);
         foreach (['Your business', 'hello@example.com', 'customers', '/contact', 'href'] as $copy) {

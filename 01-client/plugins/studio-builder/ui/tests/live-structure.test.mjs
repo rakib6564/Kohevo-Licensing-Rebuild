@@ -54,72 +54,73 @@ class Doc extends El {
 }
 
 const blk = (id, extra = {}) => ({ id, type: 'core.text', props: { text: id }, style: {}, children: [], ...extra });
-const sec = (id, blocks) => ({ id, style: {}, blocks });
-const doc = (...sections) => ({ sections });
+const sec = (id, children) => ({ id, type: 'core.container', style: {}, children });
+const doc = (...containers) => ({ containers });
 
-/** main > section[sec] > .inner > blocks; a block with children: block > .wrap > blocks. */
+/** main > a top-level Container > its children (one element, no wrapper); a nested block with children: block > .wrap > blocks. */
 function render(d) {
   const root = new Doc();
   const main = root.ownerDocument.createElement('main');
   root.appendChild(main);
-  const put = (parent, nodes) => nodes.forEach((n) => {
-    const e = root.createElement('div'); e.setAttribute('data-sb-node', n.id); e.setAttribute('data-sb-type', n.type || 'section'); e.setAttribute('class', 'sb-block sbx-selected'); e.textContent = '';
+  const put = (parent, nodes, top = false) => nodes.forEach((n) => {
+    const e = root.createElement('div'); e.setAttribute('data-sb-node', n.id); e.setAttribute('data-sb-type', n.type); e.setAttribute('class', 'sb-block sbx-selected'); e.textContent = '';
     parent.appendChild(e);
-    const kids = n.blocks || n.children || [];
-    if (kids.length || n.blocks) { const w = root.createElement('div'); w.setAttribute('class', n.blocks ? 'sb-section__inner' : 'sb-wrap'); e.appendChild(w); put(w, kids); } else e.text = n.id;
+    const kids = n.children || [];
+    if (top) put(e, kids);
+    else if (kids.length) { const w = root.createElement('div'); w.setAttribute('class', 'sb-wrap'); e.appendChild(w); put(w, kids); } else e.text = n.id;
   });
-  put(main, d.sections);
+  put(main, d.containers, true);
   return { root, main };
 }
 const ids = (el) => el.all().filter((e) => e.attrs.has('data-sb-node')).map((e) => e.getAttribute('data-sb-node'));
 
 test('a deleted block disappears with its children, and nothing else moves', () => {
-  const before = doc(sec('sec_1', [blk('a'), blk('b', { type: 'layout.container', children: [blk('c')] }), blk('d')]));
+  const before = doc(sec('blk_top_1', [blk('a'), blk('b', { type: 'layout.container', children: [blk('c')] }), blk('d')]));
   const { root } = render(before);
-  const r = syncLiveStructure(root, before, doc(sec('sec_1', [blk('a'), blk('d')])));
-  assert.deepEqual(ids(root), ['sec_1', 'a', 'd']);
+  const r = syncLiveStructure(root, before, doc(sec('blk_top_1', [blk('a'), blk('d')])));
+  assert.deepEqual(ids(root), ['blk_top_1', 'a', 'd']);
   assert.equal(r.complete, true);
 });
 
 test('a block moved down among its siblings is re-seated, not rebuilt', () => {
-  const before = doc(sec('sec_1', [blk('a'), blk('b'), blk('c')]));
+  const before = doc(sec('blk_top_1', [blk('a'), blk('b'), blk('c')]));
   const { root } = render(before);
   const elA = root.querySelector('[data-sb-node="a"]');
-  const r = syncLiveStructure(root, before, doc(sec('sec_1', [blk('b'), blk('c'), blk('a')])));
-  assert.deepEqual(ids(root), ['sec_1', 'b', 'c', 'a']);
+  const r = syncLiveStructure(root, before, doc(sec('blk_top_1', [blk('b'), blk('c'), blk('a')])));
+  assert.deepEqual(ids(root), ['blk_top_1', 'b', 'c', 'a']);
   assert.equal(root.querySelector('[data-sb-node="a"]'), elA, 'the same element');
   assert.equal(r.complete, true);
 });
 
 test('a block moved into a container, and out of it', () => {
-  const before = doc(sec('sec_1', [blk('a'), blk('box', { type: 'layout.container', children: [blk('x')] })]));
+  const before = doc(sec('blk_top_1', [blk('a'), blk('box', { type: 'layout.container', children: [blk('x')] })]));
   const { root } = render(before);
-  const into = doc(sec('sec_1', [blk('box', { type: 'layout.container', children: [blk('x'), blk('a')] })]));
+  const into = doc(sec('blk_top_1', [blk('box', { type: 'layout.container', children: [blk('x'), blk('a')] })]));
   assert.equal(syncLiveStructure(root, before, into).complete, true);
-  assert.deepEqual(ids(root), ['sec_1', 'box', 'x', 'a']);
+  assert.deepEqual(ids(root), ['blk_top_1', 'box', 'x', 'a']);
   assert.equal(root.querySelector('[data-sb-node="a"]').closest('[data-sb-node]').parentNode.parentNode.getAttribute('data-sb-node'), 'box');
-  const out = doc(sec('sec_1', [blk('a'), blk('box', { type: 'layout.container', children: [blk('x')] })]));
+  const out = doc(sec('blk_top_1', [blk('a'), blk('box', { type: 'layout.container', children: [blk('x')] })]));
   assert.equal(syncLiveStructure(root, into, out).complete, true);
-  assert.deepEqual(ids(root), ['sec_1', 'a', 'box', 'x']);
+  assert.deepEqual(ids(root), ['blk_top_1', 'a', 'box', 'x']);
 });
 
-test('a section moved above another', () => {
-  const before = doc(sec('sec_1', [blk('a')]), sec('sec_2', [blk('b')]));
+test('a top-level Container moved above another', () => {
+  const before = doc(sec('blk_top_1', [blk('a')]), sec('blk_top_2', [blk('b')]));
   const { root, main } = render(before);
-  const r = syncLiveStructure(root, before, doc(sec('sec_2', [blk('b')]), sec('sec_1', [blk('a')])));
-  assert.deepEqual(main.children.map((e) => e.getAttribute('data-sb-node')), ['sec_2', 'sec_1']);
+  const r = syncLiveStructure(root, before, doc(sec('blk_top_2', [blk('b')]), sec('blk_top_1', [blk('a')])));
+  assert.deepEqual(main.children.map((e) => e.getAttribute('data-sb-node')), ['blk_top_2', 'blk_top_1']);
   assert.equal(r.complete, true);
 });
 
 test('a duplicate is a clone of the source with fresh ids and no selection state', () => {
   const box = (id, kid) => blk(id, { type: 'layout.container', props: { gap: 1 }, children: [blk(kid)] });
-  const before = doc(sec('sec_1', [box('box', 'x')]));
+  const before = doc(sec('blk_top_1', [box('box', 'x')]));
   const { root } = render(before);
   const copy = { ...box('tmp_box', 'tmp_x') };
   copy.children = [{ ...blk('tmp_x'), props: { text: 'x' } }];
-  copy.children[0].props = before.sections[0].blocks[0].children[0].props; // identical content
-  const r = syncLiveStructure(root, before, doc(sec('sec_1', [box('box', 'x'), copy])));
-  assert.deepEqual(ids(root), ['sec_1', 'box', 'x', 'tmp_box', 'tmp_x']);
+  copy.children[0].props = before.containers[0].children[0].children[0].props; // identical content
+  const r = syncLiveStructure(root, before, doc(sec('blk_top_1', [box('box', 'x'), copy])));
+  assert.deepEqual(ids(root), ['blk_top_1', 'box', 'x', 'tmp_box', 'tmp_x']);
   const dup = root.querySelector('[data-sb-node="tmp_box"]');
   assert.ok(!dup.cls().includes('sbx-selected'), 'selection state is not copied');
   assert.ok(dup.cls().includes('sb-block'));
@@ -128,11 +129,11 @@ test('a duplicate is a clone of the source with fresh ids and no selection state
 });
 
 test('a block with no twin on the canvas gets a placeholder at its place', () => {
-  const before = doc(sec('sec_1', [blk('a'), blk('b')]));
+  const before = doc(sec('blk_top_1', [blk('a'), blk('b')]));
   const { root } = render(before);
   const fresh = { id: 'tmp_new', type: 'booking.embed', props: {}, style: {}, children: [] };
-  const r = syncLiveStructure(root, before, doc(sec('sec_1', [blk('a'), fresh, blk('b')])));
-  assert.deepEqual(ids(root), ['sec_1', 'a', 'tmp_new', 'b']);
+  const r = syncLiveStructure(root, before, doc(sec('blk_top_1', [blk('a'), fresh, blk('b')])));
+  assert.deepEqual(ids(root), ['blk_top_1', 'a', 'tmp_new', 'b']);
   const ph = root.querySelector('[data-sb-node="tmp_new"]');
   assert.ok(ph.cls().includes('sbx-pending'));
   assert.equal(ph.text, 'embed');
@@ -142,53 +143,53 @@ test('a block with no twin on the canvas gets a placeholder at its place', () =>
 
 test('a provisional id the server replaced is renamed in place, never rebuilt', () => {
   const tmp = { id: 'tmp_new', type: 'booking.embed', props: {}, style: {}, children: [] };
-  const before = doc(sec('sec_1', [blk('a'), tmp]));
+  const before = doc(sec('blk_top_1', [blk('a'), tmp]));
   const { root } = render(before);
   const el = root.querySelector('[data-sb-node="tmp_new"]');
   const real = { ...tmp, id: 'blk_real' };
-  const r = syncLiveStructure(root, before, doc(sec('sec_1', [blk('a'), real])));
+  const r = syncLiveStructure(root, before, doc(sec('blk_top_1', [blk('a'), real])));
   assert.equal(el.getAttribute('data-sb-node'), 'blk_real');
   assert.equal(root.querySelector('[data-sb-node="blk_real"]'), el);
-  assert.deepEqual(ids(root), ['sec_1', 'a', 'blk_real']);
+  assert.deepEqual(ids(root), ['blk_top_1', 'a', 'blk_real']);
   assert.equal(r.complete, true);
 });
 
 test('children that do not share one wrapper are left to the server, and the result says so', () => {
   // two cells, one child each: "tabs" or "columns" markup
-  const before = doc(sec('sec_1', [blk('t', { type: 'layout.tabs', children: [blk('p1'), blk('p2')] })]));
+  const before = doc(sec('blk_top_1', [blk('t', { type: 'layout.tabs', children: [blk('p1'), blk('p2')] })]));
   const { root } = render(before);
   const t = root.querySelector('[data-sb-node="t"]');
   const wrap = t.children[0];
   const [p1, p2] = wrap.children;
   const cell1 = root.createElement('div'); const cell2 = root.createElement('div');
   wrap.appendChild(cell1); wrap.appendChild(cell2); cell1.appendChild(p1); cell2.appendChild(p2);
-  const r = syncLiveStructure(root, before, doc(sec('sec_1', [blk('t', { type: 'layout.tabs', children: [blk('p2'), blk('p1')] })])));
+  const r = syncLiveStructure(root, before, doc(sec('blk_top_1', [blk('t', { type: 'layout.tabs', children: [blk('p2'), blk('p1')] })])));
   assert.equal(r.complete, false);
   assert.equal(p1.parentNode, cell1, 'untouched');
 });
 
 test('adding the first child to an empty container is left to the server', () => {
-  const before = doc(sec('sec_1', [blk('box', { type: 'layout.container', children: [] })]));
+  const before = doc(sec('blk_top_1', [blk('box', { type: 'layout.container', children: [] })]));
   const { root } = render(before);
-  const r = syncLiveStructure(root, before, doc(sec('sec_1', [blk('box', { type: 'layout.container', children: [blk('n', { id: 'tmp_n' })] })])));
+  const r = syncLiveStructure(root, before, doc(sec('blk_top_1', [blk('box', { type: 'layout.container', children: [blk('n', { id: 'tmp_n' })] })])));
   assert.equal(r.complete, false);
 });
 
 test('nothing changed: nothing is touched', () => {
-  const before = doc(sec('sec_1', [blk('a'), blk('b')]));
+  const before = doc(sec('blk_top_1', [blk('a'), blk('b')]));
   const { root } = render(before);
-  assert.deepEqual(syncLiveStructure(root, before, doc(sec('sec_1', [blk('a'), blk('b')]))), { changed: 0, complete: true, pending: [] });
+  assert.deepEqual(syncLiveStructure(root, before, doc(sec('blk_top_1', [blk('a'), blk('b')]))), { changed: 0, complete: true, pending: [] });
   assert.deepEqual(syncLiveStructure(null, before, before), { changed: 0, complete: false, pending: [] });
 });
 
-test('a new section gets one placeholder for the whole section, and its real markup can be fetched', () => {
-  const before = doc(sec('sec_1', [blk('a')]));
+test('a new top-level Container gets one placeholder for the whole of it, and its real markup can be fetched', () => {
+  const before = doc(sec('blk_top_1', [blk('a')]));
   const { root } = render(before);
   const fresh = sec('tmp_sec', [blk('tmp_x'), blk('tmp_y')]);
-  const r = syncLiveStructure(root, before, doc(sec('sec_1', [blk('a')]), fresh));
-  assert.deepEqual(ids(root), ['sec_1', 'a', 'tmp_sec']);
+  const r = syncLiveStructure(root, before, doc(sec('blk_top_1', [blk('a')]), fresh));
+  assert.deepEqual(ids(root), ['blk_top_1', 'a', 'tmp_sec']);
   const ph = root.querySelector('[data-sb-node="tmp_sec"]');
   assert.ok(ph.cls().includes('sbx-pending'));
-  assert.deepEqual(r.pending, [ph], 'the section, not its blocks, is what the server renders');
+  assert.deepEqual(r.pending, [ph], 'the Container, not its children, is what the server renders');
   assert.equal(r.complete, true);
 });

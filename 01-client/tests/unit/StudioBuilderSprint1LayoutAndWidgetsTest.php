@@ -5,7 +5,7 @@
  * Exercises:
  *  1. WidgetRegistry registration, manifest filtering, and categories.
  *  2. BlockRegistry::registerLayoutBlocks and withAllCoreBlocks.
- *  3. Individual renderers: layout.section, layout.container, layout.flex, layout.grid, core.text.
+ *  3. Individual renderers: layout.container, layout.flex, layout.grid, core.text.
  *  4. HeadingRenderer and ButtonRenderer enhancements.
  *  5. DocumentRenderer custom attributes, classNames, and responsive device classes.
  *  6. StudioStylesheet CSS utilities for layout and responsive rules.
@@ -27,6 +27,7 @@ if (!function_exists('unit')) {
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\DocumentNormalizer;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\DocumentValidator;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
@@ -38,7 +39,6 @@ use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\FlexRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\GridRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\HeadingRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\LayoutContainerRenderer;
-use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\SectionRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\TextRenderer;
 use Slate\Module\StudioBuilder\Render\DocumentRenderer;
 use Slate\Module\StudioBuilder\Render\Media\CoreMediaResolver;
@@ -65,7 +65,7 @@ function s1_scope(array $block, string $children = ''): BlockRenderScope
 
 unit('sprint1: WidgetRegistry built from BlockRegistry has layout and content primitives with manifests', function (): void {
     $wr = WidgetRegistry::fromBlockRegistry(BlockRegistry::withAllCoreBlocks());
-    assert_true($wr->has('layout.section'));
+    assert_false($wr->has('layout.section'), 'the retired block is upgraded on read, not offered');
     assert_true($wr->has('layout.container'));
     assert_true($wr->has('layout.flex'));
     assert_true($wr->has('layout.grid'));
@@ -77,8 +77,8 @@ unit('sprint1: WidgetRegistry built from BlockRegistry has layout and content pr
     assert_true(isset($cats['layout']));
     assert_true(isset($cats['content']));
 
-    $section = $wr->resolve('layout.section');
-    assert_eq('layout.section', $section->type());
+    $section = $wr->resolve('core.container');
+    assert_eq('core.container', $section->type());
     assert_true($section->allowsChildren());
     $manifest = $section->toEditorManifest();
     assert_true(!empty($manifest['description']));
@@ -86,7 +86,7 @@ unit('sprint1: WidgetRegistry built from BlockRegistry has layout and content pr
 
     $manifests = $wr->editorManifests();
     $types = array_column($manifests, 'type');
-    assert_true(in_array('layout.section', $types, true));
+    assert_true(in_array('core.container', $types, true));
     assert_true(in_array('layout.container', $types, true));
     assert_true(in_array('layout.flex', $types, true));
     assert_true(in_array('layout.grid', $types, true));
@@ -116,7 +116,7 @@ unit('sprint1: WidgetRegistry has no block definitions of its own, so it cannot 
 
 unit('sprint1: BlockRegistry registerLayoutBlocks registers primitives onto BlockRegistry', function (): void {
     $br = BlockRegistry::withAllCoreBlocks();
-    assert_true($br->has('layout.section'));
+    assert_false($br->has('layout.section'), 'the retired block is upgraded on read, not registered');
     assert_true($br->has('layout.container'));
     assert_true($br->has('layout.flex'));
     assert_true($br->has('layout.grid'));
@@ -127,18 +127,21 @@ unit('sprint1: BlockRegistry registerLayoutBlocks registers primitives onto Bloc
 
 // ── 3. Renderers ──────────────────────────────────────────────────────────────
 
-unit('sprint1: SectionRenderer compiles to semantic HTML tag with width and padding classes', function (): void {
-    $renderer = new SectionRenderer();
-    assert_eq('layout.section', $renderer->type());
-    assert_false($renderer->isDynamic());
-
-    $html = $renderer->render(s1_scope([
-        'type' => 'layout.section',
-        'props' => ['tag' => 'section', 'content_width' => 'boxed', 'padding_y' => 'lg', 'min_height' => 'screen'],
-    ], '<h2>Inner</h2>'));
-
-    assert_true(str_starts_with($html, '<section class="sb-layout-section sb-layout-section--boxed sb-py-lg sb-layout-section--min-screen">'));
-    assert_true(str_ends_with($html, '<h2>Inner</h2></section>'));
+unit('sprint1: a stored layout.section block is a Container, with its tag, width, padding and height', function (): void {
+    $doc = CanonicalDocumentSchema::emptyDocument();
+    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['children' => [[
+        'id' => 'blk_' . str_repeat('c', 16), 'type' => 'layout.section', 'version' => 1,
+        'props' => ['tag' => 'article', 'content_width' => 'narrow', 'padding_y' => 'lg', 'min_height' => 'screen', 'background_token' => 'surface.muted'],
+        'style' => [], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
+    ]]])];
+    $block = DocumentUpgrader::structure($doc)['containers'][0]['children'][0];
+    assert_eq('core.container', $block['type']);
+    assert_eq(CanonicalDocumentSchema::CONTAINER_VERSION, $block['version']);
+    assert_eq('article', $block['tag']);
+    assert_eq(['content_width' => 'boxed', 'content_size' => 'narrow', 'padding_y' => 'lg'], $block['style']['layout']);
+    assert_eq('100vh', $block['style']['dimensions']['min_height']);
+    assert_eq('surface.muted', $block['style']['surface_token']);
+    assert_true(DocumentValidator::validate(DocumentUpgrader::structure($doc), BlockRegistry::withAllCoreBlocks())->isValid(), 'and it validates');
 });
 
 unit('sprint1: LayoutContainerRenderer compiles with constraint classes and alignment', function (): void {
@@ -268,7 +271,6 @@ unit('sprint1: StudioStylesheet contains layout and responsive device classes', 
     StudioStylesheet::resetCache();
     $css = StudioStylesheet::css();
 
-    assert_true(str_contains($css, '.sb-layout-section{'));
     assert_true(str_contains($css, '.sb-container{'));
     assert_true(str_contains($css, '.sb-flex{'));
     assert_true(str_contains($css, '.sb-grid{'));

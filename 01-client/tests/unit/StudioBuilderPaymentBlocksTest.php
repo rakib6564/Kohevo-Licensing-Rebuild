@@ -281,7 +281,7 @@ function sbpb_render(string $type, array $props, string $mode): string
         'preview' => RenderContext::forPreview(SBPB_TENANT, $site, StudioActor::authenticated(3, [StudioPermissions::VIEW, StudioPermissions::EDIT]), $entitled),
         'editor' => RenderContext::forEditor(SBPB_TENANT, $site, StudioActor::authenticated(3, [StudioPermissions::VIEW, StudioPermissions::EDIT]), $entitled),
     };
-    $block = ['id' => SBPB_BLOCK, 'type' => $type, 'version' => 1, 'props' => $props, 'style' => CanonicalDocumentSchema::defaultBlockStyle(),
+    $block = ['id' => SBPB_BLOCK, 'type' => $type, 'version' => ($type === 'core.container' ? 2 : 1), 'props' => $props, 'style' => CanonicalDocumentSchema::defaultBlockStyle(),
               'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => []];
     return $tenants->runAs(SBPB_TENANT, static fn(): string => $documents->renderBlock($block, $ctx, (new ThemeResolver())->resolve('default'), new RenderCollector(), false));
 }

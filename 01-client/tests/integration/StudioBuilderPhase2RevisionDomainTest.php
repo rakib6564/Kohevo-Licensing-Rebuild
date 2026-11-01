@@ -151,16 +151,9 @@ function sbp2_doc(BlockRegistry $registry, string $heading = 'Hello'): array
         'version'    => 1,
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
     ];
-    $section = [
-        'blocks'     => [$hero],
-        'global_ref' => null,
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => 'Main',
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ];
+    $section = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => [$hero], 'visibility' => CanonicalDocumentSchema::defaultVisibility()]);
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', $heading);
-    $doc['sections'] = [$section];
+    $doc['containers'] = [$section];
     return DocumentNormalizer::normalize($doc, $registry);
 }
 
@@ -238,7 +231,7 @@ unit('phase2 integration: StudioRevisionService full lifecycle, concurrency, dep
 
             // 8. Dependency indexing: a doc with a media_ref must produce a persisted dependency row
             $docWithMedia = sbp2_doc($registry, 'Has Media');
-            $docWithMedia['sections'][0]['blocks'][0]['props']['media'] = ['media_id' => 55, 'alt' => 'Alt', 'focal_point' => [0.5, 0.5]];
+            $docWithMedia['containers'][0]['children'][0]['props']['media'] = ['media_id' => 55, 'alt' => 'Alt', 'focal_point' => [0.5, 0.5]];
             $docWithMedia = DocumentNormalizer::normalize($docWithMedia, $registry);
             $withMedia = $tenants->runAs($tenantId, static fn(): array => $revisionService->createDraftRevision($pageId, ValidatedDocument::from($docWithMedia, $registry), $rollbackRevId, 1, 'manual', 'With media'));
             $withMediaRevId = (int) $withMedia['revision']['id'];
@@ -283,7 +276,7 @@ unit('phase2 integration: StudioPageAddressService creates pages atomically, rej
             assert_eq((int) $created['revision']['id'], (int) $created['page']['active_draft_revision_id']);
 
             $decodedDoc = CanonicalJson::decode((string) $created['revision']['document_json']);
-            assert_eq([], $decodedDoc['sections'], 'a freshly created page must start with a blank document');
+            assert_eq([], $decodedDoc['containers'], 'a freshly created page must start with a blank document');
 
             $pageId = (int) $created['page']['id'];
 
@@ -335,7 +328,7 @@ unit('phase2 integration: StudioTemplateService saves/updates templates, protect
             $templateDoc = sbp2_doc($registry, 'Preset Heading');
 
             $saved = $tenants->runAs($tenantId, static fn(): array => $templateService->saveTemplate(
-                'hero-minimal', 'section_preset', 'hero', 'Minimal Hero', 'A minimal hero preset.', $templateDoc, 1
+                'hero-minimal', 'container_preset', 'hero', 'Minimal Hero', 'A minimal hero preset.', $templateDoc, 1
             ));
             assert_eq('hero-minimal', $saved['template_key']);
 
@@ -344,7 +337,7 @@ unit('phase2 integration: StudioTemplateService saves/updates templates, protect
             $refused = null;
             try {
                 $tenants->runAs($tenantId, static fn(): array => $templateService->saveTemplate(
-                    'hero-minimal', 'section_preset', 'hero', 'Minimal Hero v2', null, $updatedDoc, 1
+                    'hero-minimal', 'container_preset', 'hero', 'Minimal Hero v2', null, $updatedDoc, 1
                 ));
             } catch (StudioValidationException $e) {
                 $refused = $e->errors()[0]['code'] ?? null;
@@ -354,7 +347,7 @@ unit('phase2 integration: StudioTemplateService saves/updates templates, protect
 
             // Update path: an explicit overwrite updates in place rather than duplicating
             $savedAgain = $tenants->runAs($tenantId, static fn(): array => $templateService->saveTemplate(
-                'hero-minimal', 'section_preset', 'hero', 'Minimal Hero v2', null, $updatedDoc, 1, overwrite: true
+                'hero-minimal', 'container_preset', 'hero', 'Minimal Hero v2', null, $updatedDoc, 1, overwrite: true
             ));
             assert_eq((int) $saved['id'], (int) $savedAgain['id'], 'saving an existing template_key must update, not duplicate');
             assert_eq('Minimal Hero v2', $savedAgain['name']);
@@ -364,7 +357,7 @@ unit('phase2 integration: StudioTemplateService saves/updates templates, protect
                 $templates->update((int) $saved['id'], ['is_system' => 1]);
             });
             assert_throws(StudioValidationException::class, function () use ($tenants, $tenantId, $templateService, $templateDoc): void {
-                $tenants->runAs($tenantId, static fn() => $templateService->saveTemplate('hero-minimal', 'section_preset', 'hero', 'Hacked', null, $templateDoc, 1, overwrite: true));
+                $tenants->runAs($tenantId, static fn() => $templateService->saveTemplate('hero-minimal', 'container_preset', 'hero', 'Hacked', null, $templateDoc, 1, overwrite: true));
             });
 
             // Apply a (new, non-system) template onto a page
@@ -381,7 +374,7 @@ unit('phase2 integration: StudioTemplateService saves/updates templates, protect
             assert_eq(2, (int) $applied['revision']['revision_number'], 'applying a template must create a new draft revision');
             $appliedDoc = CanonicalJson::decode((string) $applied['revision']['document_json']);
             assert_eq('page', $appliedDoc['document_type'], 'applied document must adopt the target page type, not the template document_type');
-            assert_eq(1, count($appliedDoc['sections']));
+            assert_eq(1, count($appliedDoc['containers']));
 
             // Applying a nonexistent template fails closed
             assert_throws(StudioNotFoundException::class, function () use ($tenants, $tenantId, $templateService, $pageId): void {

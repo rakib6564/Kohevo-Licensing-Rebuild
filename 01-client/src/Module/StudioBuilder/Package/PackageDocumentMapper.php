@@ -6,7 +6,7 @@
  *
  *   - media references: collect every media id a document names (block
  *     `media_ref` fields at any depth — through repeaters and objects —,
- *     section and block `style.background.image` media references, and
+ *     block `style.background.image` media references, and
  *     `seo.og_image_media_id`), and rewrite them through a resolver. On
  *     export the resolver renumbers source ids into package-local keys; on
  *     import it maps package keys to TARGET-tenant media ids.
@@ -14,7 +14,7 @@
  *     Downgrade rule for a media reference the resolver cannot map (the
  *     Phase 8A import contract):
  *       * `seo.og_image_media_id`                -> null
- *       * a section or block background image   -> removed (the colour,
+ *       * a block's background image            -> removed (the colour,
  *         gradient and overlay of that background are kept)
  *       * an OPTIONAL `media_ref` field (e.g. core.hero `media`) -> null
  *       * a block with a REQUIRED `media_ref` field (e.g. core.image) ->
@@ -22,15 +22,15 @@
  *     Each downgrade is reported (path in the SOURCE document). No URL is
  *     ever written: `media_ref` only holds a tenant media id.
  *
- *   - global references: every `section.global_ref` is rewritten through an
+ *   - global references: every Container's `global_ref` is rewritten through an
  *     explicit source -> target map. An unmapped reference is downgraded to
- *     an ordinary empty owned section (`global_ref = null`, `blocks = []`,
- *     label/layout/visibility kept) and reported.
+ *     an ordinary empty owned Container (no `global_ref`, `children = []`,
+ *     label/style/visibility kept) and reported.
  *
- *   - ids: every section, block and nested child id is re-minted with the
+ *   - ids: every block and nested child id is re-minted with the
  *     given minter (never trusting the ids the package carries, which may
- *     even collide). The default minters are the canonical
- *     `CanonicalDocumentSchema::newSectionId()` / `newBlockId()` — the same
+ *     even collide). The default minter is the canonical
+ *     `CanonicalDocumentSchema::newBlockId()` — the same
  *     primitive `DocumentCopier` uses; `DocumentCopier` itself is not used
  *     because it also drops every `global_ref`, which import must remap.
  *
@@ -43,6 +43,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Package;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 
@@ -76,6 +77,7 @@ final class PackageDocumentMapper
      */
     public static function rewriteMedia(array $document, BlockRegistry $registry, callable $resolve): array
     {
+        $document = DocumentUpgrader::structure($document);
         $unresolved = [];
 
         $og = $document['seo']['og_image_media_id'] ?? null;
@@ -87,19 +89,8 @@ final class PackageDocumentMapper
             $document['seo']['og_image_media_id'] = $mapped;
         }
 
-        if (is_array($document['sections'] ?? null)) {
-            foreach ($document['sections'] as $s => $section) {
-                if (!is_array($section)) {
-                    continue;
-                }
-                if (is_array($section['style'] ?? null)) {
-                    $document['sections'][$s]['style'] = self::rewriteBackground($section['style'], $resolve, "\$.sections[{$s}].style", $unresolved);
-                }
-                if (!is_array($section['blocks'] ?? null)) {
-                    continue;
-                }
-                $document['sections'][$s]['blocks'] = self::rewriteBlocks($section['blocks'], $registry, $resolve, "\$.sections[{$s}].blocks", $unresolved);
-            }
+        if (is_array($document['containers'] ?? null)) {
+            $document['containers'] = self::rewriteBlocks($document['containers'], $registry, $resolve, '$.containers', $unresolved);
         }
         return ['document' => $document, 'unresolved' => $unresolved];
     }
@@ -138,7 +129,7 @@ final class PackageDocumentMapper
     }
 
     /**
-     * A section's or block's `style.background.image` media reference. An
+     * A block's `style.background.image` media reference. An
      * unresolved one is removed; the rest of the background stays.
      *
      * @param array<string, mixed> $style
@@ -210,8 +201,8 @@ final class PackageDocumentMapper
     }
 
     /**
-     * Rewrite every `section.global_ref` through `$resolve(string $ref): ?string`.
-     * An unresolved reference becomes an empty owned section.
+     * Rewrite every Container's `global_ref` through `$resolve(string $ref): ?string`.
+     * An unresolved reference becomes an empty owned Container.
      *
      * @param array<string, mixed> $document
      * @param callable(string): ?string $resolve
@@ -219,33 +210,34 @@ final class PackageDocumentMapper
      */
     public static function rewriteGlobalRefs(array $document, callable $resolve): array
     {
+        $document = DocumentUpgrader::structure($document);
         $unresolved = [];
-        if (!is_array($document['sections'] ?? null)) {
+        if (!is_array($document['containers'] ?? null)) {
             return ['document' => $document, 'unresolved' => []];
         }
-        foreach ($document['sections'] as $s => $section) {
-            $ref = is_array($section) ? ($section['global_ref'] ?? null) : null;
+        foreach ($document['containers'] as $c => $container) {
+            $ref = is_array($container) ? ($container['global_ref'] ?? null) : null;
             if (!is_string($ref) || $ref === '') {
                 continue;
             }
             $mapped = $resolve($ref);
             if ($mapped !== null) {
-                $document['sections'][$s]['global_ref'] = $mapped;
+                $document['containers'][$c]['global_ref'] = $mapped;
                 continue;
             }
-            $unresolved[] = ['path' => "\$.sections[{$s}].global_ref", 'ref' => $ref];
-            $document['sections'][$s]['global_ref'] = null;
-            $document['sections'][$s]['blocks'] = [];
+            $unresolved[] = ['path' => "\$.containers[{$c}].global_ref", 'ref' => $ref];
+            unset($document['containers'][$c]['global_ref']);
+            $document['containers'][$c]['children'] = [];
         }
         return ['document' => $document, 'unresolved' => $unresolved];
     }
 
-    /** Distinct `section.global_ref` values of a document, in order. @return list<string> */
+    /** Distinct `global_ref` values of a document, in order. @return list<string> */
     public static function globalRefs(array $document): array
     {
         $refs = [];
-        foreach ((array) ($document['sections'] ?? []) as $section) {
-            $ref = is_array($section) ? ($section['global_ref'] ?? null) : null;
+        foreach ((array) (DocumentUpgrader::structure($document)['containers'] ?? []) as $container) {
+            $ref = is_array($container) ? ($container['global_ref'] ?? null) : null;
             if (is_string($ref) && $ref !== '' && !in_array($ref, $refs, true)) {
                 $refs[] = $ref;
             }
@@ -254,28 +246,18 @@ final class PackageDocumentMapper
     }
 
     /**
-     * Re-mint every section, block and nested child id.
+     * Re-mint every block and nested child id.
      *
      * @param array<string, mixed> $document
-     * @param null|callable(): string $sectionId
      * @param null|callable(): string $blockId
      * @return array<string, mixed>
      */
-    public static function remintIds(array $document, ?callable $sectionId = null, ?callable $blockId = null): array
+    public static function remintIds(array $document, ?callable $blockId = null): array
     {
-        $sectionId ??= [CanonicalDocumentSchema::class, 'newSectionId'];
-        $blockId   ??= [CanonicalDocumentSchema::class, 'newBlockId'];
-        if (!is_array($document['sections'] ?? null)) {
-            return $document;
-        }
-        foreach ($document['sections'] as $s => $section) {
-            if (!is_array($section)) {
-                continue;
-            }
-            $document['sections'][$s]['id'] = $sectionId();
-            if (is_array($section['blocks'] ?? null)) {
-                $document['sections'][$s]['blocks'] = self::remintBlocks($section['blocks'], $blockId);
-            }
+        $blockId ??= [CanonicalDocumentSchema::class, 'newBlockId'];
+        $document = DocumentUpgrader::structure($document);
+        if (is_array($document['containers'] ?? null)) {
+            $document['containers'] = self::remintBlocks($document['containers'], $blockId);
         }
         return $document;
     }
@@ -299,10 +281,10 @@ final class PackageDocumentMapper
     }
 
     /**
-     * Section and block (all depths) counts of a document.
+     * Top-level Container and block (all depths) counts of a document.
      *
      * @param array<string, mixed> $document
-     * @return array{sections: int, blocks: int}
+     * @return array{containers: int, blocks: int}
      */
     public static function counts(array $document): array
     {
@@ -315,30 +297,29 @@ final class PackageDocumentMapper
                 }
             }
         };
-        $sections = 0;
-        foreach ((array) ($document['sections'] ?? []) as $section) {
-            if (is_array($section)) {
-                $sections++;
-                $walk(is_array($section['blocks'] ?? null) ? $section['blocks'] : []);
+        $containers = 0;
+        foreach ((array) (DocumentUpgrader::structure($document)['containers'] ?? []) as $container) {
+            if (is_array($container)) {
+                $containers++;
+                $walk(is_array($container['children'] ?? null) ? $container['children'] : []);
             }
         }
-        return ['sections' => $sections, 'blocks' => $blocks];
+        return ['containers' => $containers, 'blocks' => $blocks];
     }
 
     /**
-     * Deterministic id minters (for a dry run, whose report must be
+     * A deterministic id minter (for a dry run, whose report must be
      * reproducible byte for byte): ids derived from a seed and a counter.
      *
-     * @return array{0: callable(): string, 1: callable(): string}
+     * @return callable(): string
      */
-    public static function deterministicMinters(string $seed): array
+    public static function deterministicMinter(string $seed): callable
     {
         $n = 0;
-        $next = static function (string $prefix) use (&$n, $seed): string {
+        return static function () use (&$n, $seed): string {
             $n++;
-            return $prefix . substr(hash('sha256', $seed . '|' . $prefix . '|' . $n), 0, 24);
+            return 'blk_' . substr(hash('sha256', $seed . '|blk_|' . $n), 0, 24);
         };
-        return [static fn(): string => $next('sec_'), static fn(): string => $next('blk_')];
     }
 
     /** A deterministic, well-formed v4-shaped uuid for a planned (not yet created) component. */

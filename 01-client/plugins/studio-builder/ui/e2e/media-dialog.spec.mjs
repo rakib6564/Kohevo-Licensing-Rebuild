@@ -24,8 +24,8 @@ async function addImageBlock(page) {
   await settled(page);
   // select the new block from Layers (a 1x1 test image is too small to click on the canvas)
   await page.getByRole('tab', { name: /^Layers$/ }).click();
-  const section = page.locator('[role="treeitem"][aria-level="1"]').first();
-  if ((await section.getAttribute('aria-expanded')) === 'false') { await section.focus(); await page.keyboard.press('ArrowRight'); }
+  const top = page.locator('[role="treeitem"][aria-level="1"]').first();
+  if ((await top.getAttribute('aria-expanded')) === 'false') { await top.focus(); await page.keyboard.press('ArrowRight'); }
   await page.locator('[role="treeitem"]', { hasText: 'Image' }).last().click();
   await showEdit(page);
   await expect(page.locator('.sbx-inspector-host').getByTestId('media-choose')).toBeVisible();

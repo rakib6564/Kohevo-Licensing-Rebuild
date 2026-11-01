@@ -1,6 +1,6 @@
 <?php
 // The FightxLife design as native Studio style: each class name the build gives a block maps to the block's own style,
-// device overrides, hover state, parts and props. SEC() applies the map and drops every class it covers; a class with
+// device overrides, hover state, parts and props. TOP() applies the map and drops every class it covers; a class with
 // no entry (or listed in GAP) keeps its name and its rules in gap.css.
 //
 // Breakpoints: the design used 1050, 780 and 560px; Studio has tablet (≤1023px) and phone (≤767px). 1050 rules → tablet,

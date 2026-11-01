@@ -1,6 +1,6 @@
 <?php
 /**
- * Kohevo Studio (studio-builder) — Canonical Document Schema ("1.0").
+ * Kohevo Studio (studio-builder) — Canonical Document Schema ("2.0").
  *
  * Defines the structural constants, limits, allowed keys, node ID patterns,
  * symbolic token reference patterns, and default envelope structures for
@@ -15,13 +15,18 @@ use Slate\Module\StudioBuilder\Schema\FieldSchema;
 
 final class CanonicalDocumentSchema
 {
-    public const SCHEMA_VERSION = '1.0';
+    public const SCHEMA_VERSION = '2.0';
+    /** The format before Containers replaced sections; DocumentUpgrader::structure() turns it into SCHEMA_VERSION on read. */
+    public const LEGACY_SCHEMA_VERSION = '1.0';
+
+    /** `core.container`'s version: BlockRegistry declares it, and a document built here carries it. */
+    public const CONTAINER_VERSION = 2;
 
     public const MAX_DOCUMENT_BYTES      = 1048576; // 1 MiB
     public const MAX_JSON_DEPTH          = 32;
-    public const MAX_SECTIONS            = 50;
-    public const MAX_BLOCKS_PER_DOCUMENT = 250;
-    public const MAX_NESTING_DEPTH       = 6;
+    public const MAX_CONTAINERS          = 50;
+    public const MAX_BLOCKS_PER_DOCUMENT = 300;
+    public const MAX_NESTING_DEPTH       = 7;
     public const MAX_REPEATER_ITEMS      = 50;
     public const MAX_STRING_LENGTH       = 2000;
     public const MAX_TEXT_LENGTH         = 20000;
@@ -33,18 +38,18 @@ final class CanonicalDocumentSchema
         'system',
         'header_partial',
         'footer_partial',
-        'section_preset',
+        'container_preset',
     ];
 
     /**
-     * Phase 6 — live global references. A section whose `global_ref` is set
-     * references the canonical content of a Global Component: a Studio page
-     * of type `section_preset` (COMPONENT_DOCUMENT_TYPE), identified by its
+     * Phase 6 — live global references. A top-level Container whose `global_ref`
+     * is set references the canonical content of a Global Component: a Studio page
+     * of type `container_preset` (COMPONENT_DOCUMENT_TYPE), identified by its
      * immutable page `uuid`. Only these document types may hold such a
      * reference; a component, header or footer partial may not (references
      * are one level deep by construction — no cycles, no nested resolution).
      */
-    public const COMPONENT_DOCUMENT_TYPE   = 'section_preset';
+    public const COMPONENT_DOCUMENT_TYPE   = 'container_preset';
     public const GLOBAL_REF_DOCUMENT_TYPES = ['page', 'landing', 'system'];
     public const CHROMED_DOCUMENT_TYPES    = ['page', 'landing'];
 
@@ -54,8 +59,11 @@ final class CanonicalDocumentSchema
         'template_key',
         'settings',
         'seo',
-        'sections',
+        'containers',
     ];
+
+    /** The one block type a document's top level may hold. */
+    public const CONTAINER_TYPE = 'core.container';
 
     public const ALLOWED_SETTINGS_KEYS = [
         'container_width',
@@ -85,8 +93,6 @@ final class CanonicalDocumentSchema
 
     /** `default` is the site's content width (Site settings › Layout); the others are the site's Narrow, Normal and Wide, or no limit. */
     public const ALLOWED_CONTAINER_WIDTHS = ['default', 'narrow', 'normal', 'wide', 'full'];
-    /** A section can also take a width of its own, per device (`layout.custom_width`). */
-    public const ALLOWED_SECTION_WIDTHS = ['default', 'narrow', 'normal', 'wide', 'full', 'custom'];
     public const ALLOWED_CHROME_MODES     = ['inherit', 'custom', 'hidden'];
 
     public const ALLOWED_SEO_KEYS = [
@@ -108,28 +114,6 @@ final class CanonicalDocumentSchema
         'noindex,nofollow',
     ];
 
-    /** Keys every section must carry. */
-    public const REQUIRED_SECTION_KEYS = [
-        'id',
-        'label',
-        'global_ref',
-        'layout',
-        'visibility',
-        'blocks',
-    ];
-
-    /** Required keys plus the optional layer lock (`locked`, present only while true). */
-    public const ALLOWED_SECTION_KEYS = [
-        ...self::REQUIRED_SECTION_KEYS,
-        'locked',
-        'style',
-        'animation',
-        'interactions',
-    ];
-
-    /** Keys of a section's optional `style` (B2-P3b): a background and padding. */
-    public const ALLOWED_SECTION_STYLE_KEYS = ['background', 'padding'];
-
     /** `animation.type` values (the entrance presets); the stylesheet owns the matching keyframes. */
     public const ALLOWED_ANIMATION_TYPES = ['fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in', 'move_left', 'move_right', 'reveal_left', 'reveal_up', 'fade_left', 'fade_right', 'zoom_in', 'zoom_out', 'bounce_in', 'flip_x', 'flip_y', 'rotate_in', 'light_speed', 'pulse', 'none'];
 
@@ -146,17 +130,8 @@ final class CanonicalDocumentSchema
      */
     public const ALLOWED_BLOCK_METADATA_KEYS = ['label', 'locked'];
 
-    /** Max length of a block's `metadata.label` (sections keep their own 120-char label). */
+    /** Max length of a block's `metadata.label`. */
     public const BLOCK_LABEL_MAX_LENGTH = 80;
-
-    public const ALLOWED_LAYOUT_KEYS = [
-        'columns',
-        'width',
-        'gap',
-        'padding_y',
-        'background_token',
-        'custom_width',
-    ];
 
     public const ALLOWED_SPACING_SCALE = ['none', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'];
 
@@ -208,6 +183,7 @@ final class CanonicalDocumentSchema
         'tag',
         'link',
         'custom_css',
+        'global_ref',
     ];
 
     /** Exact attribute names an author may set on a block wrapper. */
@@ -293,6 +269,7 @@ final class CanonicalDocumentSchema
         'tag',
         'link',
         'custom_css',
+        'global_ref',
     ];
 
     /** An element's own stylesheet: a few rules, not a file. */
@@ -341,7 +318,6 @@ final class CanonicalDocumentSchema
 
     public const ALLOWED_ALIGNMENTS = ['left', 'center', 'right', 'justify'];
 
-    public const SECTION_ID_PATTERN   = '/^sec_[a-z0-9]{16,32}$/';
     public const BLOCK_ID_PATTERN     = '/^blk_[a-z0-9]{16,32}$/';
     public const BLOCK_TYPE_PATTERN   = '/^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/';
     public const TEMPLATE_KEY_PATTERN = '/^[a-z0-9][a-z0-9_-]{0,119}$/';
@@ -364,14 +340,6 @@ final class CanonicalDocumentSchema
         '_collapsed',
         '_dirty',
     ];
-
-    /**
-     * Generate a cryptographically random opaque Section ID (`sec_<24 hex chars>`).
-     */
-    public static function newSectionId(): string
-    {
-        return 'sec_' . bin2hex(random_bytes(12));
-    }
 
     /**
      * Generate a cryptographically random opaque Block ID (`blk_<24 hex chars>`).
@@ -413,23 +381,29 @@ final class CanonicalDocumentSchema
     }
 
     /**
-     * Default section layout map.
+     * A new top-level Container: a `<section>`, boxed to the site's content width with the site's gutter, spaced like the
+     * site's default band. Its children are stacked until the author says otherwise.
      *
+     * @param array<string, mixed> $overrides
      * @return array<string, mixed>
      */
-    public static function defaultSectionLayout(): array
+    public static function newContainer(array $overrides = []): array
     {
-        return [
-            'background_token' => 'surface.primary',
-            'columns'          => ['base' => 1, 'md' => 12],
-            'gap'              => 'md',
-            'padding_y'        => ['base' => 'md', 'md' => 'lg'],
-            'width'            => 'default',
-        ];
+        return array_replace([
+            'id'         => self::newBlockId(),
+            'type'       => self::CONTAINER_TYPE,
+            'version'    => self::CONTAINER_VERSION,
+            'tag'        => 'section',
+            'props'      => [],
+            'style'      => ['surface_token' => 'surface.primary', 'layout' => ['content_width' => 'boxed', 'gutter' => 'site']],
+            'visibility' => self::defaultVisibility(),
+            'bindings'   => [],
+            'children'   => [],
+        ], $overrides);
     }
 
     /**
-     * Default visibility map for sections and blocks.
+     * Default visibility map for blocks.
      *
      * @return array<string, mixed>
      */
@@ -460,7 +434,7 @@ final class CanonicalDocumentSchema
     }
 
     /**
-     * Construct a blank, valid canonical Studio document (schema_version = "1.0").
+     * Construct a blank, valid canonical Studio document (schema_version = "2.0").
      *
      * @return array<string, mixed>
      */
@@ -472,7 +446,7 @@ final class CanonicalDocumentSchema
         return [
             'document_type'  => $documentType,
             'schema_version' => self::SCHEMA_VERSION,
-            'sections'       => [],
+            'containers'     => [],
             'seo'            => self::defaultSeo($seoTitle),
             'settings'       => self::defaultSettings(),
             'template_key'   => $templateKey,

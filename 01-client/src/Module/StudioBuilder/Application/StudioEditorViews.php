@@ -9,7 +9,7 @@
  * decoded, and only to an actor authorized to edit that page).
  *
  * A page view carries no `uuid`. A Global Component view (Phase 6) exposes
- * the component page's uuid as `ref` — it IS the value a consuming section
+ * the component page's uuid as `ref` — it IS the value a consuming Container
  * stores in `global_ref`, opaque, tenant-scoped on every lookup, and only
  * ever returned to an authenticated, entitled actor of that tenant.
  */
@@ -65,7 +65,7 @@ final class StudioEditorViews
 
     /**
      * @param array<string, mixed> $row studiobuilder_templates row
-     * @param null|array{sections: int, blocks: int, block_labels: list<string>} $summary
+     * @param null|array{containers: int, blocks: int, block_labels: list<string>} $summary
      * @return array<string, mixed>
      */
     public static function template(array $row, ?string $thumbnailUrl = null, ?array $summary = null): array
@@ -84,9 +84,9 @@ final class StudioEditorViews
     }
 
     /**
-     * A Global Component: a `section_preset` page plus its reference key and usage.
+     * A Global Component: a `container_preset` page plus its reference key and usage.
      *
-     * @param array<string, mixed> $row studiobuilder_pages row (page_type = section_preset)
+     * @param array<string, mixed> $row studiobuilder_pages row (page_type = container_preset)
      * @return array<string, mixed>
      */
     public static function component(array $row, int $usageCount = 0): array

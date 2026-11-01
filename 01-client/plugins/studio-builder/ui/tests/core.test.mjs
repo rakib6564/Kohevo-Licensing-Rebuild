@@ -12,19 +12,22 @@ import { attachCanvas, nodeElementFrom, markSelected } from '../src/core/canvas.
 import { createTransport } from '../src/core/api.mjs';
 import { EditLock } from '../src/core/lock.mjs';
 import { t, errorMessage } from '../src/core/messages.mjs';
-import { manifest, doc, section, heading, container, block } from './helpers.mjs';
+import { manifest, doc, topContainer, heading, container, block } from './helpers.mjs';
 
 // ── doc.mjs ───────────────────────────────────────────────────────────────
 
 test('tree: find, walk, ids, depth, labels', () => {
   const inner = heading('Inner');
   const c = container([inner]);
-  const s = section([heading('Top'), c]);
+  const s = topContainer([heading('Top'), c]);
   const x = doc([s]);
   assert.equal(d.findNode(x, inner.id).parentId, c.id);
-  assert.equal(d.findNode(x, inner.id).depth, 2);
-  assert.equal(d.findNode(x, s.id).kind, 'section');
-  assert.equal(d.countBlocks(x), 3);
+  assert.equal(d.findNode(x, inner.id).depth, 3, 'a top-level Container is depth 1');
+  assert.equal(d.findNode(x, s.id).depth, 1);
+  assert.equal(d.findNode(x, s.id).parentId, null);
+  assert.equal(d.findNode(x, inner.id).topId, s.id);
+  assert.equal(d.findNode(x, s.id).kind, 'block', 'one node kind');
+  assert.equal(d.countBlocks(x), 4, 'the top-level Container counts');
   assert.equal(d.nodeIds(x).size, 4);
   assert.equal(d.nodeLabel(inner, manifest, 'block'), 'Heading: Inner');
   assert.deepEqual(d.asObject([]), {}, 'PHP empty-object encoding ([]) reads as {}');
@@ -33,72 +36,74 @@ test('tree: find, walk, ids, depth, labels', () => {
 test('structure rules mirror the server: children only in containers, no cycles, depth limit', () => {
   const leaf = heading('Leaf');
   const c1 = container([]);
-  const c2 = container([container([container([container([container([container([])])])])])]); // depths 1..6 (the maximum)
-  const s = section([leaf, c1, c2]);
+  // The chain fills the nesting limit: `s` is depth 1, so c2 is depth 2 and `deepest` the maximum.
+  const max = manifest.limits.max_nesting_depth;
+  let deepest = container([]);
+  const chain = [deepest];
+  for (let depth = max; depth > 2; depth -= 1) { deepest = container([chain[0]]); chain.unshift(deepest); }
+  const c2 = chain[0];
+  const s = topContainer([leaf, c1, c2]);
   const x = doc([s]);
   assert.equal(d.canMoveBlock(x, manifest, leaf.id, c1.id), true, 'into a container');
   assert.equal(d.canMoveBlock(x, manifest, c1.id, leaf.id), false, 'a heading does not allow children');
   assert.equal(d.canMoveBlock(x, manifest, c2.id, c2.children[0].id), false, 'never into its own descendant');
-  assert.equal(d.canMoveBlock(x, manifest, c2.id, c1.id), false, 'depth would exceed max_nesting_depth (6)');
-  const fifth = c2.children[0].children[0].children[0].children[0];
-  assert.equal(d.canInsertBlock(x, manifest, fifth.id, 'core.heading'), true, 'a child at depth 6 is allowed');
-  const deepest = fifth.children[0];
-  assert.equal(d.canInsertBlock(x, manifest, deepest.id, 'core.heading'), false, 'a child at depth 7 is not');
+  assert.equal(d.canMoveBlock(x, manifest, c2.id, c1.id), false, 'depth would exceed max_nesting_depth');
+  const last = chain.at(-1);
+  const above = chain.at(-2);
+  assert.equal(d.canInsertBlock(x, manifest, above.id, 'core.heading'), true, 'a child at the maximum depth is allowed');
+  assert.equal(d.canInsertBlock(x, manifest, last.id, 'core.heading'), false, 'a child one deeper is not');
   assert.equal(d.canInsertBlock(x, manifest, s.id, 'unknown.block'), false, 'unregistered types are never offered');
 });
 
-test('keyboard move targets: siblings, across sections, out of / into containers', () => {
+test('keyboard move targets: siblings, across top-level Containers, out of / into containers', () => {
   const a = heading('A'); const b = heading('B'); const inC = heading('In');
   const c = container([inC]);
-  const s1 = section([a, b, c]); const s2 = section([]);
+  const s1 = topContainer([a, b, c]); const s2 = topContainer([]);
   const x = doc([s1, s2]);
   assert.deepEqual(d.blockMoveTarget(x, manifest, b.id, 'up'), { parentId: s1.id, index: 0 });
-  assert.deepEqual(d.blockMoveTarget(x, manifest, a.id, 'up'), null, 'first block of first section cannot go up');
-  assert.deepEqual(d.blockMoveTarget(x, manifest, c.id, 'down'), { parentId: s2.id, index: 0 }, 'crosses into the next section');
+  assert.deepEqual(d.blockMoveTarget(x, manifest, a.id, 'up'), null, 'first block of the first Container cannot go up');
+  assert.deepEqual(d.blockMoveTarget(x, manifest, c.id, 'down'), { parentId: s2.id, index: 0 }, 'crosses into the next top-level Container');
   assert.deepEqual(d.blockMoveTarget(x, manifest, inC.id, 'up'), { parentId: s1.id, index: 2 }, 'steps out before its container');
   assert.deepEqual(d.blockOutdentTarget(x, manifest, inC.id), { parentId: s1.id, index: 3 });
   assert.deepEqual(d.blockIndentTarget(x, manifest, b.id), null, 'previous sibling is not a container');
-  const y = doc([section([container([]), heading('Z')])]);
-  const z = y.sections[0].blocks[1];
-  assert.deepEqual(d.blockIndentTarget(y, manifest, z.id), { parentId: y.sections[0].blocks[0].id, index: 0 });
+  const y = doc([topContainer([container([]), heading('Z')])]);
+  const z = y.containers[0].children[1];
+  assert.deepEqual(d.blockIndentTarget(y, manifest, z.id), { parentId: y.containers[0].children[0].id, index: 0 });
 });
 
 test('insertion point follows the selection', () => {
   const a = heading('A'); const c = container([]);
-  const s = section([a, c]);
+  const s = topContainer([a, c]);
   const x = doc([s]);
   assert.deepEqual(d.insertionPoint(x, manifest, a.id, 'core.heading'), { parentId: s.id, index: 1 });
   assert.deepEqual(d.insertionPoint(x, manifest, c.id, 'core.heading'), { parentId: c.id, index: 0 });
   assert.deepEqual(d.insertionPoint(x, manifest, s.id, 'core.heading'), { parentId: s.id, index: 2 });
-  assert.equal(d.insertionPoint(doc([]), manifest, null, 'core.heading'), null, 'an empty page needs a section first');
+  assert.equal(d.insertionPoint(doc([]), manifest, null, 'core.heading'), null, 'an empty page needs a Container first');
+  assert.deepEqual(d.insertionPoint(doc([]), manifest, null, 'core.container'), { parentId: null, index: 0 });
 });
 
 // ── operations.mjs ───────────────────────────────────────────────────────
 
 test('operations use the canonical {op, payload} vocabulary', () => {
-  assert.deepEqual(ops.moveBlock('blk_1', 'sec_1', 2), { op: 'move_block', payload: { block_id: 'blk_1', parent_id: 'sec_1', index: 2 } });
-  assert.deepEqual(ops.insertBlock('sec_1', 0, { type: 'core.heading' }), { op: 'insert_block', payload: { parent_id: 'sec_1', index: 0, block: { type: 'core.heading' } } });
-  assert.deepEqual(ops.moveSection('sec_1', 3), { op: 'move_section', payload: { section_id: 'sec_1', to_index: 3 } });
+  assert.deepEqual(ops.moveBlock('blk_1', 'blk_top_1', 2), { op: 'move_block', payload: { block_id: 'blk_1', parent_id: 'blk_top_1', index: 2 } });
+  assert.deepEqual(ops.insertBlock('blk_top_1', 0, { type: 'core.heading' }), { op: 'insert_block', payload: { parent_id: 'blk_top_1', index: 0, block: { type: 'core.heading' } } });
+  assert.deepEqual(ops.moveBlock('blk_1', null, 3), { op: 'move_block', payload: { block_id: 'blk_1', parent_id: null, index: 3 } }, 'null is the top level');
   assert.deepEqual(ops.duplicateBlock('blk_1'), { op: 'duplicate_block', payload: { block_id: 'blk_1' } });
-  assert.deepEqual(ops.duplicateSection('sec_1'), { op: 'duplicate_section', payload: { section_id: 'sec_1' } });
-  assert.deepEqual(ops.updateSectionLabel('sec_1', 'Renamed'), { op: 'update_section_label', payload: { section_id: 'sec_1', label: 'Renamed' } });
-  const serverOps = ['update_block_custom_css', 'update_settings', 'update_seo', 'update_template', 'insert_section', 'remove_section', 'move_section',
-    'duplicate_section', 'update_section_label', 'update_section_layout',
-    'update_section_visibility', 'insert_block', 'remove_block', 'move_block', 'duplicate_block', 'update_block_props', 'update_block_style', 'update_block_visibility', 'update_block_bindings',
+  assert.deepEqual(ops.updateBlockMeta('blk_1', { label: 'Renamed' }), { op: 'update_block_meta', payload: { block_id: 'blk_1', label: 'Renamed' } });
+  const serverOps = ['update_block_custom_css', 'update_settings', 'update_seo', 'update_template', 'insert_block', 'remove_block', 'move_block', 'duplicate_block', 'update_block_props', 'update_block_style', 'update_block_visibility', 'update_block_bindings',
     'update_block_responsive', 'update_block_class_names', 'update_block_attributes',
     // DocumentOperation::ALLOWED_OPS (DocumentOperation.php) — the motion
     // operations have been server-side since Sprint 7; only the builder UI
     // was missing them.
     'update_block_animation', 'update_block_interactions',
-    // Layer lock and block rename (LayerLock.php; update_block_meta / update_section_locked).
-    'update_block_meta', 'update_section_locked',
-    // B2-P3b: states, wrapper tag, section style and single-property reset.
-    'update_block_style_states', 'update_block_tag', 'reset_block_style_property', 'update_section_style',
-    // B2-P3d: a section's own motion.
-    'update_section_animation', 'update_section_interactions',
+    // Layer lock and block rename (LayerLock.php; update_block_meta).
+    'update_block_meta',
+    // B2-P3b: states, wrapper tag and single-property reset.
+    'update_block_style_states', 'update_block_tag', 'reset_block_style_property',
     // A widget's part styles (BlockParts.php).
     'update_block_style_parts'];
   for (const name of Object.values(ops.OPS)) assert.ok(serverOps.includes(name), `${name} is a server DocumentOperation`);
+  assert.ok(!Object.values(ops.OPS).some((name) => name.includes('section')), 'no section operation is left');
 });
 
 test('motion operations carry the whole-value payload the server applier reads', () => {
@@ -110,12 +115,12 @@ test('motion operations carry the whole-value payload the server applier reads',
 
 test('local apply: animation and interactions replace the field, coalesce, and miss loudly', () => {
   const a = heading('A');
-  const x = doc([section([a])]);
+  const x = doc([topContainer([a])]);
   const animated = ops.applyLocal(x, ops.updateBlockAnimation(a.id, { type: 'fade_up' }));
-  assert.deepEqual(animated.sections[0].blocks[0].animation, { type: 'fade_up' });
+  assert.deepEqual(animated.containers[0].children[0].animation, { type: 'fade_up' });
 
   const interacted = ops.applyLocal(x, ops.updateBlockInteractions(a.id, { trigger: 'viewport-enter' }));
-  assert.deepEqual(interacted.sections[0].blocks[0].interactions, { trigger: 'viewport-enter' });
+  assert.deepEqual(interacted.containers[0].children[0].interactions, { trigger: 'viewport-enter' });
 
   // Both are whole-value replaces on `block_id`, so a rapid second edit wins
   // instead of queueing every intermediate value.
@@ -186,35 +191,38 @@ test('motion: hasMotion reflects what the renderer would actually emit', () => {
 
 test('local apply: every structural op, with structural sharing', () => {
   const a = heading('A'); const b = heading('B'); const c = container([]);
-  const s1 = section([a, b, c]); const s2 = section([heading('Other')]);
+  const s1 = topContainer([a, b, c]); const s2 = topContainer([heading('Other')]);
   const x = doc([s1, s2]);
   const moved = ops.applyLocal(x, ops.moveBlock(a.id, c.id, 0), { manifest });
   assert.equal(d.findNode(moved, a.id).parentId, c.id);
-  assert.equal(moved.sections[1], x.sections[1], 'untouched section keeps its identity');
+  assert.equal(moved.containers[1], x.containers[1], 'an untouched Container keeps its identity');
   const removed = ops.applyLocal(x, ops.removeBlock(b.id), { manifest });
   assert.equal(d.findNode(removed, b.id), null);
   const dupBlock = ops.applyLocal(x, ops.duplicateBlock(a.id), { manifest });
-  assert.equal(dupBlock.sections[0].blocks.length, 4);
-  assert.equal(dupBlock.sections[0].blocks[0].id, a.id);
-  assert.notEqual(dupBlock.sections[0].blocks[1].id, a.id);
-  assert.equal(dupBlock.sections[0].blocks[1].props.text, 'A');
-  const dupSec = ops.applyLocal(x, ops.duplicateSection(s1.id), { manifest });
-  assert.equal(dupSec.sections.length, 3);
-  assert.notEqual(dupSec.sections[1].id, s1.id);
-  assert.ok(dupSec.sections[1].label.includes('Copy'));
-  const renamed = ops.applyLocal(x, ops.updateSectionLabel(s1.id, 'New Title'));
-  assert.equal(renamed.sections[0].label, 'New Title');
+  assert.equal(dupBlock.containers[0].children.length, 4);
+  assert.equal(dupBlock.containers[0].children[0].id, a.id);
+  assert.notEqual(dupBlock.containers[0].children[1].id, a.id);
+  assert.equal(dupBlock.containers[0].children[1].props.text, 'A');
+  const dupTop = ops.applyLocal(x, ops.duplicateBlock(s1.id), { manifest });
+  assert.equal(dupTop.containers.length, 3);
+  assert.notEqual(dupTop.containers[1].id, s1.id);
+  assert.equal(dupTop.containers[1].metadata.label, s1.metadata.label);
+  assert.ok(d.nodeIds(dupTop).size === d.countBlocks(dupTop), 'every copied descendant has its own id');
+  const renamed = ops.applyLocal(x, ops.updateBlockMeta(s1.id, { label: 'New Title' }));
+  assert.equal(renamed.containers[0].metadata.label, 'New Title');
   const inserted = ops.applyLocal(x, ops.insertBlock(s2.id, 0, { type: 'core.button' }), { manifest, provisionalId: 'tmp_x' });
   const ins = d.findNode(inserted, 'tmp_x').node;
   assert.equal(ins.type, 'core.button');
   assert.equal(ins.version, 1);
-  const secs = ops.applyLocal(x, ops.moveSection(s2.id, 0), { manifest });
-  assert.deepEqual(secs.sections.map((s) => s.id), [s2.id, s1.id]);
-  const newSec = ops.applyLocal(x, ops.insertSection(1), { provisionalId: 'tmp_s' });
-  assert.equal(newSec.sections[1].id, 'tmp_s');
-  assert.deepEqual(newSec.sections[1].layout, ops.DEFAULT_SECTION_LAYOUT);
+  const tops = ops.applyLocal(x, ops.moveBlock(s2.id, null, 0), { manifest });
+  assert.deepEqual(tops.containers.map((s) => s.id), [s2.id, s1.id]);
+  const newTop = ops.applyLocal(x, ops.insertContainer(1), { manifest, provisionalId: 'tmp_s' });
+  assert.equal(newTop.containers[1].id, 'tmp_s');
+  assert.equal(newTop.containers[1].type, d.CONTAINER_TYPE);
+  assert.equal(newTop.containers[1].tag, 'section');
+  assert.deepEqual(newTop.containers[1].style.layout, { content_width: 'boxed', gutter: 'site' });
   assert.throws(() => ops.applyLocal(x, ops.removeBlock('blk_missing')), /No node/);
-  assert.equal(x.sections[0].blocks.length, 3, 'the input document is never mutated');
+  assert.equal(x.containers[0].children.length, 3, 'the input document is never mutated');
 });
 
 test('coalescing and provisional id remapping', () => {

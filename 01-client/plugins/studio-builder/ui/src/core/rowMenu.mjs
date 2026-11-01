@@ -1,7 +1,7 @@
 // What the Layers row menu offers for one row, and whether each entry is available right now.
 // Pure: the component only renders this list and runs the chosen action.
 
-import { blockDefinition, blockMoveTarget, canMoveBlock, childrenOf, findNode, isGlobalSection, sectionsOf } from './doc.mjs';
+import { blockDefinition, blockMoveTarget, canMoveBlock, childrenOf, findNode, isGlobalContainer } from './doc.mjs';
 import { effectivelyLocked, hasLockedDescendant, isLocked } from './layerLock.mjs';
 import { saveScopesFor } from './library.mjs';
 import { planPaste } from './clipboard.mjs';
@@ -10,7 +10,7 @@ import { planPaste } from './clipboard.mjs';
 export function rowFor(doc, id) {
   const info = findNode(doc, id);
   if (!info) return null;
-  const setSize = info.kind === 'section' ? sectionsOf(doc).length : childrenOf(doc, info.parentId).length;
+  const setSize = childrenOf(doc, info.parentId).length;
   return { id, kind: info.kind, index: info.index, setSize, parentId: info.parentId, node: info.node };
 }
 
@@ -19,8 +19,8 @@ export function rowFor(doc, id) {
  * system clipboard is only read when Paste is chosen) both stay enabled and the choice itself reports the problem.
  */
 export function pasteState({ row, doc, manifest, envelope }) {
-  const def = row.kind === 'block' ? blockDefinition(manifest, row.node.type) : null;
-  const holds = row.kind === 'section' ? !isGlobalSection(row.node) : !!(def && def.allows_children);
+  const def = blockDefinition(manifest, row.node.type);
+  const holds = !!(def && def.allows_children) && !isGlobalContainer(row.node);
   const check = (mode) => {
     if (!envelope) return { disabled: false };
     const plan = planPaste({ doc, manifest, envelope, targetId: row.id, mode });
@@ -39,17 +39,10 @@ export function rowMenuItems({ row, doc, manifest, locks, pageType = 'page', can
   const locked = own || byAncestor;
   const hidden = !!(row.node.visibility && Array.isArray(row.node.visibility.devices) && row.node.visibility.devices.length === 0);
 
-  let canUp;
-  let canDown;
-  if (row.kind === 'section') {
-    canUp = row.index > 0;
-    canDown = row.index < row.setSize - 1;
-  } else {
-    const up = blockMoveTarget(doc, manifest, row.id, 'up');
-    const down = blockMoveTarget(doc, manifest, row.id, 'down');
-    canUp = !!up && canMoveBlock(doc, manifest, row.id, up.parentId);
-    canDown = !!down && canMoveBlock(doc, manifest, row.id, down.parentId);
-  }
+  const up = blockMoveTarget(doc, manifest, row.id, 'up');
+  const down = blockMoveTarget(doc, manifest, row.id, 'down');
+  const canUp = !!up && canMoveBlock(doc, manifest, row.id, up.parentId);
+  const canDown = !!down && canMoveBlock(doc, manifest, row.id, down.parentId);
 
   const items = [
     { key: 'rename', labelKey: 'row_rename', disabled: locked, reasonKey: locked ? 'locked_by_parent' : null },
@@ -63,7 +56,7 @@ export function rowMenuItems({ row, doc, manifest, locks, pageType = 'page', can
     { key: 'move_down', labelKey: 'row_move_down', disabled: locked || !canDown, reasonKey: locked ? 'locked_by_parent' : null },
   ];
 
-  // "Save to library" needs the admin permission and a scope for this very node (a global-component section has none).
+  // "Save to library" needs the admin permission and a scope for this very node (a global component's reference has none).
   const scopes = saveScopesFor(doc, pageType, row.id);
   if (canSaveToLibrary && scopes.some((s) => s.nodeId === row.id)) items.push({ key: 'save_library', labelKey: 'row_save_library' });
 

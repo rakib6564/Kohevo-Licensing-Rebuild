@@ -40,6 +40,7 @@ test('the empty container button opens the same window', async ({ page }) => {
   await page.getByTestId('zone-templates').click();
   await expect(page.getByTestId('library-modal')).toBeVisible();
   await page.keyboard.press('Escape');
+  await page.getByTestId('undo').click(); // nothing a test adds stays on the shared page
   const undo = page.getByTestId('undo');
   for (let i = 0; i < 6 && (await undo.isEnabled()); i++) { await undo.click(); await page.waitForTimeout(400); }
 });

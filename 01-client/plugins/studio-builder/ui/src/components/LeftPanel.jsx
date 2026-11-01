@@ -93,11 +93,9 @@ export const LeftPanel = memo(function LeftPanel({
   if (tab === 'blocks') sheetTitle = t('sheet_add');
   else if (tab === 'structure') sheetTitle = t('sheet_layers');
   else if (tab === 'inspector') {
-    if (info && info.kind === 'block') {
+    if (info) {
       const def = blockDefinition(manifest, info.node.type);
       sheetTitle = def ? t('sheet_edit_named', { label: def.label }) : t('sheet_edit_block');
-    } else if (info && info.kind === 'section') {
-      sheetTitle = t('sheet_edit_section');
     } else {
       sheetTitle = t('sheet_page_settings');
     }

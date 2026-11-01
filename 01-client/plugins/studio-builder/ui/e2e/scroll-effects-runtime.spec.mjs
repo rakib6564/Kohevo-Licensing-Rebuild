@@ -9,7 +9,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const markup = fs.readFileSync(path.join(here, '..', 'tests', 'fixtures', 'scroll-effects.html'), 'utf8');
 const runtimePath = path.join(here, '..', '..', 'assets', 'public', 'studio-runtime.js');
 // Room to scroll: the parallax section is tall, and the page below it longer still.
-const page_ = `<!doctype html><html><head><style>body{margin:0}.sb-section{min-height:120px;background:#fff}main .sb-section{min-height:900px}main{padding-bottom:2000px}</style></head><body>${markup}</body></html>`;
+const page_ = `<!doctype html><html><head><style>body{margin:0}.sb-top{min-height:120px;background:#fff}main .sb-top{min-height:900px}main{padding-bottom:2000px}</style></head><body>${markup}</body></html>`;
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'one viewport is enough; run once');
@@ -26,7 +26,7 @@ const scrollTo = async (page, y) => {
   await page.waitForTimeout(120); // one rAF and the stuck-state transition start
 };
 
-test('a sticky header section sticks to the page, marks itself stuck, hides scrolling down and returns scrolling up', async ({ page }) => {
+test('a sticky header Container sticks to the page, marks itself stuck, hides scrolling down and returns scrolling up', async ({ page }) => {
   await load(page);
   const header = page.locator('section.sb-sticky');
   await expect(header).toHaveCSS('position', 'sticky');

@@ -50,7 +50,7 @@ test('the Pages view lists this site\'s pages with the current one marked, and o
   await page.locator('[data-nav="layers"]').click();
   await expect(page.locator('[data-nav="layers"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(pages(page)).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /Add section/ }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /Add Container/ }).first()).toBeVisible();
 });
 
 test('duplicate makes a draft copy; archive takes it off the list; a taken address is refused in the dialog', async ({ page }) => {

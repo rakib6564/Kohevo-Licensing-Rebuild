@@ -23,14 +23,14 @@ test('the canvas frame is script-less and nothing from the parent is injected in
   expect(handlers).toEqual([]);
 });
 
-test('adding a section from the Layers panel puts it in the canvas', async ({ page }, testInfo) => {
+test('adding a Container from the Layers panel puts it in the canvas', async ({ page }, testInfo) => {
   // The Layers panel is a sheet below 860px; mobile flows are covered by the mobile-shell suite.
   test.skip(testInfo.project.name !== 'desktop', 'desktop docked panel only');
   await openBuilder(page);
   const frame = await frameDocument(page);
   const before = await frame.locator('[data-sb-node]').count();
-  await page.getByRole('tab', { name: /^Layers$/ }).click(); // the editor opens on Add; the Add section button is in Layers
-  await page.getByRole('button', { name: /Add section/ }).first().click();
+  await page.getByRole('tab', { name: /^Layers$/ }).click(); // the editor opens on Add; the Add Container button is in Layers
+  await page.getByRole('button', { name: /Add Container/ }).first().click();
   await expect.poll(async () => (await frameDocument(page)).locator('[data-sb-node]').count(), { timeout: 15_000 }).toBeGreaterThan(before);
 });
 

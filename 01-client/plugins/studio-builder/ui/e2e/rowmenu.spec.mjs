@@ -9,18 +9,18 @@ test.afterEach(async ({ page }) => {
   await page.goto(`/plugins/studio-builder/admin/builder.php?page=${sandboxPageId()}&lang=en`);
 });
 
-async function ensureSections(page, n) {
+async function ensureContainers(page, n) {
   await page.getByRole('tab', { name: /^(Layers|Calques)$/ }).click();
   for (let guard = 0; guard < n + 2; guard++) {
     const count = await page.locator(`${ROWS}[aria-level="1"]`).count();
     if (count >= n) break;
-    await page.getByRole('button', { name: /Add section/ }).first().click();
+    await page.getByRole('button', { name: /Add Container/ }).first().click();
     await expect.poll(() => page.locator(`${ROWS}[aria-level="1"]`).count(), { timeout: 15_000 }).toBeGreaterThan(count);
   }
   await settled(page);
 }
 
-// Creating a section selects it, which moves the left panel to the Inspector: come back to Layers before reading rows.
+// Creating a Container selects it, which moves the left panel to the Inspector: come back to Layers before reading rows.
 async function topIds(page) {
   await page.getByRole('tab', { name: /^(Layers|Calques)$/ }).click();
   return page.locator(`${ROWS}[aria-level="1"]`).evaluateAll((els) => els.map((e) => e.getAttribute('data-row')));
@@ -38,7 +38,7 @@ test.describe('desktop', () => {
 
   test('the ⋯ button opens a menu of every row action; Escape closes it and returns focus', async ({ page }) => {
     await openBuilder(page);
-    await ensureSections(page, 1);
+    await ensureContainers(page, 1);
     const [id] = await topIds(page);
     await selectRow(page, id);
     const btn = menuOf(page, id);
@@ -66,9 +66,9 @@ test.describe('desktop', () => {
     await expect(page.getByRole('menu')).toHaveCount(0);
   });
 
-  test('Duplicate and Delete from the menu add and remove a section; Hide and Show toggle it', async ({ page }) => {
+  test('Duplicate and Delete from the menu add and remove a Container; Hide and Show toggle it', async ({ page }) => {
     await openBuilder(page);
-    await ensureSections(page, 1);
+    await ensureContainers(page, 1);
     const before = await topIds(page);
     const id = before[0];
     await selectRow(page, id);
@@ -94,16 +94,16 @@ test.describe('desktop', () => {
     await expect.poll(async () => (await topIds(page)).length, { timeout: 15_000 }).toBe(before.length);
   });
 
-  test('Move down and Move up reorder sections; the ends are disabled', async ({ page }) => {
+  test('Move down and Move up reorder Containers; the ends are disabled', async ({ page }) => {
     await openBuilder(page);
-    await ensureSections(page, 2);
+    await ensureContainers(page, 2);
     const [a, b] = await topIds(page);
     await selectRow(page, a);
     await menuOf(page, a).click();
     await expect(item(page, 'move_up')).toHaveAttribute('aria-disabled', 'true');
     await item(page, 'move_down').click();
     await expect.poll(async () => (await topIds(page)).slice(0, 2), { timeout: 15_000 }).toEqual([b, a]);
-    // the shared page may hold more sections: the last one can never move down
+    // the shared page may hold more Containers: the last one can never move down
     const ids = await topIds(page);
     await selectRow(page, ids[ids.length - 1]);
     await menuOf(page, ids[ids.length - 1]).click();
@@ -119,7 +119,7 @@ test.describe('desktop', () => {
 
   test('Rename from the menu opens the inline field; Save to library opens the template dialog on this node', async ({ page }) => {
     await openBuilder(page);
-    await ensureSections(page, 1);
+    await ensureContainers(page, 1);
     const [id] = await topIds(page);
     await selectRow(page, id);
     await menuOf(page, id).click();
@@ -142,13 +142,13 @@ test.describe('desktop', () => {
     await item(page, 'save_library').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    await expect(dialog.locator('#sbx-tpl-scope option:checked')).toHaveText(/section/i); // the row's own node is the default scope
+    await expect(dialog.locator('#sbx-tpl-scope option:checked')).toHaveText(/Container/i); // the row's own node is the default scope
     await dialog.getByRole('button', { name: 'Cancel' }).click();
   });
 
   test('Shift+F10 on a focused row opens its menu', async ({ page }) => {
     await openBuilder(page);
-    await ensureSections(page, 1);
+    await ensureContainers(page, 1);
     const [id] = await topIds(page);
     const row = page.locator(`${ROWS}[data-row="${id}"]`);
     await row.focus();
@@ -159,7 +159,7 @@ test.describe('desktop', () => {
 
   test('the header and footer appear as references, not layers', async ({ page }) => {
     await openBuilder(page);
-    await ensureSections(page, 1);
+    await ensureContainers(page, 1);
     const header = page.getByTestId('partial-header');
     const footer = page.getByTestId('partial-footer');
     await expect(header).toBeVisible();
@@ -174,7 +174,7 @@ test.describe('desktop', () => {
   test('the menu and the references are French in French', async ({ page }) => {
     await page.goto(`/plugins/studio-builder/admin/builder.php?page=${sandboxPageId()}&lang=fr`);
     await page.locator('header.sbx-topbar').waitFor({ state: 'visible' });
-    await ensureSections(page, 1);
+    await ensureContainers(page, 1);
     const [id] = await topIds(page);
     await page.locator(`${ROWS}[data-row="${id}"]`).click();
     await page.getByRole('tab', { name: /^Calques$/ }).click();
@@ -197,7 +197,7 @@ test.describe('phone', () => {
     const sheet = page.locator('.sbx-left.is-mobile-open');
     await sheet.getByRole('tab', { name: /^Layers$/ }).click();
     if (!(await sheet.locator(ROWS).count())) {
-      await sheet.getByRole('button', { name: /Add section/ }).first().click();
+      await sheet.getByRole('button', { name: /Add Container/ }).first().click();
       await expect.poll(() => sheet.locator(ROWS).count(), { timeout: 15_000 }).toBeGreaterThan(0);
     }
     await settled(page);

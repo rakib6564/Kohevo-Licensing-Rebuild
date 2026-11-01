@@ -20,9 +20,8 @@ test('the same size word shows its own size for each field', () => {
   assert.equal(sizedLabel('layout.flex.gap', 'md'), 'Medium · 16px');
   assert.equal(sizedLabel('layout.container.padding', 'md'), 'Medium · 32px');
   assert.equal(sizedLabel('core.card.padding', 'md'), 'Medium · 20px');
-  assert.equal(sizedLabel('section.width', 'wide'), 'Wide · 1280px');
-  assert.equal(sizedLabel('section.width', 'full'), 'Full width · no limit');
-  assert.equal(sizedLabel('layout.section.min_height', 'screen'), 'Full screen height · full screen height');
+  assert.equal(sizedLabel('container.width', 'wide'), 'Wide · 1280px');
+  assert.equal(sizedLabel('container.width', 'full'), 'Full width · no limit');
   assert.equal(sizedLabel('core.text.size', 'base'), 'Base (normal) · 16px');
   assert.equal(sizedLabel('core.heading.level', 'h2'), 'Heading 2', 'a field with no size table keeps the plain name');
   assert.equal(sizedLabel('core.card.padding', 'unknown'), 'Unknown');
@@ -38,7 +37,7 @@ test('every field mapped to a table names a real field and covers each of its al
       Object.values(o).forEach((x) => walk(x, owner));
     }
   })(manifest, '');
-  const vocab = { 'section.gap': manifest.vocabulary.spacing_scale, 'section.padding_y': manifest.vocabulary.spacing_scale, 'section.width': manifest.vocabulary.container_widths };
+  const vocab = { 'container.gap': manifest.vocabulary.spacing_scale, 'container.padding_y': manifest.vocabulary.spacing_scale, 'container.width': manifest.vocabulary.container_widths };
   for (const [fieldId, table] of Object.entries(OPTION_VALUES.fields)) {
     const allowed = fields.get(fieldId) || vocab[fieldId];
     assert.ok(allowed, `${fieldId} exists in the manifest`);

@@ -3,24 +3,23 @@
 // refusing a locked edit up front.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { manifest, doc, section, heading, container, fakeServer, manualScheduler } from './helpers.mjs';
+import { manifest, doc, topContainer, heading, container, fakeServer, manualScheduler } from './helpers.mjs';
 import * as ops from '../src/core/operations.mjs';
 import { applyLocal } from '../src/core/operations.mjs';
 import { findNode, nodeLabel } from '../src/core/doc.mjs';
 import { SyncEngine } from '../src/core/sync.mjs';
 import { isLocked, lockIndex, effectivelyLocked, ancestorLocked, hasLockedDescendant, lockViolation } from '../src/core/layerLock.mjs';
 
-/** section → [container → [inner heading], sibling heading] */
+/** top-level Container → [container → [inner heading], sibling heading] */
 function fixture() {
   const inner = heading('Inner');
   const box = container([inner]);
   const sibling = heading('Sibling');
-  const sec = section([box, sibling]);
+  const sec = topContainer([box, sibling]);
   return { d: doc([sec]), sec, box, inner, sibling };
 }
 const lock = (d, id, locked = true) => {
-  const op = findNode(d, id).kind === 'section' ? ops.updateSectionLocked(id, locked) : ops.updateBlockMeta(id, { locked });
-  return applyLocal(d, op);
+  return applyLocal(d, ops.updateBlockMeta(id, { locked }));
 };
 
 test('update_block_meta sets, trims and clears the label; empty metadata disappears', () => {
@@ -35,12 +34,12 @@ test('update_block_meta sets, trims and clears the label; empty metadata disappe
   assert.equal('metadata' in findNode(d, sibling.id).node, false);
 });
 
-test('update_section_locked adds the key only while locked', () => {
+test('update_block_meta on a top-level Container adds the lock only while locked', () => {
   const { d, sec } = fixture();
-  const locked = applyLocal(d, ops.updateSectionLocked(sec.id, true));
-  assert.equal(locked.sections[0].locked, true);
-  assert.equal('locked' in applyLocal(locked, ops.updateSectionLocked(sec.id, false)).sections[0], false);
-  assert.throws(() => applyLocal(d, ops.updateSectionLocked('sec_missing', true)));
+  const locked = applyLocal(d, ops.updateBlockMeta(sec.id, { locked: true }));
+  assert.equal(locked.containers[0].metadata.locked, true);
+  assert.equal('locked' in applyLocal(locked, ops.updateBlockMeta(sec.id, { locked: false })).containers[0].metadata, false);
+  assert.throws(() => applyLocal(d, ops.updateBlockMeta('blk_missing', { locked: true })));
   assert.throws(() => applyLocal(d, ops.updateBlockMeta('blk_missing', { label: 'x' })));
 });
 
@@ -79,7 +78,7 @@ test('lockViolation: a locked block refuses edits, moves, rename and removal; ot
   assert.equal(lockViolation(locked, ops.duplicateBlock(sibling.id)), null, 'duplicating stays allowed');
 });
 
-test('lockViolation: locked containers and sections protect everything inside', () => {
+test('lockViolation: locked Containers, nested or top-level, protect everything inside', () => {
   const { d, sec, box, inner, sibling } = fixture();
   const lockedBox = lock(d, box.id);
   assert.equal(lockViolation(lockedBox, ops.updateBlockProps(inner.id, {})), 'locked');
@@ -88,19 +87,19 @@ test('lockViolation: locked containers and sections protect everything inside', 
   assert.equal(lockViolation(lockedBox, ops.moveBlock(inner.id, sec.id, 0)), 'locked');
 
   const lockedSec = lock(d, sec.id);
-  assert.equal(lockViolation(lockedSec, ops.updateSectionLabel(sec.id, 'x')), 'locked');
-  assert.equal(lockViolation(lockedSec, ops.moveSection(sec.id, 0)), 'locked');
-  assert.equal(lockViolation(lockedSec, ops.removeSection(sec.id)), 'locked');
+  assert.equal(lockViolation(lockedSec, ops.updateBlockMeta(sec.id, { label: 'x' })), 'locked');
+  assert.equal(lockViolation(lockedSec, ops.moveBlock(sec.id, null, 0)), 'locked');
+  assert.equal(lockViolation(lockedSec, ops.removeBlock(sec.id)), 'locked');
   assert.equal(lockViolation(lockedSec, ops.insertBlock(sec.id, 0, { type: 'core.heading' })), 'locked');
   assert.equal(lockViolation(lockedSec, ops.updateBlockProps(sibling.id, {})), 'locked');
-  assert.equal(lockViolation(lockedSec, ops.insertSection(1, {})), null, 'a new top-level section is not inside the lock');
+  assert.equal(lockViolation(lockedSec, ops.insertContainer(1)), null, 'a new top-level Container is not inside the lock');
 });
 
 test('lockViolation: a parent holding a locked child cannot be removed, so locks cannot be deleted away', () => {
   const { d, sec, box, inner } = fixture();
   const locked = lock(d, inner.id);
   assert.equal(lockViolation(locked, ops.removeBlock(box.id)), 'locked');
-  assert.equal(lockViolation(locked, ops.removeSection(sec.id)), 'locked');
+  assert.equal(lockViolation(locked, ops.removeBlock(sec.id)), 'locked');
   // Moving the parent keeps the locked child intact, so it is allowed.
   assert.equal(lockViolation(locked, ops.moveBlock(box.id, sec.id, 1)), null);
 });
@@ -109,9 +108,9 @@ test('lockViolation: unlocking is allowed from the outermost lock only; unknown 
   const { d, sec, inner } = fixture();
   const both = lock(lock(d, inner.id), sec.id);
   assert.equal(lockViolation(both, ops.updateBlockMeta(inner.id, { locked: false })), 'locked');
-  assert.equal(lockViolation(both, ops.updateSectionLocked(sec.id, false)), null);
-  const afterSection = applyLocal(both, ops.updateSectionLocked(sec.id, false));
-  assert.equal(lockViolation(afterSection, ops.updateBlockMeta(inner.id, { locked: false })), null);
+  assert.equal(lockViolation(both, ops.updateBlockMeta(sec.id, { locked: false })), null);
+  const afterTop = applyLocal(both, ops.updateBlockMeta(sec.id, { locked: false }));
+  assert.equal(lockViolation(afterTop, ops.updateBlockMeta(inner.id, { locked: false })), null);
   assert.equal(lockViolation(both, ops.updateBlockProps('tmp_blk_pending', {})), null);
 });
 

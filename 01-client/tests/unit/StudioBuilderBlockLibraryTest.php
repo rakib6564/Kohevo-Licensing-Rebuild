@@ -88,7 +88,7 @@ function sbbl_block(string $type, array $props = [], array $extra = []): array
         'props'      => $props,
         'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
         'type'       => $type,
-        'version'    => 1,
+        'version'    => ($type === 'core.container' ? 2 : 1),
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
     ], $extra);
 }
@@ -97,14 +97,7 @@ function sbbl_block(string $type, array $props = [], array $extra = []): array
 function sbbl_doc(array $blocks): array
 {
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Interactive');
-    $doc['sections'] = [[
-        'blocks'     => $blocks,
-        'global_ref' => null,
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => 'Main',
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ]];
+    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => $blocks, 'visibility' => CanonicalDocumentSchema::defaultVisibility()])];
     return $doc;
 }
 
@@ -207,7 +200,7 @@ unit('block library: empty props normalise into visible starter content', functi
     $normalised = DocumentNormalizer::normalize($doc, $registry);
 
     $byType = [];
-    foreach ($normalised['sections'][0]['blocks'] as $block) {
+    foreach ($normalised['containers'][0]['children'] as $block) {
         $byType[$block['type']] = $block;
     }
 

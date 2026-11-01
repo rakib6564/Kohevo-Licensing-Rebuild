@@ -16,7 +16,7 @@
  *   hero pattern           core.hero      {eyebrow, heading, subheading, primary_cta, media}
  *   2–12 uniform cards     core.feature_list {columns, items: [{heading, body, url}]}
  *   flex / grid wrappers   core.container {gap, direction} (+ children), depth ≤ 4
- *   section / article / header / footer / main / body-level blocks -> sections
+ *   section / article / header / footer / main / body-level blocks -> top-level Containers
  *
  * Heuristics are deterministic and conservative; anything that does not
  * match falls back to the generic mapping. `div`, `aside` and custom
@@ -142,23 +142,23 @@ final class HtmlStructureMapper
         return true;
     }
 
-    // ── 2. Sections -> IR ────────────────────────────────────────────────────
+    // ── 2. Top-level Containers -> IR ────────────────────────────────────────────────────
 
     /** @return list<array<string, mixed>> */
-    public function sections(): array
+    public function containers(): array
     {
         $out = [];
-        foreach ($this->collectSections($this->body, 0) as $entry) {
-            $section = $this->mapSection($entry['el'], $entry['items']);
-            if ($section !== null) {
-                $out[] = $section;
+        foreach ($this->collectContainers($this->body, 0) as $entry) {
+            $container = $this->mapContainer($entry['el'], $entry['items']);
+            if ($container !== null) {
+                $out[] = $container;
             }
         }
         return $out;
     }
 
     /** @return list<array{el: ?int, items: list<int>}> */
-    private function collectSections(int $container, int $guard): array
+    private function collectContainers(int $container, int $guard): array
     {
         $items = $this->significant($this->children($container));
         // A lone generic wrapper (div / main / custom) around everything is unwrapped.
@@ -166,7 +166,7 @@ final class HtmlStructureMapper
             $only = $items[0];
             $tag = $this->tag($only);
             if (!in_array($tag, ['section', 'header', 'footer', 'article'], true) && !$this->isContentLevel($tag) && !$this->isHidden($only)) {
-                return $this->collectSections($only, $guard + 1);
+                return $this->collectContainers($only, $guard + 1);
             }
         }
 
@@ -193,7 +193,7 @@ final class HtmlStructureMapper
             }
             $flush();
             if ($guard < 16 && $this->hasSectioningChild($child)) {
-                foreach ($this->collectSections($child, $guard + 1) as $entry) {
+                foreach ($this->collectContainers($child, $guard + 1) as $entry) {
                     $out[] = $entry;
                 }
                 continue;
@@ -208,7 +208,7 @@ final class HtmlStructureMapper
     }
 
     /** @param list<int> $items @return ?array<string, mixed> */
-    private function mapSection(?int $el, array $items): ?array
+    private function mapContainer(?int $el, array $items): ?array
     {
         $nodes = null;
         if ($el !== null) {
@@ -233,8 +233,8 @@ final class HtmlStructureMapper
         $loc = $el !== null ? $this->loc($el) : $this->locOfItems($items);
         return [
             'loc'        => $loc,
-            'label'      => $this->sectionLabel($nodes),
-            'layout'     => $el !== null ? $this->sectionLayout($el) : [],
+            'label'      => $this->containerLabel($nodes),
+            'layout'     => $el !== null ? $this->containerLayout($el) : [],
             'visibility' => $el !== null ? $this->visibility($el) : null,
             'nodes'      => $nodes,
         ];
@@ -348,8 +348,7 @@ final class HtmlStructureMapper
 
     /**
      * Flex/grid evidence -> a horizontal/vertical `core.container`, each
-     * multi-block child wrapped in its own vertical container (canonical
-     * sections have no per-block column spans). Never deeper than depth 4:
+     * multi-block child wrapped in its own vertical container. Never deeper than depth 4:
      * without room the wrapper stays transparent.
      *
      * @return list<array<string, mixed>>
@@ -566,7 +565,7 @@ final class HtmlStructureMapper
     }
 
     /**
-     * Section-level hero: optional eyebrow, exactly one heading (h1), optional
+     * A top-level hero: optional eyebrow, exactly one heading (h1), optional
      * paragraph, at most one button, at most one image — nothing else — and at
      * least one of paragraph / button / image. Containers are looked through.
      *
@@ -1064,7 +1063,7 @@ final class HtmlStructureMapper
     }
 
     /** @return array<string, mixed> */
-    private function sectionLayout(int $el): array
+    private function containerLayout(int $el): array
     {
         $decls = $this->decls($el);
         $loc = $this->loc($el);
@@ -1081,7 +1080,7 @@ final class HtmlStructureMapper
             if ($rems === []) {
                 $this->unmapped($loc, 'padding', (string) ($top ?? $bottom));
             } else {
-                $layout['padding_y'] = ['base' => $this->quantize(max($rems), HtmlCssValues::PADDING_SCALE, $loc, 'padding')];
+                $layout['padding_y'] = $this->quantize(max($rems), HtmlCssValues::PADDING_SCALE, $loc, 'padding');
             }
         }
         $gap = $this->gap($el);
@@ -1158,27 +1157,19 @@ final class HtmlStructureMapper
     // ── 7. IR -> canonical document ──────────────────────────────────────────
 
     /**
-     * @param list<array<string, mixed>> $sections
+     * @param list<array<string, mixed>> $containers
      * @return ?array{document: array<string, mixed>, media: list<array{key: int, path: string, mime: string}>}
      */
-    public function document(array $sections, string $pageType, string $title): ?array
+    public function document(array $containers, string $pageType, string $title): ?array
     {
-        if (count($sections) > CanonicalDocumentSchema::MAX_SECTIONS) {
-            $this->issues->error('output_limit_exceeded', 'html:', 'The page would have ' . count($sections) . ' sections; Studio allows ' . CanonicalDocumentSchema::MAX_SECTIONS . '. Nothing was imported.', 'sections');
+        if (count($containers) > CanonicalDocumentSchema::MAX_CONTAINERS) {
+            $this->issues->error('output_limit_exceeded', 'html:', 'The page would have ' . count($containers) . ' Containers; Studio allows ' . CanonicalDocumentSchema::MAX_CONTAINERS . '. Nothing was imported.', 'containers');
             return null;
         }
-        $counter = ['sec' => 0, 'blk' => 0];
+        $counter = ['blk' => 0];
         $doc = CanonicalDocumentSchema::emptyDocument($pageType, 'default', $title);
-        foreach ($sections as $section) {
-            $layout = array_merge(CanonicalDocumentSchema::defaultSectionLayout(), ['columns' => ['base' => 1]], $section['layout']);
-            $doc['sections'][] = [
-                'id'         => sprintf('sec_%024d', ++$counter['sec']),
-                'label'      => $section['label'],
-                'global_ref' => null,
-                'layout'     => $layout,
-                'visibility' => ['auth_state' => 'any', 'devices' => $section['visibility'] ?? self::ALL_DEVICES],
-                'blocks'     => $this->blocks($section['nodes'], $counter),
-            ];
+        foreach ($containers as $top) {
+            $doc['containers'][] = $this->topContainer($top, $counter);
         }
         if ($counter['blk'] > CanonicalDocumentSchema::MAX_BLOCKS_PER_DOCUMENT) {
             $this->issues->error('output_limit_exceeded', 'html:', "The page would have {$counter['blk']} blocks; Studio allows " . CanonicalDocumentSchema::MAX_BLOCKS_PER_DOCUMENT . '. Nothing was imported.', 'blocks');
@@ -1192,8 +1183,38 @@ final class HtmlStructureMapper
     }
 
     /**
+     * One IR entry as a top-level Container, spaced like the site's default band unless the source said otherwise.
+     *
+     * @param array<string, mixed> $top
+     * @param array{blk: int} $counter
+     * @return array<string, mixed>
+     */
+    private function topContainer(array $top, array &$counter): array
+    {
+        $found = $top['layout'];
+        $layout = ['content_width' => 'boxed', 'gutter' => 'site', 'padding_y' => $found['padding_y'] ?? 'lg'];
+        if (in_array($found['width'] ?? null, ['narrow', 'normal', 'wide', 'full'], true)) {
+            $layout['content_size'] = $found['width'];
+        }
+        $container = CanonicalDocumentSchema::newContainer([
+            'id'         => sprintf('blk_%024d', ++$counter['blk']),
+            'props'      => ['gap' => $found['gap'] ?? 'md'],
+            'style'      => ['surface_token' => $found['background_token'] ?? 'surface.primary', 'layout' => $layout],
+            'visibility' => ['auth_state' => 'any', 'devices' => $top['visibility'] ?? self::ALL_DEVICES],
+        ]);
+        $container['children'] = $this->blocks($top['nodes'], $counter);
+        if ($top['label'] !== '') {
+            $container['metadata'] = ['label' => $top['label']];
+        }
+        if (!isset($found['padding_y'])) {
+            $container['responsive'] = ['mobile' => ['style' => ['layout' => ['padding_y' => 'md']]]];
+        }
+        return $container;
+    }
+
+    /**
      * @param list<array<string, mixed>> $nodes
-     * @param array{sec: int, blk: int} $counter
+     * @param array{blk: int} $counter
      * @return list<array<string, mixed>>
      */
     private function blocks(array $nodes, array &$counter): array
@@ -1251,7 +1272,7 @@ final class HtmlStructureMapper
         return [
             'id'         => $id,
             'type'       => $type,
-            'version'    => 1,
+            'version'    => $type === CanonicalDocumentSchema::CONTAINER_TYPE ? CanonicalDocumentSchema::CONTAINER_VERSION : 1,
             'props'      => $props,
             'style'      => $style,
             'visibility' => ['auth_state' => 'any', 'devices' => $node['visibility'] ?? self::ALL_DEVICES],
@@ -1467,7 +1488,7 @@ final class HtmlStructureMapper
     }
 
     /** @param list<array<string, mixed>> $nodes */
-    private function sectionLabel(array $nodes): string
+    private function containerLabel(array $nodes): string
     {
         foreach ($nodes as $node) {
             $text = match ($node['type']) {
@@ -1476,7 +1497,7 @@ final class HtmlStructureMapper
                 default   => null,
             };
             if (is_string($text) && $text !== '') {
-                $label = mb_substr($text, 0, 120, 'UTF-8');
+                $label = mb_substr($text, 0, CanonicalDocumentSchema::BLOCK_LABEL_MAX_LENGTH, 'UTF-8');
                 return FieldSchema::containsExecutableOrSqlFragment($label) ? '' : $label;
             }
         }

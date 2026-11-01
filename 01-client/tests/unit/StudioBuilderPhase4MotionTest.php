@@ -194,8 +194,8 @@ unit('phase4: applying both motion operations writes the document fields', funct
     $document = [
         'settings' => [],
         'seo'      => [],
-        'sections' => [[
-            'blocks' => [['id' => 'blk_motion_1', 'type' => 'core.heading']],
+        'containers' => [[
+            'children' => [['id' => 'blk_motion_1', 'type' => 'core.heading']],
         ]],
     ];
 
@@ -207,7 +207,7 @@ unit('phase4: applying both motion operations writes the document fields', funct
         ]),
         $registry
     );
-    assert_eq(['type' => 'fade_up', 'duration_ms' => 700], $afterAnimation['sections'][0]['blocks'][0]['animation']);
+    assert_eq(['type' => 'fade_up', 'duration_ms' => 700], $afterAnimation['containers'][0]['children'][0]['animation']);
 
     $afterInteractions = DocumentOperationApplier::applyOne(
         $afterAnimation,
@@ -217,7 +217,7 @@ unit('phase4: applying both motion operations writes the document fields', funct
         ]),
         $registry
     );
-    assert_eq(['trigger' => 'hover'], $afterInteractions['sections'][0]['blocks'][0]['interactions']);
+    assert_eq(['trigger' => 'hover'], $afterInteractions['containers'][0]['children'][0]['interactions']);
 });
 
 unit('motion: a reveal never holds transform, so a hover lift can animate', function (): void {

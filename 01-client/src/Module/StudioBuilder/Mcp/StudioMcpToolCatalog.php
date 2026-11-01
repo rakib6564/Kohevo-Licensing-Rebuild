@@ -42,8 +42,7 @@ final class StudioMcpToolCatalog
     public const MAX_OPERATIONS = 50;
 
     private const ID = ['type' => 'integer', 'minimum' => 1];
-    private const NODE_ID = ['type' => 'string', 'pattern' => '^(sec|blk)_[a-z0-9]{16,32}$', 'maxLength' => 64];
-    private const SECTION_ID = ['type' => 'string', 'pattern' => '^sec_[a-z0-9]{16,32}$', 'maxLength' => 64];
+    private const NODE_ID = ['type' => 'string', 'pattern' => '^blk_[a-z0-9]{16,32}$', 'maxLength' => 64];
     private const EXPECTED = ['type' => ['integer', 'null'], 'minimum' => 1, 'description' => 'The revision id the change is based on (the page\'s current active_draft_revision_id as last read). A stale value is refused with concurrency_conflict and nothing is overwritten. Null only for a page that has no draft yet.'];
     private const INCLUDE_DOCUMENT = ['type' => 'boolean', 'description' => 'Default false: the result carries a bounded structural outline. True adds the full canonical document.'];
 
@@ -79,13 +78,13 @@ final class StudioMcpToolCatalog
                 'access' => self::ACCESS_READ, 'requires_confirmation' => false, 'rate' => self::RATE_READ,
             ],
             'studio_get_templates' => [
-                'description' => 'The template library (page templates and reusable section/block presets): key, type, name, category, structural summary.',
+                'description' => 'The template library (page templates and reusable Container/block presets): key, type, name, category, structural summary.',
                 'inputSchema' => self::schema(['type' => ['type' => 'string', 'pattern' => '^[a-z_]{1,32}$']], []),
                 'scope' => StudioMcpScopes::READ, 'permission' => StudioPermissions::VIEW,
                 'access' => self::ACCESS_READ, 'requires_confirmation' => false, 'rate' => self::RATE_READ,
             ],
             'studio_get_components' => [
-                'description' => 'The global components of this site (reusable live sections): id, ref, title, publish state, usage count.',
+                'description' => 'The global components of this site (reusable live Containers): id, ref, title, publish state, usage count.',
                 'inputSchema' => self::schema([], []),
                 'scope' => StudioMcpScopes::READ, 'permission' => StudioPermissions::VIEW,
                 'access' => self::ACCESS_READ, 'requires_confirmation' => false, 'rate' => self::RATE_READ,
@@ -109,7 +108,7 @@ final class StudioMcpToolCatalog
                 'access' => self::ACCESS_READ, 'requires_confirmation' => false, 'rate' => self::RATE_READ,
             ],
             'studio_get_structure' => [
-                'description' => 'The outline of a page\'s current working draft: sections and blocks with ids, types and labels (no properties). Use the ids in studio_apply_operations.',
+                'description' => 'The outline of a page\'s current working draft: top-level Containers and their blocks with ids, types and labels (no properties). Use the ids in studio_apply_operations.',
                 'inputSchema' => self::schema(['page_id' => self::ID], ['page_id']),
                 'scope' => StudioMcpScopes::EDIT, 'permission' => StudioPermissions::EDIT,
                 'access' => self::ACCESS_READ, 'requires_confirmation' => false, 'rate' => self::RATE_READ,
@@ -127,7 +126,7 @@ final class StudioMcpToolCatalog
                 'access' => self::ACCESS_READ, 'requires_confirmation' => false, 'rate' => self::RATE_RENDER,
             ],
             'studio_diff' => [
-                'description' => 'Structured, human-readable diff between two revisions of a page (by default: the working draft against its parent, else the published revision): changed sections, blocks, properties, styles, settings, SEO, template and component references, plus publish and dependency impact.',
+                'description' => 'Structured, human-readable diff between two revisions of a page (by default: the working draft against its parent, else the published revision): changed Containers, blocks, properties, styles, settings, SEO, template and component references, plus publish and dependency impact.',
                 'inputSchema' => self::schema(['page_id' => self::ID, 'base_revision_id' => self::ID, 'proposed_revision_id' => self::ID], ['page_id']),
                 'scope' => StudioMcpScopes::READ, 'permission' => StudioPermissions::VIEW,
                 'access' => self::ACCESS_READ, 'requires_confirmation' => false, 'rate' => self::RATE_RENDER,
@@ -164,7 +163,7 @@ final class StudioMcpToolCatalog
                 'access' => self::ACCESS_WRITE, 'requires_confirmation' => true, 'rate' => self::RATE_WRITE,
             ],
             'studio_insert_template' => [
-                'description' => 'Insert a reusable section/block preset into a page\'s draft as an owned copy (new ai_operation revision). Requires expected_revision_id.',
+                'description' => 'Insert a reusable Container/block preset into a page\'s draft as an owned copy (new ai_operation revision). Requires expected_revision_id.',
                 'inputSchema' => self::schema([
                     'page_id'              => self::ID,
                     'template_key'         => ['type' => 'string', 'pattern' => '^[a-z0-9][a-z0-9_-]{0,119}$'],
@@ -188,12 +187,12 @@ final class StudioMcpToolCatalog
                 'access' => self::ACCESS_WRITE, 'requires_confirmation' => true, 'rate' => self::RATE_WRITE,
             ],
             'studio_create_global_component' => [
-                'description' => 'Create a global component (unpublished). With page_id + section_id + expected_revision_id, the section is moved into the component and replaced by a live reference (new ai_operation revision of the page).',
+                'description' => 'Create a global component (unpublished). With page_id + container_id + expected_revision_id, the top-level Container is moved into the component and replaced by a live reference (new ai_operation revision of the page).',
                 'inputSchema' => self::schema([
                     'title'                => ['type' => 'string', 'minLength' => 1, 'maxLength' => 255],
                     'slug'                 => ['type' => 'string', 'minLength' => 1, 'maxLength' => 191],
                     'page_id'              => self::ID,
-                    'section_id'           => self::SECTION_ID,
+                    'container_id'         => self::NODE_ID,
                     'expected_revision_id' => self::EXPECTED,
                     'include_document'     => self::INCLUDE_DOCUMENT,
                 ], ['title', 'slug']),
@@ -204,10 +203,10 @@ final class StudioMcpToolCatalog
                 'description' => 'Turn a live global-component reference on a page back into owned content (new ai_operation revision). Requires expected_revision_id.',
                 'inputSchema' => self::schema([
                     'page_id'              => self::ID,
-                    'section_id'           => self::SECTION_ID,
+                    'container_id'         => self::NODE_ID,
                     'expected_revision_id' => self::EXPECTED,
                     'include_document'     => self::INCLUDE_DOCUMENT,
-                ], ['page_id', 'section_id', 'expected_revision_id']),
+                ], ['page_id', 'container_id', 'expected_revision_id']),
                 'scope' => StudioMcpScopes::EDIT, 'permission' => StudioPermissions::EDIT,
                 'access' => self::ACCESS_WRITE, 'requires_confirmation' => true, 'rate' => self::RATE_WRITE,
             ],
@@ -230,7 +229,7 @@ final class StudioMcpToolCatalog
                 'access' => self::ACCESS_DESTRUCTIVE, 'requires_confirmation' => true, 'rate' => self::RATE_WRITE,
             ],
             'studio_save_template' => [
-                'description' => 'Save a template from a page\'s stored working draft (whole page, one section or one block by node id). Content is read from the server revision, never supplied by the caller.',
+                'description' => 'Save a template from a page\'s stored working draft (whole page, one Container or one block by node id). Content is read from the server revision, never supplied by the caller.',
                 'inputSchema' => self::schema([
                     'page_id'       => self::ID,
                     'node_id'       => self::NODE_ID,

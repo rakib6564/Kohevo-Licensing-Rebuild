@@ -150,7 +150,7 @@ export function isFontFamily(value) {
 /** Field kind → checker, for controls that name what they edit. */
 /**
  * A size that is never negative, as padding takes it (StyleSurface::isSize): 960px, 90%, 60rem, 80vw, calc()...; a bare
- * number other than 0 and the CSS keywords are refused. A section's custom width.
+ * number other than 0 and the CSS keywords are refused. A Container's custom width.
  */
 export function isSize(value) {
   if (typeof value !== 'string') return false;

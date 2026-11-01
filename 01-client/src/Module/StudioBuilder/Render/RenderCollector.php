@@ -94,7 +94,7 @@ final class RenderCollector
     }
 
     /**
-     * Register the generated rules for one block or section and return the class to put on its
+     * Register the generated rules for one block and return the class to put on its
      * element. `$declarations` and `$states` must come from `StyleSurface` (never from authored text).
      *
      * The class is derived from the RULES, not from the node id: two nodes that look the same share one
@@ -105,8 +105,7 @@ final class RenderCollector
      */
     public function scopedRule(string $nodeId, string $declarations, bool $reduceMotion = false, array $states = [], array $media = [], array $parts = []): string
     {
-        $isSection = str_starts_with($nodeId, 'sec_');
-        $valid = preg_match($isSection ? CanonicalDocumentSchema::SECTION_ID_PATTERN : CanonicalDocumentSchema::BLOCK_ID_PATTERN, $nodeId) === 1;
+        $valid = preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $nodeId) === 1;
         if (($declarations === '' && $states === [] && $media === [] && $parts === []) || !$valid) {
             return '';
         }

@@ -29,16 +29,11 @@ use Slate\Module\StudioBuilder\Service\StudioTemplateService;
 use Slate\Module\StudioBuilder\Service\StudioThemeService;
 
 unit('sprint4 unit: StudioTemplateService extracts section preset with preserved subtree', function (): void {
-    $secId = CanonicalDocumentSchema::newSectionId();
+    $secId = CanonicalDocumentSchema::newBlockId();
     $btnId = CanonicalDocumentSchema::newBlockId();
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Page');
-    $doc['sections'] = [
-        [
-            'id' => $secId,
-            'label' => 'Reusable Call To Action',
-            'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            'blocks' => [
+    $doc['containers'] = [
+        CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Reusable Call To Action'], 'id' => $secId, 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [
                 [
                     'id' => $btnId,
                     'type' => 'core.button',
@@ -49,34 +44,27 @@ unit('sprint4 unit: StudioTemplateService extracts section preset with preserved
                     'bindings' => [],
                     'children' => [],
                 ],
-            ],
-        ],
+            ]]),
     ];
 
-    $extracted = StudioTemplateService::extractTemplateDocument($doc, $secId, 'section_preset');
+    $extracted = StudioTemplateService::extractTemplateDocument($doc, $secId, 'container_preset');
     assert_eq(CanonicalDocumentSchema::SCHEMA_VERSION, $extracted['schema_version']);
-    assert_eq('section_preset', $extracted['document_type']);
-    assert_eq(1, count($extracted['sections']), 'extracted 1 section');
-    assert_eq('Reusable Call To Action', $extracted['sections'][0]['label']);
-    assert_eq('core.button', $extracted['sections'][0]['blocks'][0]['type']);
-    assert_eq('Contact Us', $extracted['sections'][0]['blocks'][0]['props']['link']['label']);
+    assert_eq('container_preset', $extracted['document_type']);
+    assert_eq(1, count($extracted['containers']), 'extracted 1 section');
+    assert_eq('Reusable Call To Action', $extracted['containers'][0]['metadata']['label']);
+    assert_eq('core.button', $extracted['containers'][0]['children'][0]['type']);
+    assert_eq('Contact Us', $extracted['containers'][0]['children'][0]['props']['link']['label']);
 });
 
 unit('sprint4 unit: StudioGlobalComponentService reference and detach operations mint fresh IDs', function (): void {
-    $sec = [
-        'id' => 'sec_source_1',
-        'label' => 'Global Header Section',
-        'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks' => [],
-    ];
+    $sec = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Global Header Section'], 'id' => 'blk_source_0000000001', 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => []]);
     $componentUuid = '01923456-789a-7bcd-ef01-23456789abcd';
 
     // 1. Reference section creation
-    $refSec = StudioGlobalComponentService::referenceSectionFor($sec, $componentUuid);
+    $refSec = StudioGlobalComponentService::referenceContainerFor($sec, $componentUuid);
     assert_eq($componentUuid, $refSec['global_ref'], 'holds global_ref uuid');
-    assert_eq([], $refSec['blocks'], 'global reference owns no local blocks');
-    assert_eq('Global Header Section', $refSec['label']);
+    assert_eq([], $refSec['children'], 'global reference owns no local blocks');
+    assert_eq('Global Header Section', $refSec['metadata']['label']);
 
     // 2. DocumentCopier deep subtree copy mints fresh block IDs
     $originalBlocks = [
@@ -153,7 +141,6 @@ unit('sprint4 unit: StudioStylesheet contains global body, typography, button, a
     assert_true(str_contains($css, '.sb-button--secondary'));
     assert_true(str_contains($css, '.sb-button--outline'));
     assert_true(str_contains($css, '.sb-button--ghost'));
-    assert_true(str_contains($css, '.sb-layout-section'));
     assert_true(str_contains($css, '.sb-container'));
     assert_true(str_contains($css, '.sb-flex'));
     assert_true(str_contains($css, '.sb-grid'));

@@ -33,6 +33,6 @@ unit('inspector parity: an element\'s CSS is scoped to it, and is sanitized when
     $css = \Slate\Module\StudioBuilder\Document\ElementCss::compile('selector{color:red} selector a{color:blue}</style><script>x</script>', 'sb-el-1');
     assert_true(str_contains($css, '.sb-el-1{color:red}') && str_contains($css, '.sb-el-1 a{color:blue}'), $css);
     assert_false(str_contains(strtolower($css), '</style') || str_contains(strtolower($css), '<script'), $css);
-    $doc = ['sections' => [['id' => 'sec_1', 'blocks' => [['id' => 'blk_a', 'children' => [['id' => 'blk_b', 'custom_css' => 'selector{top:0}']]]]]]];
+    $doc = ['containers' => [['id' => 'sec_1', 'blocks' => [['id' => 'blk_a', 'children' => [['id' => 'blk_b', 'custom_css' => 'selector{top:0}']]]]]]];
     assert_eq(['blk_b' => 'selector{top:0}'], \Slate\Module\StudioBuilder\Document\ElementCss::collect($doc), 'found however deep it sits');
 });

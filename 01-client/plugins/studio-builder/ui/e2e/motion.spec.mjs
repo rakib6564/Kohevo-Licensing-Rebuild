@@ -1,4 +1,4 @@
-// Motion (B2-P3d): the move/reveal presets, and a section's own motion.
+// Motion (B2-P3d): the move/reveal presets, and a Container's own motion.
 import { test, expect } from '@playwright/test';
 import { openBuilder, frameDocument, settled, sandboxPageId, openSection, showEdit, undoReady } from './helpers.mjs';
 
@@ -39,7 +39,7 @@ async function insertBlock(page, type, chip = 'content') {
 
 
 
-test('a block takes a reveal preset and a section takes its own motion; both reach the page as classes', async ({ page }) => {
+test('a block takes a reveal preset and a Container takes its own motion; both reach the page as classes', async ({ page }) => {
   await openBuilder(page);
   await settled(page);
   const before = await layerCount(page);
@@ -59,13 +59,13 @@ test('a block takes a reveal preset and a section takes its own motion; both rea
     await showEdit(page);
     await openSection(page, 'motion');
     await page.getByTestId('motion-more').locator('summary').click();
-    const sectionPresets = page.getByRole('radiogroup', { name: 'Entrance' });
-    await sectionPresets.getByRole('radio', { name: /Move left/ }).click();
+    const containerPresets = page.getByRole('radiogroup', { name: 'Entrance' });
+    await containerPresets.getByRole('radio', { name: /Move left/ }).click();
     await page.locator('select[id$="-trigger"]').selectOption('viewport-enter');
     await settled(page);
-    const section = frame.locator('section.sb-section.sb-animate-move-left.sb-interaction-viewport-enter');
-    await expect(section).toHaveCount(1, { timeout: 20_000 });
-    await expect(section).toHaveAttribute('data-sb-interaction-trigger', 'viewport-enter');
+    const top = frame.locator('section.sb-top.sb-animate-move-left.sb-interaction-viewport-enter');
+    await expect(top).toHaveCount(1, { timeout: 20_000 });
+    await expect(top).toHaveAttribute('data-sb-interaction-trigger', 'viewport-enter');
     await expect(page.getByRole('alert')).toHaveCount(0);
   } finally {
     await restore(page, before);

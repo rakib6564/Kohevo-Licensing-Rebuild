@@ -97,28 +97,21 @@ unit('sprint7 unit: DocumentValidator accepts valid interactions and animation s
     ];
 
     $doc = CanonicalDocumentSchema::emptyDocument();
-    $doc['sections'][] = [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => 'Section 1',
-        'global_ref' => null,
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks'     => [$validBlock],
-    ];
+    $doc['containers'][] = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Section 1'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$validBlock]]);
 
     $result = DocumentValidator::validate($doc, $registry);
     assert_true($result->isValid(), 'Document with valid animation and interactions is valid');
 
     // Invalid interaction trigger
-    $doc['sections'][0]['blocks'][0]['interactions']['trigger'] = 'invalid_trigger_name';
+    $doc['containers'][0]['children'][0]['interactions']['trigger'] = 'invalid_trigger_name';
     $resInvalid = DocumentValidator::validate($doc, $registry);
     assert_false($resInvalid->isValid(), 'Invalid interaction trigger is rejected');
     $codes = array_column($resInvalid->errors(), 'code');
     assert_true(in_array('invalid_interaction_trigger', $codes, true), 'Flags invalid_interaction_trigger');
 
     // Invalid animation type
-    $doc['sections'][0]['blocks'][0]['interactions']['trigger'] = 'hover';
-    $doc['sections'][0]['blocks'][0]['animation']['type'] = 'fly_to_moon';
+    $doc['containers'][0]['children'][0]['interactions']['trigger'] = 'hover';
+    $doc['containers'][0]['children'][0]['animation']['type'] = 'fly_to_moon';
     $resInvalidAnim = DocumentValidator::validate($doc, $registry);
     assert_false($resInvalidAnim->isValid(), 'Invalid animation type is rejected');
     $codesAnim = array_column($resInvalidAnim->errors(), 'code');

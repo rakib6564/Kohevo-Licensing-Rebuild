@@ -2,18 +2,18 @@
 /**
  * Kohevo Studio (studio-builder) — Global Component domain rules (Phase 6).
  *
- * A Global Component IS a Studio page of type `section_preset`
+ * A Global Component IS a Studio page of type `container_preset`
  * (CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE) — nothing new is stored:
  * identity = page uuid, content = its revisions, publish state = its
  * `published_revision_id`, concurrency = `expected_revision_id`, editing = the
- * ordinary builder. A consuming page holds `section.global_ref = <uuid>` and
+ * ordinary builder. A consuming page's top-level Container holds `global_ref = <uuid>` and
  * owns no copy of the content ("Global reference"). This service holds the
  * rules around that relationship; orchestration (transactions, authorization,
  * audit) stays in StudioApplicationService.
  *
- *   Local content     section.global_ref = null, blocks owned by the page
+ *   Local content     no global_ref, children owned by the page
  *   Reusable preset   studiobuilder_templates row; insertion COPIES (DocumentCopier)
- *   Global reference  section.global_ref = component uuid; blocks = []; live
+ *   Global reference  global_ref = component uuid; children = []; live
  */
 
 declare(strict_types=1);
@@ -89,13 +89,13 @@ final class StudioGlobalComponentService
     }
 
     /**
-     * The component's content as sections — its PUBLISHED revision when it has
+     * The component's content as Containers — its PUBLISHED revision when it has
      * one (what every consumer renders), otherwise its working draft.
      *
      * @param array<string, mixed> $componentRow
      * @return list<array<string, mixed>>
      */
-    public function contentSections(array $componentRow): array
+    public function contentContainers(array $componentRow): array
     {
         $pageId = (int) $componentRow['id'];
         $revisionId = !empty($componentRow['published_revision_id'])
@@ -105,60 +105,61 @@ final class StudioGlobalComponentService
         if ($revision === null) {
             return [];
         }
-        $document = CanonicalJson::decode((string) $revision['document_json']);
+        $document = DocumentUpgrader::structure(CanonicalJson::decode((string) $revision['document_json']));
         if ($this->registry !== null) {
             // Detached copies are written into a page: older block versions are upgraded first.
             $document = DocumentUpgrader::upgrade($document, $this->registry)['document'];
         }
-        $sections = [];
-        foreach ((array) ($document['sections'] ?? []) as $section) {
-            if (is_array($section) && empty($section['global_ref'])) {
-                $sections[] = $section;
+        $containers = [];
+        foreach ((array) ($document['containers'] ?? []) as $container) {
+            if (is_array($container) && empty($container['global_ref'])) {
+                $containers[] = $container;
             }
         }
-        return $sections;
+        return $containers;
     }
 
     /**
-     * The section a consuming page keeps in place of the content: same
-     * label/visibility/layout as the section it replaces, no blocks, a live
+     * The Container a consuming page keeps in place of the content: same
+     * label/visibility/style as the Container it replaces, no children, a live
      * reference.
      *
-     * @param array<string, mixed> $section
+     * @param array<string, mixed> $container
      * @return array<string, mixed>
      */
-    public static function referenceSectionFor(array $section, string $componentRef, ?string $label = null): array
+    public static function referenceContainerFor(array $container, string $componentRef, ?string $label = null): array
     {
-        return [
-            'blocks'     => [],
-            'global_ref' => $componentRef,
-            'label'      => $label ?? (string) ($section['label'] ?? ''),
-            'layout'     => is_array($section['layout'] ?? null) ? $section['layout'] : CanonicalDocumentSchema::defaultSectionLayout(),
-            'visibility' => is_array($section['visibility'] ?? null) ? $section['visibility'] : CanonicalDocumentSchema::defaultVisibility(),
-        ];
+        $reference = CanonicalDocumentSchema::newContainer(['global_ref' => $componentRef]);
+        foreach (['style', 'visibility'] as $key) {
+            if (is_array($container[$key] ?? null)) {
+                $reference[$key] = $container[$key];
+            }
+        }
+        $label ??= (string) ($container['metadata']['label'] ?? '');
+        if ($label !== '') {
+            $reference['metadata'] = ['label' => mb_substr($label, 0, CanonicalDocumentSchema::BLOCK_LABEL_MAX_LENGTH, 'UTF-8')];
+        }
+        return $reference;
     }
 
     /**
-     * Canonical operations that replace section `$sectionId` of `$document`
+     * Canonical operations that replace top-level Container `$containerId` of `$document`
      * (a live reference) with an owned copy of the referenced component's
      * content — the "detach" of a global reference. Fails closed when the
-     * section is not a reference or the component is missing in this tenant.
+     * Container is not a reference or the component is missing in this tenant.
      *
      * @param array<string, mixed> $document the page's current working document
      * @return array{operations: list<DocumentOperation>, component: array<string, mixed>}
      */
-    public function detachOperations(array $document, string $sectionId): array
+    public function detachOperations(array $document, string $containerId): array
     {
         $this->requireTenantId();
-        $found = DocumentCopier::findNode($document, $sectionId);
-        if ($found === null || $found['kind'] !== 'section') {
-            throw new StudioNotFoundException("Section '{$sectionId}' was not found in the page.", ['section_id' => $sectionId]);
-        }
-        $section = $found['node'];
-        $ref = $section['global_ref'] ?? null;
+        $found = self::topLevelContainer($document, $containerId);
+        $container = $found['node'];
+        $ref = $container['global_ref'] ?? null;
         if (!is_string($ref) || $ref === '') {
             throw new StudioValidationException([
-                ['path' => '$.section_id', 'code' => 'not_a_global_reference', 'message' => 'This section does not reference a global component.'],
+                ['path' => '$.container_id', 'code' => 'not_a_global_reference', 'message' => 'This Container does not reference a global component.'],
             ]);
         }
         $component = $this->pages->findComponentByRef($ref);
@@ -166,62 +167,71 @@ final class StudioGlobalComponentService
             throw new StudioNotFoundException('The referenced global component was not found in the active tenant.', ['global_ref' => $ref]);
         }
 
-        $operations = [new DocumentOperation(DocumentOperation::OP_REMOVE_SECTION, ['section_id' => $sectionId])];
-        $copies = array_map([DocumentCopier::class, 'copySection'], $this->contentSections($component));
+        $operations = [new DocumentOperation(DocumentOperation::OP_REMOVE_BLOCK, ['block_id' => $containerId])];
+        $copies = DocumentCopier::copyBlocks($this->contentContainers($component));
         if ($copies === []) {
-            // An empty component detaches to one empty, owned section.
-            $copies = [DocumentCopier::copySection(['label' => (string) ($section['label'] ?? ''), 'layout' => $section['layout'] ?? null, 'visibility' => $section['visibility'] ?? null, 'blocks' => []])];
+            // An empty component detaches to one empty, owned Container.
+            $copies = [DocumentCopier::copyBlock(array_merge($container, ['children' => []]))];
         }
         foreach ($copies as $i => $copy) {
-            $copy['visibility'] = is_array($section['visibility'] ?? null) ? $section['visibility'] : CanonicalDocumentSchema::defaultVisibility();
-            if (!is_array($copy['layout'] ?? null)) {
-                $copy['layout'] = CanonicalDocumentSchema::defaultSectionLayout();
+            $copy['visibility'] = is_array($container['visibility'] ?? null) ? $container['visibility'] : CanonicalDocumentSchema::defaultVisibility();
+            if ((string) ($copy['metadata']['label'] ?? '') === '') {
+                $copy['metadata']['label'] = mb_substr((string) ($container['metadata']['label'] ?? $component['title']), 0, CanonicalDocumentSchema::BLOCK_LABEL_MAX_LENGTH, 'UTF-8');
             }
-            if (($copy['label'] ?? '') === '') {
-                $copy['label'] = (string) ($section['label'] ?? $component['title']);
-            }
-            $operations[] = new DocumentOperation(DocumentOperation::OP_INSERT_SECTION, ['index' => $found['index'] + $i, 'section' => $copy]);
+            $operations[] = new DocumentOperation(DocumentOperation::OP_INSERT_BLOCK, ['parent_id' => null, 'index' => $found['index'] + $i, 'block' => $copy]);
         }
         return ['operations' => $operations, 'component' => $component];
     }
 
     /**
-     * The documents and operations for "make this section a global component":
-     * the new component's first document (an owned copy of the section) and
-     * the operations that replace the section in the source page by a live
+     * The documents and operations for "make this Container a global component":
+     * the new component's first document (an owned copy of the Container) and
+     * the operations that replace it in the source page by a live
      * reference. The uuid is only known once the component page exists, so
      * the reference operations are built by `referenceOperations()`.
      *
      * @param array<string, mixed> $document
-     * @return array{section: array<string, mixed>, index: int, component_document: array<string, mixed>}
+     * @return array{container: array<string, mixed>, index: int, component_document: array<string, mixed>}
      */
-    public function extractionFor(array $document, string $sectionId, string $componentTitle): array
+    public function extractionFor(array $document, string $containerId, string $componentTitle): array
     {
-        $found = DocumentCopier::findNode($document, $sectionId);
-        if ($found === null || $found['kind'] !== 'section') {
-            throw new StudioNotFoundException("Section '{$sectionId}' was not found in the page.", ['section_id' => $sectionId]);
-        }
-        $section = $found['node'];
-        if (!empty($section['global_ref'])) {
+        $found = self::topLevelContainer($document, $containerId);
+        $container = $found['node'];
+        if (!empty($container['global_ref'])) {
             throw new StudioValidationException([
-                ['path' => '$.section_id', 'code' => 'already_a_global_reference', 'message' => 'This section already references a global component.'],
+                ['path' => '$.container_id', 'code' => 'already_a_global_reference', 'message' => 'This Container already references a global component.'],
             ]);
         }
         $componentDocument = CanonicalDocumentSchema::emptyDocument(CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE, 'default', $componentTitle);
-        $componentDocument['sections'] = [DocumentCopier::copySection($section)];
-        return ['section' => $section, 'index' => (int) $found['index'], 'component_document' => $componentDocument];
+        $componentDocument['containers'] = [DocumentCopier::copyBlock($container)];
+        return ['container' => $container, 'index' => (int) $found['index'], 'component_document' => $componentDocument];
     }
 
     /**
-     * @param array<string, mixed> $section the section being replaced
+     * @param array<string, mixed> $container the Container being replaced
      * @return list<DocumentOperation>
      */
-    public static function referenceOperations(array $section, int $index, string $componentRef): array
+    public static function referenceOperations(array $container, int $index, string $componentRef): array
     {
         return [
-            new DocumentOperation(DocumentOperation::OP_REMOVE_SECTION, ['section_id' => (string) $section['id']]),
-            new DocumentOperation(DocumentOperation::OP_INSERT_SECTION, ['index' => $index, 'section' => self::referenceSectionFor($section, $componentRef)]),
+            new DocumentOperation(DocumentOperation::OP_REMOVE_BLOCK, ['block_id' => (string) $container['id']]),
+            new DocumentOperation(DocumentOperation::OP_INSERT_BLOCK, ['parent_id' => null, 'index' => $index, 'block' => self::referenceContainerFor($container, $componentRef)]),
         ];
+    }
+
+    /**
+     * A Container at the top level of the document, the only place a global reference can sit.
+     *
+     * @param array<string, mixed> $document
+     * @return array{node: array<string, mixed>, index: int}
+     */
+    private static function topLevelContainer(array $document, string $containerId): array
+    {
+        $found = DocumentCopier::findNode($document, $containerId);
+        if ($found === null || ($found['node']['id'] ?? null) !== ($document['containers'][$found['index']]['id'] ?? null)) {
+            throw new StudioNotFoundException("Container '{$containerId}' was not found at the top level of the page.", ['container_id' => $containerId]);
+        }
+        return $found;
     }
 
     private function requireTenantId(): int

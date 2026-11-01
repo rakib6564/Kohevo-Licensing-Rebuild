@@ -19,7 +19,7 @@
  * tenant-scoped application layer.
  *
  * Every document mutation is a canonical `DocumentOperation` (insert/move/
- * remove section or block, update props/style/visibility/bindings/layout,
+ * remove block, update props/style/visibility/bindings/layout,
  * settings, SEO) submitted through the single `operations` command — there is
  * no second, ad-hoc mutation protocol.
  *
@@ -34,6 +34,7 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Http;
 
+use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Application\StudioApplicationService;
 use Slate\Module\StudioBuilder\Application\StudioEditorViews;
@@ -61,8 +62,8 @@ final class StudioAuthoringApi
         'manifest'     => ['GET', []],
         'revisions'    => ['GET', ['page', 'limit']],
         'templates'    => ['GET', ['type']],
-        // B2-P2a: the built-in section presets (seeded as system templates on first use)
-        'section_presets' => ['GET', []],
+        // B2-P2a: the built-in Container presets (seeded as system templates on first use)
+        'container_presets' => ['GET', []],
         'header_presets'  => ['GET', []],
         'pages'        => ['GET', []],
         // Phase 6 queries
@@ -83,7 +84,6 @@ final class StudioAuthoringApi
         'operations'   => ['POST', ['page_id', 'expected_revision_id', 'revision_kind', 'operations', 'summary']],
         // Renders one unsaved block for the canvas (read-only: nothing is stored). A POST only because the block is the body.
         'render_block' => ['POST', ['page_id', 'block']],
-        'render_section' => ['POST', ['page_id', 'section']],
         'save_draft'   => ['POST', ['page_id', 'expected_revision_id', 'revision_kind', 'document', 'summary']],
         'publish'      => ['POST', ['page_id', 'expected_revision_id', 'summary']],
         'rollback'     => ['POST', ['page_id', 'target_revision_id', 'expected_revision_id', 'summary']],
@@ -99,8 +99,8 @@ final class StudioAuthoringApi
         'insert_template'  => ['POST', ['page_id', 'template_key', 'index', 'parent_id', 'expected_revision_id']],
         'save_template'    => ['POST', ['page_id', 'node_id', 'template_key', 'template_type', 'category', 'name', 'description', 'thumbnail_media_id', 'overwrite']],
         'delete_template'  => ['POST', ['template_key']],
-        'create_component' => ['POST', ['title', 'slug', 'page_id', 'section_id', 'expected_revision_id']],
-        'detach_component' => ['POST', ['page_id', 'section_id', 'expected_revision_id']],
+        'create_component' => ['POST', ['title', 'slug', 'page_id', 'container_id', 'expected_revision_id']],
+        'detach_component' => ['POST', ['page_id', 'container_id', 'expected_revision_id']],
         'save_tokens'      => ['POST', ['group', 'tokens']],
         'save_elements'    => ['POST', ['disabled']],
         'save_custom_css'  => ['POST', ['css']],
@@ -250,12 +250,11 @@ final class StudioAuthoringApi
             'manifest'     => StudioApiResponse::ok(['manifest' => $this->app->editorManifest($actor)]),
             'revisions'    => StudioApiResponse::ok(['revisions' => $this->app->listRevisions($actor, self::id($input, 'page'), self::optionalInt($input, 'limit') ?? 30)]),
             'templates'    => $this->templates($actor, $input),
-            'section_presets' => StudioApiResponse::ok(['presets' => $this->app->sectionPresets($actor)]),
+            'container_presets' => StudioApiResponse::ok(['presets' => $this->app->containerPresets($actor)]),
             'header_presets'  => StudioApiResponse::ok(['presets' => $this->app->headerPresets($actor)]),
             'pages'        => StudioApiResponse::ok(['pages' => $this->app->listPages($actor)]),
             'operations'   => $this->operations($actor, $input),
             'render_block' => $this->renderBlock($actor, $input),
-            'render_section' => $this->renderSection($actor, $input),
             'save_draft'   => $this->saveDraft($actor, $input),
             'publish'      => $this->publish($actor, $input),
             'rollback'     => $this->rollback($actor, $input),
@@ -280,7 +279,7 @@ final class StudioAuthoringApi
             'save_template'    => $this->saveTemplate($actor, $input),
             'delete_template'  => StudioApiResponse::ok(['deleted' => StudioEditorViews::template($this->app->deleteTemplate($actor, self::templateKey($input)))]),
             'create_component' => $this->createComponent($actor, $input),
-            'detach_component' => StudioApiResponse::ok(self::mutationResult($this->app->detachGlobalSection($actor, self::id($input, 'page_id'), self::nodeId($input, 'section_id'), self::expectedRevision($input)))),
+            'detach_component' => StudioApiResponse::ok(self::mutationResult($this->app->detachGlobalContainer($actor, self::id($input, 'page_id'), self::nodeId($input, 'container_id'), self::expectedRevision($input)))),
             'save_tokens'      => $this->saveTokens($actor, $input),
             'save_elements'    => $this->saveElements($actor, $input),
             'save_custom_css'  => StudioApiResponse::ok($this->app->saveCustomCss($actor, self::string($input, 'css', StudioCodePolicy::MAX_CUSTOM_CSS_BYTES))),
@@ -323,8 +322,8 @@ final class StudioAuthoringApi
     private function insertTemplate(StudioActor $actor, array $input): StudioApiResponse
     {
         $parentId = self::optionalString($input, 'parent_id', 64);
-        if ($parentId !== null && preg_match('/^(sec|blk)_[a-z0-9]{16,32}$/', $parentId) !== 1) {
-            throw self::invalid('parent_id', 'invalid_field', 'parent_id must be a section or block id.');
+        if ($parentId !== null && preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $parentId) !== 1) {
+            throw self::invalid('parent_id', 'invalid_field', 'parent_id must be a block id.');
         }
         $result = $this->app->insertTemplate(
             $actor,
@@ -341,8 +340,8 @@ final class StudioAuthoringApi
     private function saveTemplate(StudioActor $actor, array $input): StudioApiResponse
     {
         $nodeId = self::optionalString($input, 'node_id', 64);
-        if ($nodeId !== null && preg_match('/^(sec|blk)_[a-z0-9]{16,32}$/', $nodeId) !== 1) {
-            throw self::invalid('node_id', 'invalid_field', 'node_id must be a section or block id.');
+        if ($nodeId !== null && preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $nodeId) !== 1) {
+            throw self::invalid('node_id', 'invalid_field', 'node_id must be a block id.');
         }
         $type = self::string($input, 'template_type', 32);
         if (preg_match('/^[a-z_]{1,32}$/', $type) !== 1) {
@@ -377,18 +376,18 @@ final class StudioAuthoringApi
     private function createComponent(StudioActor $actor, array $input): StudioApiResponse
     {
         $fromPage = array_key_exists('page_id', $input) && $input['page_id'] !== null ? self::id($input, 'page_id') : null;
-        $sectionId = null;
+        $containerId = null;
         $expected = null;
         if ($fromPage !== null) {
-            $sectionId = self::nodeId($input, 'section_id');
-            $expected  = self::expectedRevision($input);
+            $containerId = self::nodeId($input, 'container_id');
+            $expected    = self::expectedRevision($input);
         }
         $result = $this->app->createGlobalComponent(
             $actor,
             self::string($input, 'title', 255),
             self::string($input, 'slug', 191),
             $fromPage,
-            $sectionId,
+            $containerId,
             $expected,
         );
         $out = ['component' => $result['component']];
@@ -668,16 +667,6 @@ final class StudioAuthoringApi
     }
 
     /** @param array<string, mixed> $input */
-    private function renderSection(StudioActor $actor, array $input): StudioApiResponse
-    {
-        $section = $input['section'] ?? null;
-        if (!is_array($section) || ($section !== [] && array_is_list($section))) {
-            throw self::invalid('section', 'invalid_section', 'section must be a JSON object.');
-        }
-        return StudioApiResponse::ok(['html' => $this->app->renderSectionFragment($actor, self::id($input, 'page_id'), $section)->html]);
-    }
-
-    /** @param array<string, mixed> $input */
     private function saveDraft(StudioActor $actor, array $input): StudioApiResponse
     {
         $document = $input['document'] ?? null;
@@ -914,8 +903,8 @@ final class StudioAuthoringApi
     private static function nodeId(array $input, string $key): string
     {
         $value = self::string($input, $key, 64);
-        if (preg_match('/^(sec|blk)_[a-z0-9]{16,32}$/', $value) !== 1) {
-            throw self::invalid($key, 'invalid_field', "{$key} must be a section or block id.");
+        if (preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $value) !== 1) {
+            throw self::invalid($key, 'invalid_field', "{$key} must be a block id.");
         }
         return $value;
     }

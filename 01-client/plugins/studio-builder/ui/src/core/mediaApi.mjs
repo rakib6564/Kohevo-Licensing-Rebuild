@@ -10,7 +10,7 @@ const VIDEO_TYPES = ['video/mp4', 'video/x-m4v', 'video/webm', 'video/ogg', 'vid
 /** `video`, or `image` for anything else. */
 export const mediaType = (type) => (type === 'video' ? 'video' : 'image');
 
-/** A URL field that holds a video file (the Video widget's file, a section's background video): its key or label says
+/** A URL field that holds a video file (the Video widget's file, a Container's background video): its key or label says
  * so, or its value is one. Its Media Library button opens the picker on video files. */
 export function isVideoTarget(field, val) {
   const key = String((field && field.key) || '');

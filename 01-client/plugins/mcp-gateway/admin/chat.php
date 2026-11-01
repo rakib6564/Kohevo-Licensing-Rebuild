@@ -364,7 +364,7 @@ function mcp_chat_prompt_library(): array {
             __('mcp_gateway_chat_prompt_studio_1', 'List the Studio pages and tell me which ones have unpublished draft changes.'),
             __('mcp_gateway_chat_prompt_studio_2', 'Show the structure of the Studio page "[title]".'),
             __('mcp_gateway_chat_prompt_studio_3', 'On the Studio page "[title]", change the main heading to "[new heading]" as a draft.'),
-            __('mcp_gateway_chat_prompt_studio_4', 'Add a section with a heading "[text]" and a paragraph "[text]" at the end of the Studio page "[title]" as a draft.'),
+            __('mcp_gateway_chat_prompt_studio_4', 'Add a Container with a heading "[text]" and a paragraph "[text]" at the end of the Studio page "[title]" as a draft.'),
             __('mcp_gateway_chat_prompt_studio_5', 'Show me the diff of the current draft of the Studio page "[title]" against its published version.'),
             __('mcp_gateway_chat_prompt_studio_6', 'Give me the preview link for the current draft of the Studio page "[title]" so I can review and publish it.'),
         ],

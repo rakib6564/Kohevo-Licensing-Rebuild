@@ -42,14 +42,14 @@ function B(string $type, array $props = [], array $children = [], string|array $
 require __DIR__ . '/native.php';
 
 /**
- * A full-width section. Its container is boxed with no width of its own, so it holds the content to the site's content
+ * A full-width top-level Container. The container inside it is boxed with no width of its own, so it holds the content to the site's content
  * width (Site settings › Layout, 1170px in site.php) with a 32px gutter (22px on a tablet, 18px on a phone), and the
  * design's class names become native style (native.php). A long-form body is laid into a template column, so it is not boxed.
  */
-function SEC(string $label, array $blocks, string|array $cls = []): array
+function TOP(string $label, array $blocks, string|array $cls = []): array
 {
     $cls = is_string($cls) ? array_filter(explode(' ', $cls)) : $cls;
-    // A WRAP() marker is not a block: its children become the section's own, its classes the section's.
+    // A WRAP() marker is not a block: its children become the Container's own, its classes the Container's.
     $flat = [];
     foreach ($blocks as $b) {
         if (isset($b['__wrap'])) {
@@ -60,13 +60,14 @@ function SEC(string $label, array $blocks, string|array $cls = []): array
         }
     }
     $blocks = $flat;
-    $s = [
-        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => $label, 'global_ref' => null,
-        'layout' => ['background_token' => 'surface.primary', 'columns' => ['base' => 1, 'md' => 1], 'gap' => 'none', 'padding_y' => ['base' => 'none'], 'width' => 'full'],
+    $s = CanonicalDocumentSchema::newContainer([
+        'metadata' => ['label' => mb_substr($label, 0, CanonicalDocumentSchema::BLOCK_LABEL_MAX_LENGTH, 'UTF-8')],
+        'props'    => ['gap' => 'none'],
+        'style'    => ['surface_token' => 'surface.primary', 'layout' => ['content_width' => 'boxed', 'content_size' => 'full', 'gutter' => 'site', 'display' => 'grid', 'columns' => 1, 'padding_y' => 'none']],
         'visibility' => ['auth_state' => 'any', 'devices' => ['base', 'sm', 'md', 'lg']],
-        'blocks' => [B('layout.container', ['width' => 'full', 'padding' => 'none'], $blocks, $cls)],
-    ];
-    $box = &$s['blocks'][0];
+        'children' => [B('layout.container', ['width' => 'full', 'padding' => 'none'], $blocks, $cls)],
+    ]);
+    $box = &$s['children'][0];
     $boxed = !in_array('fx-body', $cls, true);
     if ($boxed) {
         $box['style']['layout'] = ['content_width' => 'boxed'];
@@ -74,7 +75,7 @@ function SEC(string $label, array $blocks, string|array $cls = []): array
         $box['responsive']['mobile']['style']['padding'] = ['left' => '18px', 'right' => '18px'];
     }
     native_apply($box, []);
-    // The desktop gutter, unless the design gives the section a padding or a width of its own.
+    // The desktop gutter, unless the design gives the Container a padding or a width of its own.
     if ($boxed && !isset($box['style']['layout']['content_max'])) {
         $box['style']['padding']['left'] ??= '32px';
         $box['style']['padding']['right'] ??= '32px';
@@ -117,12 +118,12 @@ function check_doc(array $doc): void
     }
 }
 
-/** Create (or replace) a page and publish `$sections`. */
-function build_page(string $slug, string $title, string $pageType, string $route, array $sections, array $settings = [], string $seoTitle = '', string $seoDesc = '', ?int $ogId = null): int
+/** Create (or replace) a page and publish `$containers`. */
+function build_page(string $slug, string $title, string $pageType, string $route, array $containers, array $settings = [], string $seoTitle = '', string $seoDesc = '', ?int $ogId = null): int
 {
     global $runtime, $actor, $tid;
     $doc = CanonicalDocumentSchema::emptyDocument($pageType, 'default', $seoTitle !== '' ? $seoTitle : $title);
-    $doc['sections'] = $sections;
+    $doc['containers'] = $containers;
     $doc['settings'] = array_replace($doc['settings'], $settings);
     if ($pageType === 'system') { $doc['seo']['robots'] = 'noindex,nofollow'; }
     if (isset($settings['seo_robots'])) { $doc['seo']['robots'] = (string) $settings['seo_robots']; unset($doc['settings']['seo_robots']); }

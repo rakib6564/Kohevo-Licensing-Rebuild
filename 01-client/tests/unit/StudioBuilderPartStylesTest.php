@@ -44,7 +44,7 @@ unit('part styles: a part of the block\'s type takes a closed partial style, alo
         assert_false($valid(sbps_tabs($parts)), "refused: {$why}");
     }
     $norm = DocumentNormalizer::normalize(sbdc_doc(sbps_tabs(['tab' => ['color' => '#000000'], 'panel' => []])), $registry);
-    assert_eq(['tab' => ['color' => '#000000']], $norm['sections'][0]['blocks'][0]['style_parts'], 'an empty part is dropped');
+    assert_eq(['tab' => ['color' => '#000000']], $norm['containers'][0]['children'][0]['style_parts'], 'an empty part is dropped');
 });
 
 unit('part styles: the rules sit under the block\'s own class, important, with hover after the base', function (): void {
@@ -70,11 +70,11 @@ unit('part styles: the rules sit under the block\'s own class, important, with h
 
 unit('part styles: the operation sets and clears them', function (): void {
     $doc = sbdc_doc(sbps_tabs());
-    $id = $doc['sections'][0]['blocks'][0]['id'];
+    $id = $doc['containers'][0]['children'][0]['id'];
     $set = DocumentOperationApplier::applyOne($doc, new DocumentOperation(DocumentOperation::OP_UPDATE_BLOCK_STYLE_PARTS, ['block_id' => $id, 'style_parts' => ['panel' => ['padding' => ['top' => '24px']]]]), BlockRegistry::withAllCoreBlocks());
-    assert_eq(['panel' => ['padding' => ['top' => '24px']]], $set['sections'][0]['blocks'][0]['style_parts']);
+    assert_eq(['panel' => ['padding' => ['top' => '24px']]], $set['containers'][0]['children'][0]['style_parts']);
     $cleared = DocumentOperationApplier::applyOne($set, new DocumentOperation(DocumentOperation::OP_UPDATE_BLOCK_STYLE_PARTS, ['block_id' => $id, 'style_parts' => []]), BlockRegistry::withAllCoreBlocks());
-    assert_false(array_key_exists('style_parts', $cleared['sections'][0]['blocks'][0]), 'an empty map removes the key');
+    assert_false(array_key_exists('style_parts', $cleared['containers'][0]['children'][0]), 'an empty map removes the key');
 });
 
 unit('part styles: every selector names a class the widget\'s renderers still write, and the editor manifest lists the parts', function (): void {

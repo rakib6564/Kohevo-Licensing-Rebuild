@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Presets;
 
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
+
 final class WireframeOutline
 {
     /** Cap on outline nodes per document (the library view stays small). */
@@ -25,13 +27,13 @@ final class WireframeOutline
     {
         $budget = self::MAX_NODES;
         $outline = [];
-        foreach ((array) ($document['sections'] ?? []) as $section) {
-            if (!is_array($section)) {
+        foreach ((array) (DocumentUpgrader::structure($document)['containers'] ?? []) as $container) {
+            if (!is_array($container)) {
                 continue;
             }
             $outline[] = [
-                'bg'    => (string) (($section['layout']['background_token'] ?? '') ?: ''),
-                'nodes' => self::nodes(is_array($section['blocks'] ?? null) ? $section['blocks'] : [], $budget),
+                'bg'    => (string) (($container['style']['surface_token'] ?? '') ?: ''),
+                'nodes' => self::nodes(is_array($container['children'] ?? null) ? $container['children'] : [], $budget),
             ];
         }
         return $outline;

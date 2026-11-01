@@ -76,7 +76,7 @@ final class StudioCompiler
         $this->components = $components ?? new GlobalComponentResolver();
     }
 
-    /** Phase 6: resolves `section.global_ref` to the referenced component's published revision. */
+    /** Phase 6: resolves a Container's `global_ref` to the referenced component's published revision. */
     private readonly GlobalComponentResolver $components;
 
     /**
@@ -97,14 +97,14 @@ final class StudioCompiler
 
             $header = $this->renderChrome('header', $plan['header'], $context, $theme, $collector);
             $single = $plan['single'] !== null ? $this->renderSingle($plan['single'], $document, $plan['components'], $context, $theme, $collector) : null;
-            $main   = $single['html'] ?? $this->documents->renderSections($document['sections'] ?? [], $context, $theme, $collector, true, $this->prepareComponents($plan['components']));
+            $main   = $single['html'] ?? $this->documents->renderContainers($document['containers'] ?? [], $context, $theme, $collector, true, $this->prepareComponents($plan['components']));
             $footer = $this->renderChrome('footer', $plan['footer'], $context, $theme, $collector);
 
             $width = $single['width'] ?? ($document['settings']['container_width'] ?? 'wide');
             $width = in_array($width, CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS, true) ? $width : 'wide';
 
             // A header or footer opened on its own (canvas, preview) sits in the same wrapper it has on a live page, so
-            // the site's CSS for its header or footer applies, and none meant for page content (section spacing) does.
+            // the site's CSS for its header or footer applies, and none meant for page content does.
             $region = ['header_partial' => 'header', 'footer_partial' => 'footer'][$page->pageType] ?? null;
             $html = $region !== null && $single === null
                 ? $header . '<' . $region . ' class="sb-site-' . $region . ' sb-site-' . $region . '--partial" id="main">' . $main . '</' . $region . '>' . $footer
@@ -244,7 +244,7 @@ final class StudioCompiler
     }
 
     /**
-     * The published sections of every resolved component, prepared through
+     * The published Containers of every resolved component, prepared through
      * the same validate/normalize path as the page itself. Missing or
      * unpublished components are simply absent (→ unavailable fallback).
      *
@@ -263,7 +263,7 @@ final class StudioCompiler
             } catch (StudioRenderException $ignored) {
                 continue; // an unrenderable component degrades to the unavailable fallback, never breaks the page
             }
-            $prepared[(string) $ref] = is_array($document['sections'] ?? null) ? $document['sections'] : [];
+            $prepared[(string) $ref] = is_array($document['containers'] ?? null) ? $document['containers'] : [];
         }
         return $prepared;
     }
@@ -443,8 +443,8 @@ final class StudioCompiler
     }
 
     /**
-     * The page laid out by its Single template: the template's sections, with every Post content block replaced
-     * by the page's own sections. Both render into one collector, so the page's live blocks are filled per
+     * The page laid out by its Single template: the template's Containers, with every Post content block replaced
+     * by the page's own Containers. Both render into one collector, so the page's live blocks are filled per
      * request like any other; the Post content placeholders are dropped from the dynamic manifest. Post title,
      * meta and other theme blocks stay dynamic and read the page from the render context
      * (StudioRenderService::singleAttributes()).
@@ -458,12 +458,11 @@ final class StudioCompiler
     {
         $templateJson = (string) ($single['revision']['document_json'] ?? '');
         $template = RenderDocumentPreparer::prepare($templateJson, $this->registry)['document'];
-        $decoded = json_decode($templateJson, true, CanonicalDocumentSchema::MAX_JSON_DEPTH);
-        $templateComponents = is_array($decoded) ? $this->components->resolveDocument($decoded) : [];
+        $templateComponents = $this->components->resolveDocument($template);
 
         $first = count($collector->deferred());
-        // On the canvas the template is the frame around the page: only the page's own sections can be picked.
-        $html = $this->documents->renderSections($template['sections'] ?? [], $context->framing(), $theme, $collector, true, $this->prepareComponents($templateComponents));
+        // On the canvas the template is the frame around the page: only the page's own Containers can be picked.
+        $html = $this->documents->renderContainers($template['containers'] ?? [], $context->framing(), $theme, $collector, true, $this->prepareComponents($templateComponents));
         $slots = [];
         foreach (array_slice($collector->deferred(), $first, null, true) as $index => $node) {
             if (($node['type'] ?? '') === 'theme.post_content') {
@@ -473,7 +472,7 @@ final class StudioCompiler
         $replaced = [];
         if ($slots !== []) {
             $body = '<div class="sb-block sb-block--theme-post-content sb-post-body">'
-                . $this->documents->renderSections($document['sections'] ?? [], $context, $theme, $collector, true, $this->prepareComponents($components))
+                . $this->documents->renderContainers($document['containers'] ?? [], $context, $theme, $collector, true, $this->prepareComponents($components))
                 . '</div>';
             foreach ($slots as $i => $index) {
                 // The page's content appears once; a second Post content block in the template shows nothing.
@@ -499,14 +498,14 @@ final class StudioCompiler
 
         if ($source->kind === ChromeSource::PARTIAL && $source->documentJson !== null) {
             $partial = RenderDocumentPreparer::prepare($source->documentJson, $this->registry)['document'];
-            // "Sticky header" (the header partial's settings): the whole header sticks, as a sticky section would.
+            // "Sticky header" (the header partial's settings): the whole header sticks, as a sticky Container would.
             $scroll = $region === 'header' && is_array($partial['settings']['sticky_header'] ?? null)
                 ? ScrollEffects::render(['interactions' => ['sticky' => $partial['settings']['sticky_header']]])
                 : ['classes' => [], 'attrs' => '', 'vars' => []];
             $classes = trim($class . ' sb-site-' . $region . '--partial ' . implode(' ', $scroll['classes']));
             $style = $scroll['vars'] !== [] ? ' style="' . Html::e(implode(';', $scroll['vars'])) . '"' : '';
             return '<' . $tag . ' class="' . Html::e($classes) . '"' . $scroll['attrs'] . $style . '>'
-                . $this->documents->renderSections($partial['sections'] ?? [], $context->framing(), $theme, $collector, true)
+                . $this->documents->renderContainers($partial['containers'] ?? [], $context->framing(), $theme, $collector, true)
                 . '</' . $tag . '>';
         }
 

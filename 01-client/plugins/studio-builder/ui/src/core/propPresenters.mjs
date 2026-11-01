@@ -32,9 +32,6 @@ export const PROP_PRESENTERS = Object.freeze({
     width: { pills: true },
     alignment: { icons: 'text' },
   },
-  'layout.section': {
-    content_width: { pills: true },
-  },
   'core.container': {
     direction: { icons: 'dir', map: { vertical: 'column', horizontal: 'row' } },
   },

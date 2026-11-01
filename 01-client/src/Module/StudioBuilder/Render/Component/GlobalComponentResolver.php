@@ -3,11 +3,11 @@
  * Kohevo Studio (studio-builder) — Global Component reference resolution.
  *
  * Phase 6 live references. A Global Component is a Studio page of type
- * `section_preset` (CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE): it has
+ * `container_preset` (CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE): it has
  * a stable identity (page uuid), its own immutable revisions, its own
  * publish state, the same optimistic concurrency as any page, and is edited
- * in the same builder. A page section references it by uuid in
- * `section.global_ref` and owns no content of its own.
+ * in the same builder. A top-level Container references it by uuid in its
+ * `global_ref` and owns no content of its own.
  *
  * Resolution rules (identical to the Phase 4 chrome rules for partials):
  *
@@ -28,6 +28,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Render\Component;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
 use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 
@@ -64,7 +65,7 @@ final class GlobalComponentResolver
     }
 
     /**
-     * Resolve every distinct reference a (decoded) document's sections carry.
+     * Resolve every distinct reference a (decoded) document's top-level Containers carry.
      *
      * @param array<string, mixed> $document
      * @return array<string, ComponentSource> ref => source (sorted by ref)
@@ -81,13 +82,13 @@ final class GlobalComponentResolver
 
     /**
      * @param array<string, mixed> $document
-     * @return list<string> distinct, well-formed global refs in section order
+     * @return list<string> distinct, well-formed global refs in document order
      */
     public static function referencesIn(array $document): array
     {
         $refs = [];
-        foreach ((array) ($document['sections'] ?? []) as $section) {
-            $ref = is_array($section) ? ($section['global_ref'] ?? null) : null;
+        foreach ((array) (DocumentUpgrader::structure($document)['containers'] ?? []) as $container) {
+            $ref = is_array($container) ? ($container['global_ref'] ?? null) : null;
             if (is_string($ref) && $ref !== '' && preg_match(CanonicalDocumentSchema::GLOBAL_REF_PATTERN, $ref) === 1 && !in_array($ref, $refs, true)) {
                 $refs[] = $ref;
             }

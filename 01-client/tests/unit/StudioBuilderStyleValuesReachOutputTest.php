@@ -57,11 +57,8 @@ function sbsv_render(array $block): string
 function sbsv_validate(array $block): \Slate\Module\StudioBuilder\Schema\ValidationResult
 {
     return DocumentValidator::validate([
-        'schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [],
-        'sections' => [[
-            'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'S', 'global_ref' => null, 'layout' => [],
-            'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'blocks' => [$block],
-        ]],
+        'schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [],
+        'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$block]])],
     ], BlockRegistry::withAllCoreBlocks());
 }
 

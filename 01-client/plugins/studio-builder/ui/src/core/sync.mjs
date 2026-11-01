@@ -42,11 +42,11 @@ const MAX_BATCH = 50;
 const MAX_HISTORY = 50;
 const RETRY_DELAYS = [2000, 5000, 10000, 30000];
 // Operations that create nodes: a batch ends at (and includes) the first of them.
-const CREATES = new Set([OPS.INSERT_BLOCK, OPS.INSERT_SECTION, OPS.DUPLICATE_BLOCK, OPS.DUPLICATE_SECTION]);
+const CREATES = new Set([OPS.INSERT_BLOCK, OPS.DUPLICATE_BLOCK]);
 // Failures after which the request may or may not have reached the server.
 const UNCERTAIN = new Set(['timeout', 'network_error']);
 
-const kidsOf = (node) => asList(node && (node.blocks || node.children));
+const kidsOf = (node) => asList(node && node.children);
 
 /**
  * Provisional id → server id for the one subtree a confirmed batch created.
@@ -484,7 +484,7 @@ export class SyncEngine {
   /**
    * A server command that rewrites the working document in one step
    * (apply_template, insert_template, detach_component, create_component from
-   * a section). Same rules as every write: pending edits are drained first,
+   * a Container). Same rules as every write: pending edits are drained first,
    * the command carries `expected_revision_id` = the revision the user sees,
    * a 409 enters the conflict state, and the server's resulting document
    * replaces the base (one undo step). Nothing is applied locally first.
@@ -501,7 +501,7 @@ export class SyncEngine {
       if (!res.ok) return this.handleFailure(res, []);
       const d = res.data;
       if (!d.document || !d.revision) {
-        // A command that did not change this page (e.g. a component created without a source section).
+        // A command that did not change this page (e.g. a component created without a source Container).
         this.set({ status: this.state.pending.length ? STATUS.DIRTY : STATUS.SAVED });
         return true;
       }

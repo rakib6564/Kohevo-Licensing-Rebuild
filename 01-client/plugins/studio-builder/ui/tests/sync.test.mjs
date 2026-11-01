@@ -4,16 +4,16 @@ import assert from 'node:assert/strict';
 import { SyncEngine, STATUS } from '../src/core/sync.mjs';
 import * as ops from '../src/core/operations.mjs';
 import { findNode, nodeIds } from '../src/core/doc.mjs';
-import { manifest, doc, section, heading, container, manualScheduler, fakeServer } from './helpers.mjs';
+import { manifest, doc, topContainer, heading, container, manualScheduler, fakeServer } from './helpers.mjs';
 
 let minted = 0;
 /** Server-side apply: same applier semantics, but ids are minted by "the server". */
 const serverApply = (d, o) => {
-  const mint = o.op === 'insert_block' ? `blk_${String(++minted).padStart(24, 'f')}` : o.op === 'insert_section' ? `sec_${String(++minted).padStart(24, 'f')}` : undefined;
+  const mint = o.op === 'insert_block' ? `blk_${String(++minted).padStart(24, 'f')}` : undefined;
   return ops.applyLocal(d, o, { manifest, provisionalId: mint });
 };
 
-function setup(initial = doc([section([heading('Hello')])])) {
+function setup(initial = doc([topContainer([heading('Hello')])])) {
   const server = fakeServer(initial, serverApply);
   const sched = manualScheduler();
   const events = [];
@@ -28,7 +28,7 @@ function setup(initial = doc([section([heading('Hello')])])) {
   return { server, sched, engine, events, remaps };
 }
 
-const firstBlock = (d) => d.sections[0].blocks[0];
+const firstBlock = (d) => d.containers[0].children[0];
 
 test('load: the editor state IS the server document; nothing pending', () => {
   const { engine, server } = setup();
@@ -69,7 +69,7 @@ test('property edits: optimistic, coalesced, debounced autosave with expected_re
 
 test('structural edits flush immediately; provisional id is replaced by the server-minted id', async () => {
   const { engine, server, sched, remaps } = setup();
-  const secId = engine.getSnapshot().working.sections[0].id;
+  const secId = engine.getSnapshot().working.containers[0].id;
   const tmp = ops.provisionalId('blk');
   engine.apply(ops.insertBlock(secId, 1, { type: 'core.heading' }), { provisionalId: tmp });
   assert.ok(findNode(engine.getSnapshot().working, tmp), 'visible optimistically under its provisional id');
@@ -99,7 +99,7 @@ test('structural edits flush immediately; provisional id is replaced by the serv
 test('concurrency: a stale revision enters the conflict state and never overwrites the newer server revision', async () => {
   const { engine, server, sched, events } = setup();
   const id = firstBlock(engine.getSnapshot().working).id;
-  server.externalEdit((d) => { d.sections[0].blocks[0].props.text = 'Written by user A'; });
+  server.externalEdit((d) => { d.containers[0].children[0].props.text = 'Written by user A'; });
   const newerRev = server.currentId;
 
   engine.apply(ops.updateBlockProps(id, { level: 'h2', text: 'Written by user B' }));
@@ -111,7 +111,7 @@ test('concurrency: a stale revision enters the conflict state and never overwrit
   assert.equal(s.conflict.localChangeCount, 1, 'local changes still exist');
   assert.equal(engine.hasUnsavedChanges, true);
   assert.ok(events.includes('conflict'));
-  assert.equal(server.currentDoc.sections[0].blocks[0].props.text, 'Written by user A', 'server revision untouched');
+  assert.equal(server.currentDoc.containers[0].children[0].props.text, 'Written by user A', 'server revision untouched');
   assert.equal(server.currentId, newerRev, 'no revision created by the rejected save');
 
   // No further writes while in conflict: edits are refused, nothing is scheduled or sent.
@@ -209,17 +209,17 @@ test('publish drains pending edits first and publishes the exact revision it saw
   assert.equal(engine.getSnapshot().revision.id, server.currentId);
 });
 
-test('remove, move and section reorder are canonical operations and survive a reload from the server', async () => {
-  const d = doc([section([heading('A'), heading('B'), container([heading('C')])], 'S1'), section([], 'S2')]);
+test('remove, move and top-level reorder are canonical operations and survive a reload from the server', async () => {
+  const d = doc([topContainer([heading('A'), heading('B'), container([heading('C')])], 'S1'), topContainer([], 'S2')]);
   const { engine, server, sched } = setup(d);
   const w = engine.getSnapshot().working;
-  const [a, b, c] = w.sections[0].blocks;
-  const [s1, s2] = w.sections;
+  const [a, b, c] = w.containers[0].children;
+  const [s1, s2] = w.containers;
   engine.apply(ops.moveBlock(b.id, c.id, 0));          // move B into the container
   await sched.runAll(); await engine.busy;
   engine.apply(ops.removeBlock(a.id));                 // remove A
   await sched.runAll(); await engine.busy;
-  engine.apply(ops.moveSection(s2.id, 0));             // reorder sections
+  engine.apply(ops.moveBlock(s2.id, null, 0));         // reorder at the top level
   await sched.runAll(); await engine.busy;
 
   // A fresh editor built ONLY from the server reproduces the same structure.
@@ -227,7 +227,7 @@ test('remove, move and section reorder are canonical operations and survive a re
   reloaded.load({}, manifest);
   await reloaded.reloadFromServer();
   const r = reloaded.getSnapshot().working;
-  assert.deepEqual(r.sections.map((s) => s.id), [s2.id, s1.id]);
+  assert.deepEqual(r.containers.map((s) => s.id), [s2.id, s1.id]);
   assert.equal(findNode(r, a.id), null);
   assert.equal(findNode(r, b.id).parentId, c.id);
   assert.deepEqual(r, engine.getSnapshot().working);
@@ -280,7 +280,7 @@ test('a plain refresh from the server keeps undo/redo when the revision is uncha
   assert.equal(await engine.reloadFromServer(), true);
   assert.equal(engine.getSnapshot().undo.length, 1, 'same revision: history still valid');
 
-  server.externalEdit((d) => { d.sections[0].blocks[0].props.text = 'theirs'; });
+  server.externalEdit((d) => { d.containers[0].children[0].props.text = 'theirs'; });
   assert.equal(await engine.reloadFromServer(), true);
   assert.equal(engine.getSnapshot().undo.length, 0, 'another revision: history no longer applies');
   assert.equal(firstBlock(engine.getSnapshot().working).props.text, 'theirs');

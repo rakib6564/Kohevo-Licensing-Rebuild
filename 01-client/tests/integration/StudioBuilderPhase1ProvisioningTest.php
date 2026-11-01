@@ -183,8 +183,8 @@ unit('studio-builder phase 1 integration: provisioning, schema verification, RBA
             $plugin = \PluginLoader::get('studio-builder');
             assert_true($plugin instanceof \StudioBuilder, 'Booted plugin instance must be StudioBuilder');
             assert_true(StudioSchemaManager::schemaIsCurrent(), 'All 7 studiobuilder_* tables and columns must be verified');
-            assert_eq('1.0.0', (string) $plugin->setting('applied_version'));
-            assert_eq('1.0.0', (string) $plugin->setting('schema_verified'));
+            assert_eq('1.1.0', (string) $plugin->setting('applied_version'));
+            assert_eq('1.1.0', (string) $plugin->setting('schema_verified'));
 
             // Now both license entitlement AND active plugin are satisfied
             assert_true(ModuleGuard::isEntitled('studio-builder'));
@@ -332,7 +332,7 @@ unit('studio-builder phase 1 integration: provisioning, schema verification, RBA
             $tpl1Id = $tenants->runAs(1, static fn(): int => $tpls->insert([
                 'uuid'          => '33333333-3333-4333-8333-333333333333',
                 'template_key'  => 'hero-minimal',
-                'template_type' => 'section_preset',
+                'template_type' => 'container_preset',
                 'category'      => 'hero',
                 'name'          => 'Minimal Hero',
                 'document_json' => '{"version":"1.0","root":{}}',

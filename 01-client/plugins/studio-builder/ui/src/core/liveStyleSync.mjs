@@ -2,7 +2,7 @@
 // to the server's render when that arrives. The server stays the source of truth: a node is only ever overridden here
 // while the document differs from what the server last painted, and `releaseLive` ends every override.
 
-import { MANAGED_CLASS, compileBlockStyle, compileSectionStyle, ruleText, tokenClassRules } from './liveStyle.mjs';
+import { MANAGED_CLASS, compileBlockStyle, ruleText, tokenClassRules } from './liveStyle.mjs';
 
 const SHEET_ID = 'sbx-live-style';
 const KEPT_INLINE = /^(--|text-align\s*:)/;
@@ -22,7 +22,7 @@ export function tokensOfDoc(doc) {
   };
 }
 
-/** Every section and block of a document, by id. */
+/** Every block of a document, by id. */
 function indexNodes(doc) {
   const map = new Map();
   const walk = (blocks) => {
@@ -32,25 +32,20 @@ function indexNodes(doc) {
       walk(b.children);
     }
   };
-  for (const s of Array.isArray(doc && doc.sections) ? doc.sections : []) {
-    if (!s || !s.id) continue;
-    map.set(s.id, { kind: 'section', node: s });
-    walk(s.blocks);
-  }
+  walk(doc && doc.containers);
   return map;
 }
 
 /** The part of a node the style compiler reads. */
 function styleKey(entry) {
   const n = entry.node;
-  return entry.kind === 'section' ? [n.style] : [n.style, n.responsive, n.style_states];
+  return [n.style, n.responsive, n.style_states];
 }
 
 /** Can the client predict this node exactly, before and after? When not, the server's render has to show it. */
 export function styleChangeIsLive(prevEntry, nextEntry, tokens) {
-  if (!prevEntry || !nextEntry || prevEntry.kind !== nextEntry.kind) return false;
-  const compile = (e) => (e.kind === 'section' ? compileSectionStyle(e.node) : compileBlockStyle(e.node, tokens));
-  return compile(prevEntry).covered && compile(nextEntry).covered;
+  if (!prevEntry || !nextEntry) return false;
+  return compileBlockStyle(prevEntry.node, tokens).covered && compileBlockStyle(nextEntry.node, tokens).covered;
 }
 
 function sheetOf(doc) {
@@ -64,12 +59,7 @@ function sheetOf(doc) {
   return el;
 }
 
-function applyToElement(el, compiled, isSection) {
-  if (isSection) {
-    // A section keeps its surface and padding token classes; only its own scoped class gives way to the live rule.
-    for (const cls of Array.from(el.classList)) if (/^sb-x-[0-9a-f]{16}$/.test(cls)) el.classList.remove(cls);
-    return;
-  }
+function applyToElement(el, compiled) {
   const keep = (el.getAttribute('style') || '').split(';').map((d) => d.trim()).filter((d) => d && KEPT_INLINE.test(d));
   for (const cls of Array.from(el.classList)) if (MANAGED_CLASS.test(cls)) el.classList.remove(cls);
   for (const cls of compiled.classes) el.classList.add(cls);
@@ -98,9 +88,8 @@ export function syncLiveStyles(canvasDoc, serverDoc, workingDoc, tokens, live) {
 
     const el = canvasDoc.querySelector(`[data-sb-node="${esc(id)}"]`);
     if (!el) continue;
-    const isSection = entry.kind === 'section';
-    const compiled = isSection ? { ...compileSectionStyle(entry.node), classes: [], inline: [], media: [] } : compileBlockStyle(entry.node, tokens);
-    applyToElement(el, compiled, isSection);
+    const compiled = compileBlockStyle(entry.node, tokens);
+    applyToElement(el, compiled);
     live.set(id, { rule: ruleText(id, compiled), tokenRules: tokenClassRules(compiled.classes) });
     painted += 1;
   }

@@ -12,7 +12,7 @@ import * as pk from '../src/core/packages.mjs';
 import { createTransport } from '../src/core/api.mjs';
 import { SyncEngine, STATUS } from '../src/core/sync.mjs';
 import * as ops from '../src/core/operations.mjs';
-import { manifest, doc, section, heading, manualScheduler, fakeServer } from './helpers.mjs';
+import { manifest, doc, topContainer, heading, manualScheduler, fakeServer } from './helpers.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PKG = { package_format: 'kohevo-studio-package', package_version: '1.0', exported_at: '2026-09-30T00:00:00Z', items: [{ kind: 'page' }] };
@@ -83,7 +83,7 @@ function importingServer(initial) {
     if (body.expected_revision_id !== server.currentId) {
       return { ok: false, status: 409, error: { code: 'concurrency_conflict', message: '', details: { current_revision_id: server.currentId } } };
     }
-    server.externalEdit((d) => { d.sections = [section([heading('Imported')], 'Imported')]; });
+    server.externalEdit((d) => { d.containers = [topContainer([heading('Imported')], 'Imported')]; });
     const snap = await server.transport.document();
     return { ok: true, status: 201, data: { ...snap.data, deduplicated: false, report: { dry_run: false, committed: { pages: [{ mode: 'replaced' }] } } } };
   };
@@ -92,7 +92,7 @@ function importingServer(initial) {
 
 test('packages: replace-draft goes through the engine command path — pending edits are saved first, the import carries expected_revision_id, and the editor adopts the imported draft', async () => {
   const sched = manualScheduler();
-  const server = importingServer(doc([section([heading('Before')])]));
+  const server = importingServer(doc([topContainer([heading('Before')])]));
   const engine = new SyncEngine({ transport: server.transport, pageId: 1, schedule: sched.schedule, cancel: sched.cancel });
   engine.load((await server.transport.document()).data, manifest);
   engine.apply({ op: 'update_seo', payload: { seo: { title: 'Local edit' } } });
@@ -101,20 +101,20 @@ test('packages: replace-draft goes through the engine command path — pending e
   assert.deepEqual(server.calls.map((c) => c[0]), ['operations', 'import_package'], 'the local edit was saved before importing');
   assert.equal(server.calls[1][1].target_page_id, PAGE.id);
   assert.equal(engine.getSnapshot().status, STATUS.SAVED);
-  assert.equal(engine.getSnapshot().working.sections[0].blocks[0].props.text, 'Imported', 'the imported draft is now the working document');
+  assert.equal(engine.getSnapshot().working.containers[0].children[0].props.text, 'Imported', 'the imported draft is now the working document');
   assert.equal(engine.getSnapshot().undo.length > 0, true, 'one undo step back to the previous draft');
 });
 
 test('packages: a stale replace (409) enters the conflict state and keeps local edits; nothing further is sent', async () => {
   const sched = manualScheduler();
-  const server = importingServer(doc([section([heading('Before')])]));
+  const server = importingServer(doc([topContainer([heading('Before')])]));
   const engine = new SyncEngine({ transport: server.transport, pageId: 1, schedule: sched.schedule, cancel: sched.cancel });
   engine.load((await server.transport.document()).data, manifest);
   server.externalEdit((d) => { d.seo.title = 'Someone else'; });
   const ok = await engine.command((base) => server.transport.importPackage({ ...pk.importRequest({ pkg: PKG, mode: pk.MODES.REPLACE, page: PAGE, revisionId: base.expected_revision_id, dryRun: false }), expected_revision_id: base.expected_revision_id }), {});
   assert.equal(ok, false);
   assert.equal(engine.getSnapshot().status, STATUS.CONFLICT);
-  assert.equal(engine.getSnapshot().working.sections[0].blocks[0].props.text, 'Before', 'the editor still shows what the user had');
+  assert.equal(engine.getSnapshot().working.containers[0].children[0].props.text, 'Before', 'the editor still shows what the user had');
   assert.equal(await engine.command(() => Promise.resolve({ ok: true, status: 200, data: {} }), {}), false, 'no further command while in conflict');
 });
 
@@ -159,7 +159,7 @@ test('packages UI: the top bar offers Import / Export; the import tab has Analys
 test('packages UI: the report shows readiness, errors, warnings, the plan and the draft-only component note', { skip: skipReason || false }, () => {
   const report = {
     dry_run: true, can_commit: false,
-    summary: { pages_count: 1, global_components_count: 1, templates_count: 0, tokens_count: 0, sections_count: 2, blocks_count: 3, errors_count: 1, warnings_count: 1 },
+    summary: { pages_count: 1, global_components_count: 1, templates_count: 0, tokens_count: 0, containers_count: 2, blocks_count: 3, errors_count: 1, warnings_count: 1 },
     issues: [
       { severity: 'error', code: 'route_collision', item: 'page', path: '$.items[0].slug', message: 'A page with slug x exists.' },
       { severity: 'warning', code: 'unresolved_media', item: 'page', path: '$.items[0].document.seo.og_image_media_id', message: 'Image removed.' },

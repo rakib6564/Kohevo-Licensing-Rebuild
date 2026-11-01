@@ -156,11 +156,7 @@ body.sb-body h1, body.sb-body h2, body.sb-body h3, body.sb-body h4 {
     max-width: none !important;
     width: 100% !important;
 }
-.sb-main--full .sb-section {
-    padding: 0 !important;
-    margin: 0 !important;
-}
-.sb-main--full .sb-section__inner {
+.sb-main--full .sb-top {
     padding: 0 !important;
     margin: 0 !important;
     max-width: none !important;
@@ -175,14 +171,10 @@ body.sb-body h1, body.sb-body h2, body.sb-body h3, body.sb-body h4 {
     padding: 0;
     box-sizing: border-box;
 }
-.sb-main--normal .sb-section {
-    padding: 2.5rem 0 !important;
+.sb-main--normal .sb-top {
+    /* A 68rem column with 1.5rem at each side, drawn by the padding of the full-width Container. */
+    padding: 2.5rem max(1.5rem, calc((100% - 65rem) / 2)) !important;
     margin: 0 auto !important;
-}
-.sb-main--normal .sb-section__inner {
-    max-width: 68rem !important;
-    margin: 0 auto !important;
-    padding: 0 1.5rem !important;
     display: block !important;
 }
 .sb-main--normal .sb-heading,

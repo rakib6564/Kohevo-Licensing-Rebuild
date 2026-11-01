@@ -8,12 +8,12 @@ test.afterEach(async ({ page }) => {
   await page.goto(`/plugins/studio-builder/admin/builder.php?page=${sandboxPageId()}&lang=en`);
 });
 
-async function ensureSections(page, n, scope = page) {
+async function ensureContainers(page, n, scope = page) {
   await scope.getByRole('tab', { name: /^Layers$/ }).click();
   for (let guard = 0; guard < n + 2; guard++) {
     const count = await scope.locator(`${ROWS}[aria-level="1"]`).count();
     if (count >= n) break;
-    await scope.getByRole('button', { name: /Add section/ }).first().click();
+    await scope.getByRole('button', { name: /Add Container/ }).first().click();
     await expect.poll(() => scope.locator(`${ROWS}[aria-level="1"]`).count(), { timeout: 15_000 }).toBeGreaterThan(count);
   }
   await settled(page);
@@ -29,7 +29,7 @@ test.describe('desktop', () => {
 
   test('dragging a row\'s handle onto another row reorders; Escape cancels; locked rows have no handle', async ({ page }) => {
     await openBuilder(page);
-    await ensureSections(page, 2);
+    await ensureContainers(page, 2);
     const [a, b] = await topIds(page);
     const rowB = page.locator(`${ROWS}[data-row="${b}"]`);
     await page.locator(`${ROWS}[data-row="${a}"]`).hover();
@@ -71,7 +71,7 @@ test.describe('desktop', () => {
 
   test('a locked row cannot be dragged: its handle is disabled until it is unlocked', async ({ page }) => {
     await openBuilder(page);
-    await ensureSections(page, 1);
+    await ensureContainers(page, 1);
     const [a] = await topIds(page);
     await page.locator(`${ROWS}[data-row="${a}"]`).click();
     await page.getByRole('tab', { name: /^Layers$/ }).click();
@@ -86,9 +86,9 @@ test.describe('desktop', () => {
     await expect(page.getByTestId(`row-handle-${a}`)).toBeEnabled();
   });
 
-  test('a block can be dragged into another section', async ({ page }) => {
+  test('a block can be dragged into another Container', async ({ page }) => {
     await openBuilder(page);
-    await ensureSections(page, 2);
+    await ensureContainers(page, 2);
     const [a, b] = await topIds(page);
     await page.locator(`${ROWS}[data-row="${a}"]`).click();
     await page.getByRole('tab', { name: /^Add$/ }).click();
@@ -169,7 +169,7 @@ test.describe('phone', () => {
     await openBuilder(page);
     await page.getByTestId('mobile-dock-blocks').click();
     const sheet = page.locator('.sbx-left.is-mobile-open');
-    await ensureSections(page, 2, sheet);
+    await ensureContainers(page, 2, sheet);
     const [a, b] = await topIds(page, sheet);
     const handle = sheet.getByTestId(`row-handle-${a}`);
     await expect(handle).toBeVisible();

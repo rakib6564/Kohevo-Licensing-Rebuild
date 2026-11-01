@@ -31,7 +31,7 @@ async function layerCount(page) {
   return page.locator('[role="treeitem"]').count();
 }
 
-/** Undo until the page has no more layers than before (an insert may also have created a section). */
+/** Undo until the page has no more layers than before (an insert may also have created a Container). */
 async function restore(page, layers) {
   for (let i = 0; i < 16; i++) {
     await settled(page);

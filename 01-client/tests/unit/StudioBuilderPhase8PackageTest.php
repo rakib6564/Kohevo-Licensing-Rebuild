@@ -45,7 +45,7 @@ use Slate\Module\StudioBuilder\StudioPermissions;
 function sbu8_block(string $type, array $props, array $children = []): array
 {
     return [
-        'id' => 'blk_' . bin2hex(random_bytes(12)), 'type' => $type, 'version' => 1, 'props' => $props,
+        'id' => 'blk_' . bin2hex(random_bytes(12)), 'type' => $type, 'version' => ($type === 'core.container' ? 2 : 1), 'props' => $props,
         'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'bindings' => [], 'children' => $children,
     ];
@@ -56,21 +56,13 @@ function sbu8_document(): array
 {
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Unit');
     $doc['seo']['og_image_media_id'] = 1;
-    $doc['sections'] = [
-        [
-            'id' => 'sec_aaaaaaaaaaaaaaaaaaaaaaaa', 'label' => 'Main', 'global_ref' => null,
-            'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            'blocks' => [
+    $doc['containers'] = [
+        CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'id' => 'blk_aaaaaaaaaaaaaaaaaaaaaaaa', 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [
                 sbu8_block('core.hero', ['heading' => 'Hi', 'media' => ['media_id' => 1, 'alt' => 'x', 'focal_point' => [1.0, 0.5]]]),
                 sbu8_block('core.image', ['media' => ['media_id' => 2, 'alt' => 'y']]),
                 sbu8_block('core.container', ['gap' => 'md', 'direction' => 'vertical'], [sbu8_block('core.image', ['media' => ['media_id' => 2, 'alt' => 'z']])]),
-            ],
-        ],
-        [
-            'id' => 'sec_bbbbbbbbbbbbbbbbbbbbbbbb', 'label' => 'Ref', 'global_ref' => '11111111-1111-4111-8111-111111111111',
-            'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            'blocks' => [],
-        ],
+            ]]),
+        CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Ref'], 'id' => 'blk_bbbbbbbbbbbbbbbbbbbbbbbb', 'global_ref' => '11111111-1111-4111-8111-111111111111', 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => []]),
     ];
     return $doc;
 }
@@ -135,10 +127,10 @@ unit('phase8a unit: a well-formed package validates; the envelope rejects unknow
 
 unit('phase8a unit: tenant_id is rejected at ANY depth, and tampering is detected by the content hash (which is not a signature)', function (): void {
     $p = sbu8_package();
-    $p['items'][0]['document']['sections'][0]['blocks'][2]['children'][0]['props']['tenant_id'] = 7;
+    $p['items'][0]['document']['containers'][0]['children'][2]['children'][0]['props']['tenant_id'] = 7;
     $issues = StudioPackageFormat::validate(sbu8_rehash($p));
     assert_true(in_array('forbidden_tenant_id', sbu8_codes($issues), true));
-    assert_true(in_array('$.items[0].document.sections[0].blocks[2].children[0].props.tenant_id', array_column($issues, 'path'), true), 'the exact path is named');
+    assert_true(in_array('$.items[0].document.containers[0].children[2].children[0].props.tenant_id', array_column($issues, 'path'), true), 'the exact path is named');
     $p = sbu8_package() + ['tenant_id' => 1];
     assert_true(in_array('forbidden_tenant_id', sbu8_codes(StudioPackageFormat::validate($p)), true));
 
@@ -157,7 +149,7 @@ unit('phase8a unit: the content hash survives a browser JSON round trip (1.0 bec
     $shuffled = $js;
     $shuffled['items'][0] = array_reverse($js['items'][0], true);
     assert_eq([], StudioPackageFormat::validate($shuffled));
-    assert_eq(1, $js['items'][0]['document']['sections'][0]['blocks'][0]['props']['media']['focal_point'][0], 'sanity: the float lost its fraction');
+    assert_eq(1, $js['items'][0]['document']['containers'][0]['children'][0]['props']['media']['focal_point'][0], 'sanity: the float lost its fraction');
 });
 
 unit('phase8a unit: media descriptors are exactly {key, path, mime}; filesystem paths and traversal are refused; external URLs are allowed only as (never fetched) references', function (): void {
@@ -180,21 +172,19 @@ unit('phase8a unit: media descriptors are exactly {key, path, mime}; filesystem 
 
 // ── 2. Document mapper ────────────────────────────────────────────────────
 
-unit('phase8a unit: re-minting replaces every section, block and nested child id (even colliding source ids) and keeps everything else', function (): void {
+unit('phase8a unit: re-minting replaces every Container, block and nested child id (even colliding source ids) and keeps everything else', function (): void {
     $doc = sbu8_document();
-    $doc['sections'][0]['blocks'][1]['id'] = $doc['sections'][0]['blocks'][0]['id']; // collision in the source
+    $doc['containers'][0]['children'][1]['id'] = $doc['containers'][0]['children'][0]['id']; // collision in the source
     $out = PackageDocumentMapper::remintIds($doc);
-    $old = [$doc['sections'][0]['id'], $doc['sections'][1]['id'], $doc['sections'][0]['blocks'][0]['id'], $doc['sections'][0]['blocks'][2]['id'], $doc['sections'][0]['blocks'][2]['children'][0]['id']];
-    $new = [$out['sections'][0]['id'], $out['sections'][1]['id'], $out['sections'][0]['blocks'][0]['id'], $out['sections'][0]['blocks'][1]['id'], $out['sections'][0]['blocks'][2]['id'], $out['sections'][0]['blocks'][2]['children'][0]['id']];
+    $old = [$doc['containers'][0]['id'], $doc['containers'][1]['id'], $doc['containers'][0]['children'][0]['id'], $doc['containers'][0]['children'][2]['id'], $doc['containers'][0]['children'][2]['children'][0]['id']];
+    $new = [$out['containers'][0]['id'], $out['containers'][1]['id'], $out['containers'][0]['children'][0]['id'], $out['containers'][0]['children'][1]['id'], $out['containers'][0]['children'][2]['id'], $out['containers'][0]['children'][2]['children'][0]['id']];
     assert_eq([], array_intersect($old, $new));
     assert_eq(count($new), count(array_unique($new)), 'unique after re-minting');
     foreach ($new as $id) {
-        assert_true(preg_match('/^(sec|blk)_[a-z0-9]{24}$/', $id) === 1);
+        assert_true(preg_match('/^blk_[a-z0-9]{24}$/', $id) === 1);
     }
-    assert_eq('11111111-1111-4111-8111-111111111111', $out['sections'][1]['global_ref'], 're-minting keeps references (remapping is separate)');
-    [$s, $b] = PackageDocumentMapper::deterministicMinters('seed');
-    [$s2, $b2] = PackageDocumentMapper::deterministicMinters('seed');
-    assert_eq(PackageDocumentMapper::remintIds($doc, $s, $b), PackageDocumentMapper::remintIds($doc, $s2, $b2), 'dry-run minting is reproducible');
+    assert_eq('11111111-1111-4111-8111-111111111111', $out['containers'][1]['global_ref'], 're-minting keeps references (remapping is separate)');
+    assert_eq(PackageDocumentMapper::remintIds($doc, PackageDocumentMapper::deterministicMinter('seed')), PackageDocumentMapper::remintIds($doc, PackageDocumentMapper::deterministicMinter('seed')), 'dry-run minting is reproducible');
 });
 
 unit('phase8a unit: media downgrade contract — OG image -> null, optional media -> null, a block with required media is omitted (at any depth); a resolved id is written', function (): void {
@@ -205,27 +195,27 @@ unit('phase8a unit: media downgrade contract — OG image -> null, optional medi
     $none = PackageDocumentMapper::rewriteMedia($doc, $registry, static fn(int $k): ?int => null);
     $d = $none['document'];
     assert_null($d['seo']['og_image_media_id']);
-    assert_null($d['sections'][0]['blocks'][0]['props']['media'], 'optional hero media -> null');
-    assert_eq(['core.hero', 'core.container'], array_column($d['sections'][0]['blocks'], 'type'), 'the required image is omitted');
-    assert_eq([], $d['sections'][0]['blocks'][1]['children'], 'also inside a container');
+    assert_null($d['containers'][0]['children'][0]['props']['media'], 'optional hero media -> null');
+    assert_eq(['core.hero', 'core.container'], array_column($d['containers'][0]['children'], 'type'), 'the required image is omitted');
+    assert_eq([], $d['containers'][0]['children'][1]['children'], 'also inside a container');
     assert_eq(['set_null', 'set_null', 'omit_block', 'omit_block'], array_column($none['unresolved'], 'action'));
     assert_true(!str_contains(json_encode($d), 'http'), 'no URL is ever written');
 
     $some = PackageDocumentMapper::rewriteMedia($doc, $registry, static fn(int $k): ?int => $k === 1 ? 501 : null)['document'];
     assert_eq(501, $some['seo']['og_image_media_id']);
-    assert_eq(501, $some['sections'][0]['blocks'][0]['props']['media']['media_id']);
+    assert_eq(501, $some['containers'][0]['children'][0]['props']['media']['media_id']);
 });
 
-unit('phase8a unit: global references are remapped through the explicit map; an unmapped one becomes an empty owned section', function (): void {
+unit('phase8a unit: global references are remapped through the explicit map; an unmapped one becomes an empty owned Container', function (): void {
     $doc = sbu8_document();
     $mapped = PackageDocumentMapper::rewriteGlobalRefs($doc, static fn(string $r): ?string => '22222222-2222-4222-8222-222222222222');
-    assert_eq('22222222-2222-4222-8222-222222222222', $mapped['document']['sections'][1]['global_ref']);
+    assert_eq('22222222-2222-4222-8222-222222222222', $mapped['document']['containers'][1]['global_ref']);
     assert_eq([], $mapped['unresolved']);
     $un = PackageDocumentMapper::rewriteGlobalRefs($doc, static fn(string $r): ?string => null);
-    assert_null($un['document']['sections'][1]['global_ref']);
-    assert_eq([], $un['document']['sections'][1]['blocks']);
-    assert_eq('Ref', $un['document']['sections'][1]['label']);
-    assert_eq([['path' => '$.sections[1].global_ref', 'ref' => '11111111-1111-4111-8111-111111111111']], $un['unresolved']);
+    assert_null($un['document']['containers'][1]['global_ref'] ?? null);
+    assert_eq([], $un['document']['containers'][1]['children']);
+    assert_eq('Ref', $un['document']['containers'][1]['metadata']['label']);
+    assert_eq([['path' => '$.containers[1].global_ref', 'ref' => '11111111-1111-4111-8111-111111111111']], $un['unresolved']);
     assert_eq(1, preg_match(CanonicalDocumentSchema::COMPONENT_REF_PATTERN, PackageDocumentMapper::placeholderUuid('x')), 'placeholder component refs are well formed');
 });
 
@@ -237,7 +227,7 @@ unit('phase8a unit: the import report is deterministic, maps validator codes ont
         $calls = [
             static fn() => $r->warning('unresolved_media', 'b', '$.x', 'w'),
             static fn() => $r->error('route_collision', 'a', '$.slug', 'e'),
-            static fn() => $r->validatorErrors('a', '$.items[0].document', [['path' => '$.sections[0].blocks[0].type', 'code' => 'block_module_not_entitled', 'message' => 'm'], ['path' => '$.x', 'code' => 'invalid_layout_width', 'message' => 'm']]),
+            static fn() => $r->validatorErrors('a', '$.items[0].document', [['path' => '$.containers[0].children[0].type', 'code' => 'block_module_not_entitled', 'message' => 'm'], ['path' => '$.x', 'code' => 'invalid_layout_width', 'message' => 'm']]),
         ];
         foreach ($reverse ? array_reverse($calls) : $calls as $c) {
             $c();

@@ -4,7 +4,7 @@
 // `title`, `lang`, `aria-*` and `data-*` (never `data-sb-*`), values a string or number. This mirrors it so the
 // editor refuses what the server refuses; `tests/fixtures/block-attributes.json` is checked by both sides.
 
-import { asList, asObject, sectionsOf } from './doc.mjs';
+import { asList, asObject, containersOf } from './doc.mjs';
 
 export const NAMES = Object.freeze(['id', 'role', 'tabindex', 'title', 'lang']);
 export const PREFIXES = Object.freeze(['aria-', 'data-']);
@@ -45,11 +45,7 @@ export function idOwner(doc, id, exceptId) {
     }
     return null;
   };
-  for (const section of sectionsOf(doc)) {
-    const hit = walk(section.blocks);
-    if (hit) return hit;
-  }
-  return null;
+  return walk(containersOf(doc));
 }
 
 /** A block's attributes grouped for the Advanced tab; `other` keeps anything the dedicated fields do not show. */

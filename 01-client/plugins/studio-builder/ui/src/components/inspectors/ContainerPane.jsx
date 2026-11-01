@@ -1,24 +1,26 @@
 // ContainerPane — a Container's own section, laid out like the reference editor: Flexbox or Grid, Boxed or Full width with
-// its width, a minimum height, how the items sit (direction, justify, align, gaps, wrap) and, folded away, overflow and
+// its width, vertical spacing, a minimum height, how the items sit (direction, justify, align, gaps, wrap) and, folded away, overflow and
 // the HTML element (including a whole-container link).
 //
 // It edits the same document values as the panes it replaces (`style.layout`, `style.dimensions`, the block's `tag`),
-// plus the boxed width (`layout.content_width` / `content_max`) and `link`. A Container's older props (gap, direction,
+// plus the boxed width (`layout.content_width` / `content_size` / `content_max`), `layout.padding_y` and `link`. A Container's older props (gap, direction,
 // wrap) still render; they show here as what the fields start from until the layout overrides them.
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Field, Check } from '../ui/index.js';
-import { useEditor } from '../EditorContext.jsx';
+import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { DraftText } from './StyleControls.jsx';
 import { IconChoice, SelectField } from './SurfaceControls.jsx';
 import { DeviceStyle } from './DeviceStyle.jsx';
 import { Icon } from './InspectorIcons.jsx';
-import { OPTIONS, getPath, setPath, setPaths, surfaceAccepts } from '../../core/styleSurface.mjs';
-import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
+import { OPTIONS, getPath, paddingBeatsSpacing, setPath, setPaths, surfaceAccepts } from '../../core/styleSurface.mjs';
+import { OVERRIDE_DEVICES, RESPONSIVE_SCOPES, clearOverride, hasOverride } from '../../core/responsiveStyle.mjs';
 import { blockLinkIssue } from '../../core/operations.mjs';
-import { asObject } from '../../core/doc.mjs';
+import { asList, asObject } from '../../core/doc.mjs';
 import { optionLabel } from '../../core/optionLabels.mjs';
-import { siteContentPx } from '../../core/siteWidths.mjs';
+import { sizedLabel } from '../../core/optionValues.mjs';
+import { boxWidthLabel, boxWidthOf, boxWidths, siteContentPx } from '../../core/siteWidths.mjs';
+import { templateCapsWidth } from '../../core/layoutTemplate.mjs';
 import { t } from '../../core/messages.mjs';
 
 /** What the Container's own `gap` prop (a spacing step) measures, so the gap fields can show it as their starting point. */
@@ -28,6 +30,9 @@ const GAP_STEPS = Object.freeze({ none: '0', xs: '4', sm: '8', md: '16', lg: '24
 const RANGES = Object.freeze({
   px: [0, 1600, 10], '%': [0, 100, 1], vw: [0, 100, 1], vh: [0, 100, 1], rem: [0, 100, 0.5], em: [0, 100, 0.5],
 });
+
+/** A Container's own boxed width, the one layout value a device can set beside the flex and grid fields. */
+const BOX_MAX = Object.freeze(['layout.content_max']);
 
 const NUMBER_UNIT = /^(\d*\.?\d+)([a-z%]*)$/i;
 
@@ -93,6 +98,24 @@ export function UnitSlider({ id, label, value, units, path, placeholder, onCommi
       </div>
     </Field>
   );
+}
+
+/** The Single template that lays the open page out on the live site, re-read with each revision (its category can change). */
+function useLayoutTemplate(wanted) {
+  const { transport, boot } = useEditor();
+  const page = useEngineState((s) => s.page);
+  const revisionId = useEngineState((s) => (s.revision ? s.revision.id : 0));
+  const chromed = wanted && !!page && ['page', 'landing'].includes(page.page_type);
+  const [template, setTemplate] = useState(null);
+  useEffect(() => {
+    if (!chromed || !transport || typeof transport.layoutTemplate !== 'function') { setTemplate(null); return undefined; }
+    let alive = true;
+    transport.layoutTemplate(boot.pageId).then((res) => {
+      if (alive) setTemplate(res && res.ok && res.data ? res.data.template || null : null);
+    }).catch(() => { if (alive) setTemplate(null); });
+    return () => { alive = false; };
+  }, [transport, boot.pageId, revisionId, chromed]);
+  return template;
 }
 
 /** Column and row gap side by side, linked by default (one value for both), in px unless a unit is typed. */
@@ -232,10 +255,12 @@ function TagFields({ id, block, onTag }) {
  * @param {(next: object) => void} props.onChange       saves the style
  * @param {object} props.deviceScope  for the fields that can differ per device
  * @param {(tag: string|null, link: object|null) => void} props.onTag  saves the HTML element (and its link)
+ * @param {boolean} [props.top]       a top-level Container, the one a page template's width can hold in
  */
-export function ContainerPane({ block, style, onChange, deviceScope, onTag }) {
+export function ContainerPane({ block, style, onChange, deviceScope, onTag, top = false }) {
   const id = useId();
-  const { layoutChooser, setLayoutChooser, manifest } = useEditor();
+  const { layoutChooser, setLayoutChooser, manifest, boot } = useEditor();
+  const layoutTemplate = useLayoutTemplate(top);
   const siteContentWidth = siteContentPx(manifest) || '1280';
   const layout = asObject(style.layout);
   const props = asObject(block.props);
@@ -249,10 +274,22 @@ export function ContainerPane({ block, style, onChange, deviceScope, onTag }) {
     if (v === 'boxed') {
       pairs.push(['dimensions.width', undefined]);
     } else {
-      pairs.push(['layout.content_max', undefined]);
+      pairs.push(['layout.content_max', undefined], ['layout.content_size', undefined]);
     }
     onChange(setPaths(style, pairs));
   };
+  const boxWidth = boxWidthOf(layout);
+  const setBoxWidth = (v) => {
+    const custom = v === 'custom';
+    onChange(setPaths(style, [
+      ['layout.content_size', custom || v === 'default' ? undefined : v],
+      ['layout.content_max', custom ? (layout.content_max ?? `${siteContentWidth}px`) : undefined],
+    ]));
+    // A device's own width belongs to Custom: it would still hold the box in otherwise.
+    const devices = OVERRIDE_DEVICES.filter((d) => hasOverride(deviceScope.responsive, d, BOX_MAX));
+    if (!custom && devices.length) deviceScope.saveResponsive(devices.reduce((r, d) => clearOverride(r, d, BOX_MAX), deviceScope.responsive));
+  };
+  const spacing = asList(manifest && manifest.vocabulary && manifest.vocabulary.spacing_scale);
   return (
     <div className="sbx-containerpane" data-testid="container-pane">
       <SelectField
@@ -277,16 +314,28 @@ export function ContainerPane({ block, style, onChange, deviceScope, onTag }) {
         onChange={setContentWidth}
       />
       {boxed ? (
-        <UnitSlider
-          id={`${id}-content-max`}
-          label={t('container_width')}
-          value={layout.content_max}
-          units={['px', '%', 'vw', 'rem']}
-          path="layout.content_max"
-          placeholder={siteContentWidth}
-          hint={layout.content_max ? undefined : t('container_width_site', { width: `${siteContentWidth}px` })}
-          onCommit={(v) => put('layout.content_max', v ?? undefined)}
-        />
+        <>
+          <Field label={t('container_width')} htmlFor={`${id}-box-width`} hint={boxWidth === 'default' ? t('container_width_site', { width: `${siteContentWidth}px` }) : null}>
+            <select id={`${id}-box-width`} value={boxWidth} onChange={(e) => setBoxWidth(e.target.value)}>
+              {boxWidths(manifest).map((w) => <option key={w} value={w}>{boxWidthLabel(manifest, w)}</option>)}
+            </select>
+          </Field>
+          {boxWidth === 'custom' && (
+            <DeviceStyle scope={deviceScope} paths={BOX_MAX} label={t('custom_width')}>
+              {(view) => (
+                <UnitSlider
+                  id={`${id}-content-max`}
+                  label={t('custom_width')}
+                  value={getPath(view.style, 'layout.content_max')}
+                  units={['px', '%', 'vw', 'rem']}
+                  path="layout.content_max"
+                  placeholder={siteContentWidth}
+                  onCommit={(v) => view.onChange(setPath(view.style, 'layout.content_max', v ?? undefined))}
+                />
+              )}
+            </DeviceStyle>
+          )}
+        </>
       ) : (
         <DeviceStyle scope={deviceScope} paths={['dimensions.width']} label={t('container_width')}>
           {(view) => (
@@ -294,6 +343,26 @@ export function ContainerPane({ block, style, onChange, deviceScope, onTag }) {
           )}
         </DeviceStyle>
       )}
+      {top && templateCapsWidth(layoutTemplate, boxed ? boxWidth : 'full') && (
+        <p className="sbx-hint" role="note" data-testid="width-template-cap">
+          {t('width_template_cap', { title: layoutTemplate.title, width: boxWidthLabel(manifest, layoutTemplate.content_width) })}
+          {' '}
+          <a href={`${boot.builderUrl || ''}?page=${layoutTemplate.id}`} target="_blank" rel="noopener">{t('width_template_edit')}</a>
+        </p>
+      )}
+      <DeviceStyle scope={deviceScope} paths={['layout.padding_y']} label={t('padding_y')}>
+        {(view) => (
+          <SelectField
+            id={`${id}-padding-y`}
+            label={t('padding_y')}
+            value={getPath(view.style, 'layout.padding_y')}
+            options={spacing}
+            optionLabels={Object.fromEntries(spacing.map((s) => [s, sizedLabel('container.padding_y', s)]))}
+            onChange={(v) => view.onChange(setPath(view.style, 'layout.padding_y', v))}
+          />
+        )}
+      </DeviceStyle>
+      {paddingBeatsSpacing(style) && <p className="sbx-hint">{t('container_padding_overridden')}</p>}
       <DeviceStyle scope={deviceScope} paths={['dimensions.min_height']} label={t('container_min_height')}>
         {(view) => (
           <UnitSlider

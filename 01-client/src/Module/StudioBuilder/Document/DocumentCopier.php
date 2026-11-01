@@ -3,16 +3,15 @@
  * Kohevo Studio (studio-builder) — Copy semantics for canonical content.
  *
  * The ONE place that turns canonical content into an independent copy:
- * every section and block id is re-minted (`CanonicalDocumentSchema::
- * newSectionId()` / `newBlockId()`), so the copy can be inserted into any
- * document without colliding with the source or with an earlier copy.
+ * every block id is re-minted (`CanonicalDocumentSchema::newBlockId()`), so
+ * the copy can be inserted into any document without colliding with the source or with an earlier copy.
  * Nothing else about the content is interpreted here — the copy still goes
  * through the full validate/normalize pipeline of whatever document it lands
  * in.
  *
  * This is the "Reusable preset" concept (target architecture §9): the
  * receiving document OWNS the copy. It is deliberately distinct from a live
- * "Global reference" (`section.global_ref`), which copies nothing.
+ * "Global reference" (a top-level Container's `global_ref`), which copies nothing.
  */
 
 declare(strict_types=1);
@@ -22,22 +21,8 @@ namespace Slate\Module\StudioBuilder\Document;
 final class DocumentCopier
 {
     /**
-     * A deep copy of a section with fresh ids everywhere. The copy never
-     * carries a live reference: a copy owns its content.
+     * A deep copy of a block with fresh ids everywhere. The copy never carries a live reference: a copy owns its content.
      *
-     * @param array<string, mixed> $section
-     * @return array<string, mixed>
-     */
-    public static function copySection(array $section): array
-    {
-        $copy = $section;
-        $copy['id']         = CanonicalDocumentSchema::newSectionId();
-        $copy['global_ref'] = null;
-        $copy['blocks']     = self::copyBlocks(is_array($section['blocks'] ?? null) ? $section['blocks'] : []);
-        return $copy;
-    }
-
-    /**
      * @param array<string, mixed> $block
      * @return array<string, mixed>
      */
@@ -45,6 +30,7 @@ final class DocumentCopier
     {
         $copy = $block;
         $copy['id']       = CanonicalDocumentSchema::newBlockId();
+        unset($copy['global_ref']);
         $copy['children'] = self::copyBlocks(is_array($block['children'] ?? null) ? $block['children'] : []);
         return $copy;
     }
@@ -65,23 +51,20 @@ final class DocumentCopier
     }
 
     /**
-     * Find a section or block by id anywhere in a document.
+     * Find a block by id anywhere in a document. `index` is the top-level Container it sits in.
      *
      * @param array<string, mixed> $document
-     * @return null|array{kind: 'section'|'block', node: array<string, mixed>, index: int}
+     * @return null|array{node: array<string, mixed>, index: int}
      */
     public static function findNode(array $document, string $nodeId): ?array
     {
-        foreach ((array) ($document['sections'] ?? []) as $index => $section) {
-            if (!is_array($section)) {
+        foreach ((array) ($document['containers'] ?? []) as $index => $container) {
+            if (!is_array($container)) {
                 continue;
             }
-            if (($section['id'] ?? null) === $nodeId) {
-                return ['kind' => 'section', 'node' => $section, 'index' => (int) $index];
-            }
-            $found = self::findBlock(is_array($section['blocks'] ?? null) ? $section['blocks'] : [], $nodeId);
+            $found = self::findBlock([$container], $nodeId);
             if ($found !== null) {
-                return ['kind' => 'block', 'node' => $found, 'index' => (int) $index];
+                return ['node' => $found, 'index' => (int) $index];
             }
         }
         return null;

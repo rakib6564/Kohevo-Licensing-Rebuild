@@ -200,8 +200,8 @@ function sbh_blocks(array $doc): array
 {
     $out = [];
     $stack = [];
-    foreach (array_reverse($doc['sections']) as $s) {
-        foreach (array_reverse($s['blocks']) as $b) {
+    foreach (array_reverse($doc['containers']) as $s) {
+        foreach (array_reverse($s['children']) as $b) {
             $stack[] = $b;
         }
     }

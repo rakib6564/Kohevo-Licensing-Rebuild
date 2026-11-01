@@ -3,8 +3,8 @@
 // render what this returns. Insertion rules mirror the server (limits and parent/child rules from
 // the manifest); the server still refuses anything the UI should have disabled.
 
-import { asList, countBlocks, sectionsOf } from './doc.mjs';
-import { canContain, canInsertBlock, canInsertSection, insertionPoint, isGlobalSection } from './doc.mjs';
+import { asList, countBlocks, containersOf } from './doc.mjs';
+import { canContain, canInsertBlock, canInsertContainer, insertionPoint, isGlobalContainer } from './doc.mjs';
 import { isDynamicBlock } from '../components/blockKinds.mjs';
 
 /** Block categories in display order (manifest `category`); unknown ones sort last. */
@@ -65,22 +65,23 @@ export function groupBlocks(blocks, query = '', categoryLabel = (c) => c) {
 
 /**
  * Can a block of `type` be inserted right now, given the selection?
- * @returns {{ok:true}|{ok:false,reason:'blocks_limit'|'sections_limit'|'not_allowed'}}
+ * @returns {{ok:true}|{ok:false,reason:'blocks_limit'|'containers_limit'|'not_allowed'}}
  */
 export function blockInsertState(doc, manifest, selectedId, type) {
   const def = asList(manifest.blocks).find((b) => b.type === type);
   if (def && def.disabled === true) return { ok: false, reason: 'disabled' };
   if (def && def.locked === true) return { ok: false, reason: 'locked' };
-  const maxBlocks = (manifest.limits && manifest.limits.max_blocks) || 250;
+  const maxBlocks = (manifest.limits && manifest.limits.max_blocks) || 300;
   if (countBlocks(doc) >= maxBlocks) return { ok: false, reason: 'blocks_limit' };
   const where = insertionPoint(doc, manifest, selectedId, type);
-  if (!where) return canInsertSection(doc, manifest) ? { ok: true } : { ok: false, reason: 'sections_limit' }; // a new section is created
+  if (!where) return canInsertContainer(doc, manifest) ? { ok: true } : { ok: false, reason: 'containers_limit' }; // a new Container is created to hold it
+  if (where.parentId === null && !canInsertContainer(doc, manifest)) return { ok: false, reason: 'containers_limit' };
   return canInsertBlock(doc, manifest, where.parentId, type) ? { ok: true } : { ok: false, reason: 'not_allowed' };
 }
 
-/** A preset inserts whole sections, so only the section limit applies. */
+/** A preset inserts whole Containers, so only the Container limit applies. */
 export function presetInsertState(doc, manifest) {
-  return canInsertSection(doc, manifest) ? { ok: true } : { ok: false, reason: 'sections_limit' };
+  return canInsertContainer(doc, manifest) ? { ok: true } : { ok: false, reason: 'containers_limit' };
 }
 
 export const reasonKey = (reason) => `pal_reason_${reason}`;
@@ -105,7 +106,7 @@ export function searchAll({ blocks: allBlocks, presets, components }, query, lab
   return { presets: outPresets, elements, dynamic, components: comps, total: outPresets.length + elements.length + dynamic.length + comps.length };
 }
 
-export { canContain, isGlobalSection, sectionsOf };
+export { canContain, isGlobalContainer, containersOf };
 
 /**
  * A category's heading: the translated name when the builder has one (`block_cat_<slug>`), and otherwise the slug read as

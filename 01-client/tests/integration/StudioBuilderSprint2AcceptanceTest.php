@@ -259,26 +259,22 @@ unit('sprint2 integration: visual styling (typography, border, shadow, responsiv
 
             $sectionBlock = [
                 'id' => CanonicalDocumentSchema::newBlockId(),
-                'type' => 'layout.section',
-                'version' => 1,
-                'props' => [
-                    'tag' => 'section',
-                    'content_width' => 'boxed',
-                    'min_height' => 'screen',
-                    'padding_y' => 'xl',
-                ],
-                'style' => CanonicalDocumentSchema::defaultBlockStyle(),
+                'type' => 'core.container',
+                'version' => CanonicalDocumentSchema::CONTAINER_VERSION,
+                'tag' => 'section',
+                'props' => [],
+                'style' => ['layout' => ['content_width' => 'boxed', 'content_size' => 'wide', 'padding_y' => 'xl'], 'dimensions' => ['min_height' => '100vh']] + CanonicalDocumentSchema::defaultBlockStyle(),
                 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
                 'bindings' => [],
                 'children' => [$containerBlock],
             ];
 
             // 3. Persist the tree via application service operations
-            $opSec = new DocumentOperation('insert_section', ['index' => 0, 'section' => ['label' => 'Main Hero Section']]);
+            $opSec = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Main Hero Section']]]);
             $sRes = $rt->tenants->runAs(S2_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $pageId, [$opSec], $revId, 'Insert Hero Section'));
             $revId = (int) $sRes['revision']['id'];
             $secDoc = CanonicalJson::decode((string) $sRes['revision']['document_json']);
-            $secId = (string) $secDoc['sections'][0]['id'];
+            $secId = (string) $secDoc['containers'][0]['id'];
 
             $opBlock = new DocumentOperation('insert_block', ['parent_id' => $secId, 'index' => 0, 'block' => $sectionBlock]);
             $insertRes = $rt->tenants->runAs(S2_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $pageId, [$opBlock], $revId, 'Insert Visual Tree'));
@@ -286,7 +282,7 @@ unit('sprint2 integration: visual styling (typography, border, shadow, responsiv
             assert_true($revId > 0, 'revision updated with visual tree');
 
             $treeDoc = CanonicalJson::decode((string) $insertRes['revision']['document_json']);
-            $actualHeadingId = (string) $treeDoc['sections'][0]['blocks'][0]['children'][0]['children'][0]['id'];
+            $actualHeadingId = (string) $treeDoc['containers'][0]['children'][0]['children'][0]['children'][0]['id'];
 
             // 4. Test dedicated operations: update_block_responsive, update_block_class_names, update_block_attributes
             $opResp = DocumentOperation::updateBlockResponsive($actualHeadingId, [

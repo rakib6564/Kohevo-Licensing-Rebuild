@@ -37,8 +37,8 @@
  * library commands (`applyTemplate` now REQUIRES the client's expected
  * revision — preflight #1; `insertTemplate`, `saveTemplateFromPage`,
  * `deleteTemplate`), Global Component commands (`createGlobalComponent`,
- * `detachGlobalSection`, `listGlobalComponents`; a component is a
- * `section_preset` page referenced by uuid — see StudioGlobalComponentService),
+ * `detachGlobalContainer`, `listGlobalComponents`; a component is a
+ * `container_preset` page referenced by uuid — see StudioGlobalComponentService),
  * chrome binding queries (`chromeBindings`), design-token commands
  * (`designTokens`, `saveDesignTokens` behind `studio-builder.tokens`), and the
  * dependency invalidation that publishing/archiving a component or a
@@ -68,8 +68,8 @@
  * and block entitlement/permission enforcement
  * (`entitlement_check`/`permission_check`) are wired ONCE, here, in
  * `buildValidationOptions()` — never scattered into individual block classes.
- * `partial_exists` resolves a `section.global_ref` to a non-archived
- * `section_preset` page of the CURRENT tenant by uuid (Phase 6 live reference).
+ * `partial_exists` resolves a Container's `global_ref` to a non-archived
+ * `container_preset` page of the CURRENT tenant by uuid (Phase 6 live reference).
  */
 
 declare(strict_types=1);
@@ -81,6 +81,7 @@ use Slate\Module\StudioBuilder\Dependency\DependencyExtractor;
 use Slate\Module\StudioBuilder\Diff\RevisionDiff;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\DocumentNormalizer;
 use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\DocumentValidator;
 use Slate\Module\StudioBuilder\Document\ElementCss;
@@ -118,9 +119,9 @@ use Slate\Module\StudioBuilder\Render\Theme\ThemeResolver;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
 use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 use Slate\Module\StudioBuilder\Repository\TemplateRepository;
+use Slate\Module\StudioBuilder\Presets\ContainerPresetCatalog;
 use Slate\Module\StudioBuilder\Presets\ElementVariantCatalog;
 use Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog;
-use Slate\Module\StudioBuilder\Presets\SectionPresetCatalog;
 use Slate\Module\StudioBuilder\Presets\WireframeOutline;
 use Slate\Module\StudioBuilder\Runtime\StudioLog;
 use Slate\Module\StudioBuilder\Runtime\StudioPublicLocale;
@@ -449,7 +450,7 @@ final class StudioApplicationService
 
     /**
      * Save a template FROM a page's current working document: the whole page
-     * (page/header/footer templates), one section (section_preset) or one
+     * (page/header/footer templates), one Container (container_preset) or one
      * block (block_preset). The content is read from the stored revision,
      * never from the client. An existing key is replaced only with `$overwrite`.
      *
@@ -515,7 +516,7 @@ final class StudioApplicationService
     }
 
     /**
-     * Insert a reusable preset (section / header / footer / block preset) into
+     * Insert a reusable preset (Container / header / footer / block preset) into
      * a page as an OWNED COPY, through the ordinary operation pipeline (same
      * validation, normalization, concurrency and revision as any edit). The
      * page records no reference to the template afterwards.
@@ -532,18 +533,18 @@ final class StudioApplicationService
     }
 
     /**
-     * The built-in section presets (system templates) for the Add panel. The first call for a
+     * The built-in Container presets (system templates) for the Add panel. The first call for a
      * tenant seeds them; later calls only read. Same transport-safe views as the library.
      *
      * @return list<array<string, mixed>>
      */
-    public function sectionPresets(StudioActor $actor): array
+    public function containerPresets(StudioActor $actor): array
     {
         $this->authorize($actor, StudioPermissions::VIEW);
         $this->ensureSystemPresets();
-        $order = array_flip(array_column(SectionPresetCatalog::all(), 'key'));
+        $order = array_flip(array_column(ContainerPresetCatalog::all(), 'key'));
         $presets = array_values(array_filter(
-            $this->templateLibrary($actor, 'section_preset', true),
+            $this->templateLibrary($actor, 'container_preset', true),
             static fn(array $t): bool => !empty($t['is_system']) && isset($order[(string) $t['template_key']]),
         ));
         // Catalogue order (the author's order), not the storage/alphabetical order.
@@ -552,9 +553,9 @@ final class StudioApplicationService
     }
 
     /**
-     * The built-in headers (HeaderPresetCatalog) as library rows, in catalogue order. Like the section presets, the first
+     * The built-in headers (HeaderPresetCatalog) as library rows, in catalogue order. Like the Container presets, the first
      * call for a tenant seeds them and later calls only read; they are seeded on their own so a header never waits on,
-     * or adds to, the section presets.
+     * or adds to, the Container presets.
      *
      * @return list<array<string, mixed>>
      */
@@ -615,7 +616,7 @@ final class StudioApplicationService
 
     /**
      * Translate the name and description of a built-in preset for the active admin locale
-     * (`studio_preset_<slug>_name|desc` for sections, `studio_header_preset_<slug>_name|desc` for headers).
+     * (`studio_preset_<slug>_name|desc` for Containers, `studio_header_preset_<slug>_name|desc` for headers).
      * Tenant templates are left exactly as written.
      *
      * @param array<string, mixed> $view
@@ -627,7 +628,7 @@ final class StudioApplicationService
         if (empty($view['is_system']) || !\function_exists('__')) {
             return $view;
         }
-        $families = [SectionPresetCatalog::KEY_PREFIX => 'studio_preset_', HeaderPresetCatalog::KEY_PREFIX => 'studio_header_preset_'];
+        $families = [ContainerPresetCatalog::KEY_PREFIX => 'studio_preset_', HeaderPresetCatalog::KEY_PREFIX => 'studio_header_preset_'];
         $langPrefix = null;
         foreach ($families as $keyPrefix => $candidate) {
             if (str_starts_with($key, $keyPrefix)) {
@@ -680,7 +681,7 @@ final class StudioApplicationService
     private static array $headersSynced = [];
 
     /**
-     * Make sure the active tenant has the built-in section presets (system templates).
+     * Make sure the active tenant has the built-in Container presets (system templates).
      * Idempotent and cheap after the first call; a failure never blocks the library.
      */
     private function ensureSystemPresets(): void
@@ -691,7 +692,7 @@ final class StudioApplicationService
         }
         self::$presetsSynced[$tenant] = true;
         try {
-            $this->templates->syncSystemTemplates('section_preset', SectionPresetCatalog::all());
+            $this->templates->syncSystemTemplates('container_preset', ContainerPresetCatalog::all());
         } catch (\Throwable $e) {
             StudioLog::failure('presets', 'sync_system_templates', $e, 'warning');
         }
@@ -715,7 +716,7 @@ final class StudioApplicationService
     // ── Global Component commands (LIVE reference semantics) ────────────────
 
     /**
-     * The tenant's Global Components (section_preset pages) with usage counts.
+     * The tenant's Global Components (container_preset pages) with usage counts.
      *
      * @return list<array<string, mixed>>
      */
@@ -730,9 +731,9 @@ final class StudioApplicationService
     }
 
     /**
-     * Create a Global Component: a new `section_preset` page. When a source
-     * page + section are given, the component's first document is an owned
-     * copy of that section and the source section is replaced, in the same
+     * Create a Global Component: a new `container_preset` page. When a source
+     * page + top-level Container are given, the component's first document is an
+     * owned copy of that Container and the source one is replaced, in the same
      * transaction, by a live reference to the new component — verified
      * against `$expectedRevisionId` like any other draft write.
      *
@@ -742,20 +743,20 @@ final class StudioApplicationService
      *
      * @return array{component: array<string, mixed>, page: ?array<string, mixed>, revision: ?array<string, mixed>}
      */
-    public function createGlobalComponent(StudioActor $actor, string $title, string $slug, ?int $fromPageId = null, ?string $sectionId = null, ?int $expectedRevisionId = null): array
+    public function createGlobalComponent(StudioActor $actor, string $title, string $slug, ?int $fromPageId = null, ?string $containerId = null, ?int $expectedRevisionId = null): array
     {
         $this->authorize($actor, StudioPermissions::EDIT);
         $components = $this->requireComponents();
 
         $extraction = null;
         if ($fromPageId !== null) {
-            if ($sectionId === null || $sectionId === '') {
+            if ($containerId === null || $containerId === '') {
                 throw new StudioValidationException([
-                    ['path' => '$.section_id', 'code' => 'required_field', 'message' => 'section_id is required when creating a component from a page section.'],
+                    ['path' => '$.container_id', 'code' => 'required_field', 'message' => 'container_id is required when creating a component from a page Container.'],
                 ]);
             }
             [, $sourceDocument] = $this->currentDocument($fromPageId);
-            $extraction = $components->extractionFor($sourceDocument, $sectionId, $title);
+            $extraction = $components->extractionFor($sourceDocument, $containerId, $title);
         }
 
         $pdo = Database::get();
@@ -774,9 +775,9 @@ final class StudioApplicationService
                 $this->revisions->createDraftRevision((int) $componentRow['id'], $validated, (int) $created['revision']['id'], (int) $actor->userId, $this->draftKind($actor, 'manual'), "Created from page {$fromPageId}");
                 $componentRow = $this->pageRepo->find((int) $componentRow['id']) ?? $componentRow;
 
-                $operations = StudioGlobalComponentService::referenceOperations($extraction['section'], $extraction['index'], $ref);
+                $operations = StudioGlobalComponentService::referenceOperations($extraction['container'], $extraction['index'], $ref);
                 // No audit inside the transaction (see mutateDocument()); recorded below, after commit.
-                $pageResult = $this->mutateDocument($actor, $fromPageId, $operations, $expectedRevisionId, "Replaced section with global component '{$title}'", 'manual');
+                $pageResult = $this->mutateDocument($actor, $fromPageId, $operations, $expectedRevisionId, "Replaced Container with global component '{$title}'", 'manual');
             }
             if ($ownsTx) {
                 $pdo->commit();
@@ -791,7 +792,7 @@ final class StudioApplicationService
         if ($pageResult !== null && $fromPageId !== null) {
             $this->audit($actor, 'studio.page.operation_applied', (string) $fromPageId, ['operation_count' => 2, 'revision_kind' => $this->draftKind($actor, 'manual'), 'deduplicated' => false, 'revision_id' => (int) ($pageResult['revision']['id'] ?? 0)]);
         }
-        $this->audit($actor, 'studio.component.created', (string) $componentRow['id'], ['from_page_id' => $fromPageId, 'section_id' => $sectionId, 'revision_id' => (int) ($componentRow['active_draft_revision_id'] ?? 0)]);
+        $this->audit($actor, 'studio.component.created', (string) $componentRow['id'], ['from_page_id' => $fromPageId, 'container_id' => $containerId, 'revision_id' => (int) ($componentRow['active_draft_revision_id'] ?? 0)]);
         return [
             'component' => StudioEditorViews::component($componentRow, $pageResult !== null ? 1 : 0),
             'page'      => $pageResult['page'] ?? null,
@@ -800,19 +801,19 @@ final class StudioApplicationService
     }
 
     /**
-     * Turn a live reference back into owned content: the section is replaced
+     * Turn a live reference back into owned content: the Container is replaced
      * by a copy of the component's content (published revision when it has
      * one). Runs through the operation pipeline with `$expectedRevisionId`.
      *
      * @return array{revision: array<string, mixed>, page: array<string, mixed>, fingerprint: string, deduplicated: bool}
      */
-    public function detachGlobalSection(StudioActor $actor, int $pageId, string $sectionId, ?int $expectedRevisionId): array
+    public function detachGlobalContainer(StudioActor $actor, int $pageId, string $containerId, ?int $expectedRevisionId): array
     {
         $this->authorize($actor, StudioPermissions::EDIT);
         [, $document] = $this->currentDocument($pageId);
-        $detach = $this->requireComponents()->detachOperations($document, $sectionId);
+        $detach = $this->requireComponents()->detachOperations($document, $containerId);
         $result = $this->applyDocumentOperation($actor, $pageId, $detach['operations'], $expectedRevisionId, "Detached global component '{$detach['component']['title']}'", 'manual');
-        $this->audit($actor, 'studio.component.detached', (string) $pageId, ['section_id' => $sectionId, 'component_id' => (int) $detach['component']['id'], 'revision_id' => (int) ($result['revision']['id'] ?? 0)]);
+        $this->audit($actor, 'studio.component.detached', (string) $pageId, ['container_id' => $containerId, 'component_id' => (int) $detach['component']['id'], 'revision_id' => (int) ($result['revision']['id'] ?? 0)]);
         return $result;
     }
 
@@ -935,8 +936,8 @@ final class StudioApplicationService
 
     /**
      * The published Single template that lays this page out on the live site, from its working draft's category and
-     * content type, with the width of the section the page's content sits in: `{id, title, content_width}`, or null.
-     * The section Inspector uses this to say why the template keeps a wider section narrower. Read-only.
+     * content type, with the width of the Container the page's content sits in: `{id, title, content_width}`, or null.
+     * The Container Inspector uses this to say why the template keeps a wider Container narrower. Read-only.
      *
      * @return array{id: int, title: string, content_width: ?string}|null
      */
@@ -1477,58 +1478,32 @@ final class StudioApplicationService
     /**
      * Render ONE block as the editor canvas would show it, and save nothing. It lets the canvas show a block the author
      * has just inserted while the save is still on its way: the block goes into a copy of the page's working draft as the
-     * only block of one fresh section, through the same preparation as a stored block (an invalid block, or one whose
-     * module is not available, renders as the editor's "unavailable" notice). Every id is replaced with a fresh one, in
-     * document order, so the caller maps them back by position and a made-up id can never collide with a real one.
-     * Requires studio-builder.edit.
+     * only block of one fresh Container, through the same preparation as a stored block (an invalid block, or one whose
+     * module is not available, renders as the editor's "unavailable" notice). A Container is rendered as a top-level
+     * Container of that copy, with no wrapper round it, and is what `#main` holds first. Every id is replaced with a
+     * fresh one, in document order, so the caller maps them back by position and a made-up id can never collide with a
+     * real one. Requires studio-builder.edit.
      *
      * @param array<string, mixed> $block
      */
     public function renderBlockFragment(StudioActor $actor, int $pageId, array $block): RenderResult
     {
-        return $this->renderFragment($actor, $pageId, [[
-            'id'         => CanonicalDocumentSchema::newSectionId(),
-            'label'      => '',
-            'global_ref' => null,
-            'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            'blocks'     => [self::withFreshBlockIds($block)],
-        ]]);
+        if (($block['type'] ?? null) === CanonicalDocumentSchema::CONTAINER_TYPE) {
+            return $this->renderFragment($actor, $pageId, [self::withFreshBlockIds($block + CanonicalDocumentSchema::newContainer())]);
+        }
+        return $this->renderFragment($actor, $pageId, [CanonicalDocumentSchema::newContainer(['children' => [self::withFreshBlockIds($block)]])]);
     }
 
     /**
-     * The same for ONE whole section (a section preset, a pasted or duplicated section): it is the only section of a
-     * copy of the working draft, with fresh ids for the section and every block in it. Nothing is stored.
-     * Requires studio-builder.edit.
-     *
-     * @param array<string, mixed> $section
+     * @param list<array<string, mixed>> $containers
      */
-    public function renderSectionFragment(StudioActor $actor, int $pageId, array $section): RenderResult
-    {
-        $blocks = $section['blocks'] ?? [];
-        $section['blocks'] = is_array($blocks) && array_is_list($blocks)
-            ? array_map(static fn(mixed $b): mixed => is_array($b) && !array_is_list($b) ? self::withFreshBlockIds($b) : $b, $blocks)
-            : [];
-        $section += [
-            'label'      => '',
-            'global_ref' => null,
-            'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        ];
-        $section['id'] = CanonicalDocumentSchema::newSectionId();
-        return $this->renderFragment($actor, $pageId, [$section]);
-    }
-
-    /**
-     * @param list<array<string, mixed>> $sections
-     */
-    private function renderFragment(StudioActor $actor, int $pageId, array $sections): RenderResult
+    private function renderFragment(StudioActor $actor, int $pageId, array $containers): RenderResult
     {
         $tenantId = $this->authorize($actor, StudioPermissions::EDIT);
         $renderer = $this->requireRenderer();
         [$page, $revision] = $this->loadPageRevision($pageId, null);
-        $document = CanonicalJson::decode((string) $revision['document_json']);
-        $document['sections'] = $sections;
+        $document = DocumentUpgrader::structure(CanonicalJson::decode((string) $revision['document_json']));
+        $document['containers'] = $containers;
         $revision['document_json'] = CanonicalJson::encode($document);
         return $renderer->renderRevision($page, $revision, RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor));
     }
@@ -1771,16 +1746,15 @@ final class StudioApplicationService
                 'breakpoints'      => CanonicalDocumentSchema::ALLOWED_BREAKPOINTS,
                 'chrome_modes'     => CanonicalDocumentSchema::ALLOWED_CHROME_MODES,
                 'container_widths' => CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS,
-                'section_widths'   => CanonicalDocumentSchema::ALLOWED_SECTION_WIDTHS,
                 'robots'           => CanonicalDocumentSchema::ALLOWED_ROBOTS_DIRECTIVES,
                 'spacing_scale'    => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE,
                 'style_keys'       => CanonicalDocumentSchema::ALLOWED_STYLE_KEYS,
             ],
             'limits'      => [
                 'max_blocks'         => CanonicalDocumentSchema::MAX_BLOCKS_PER_DOCUMENT,
+                'max_containers'     => CanonicalDocumentSchema::MAX_CONTAINERS,
                 'max_nesting_depth'  => CanonicalDocumentSchema::MAX_NESTING_DEPTH,
                 'max_repeater_items' => CanonicalDocumentSchema::MAX_REPEATER_ITEMS,
-                'max_sections'       => CanonicalDocumentSchema::MAX_SECTIONS,
                 'seo_description_max' => CanonicalDocumentSchema::SEO_DESCRIPTION_MAX_LENGTH,
                 'seo_title_max'      => CanonicalDocumentSchema::SEO_TITLE_MAX_LENGTH,
             ],
@@ -1800,6 +1774,21 @@ final class StudioApplicationService
                 'referencing_types' => CanonicalDocumentSchema::GLOBAL_REF_DOCUMENT_TYPES,
             ],
         ];
+    }
+
+    /**
+     * A stored revision as a diff reads it. A section-based one is brought to the form its next save writes, so moving
+     * to Containers shows as no change: only what an author changed does.
+     *
+     * @param array<string, mixed> $document
+     * @return array<string, mixed>
+     */
+    private function comparable(array $document): array
+    {
+        if (($document['schema_version'] ?? null) !== CanonicalDocumentSchema::LEGACY_SCHEMA_VERSION) {
+            return $document;
+        }
+        return DocumentNormalizer::normalize(DocumentUpgrader::upgrade($document, $this->registry)['document'], $this->registry);
     }
 
     /**
@@ -1875,8 +1864,8 @@ final class StudioApplicationService
             }
         }
 
-        $baseDocument     = $base !== null ? CanonicalJson::decode((string) $base['document_json']) : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
-        $proposedDocument = CanonicalJson::decode((string) $proposed['document_json']);
+        $baseDocument     = $base !== null ? $this->comparable(CanonicalJson::decode((string) $base['document_json'])) : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
+        $proposedDocument = $this->comparable(CanonicalJson::decode((string) $proposed['document_json']));
 
         $depsBefore = $this->dependencySignatures($baseDocument);
         $depsAfter  = $this->dependencySignatures($proposedDocument);
@@ -2330,10 +2319,10 @@ final class StudioApplicationService
      * bound to the CURRENT `TenantContext`, never a value read out of the
      * document itself.
      *
-     * `partial_exists` (Phase 6) resolves a section's `global_ref` to a
-     * non-archived Global Component — a `section_preset` page of the CURRENT
+     * `partial_exists` (Phase 6) resolves a Container's `global_ref` to a
+     * non-archived Global Component — a `container_preset` page of the CURRENT
      * tenant, by uuid (`PageRepository::findComponentByRef()`). Templates are
-     * copy presets and are never referenced by a document section.
+     * copy presets and are never referenced by a document.
      *
      * @return array<string, mixed>
      */

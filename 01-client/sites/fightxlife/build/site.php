@@ -181,12 +181,12 @@ function CHECKS(array $items, string $cls = ''): array
 /** Page banner: the live page's background photo behind its title. */
 function BANNER(string $title, string $hl, string $crumb, string $bgPath = ''): array
 {
-    $sec = SEC('Page banner', [WRAP([
+    $sec = TOP('Page banner', [WRAP([
         H($title, 'h1', 'yg-banner__title', $hl),
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'wrap' => 'wrap'], [LNK('Accueil', '/', 'yg-crumb__home'), T('›', 'yg-crumb__sep'), T($crumb, 'yg-crumb__here')], 'yg-crumbs'),
     ])], 'yg-banner' . ($bgPath !== '' ? ' fx-banner--photo' : ''));
     if ($bgPath !== '' && ($id = MID($bgPath)) > 0) {
-        $sec['blocks'][0]['style']['background'] = ($sec['blocks'][0]['style']['background'] ?? []) + ['image' => ['media_id' => $id, 'alt' => '', 'focal_point' => [0.5, 0.5]], 'size' => 'cover', 'position' => 'center'];
+        $sec['children'][0]['style']['background'] = ($sec['children'][0]['style']['background'] ?? []) + ['image' => ['media_id' => $id, 'alt' => '', 'focal_point' => [0.5, 0.5]], 'size' => 'cover', 'position' => 'center'];
     }
     return $sec;
 }
@@ -236,7 +236,7 @@ function BODY(array $blocks, bool $skipFirstH1 = true): array
 }
 function DONATE(): array
 {
-    return SEC('Aide-nous à agir', [WRAP([
+    return TOP('Aide-nous à agir', [WRAP([
         T('Faire un don', 'yg-eyebrow'), H('Aide-nous à agir', 'h2', 'yg-h2', 'agir'), T('Tes dons se traduisent en actions concrètes !', 'yg-lead'), BTN('Faire un don', '/donation/'),
     ], 'yg-consult')], 'yg-consult-sec');
 }
@@ -294,7 +294,7 @@ function EVENTCARD(string $slug): array
 }
 function NEWSLETTER(): array
 {
-    return SEC('Newsletter', [WRAP([B('layout.grid', ['columns' => 3, 'gap' => 'none', 'align' => 'center'], [
+    return TOP('Newsletter', [WRAP([B('layout.grid', ['columns' => 3, 'gap' => 'none', 'align' => 'center'], [
         B('core.icon', ['name' => 'mail', 'size_px' => 28], [], 'yg-news__icon'),
         BOX([H('Abonne-toi à notre newsletter', 'h2', 'yg-news__title'), T('Reste informé de nos actions, événements, galas et plus encore… C’est promis, nous ne te spammerons pas !', 'yg-news__text')], 'yg-news__copy'),
         B('core.form', ['form_name' => 'newsletter', 'submit_text' => 'S’abonner', 'submit_variant' => 'primary', 'success_message' => 'Merci ! Ton inscription à la newsletter est bien enregistrée.'], [
@@ -343,7 +343,7 @@ $menuFootInfo = $menu('footer-info', 'Pied de page · En savoir plus', $footInfo
 $menuActions = $menu('actions', 'Nos actions', $actions);
 $social = static fn(string $icon, string $url, string $label): array => B('core.icon', ['name' => $icon, 'url' => $url, 'new_tab' => true, 'label' => $label, 'size_px' => 16], [], 'fx-social-ico');
 $header = [
-    SEC('Top bar', [B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'align' => 'center', 'gap' => 'none', 'wrap' => 'wrap'], [
+    TOP('Top bar', [B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'align' => 'center', 'gap' => 'none', 'wrap' => 'wrap'], [
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'wrap' => 'wrap'], [
             LNK('+32 483 12 72 98', 'tel:+32483127298', 'fx-top__item'), LNK('contact@fightxlife.com', 'mailto:contact@fightxlife.com', 'fx-top__item'),
             LNK('Rue Gabrielle Petit 32, 1080 Molenbeek', 'https://goo.gl/maps/aJW74coL3FB9Ld96A', 'fx-top__item fx-top__addr')], 'fx-top__contact'),
@@ -351,7 +351,7 @@ $header = [
             $social('linkedin', 'https://www.linkedin.com/company/fightxlife/', 'FightxLife sur LinkedIn'), $social('facebook', 'https://www.facebook.com/Fightxlife', 'FightxLife sur Facebook'),
             $social('instagram', 'https://www.instagram.com/fightxlife', 'FightxLife sur Instagram'), LNK('Accès Membre', MEMBRE, 'fx-top__member')], 'fx-top__right'),
     ], 'fx-top')], 'fx-top-sec'),
-    SEC('Header', [WRAP([B('layout.grid', ['columns' => 3, 'gap' => 'none', 'align' => 'center'], [
+    TOP('Header', [WRAP([B('layout.grid', ['columns' => 3, 'gap' => 'none', 'align' => 'center'], [
         IMGP(F(LOGO), 'FightxLife', 'yg-brand fx-brand', ['link_to' => 'custom', 'url' => '/']),
         B('core.nav_menu', ['menu' => $menuHeader, 'items' => [], 'layout' => 'horizontal', 'align' => 'center', 'aria_label' => 'Navigation principale'], [], 'yg-nav fx-nav'),
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'justify' => 'end'], [
@@ -370,7 +370,7 @@ $header = [
 ];
 $footer = [
     NEWSLETTER(),
-    SEC('Footer', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
+    TOP('Footer', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
         B('layout.grid', ['columns' => 2, 'gap' => 'none'], [
             BOX([H('Autres Pages', 'h3', 'yg-foot__title'), B('core.nav_menu', ['menu' => $menuFootPages, 'items' => [], 'layout' => 'vertical', 'aria_label' => 'Autres pages'], [], 'yg-foot__nav')]),
             BOX([H('En Savoir Plus', 'h3', 'yg-foot__title'), B('core.nav_menu', ['menu' => $menuFootInfo, 'items' => [], 'layout' => 'vertical', 'aria_label' => 'En savoir plus'], [], 'yg-foot__nav')]),
@@ -386,11 +386,11 @@ $footer = [
                 $social('linkedin', 'https://www.linkedin.com/company/fightxlife/', 'FightxLife sur LinkedIn')], 'fx-foot__social'),
         ], 'yg-foot__card fx-foot__card'),
     ], 'yg-foot')])], 'yg-foot-main'),
-    SEC('Footer bar', [B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'gap' => 'none'], [T('© 2022 FightxLife • Tous droits réservés'), T('ASBL FightxLife · Numéro d’entreprise 720.965564')], 'yg-foot__bar')], 'yg-foot-bottom'),
+    TOP('Footer bar', [B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'gap' => 'none'], [T('© 2022 FightxLife • Tous droits réservés'), T('ASBL FightxLife · Numéro d’entreprise 720.965564')], 'yg-foot__bar')], 'yg-foot-bottom'),
 ];
 
 // ── Pages ────────────────────────────────────────────────────────────────────────────────────────────────────────
-$pages = []; // slug => [title, route, sections, settings, metaType, metaValues, date]
+$pages = []; // slug => [title, route, containers, settings, metaType, metaValues, date]
 $p = static fn(string $slug): array => C('pages', $slug);
 
 $coursCards = [
@@ -410,7 +410,7 @@ $testimonials = [
 ];
 
 $pages['accueil'] = ['Accueil', 'homepage', [
-    SEC('Hero', [
+    TOP('Hero', [
         BOX([
             H('FightxLife, la force de vivre', 'h1', 'yg-hero__title', 'la force de vivre'),
             T('Association qui lutte contre le cancer grâce à des cours de boxe adaptés, des visites dans les hôpitaux, des SmileBox et bien plus.', 'yg-hero__text'),
@@ -425,12 +425,12 @@ $pages['accueil'] = ['Accueil', 'homepage', [
             ], [], 'yg-hero__video'),
         ], 'yg-hero__visual'),
     ], 'yg-hero-sec'),
-    SEC('Nos valeurs', [WRAP([HEAD('FightxLife', 'Nos valeurs', 'valeurs'), GRID([
+    TOP('Nos valeurs', [WRAP([HEAD('FightxLife', 'Nos valeurs', 'valeurs'), GRID([
         BOX([ICONTILE('users', 'yg-feature__icon'), H('L’égalité des chances', 'h2', 'yg-feature__title'), T('Nous faisons en sorte que nos membres disposent des mêmes chances, des mêmes opportunités de développement social, indépendamment de leur origine sociale ou ethnique.', 'yg-feature__text')], 'yg-feature'),
         BOX([ICONTILE('heart', 'yg-feature__icon'), H('Le bien-être', 'h2', 'yg-feature__title'), T('La santé mentale et physique n’a pas de prix. Un bon moral et une bonne humeur peuvent être des atouts primordiaux nous permettant d’avancer.', 'yg-feature__text')], 'yg-feature'),
         BOX([ICONTILE('shield', 'yg-feature__icon'), H('La solidarité', 'h2', 'yg-feature__title'), T('Elle est cette main tendue vers l’autre pour lui rappeler qu’il n’est pas seul dans ce qu’il traverse, avec respect, en tenant compte du rythme de chacun.', 'yg-feature__text')], 'yg-feature'),
     ], 'yg-features')])], 'yg-features-sec fx-values'),
-    SEC('Mission', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
+    TOP('Mission', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
         BOX([IMGP(F('sara-ponpqw0gqz9udxela26ghmgghhjey2rgcpahom9pdk.jpg'), 'Sara Rezki, fondatrice de FightxLife', 'yg-about__img fx-portrait')], 'yg-about__media'),
         BOX([
             T('Mission', 'yg-eyebrow'), H('FightxLife lutte contre le cancer', 'h2', 'yg-h2', 'contre le cancer'),
@@ -440,25 +440,25 @@ $pages['accueil'] = ['Accueil', 'homepage', [
             BTN('A propos de nous', '/qui-sommes-nous/'),
         ], 'yg-about__copy'),
     ], 'yg-about')])], 'yg-about-sec'),
-    SEC('Nous soutenir', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
+    TOP('Nous soutenir', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
         BOX([IMGP(LOCAL($BG['nous-soutenir'][0]), 'Une bénévole fait un cœur avec ses mains', 'yg-why__img fx-cover')], 'yg-why__media fx-media-photo'),
         BOX([
             HEAD('FightxLife', 'Nous soutenir', 'soutenir', 'Soutenir FightxLife, c’est encourager nos actions dans les hôpitaux, rendre le sourire à un enfant, réconforter des parents face au cancer et épauler nos membres pour une meilleure qualité de vie. Alors toi aussi rejoins-nous dans la lutte contre le cancer !', 'left'),
             BTN('En savoir plus', '/nous-soutenir/'),
         ], 'yg-why__copy'),
     ], 'yg-why')])], 'yg-why-sec'),
-    SEC('Nos cours', [WRAP([HEAD('FightxLife', 'Nos cours', 'cours', 'Envie de rejoindre la Team FightxLife ? Nos cours sont adaptés et respectent le rythme de tous !'), GRID($coursCards), BOX([BTN('Tous nos cours', '/cours/')], 'yg-center')])], 'yg-content'),
-    SEC('SmileBox', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
+    TOP('Nos cours', [WRAP([HEAD('FightxLife', 'Nos cours', 'cours', 'Envie de rejoindre la Team FightxLife ? Nos cours sont adaptés et respectent le rythme de tous !'), GRID($coursCards), BOX([BTN('Tous nos cours', '/cours/')], 'yg-center')])], 'yg-content'),
+    TOP('SmileBox', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
         BOX([
             HEAD('FightxLife', 'SmileBox', 'Box', 'FightxLife vient en aide aux enfants diagnostiqués d’un cancer et à leurs familles en leur distribuant une SmileBox dans tous les hôpitaux de Belgique. Toi aussi, aide-nous à leur donner le sourire !', 'left'),
             BTN('En savoir plus', '/smile-box/'),
         ], 'yg-why__copy'),
         BOX([IMGP(LOCAL($BG['smile-box'][0]), 'La SmileBox offerte aux enfants hospitalisés', 'yg-why__img fx-cover')], 'yg-why__media fx-media-photo'),
     ], 'yg-why fx-why--flip')])], 'yg-why-sec fx-white'),
-    SEC('Témoignages', [WRAP([HEAD('FightxLife', 'Témoignages', 'Témoignages'), GRID(array_map(static fn(array $t): array => QUOTE(...$t), $testimonials), 'yg-quote-grid fx-quote-grid', 4)])], 'yg-testi-sec'),
-    SEC('E-shop', [WRAP([HEAD('FightxLife', 'E-shop', 'shop', 'Se faire plaisir et soutenir nos projets : deviens notre ambassadeur et arbore nos couleurs !'),
+    TOP('Témoignages', [WRAP([HEAD('FightxLife', 'Témoignages', 'Témoignages'), GRID(array_map(static fn(array $t): array => QUOTE(...$t), $testimonials), 'yg-quote-grid fx-quote-grid', 4)])], 'yg-testi-sec'),
+    TOP('E-shop', [WRAP([HEAD('FightxLife', 'E-shop', 'shop', 'Se faire plaisir et soutenir nos projets : deviens notre ambassadeur et arbore nos couleurs !'),
         SHOPGRID(3, false), BOX([BTN('Voir l’e-shop', '/e-shop/')], 'yg-center')])], 'yg-content'),
-    SEC('Partenaires', [WRAP([HEAD('FightxLife', 'Nos sponsors & Partenaires', 'Partenaires'), LOGOS($HOMELOGOS)])], 'yg-content fx-logos-sec'),
+    TOP('Partenaires', [WRAP([HEAD('FightxLife', 'Nos sponsors & Partenaires', 'Partenaires'), LOGOS($HOMELOGOS)])], 'yg-content fx-logos-sec'),
 ], ['seo' => 'accueil']];
 
 // Qui sommes-nous
@@ -482,44 +482,44 @@ $ambassadors = [['5615d348-90ac-4a90-b0c4-6210521ec5e3-prsubd2o6bwoccg3zp240wbfj
     ['user-pq7xyyea24ujuai56hyw8j6fkc6s50llg5ccojnh74.png', 'Nadia El Gharbany'], ['user-pq7xyyea24ujuai56hyw8j6fkc6s50llg5ccojnh74.png', 'Peut-être Vous ?']];
 $pages['qui-sommes-nous'] = ['Qui Sommes-Nous', 'standalone', [
     BANNER('Qui sommes-nous', 'sommes-nous', 'Qui sommes-nous', PAGEBG('qui-sommes-nous')),
-    SEC('Nos missions', [WRAP([HEAD('FightxLife', 'Nos missions', 'missions'), GRID([
+    TOP('Nos missions', [WRAP([HEAD('FightxLife', 'Nos missions', 'missions'), GRID([
         BOX([ICONTILE('user', 'yg-feature__icon'), H('Développement Personnel', 'h2', 'yg-feature__title'), T('A travers une boxe adaptée, il s’agit de réconcilier le patient avec son mental et son corps. Lâcher les coups pour mieux se libérer du cancer, ne plus subir la maladie mais se reconstruire à travers la boxe.', 'yg-feature__text')], 'yg-feature'),
         BOX([ICONTILE('zap', 'yg-feature__icon'), H('Développement Physique', 'h2', 'yg-feature__title'), T('Abattu et peu confiant, le patient n’exerce plus d’effort physique. Nous proposons par la boxe adaptée un renforcement musculaire et une stimulation de la mémoire par les gestes répétitifs.', 'yg-feature__text')], 'yg-feature'),
         BOX([ICONTILE('users', 'yg-feature__icon'), H('Développement Social', 'h2', 'yg-feature__title'), T('Se remettre dans la vie sociale et active, créer des liens et des échanges, établir des relations au sein du groupe. Ne plus être seul face à la maladie, ne plus être isolé.', 'yg-feature__text')], 'yg-feature'),
     ], 'yg-features')])], 'yg-features-sec yg-features-sec--page'),
-    SEC('Nos valeurs', [WRAP([HEAD('FightxLife', 'Nos valeurs', 'valeurs'), GRID([
+    TOP('Nos valeurs', [WRAP([HEAD('FightxLife', 'Nos valeurs', 'valeurs'), GRID([
         BOX([ICONTILE('users', 'yg-feature__icon'), H('L’égalité des chances', 'h2', 'yg-feature__title'), T('Nous faisons en sorte que nos membres disposent des mêmes chances, des mêmes opportunités de développement social, indépendamment de leur origine sociale ou ethnique.', 'yg-feature__text')], 'yg-feature'),
         BOX([ICONTILE('heart', 'yg-feature__icon'), H('Le bien-être', 'h2', 'yg-feature__title'), T('La santé mentale et physique n’a pas de prix. Un bon moral et une bonne humeur peuvent être des atouts primordiaux nous permettant d’avancer.', 'yg-feature__text')], 'yg-feature'),
         BOX([ICONTILE('shield', 'yg-feature__icon'), H('La solidarité', 'h2', 'yg-feature__title'), T('Elle est cette main tendue vers l’autre pour lui rappeler qu’il n’est pas seul, dans un esprit marqué par le respect et le rythme de chacun.', 'yg-feature__text')], 'yg-feature'),
     ], 'yg-features')])], 'yg-features-sec fx-soft'),
-    SEC('Rejoindre', [WRAP([T('FightxLife', 'yg-eyebrow'), H('Envie de nous rejoindre ? Contacte-nous !', 'h2', 'yg-h2', 'Contacte-nous !'), BTN('En savoir plus', '/contact/')], 'yg-consult')], 'yg-consult-sec'),
-    SEC('Advisory Board', [WRAP([HEAD('FightxLife', 'Advisory Board', 'Board'), GRID(array_map(static fn(array $a): array => PERSON(F($a[0]), $a[1], $a[2], $a[3]), $advisory), 'yg-trainer-grid fx-people')])], 'yg-content'),
-    SEC('Notre équipe', [WRAP([HEAD('FightxLife', 'Notre Équipe', 'Équipe'), GRID(array_map(static fn(array $a): array => PERSON(F($a[0]), $a[1], $a[2]), $team), 'yg-trainer-grid fx-people', 4)])], 'yg-team-sec'),
-    SEC('Comité d’honneur', [WRAP([HEAD('FightxLife', 'Comité d’honneur', 'honneur', 'Notre comité d’honneur, qui partage l’expérience de chacun, aussi variée qu’intéressante, nous aide à penser nos projets et à choisir la meilleure voie pour assurer la pérennité de notre association.'),
+    TOP('Rejoindre', [WRAP([T('FightxLife', 'yg-eyebrow'), H('Envie de nous rejoindre ? Contacte-nous !', 'h2', 'yg-h2', 'Contacte-nous !'), BTN('En savoir plus', '/contact/')], 'yg-consult')], 'yg-consult-sec'),
+    TOP('Advisory Board', [WRAP([HEAD('FightxLife', 'Advisory Board', 'Board'), GRID(array_map(static fn(array $a): array => PERSON(F($a[0]), $a[1], $a[2], $a[3]), $advisory), 'yg-trainer-grid fx-people')])], 'yg-content'),
+    TOP('Notre équipe', [WRAP([HEAD('FightxLife', 'Notre Équipe', 'Équipe'), GRID(array_map(static fn(array $a): array => PERSON(F($a[0]), $a[1], $a[2]), $team), 'yg-trainer-grid fx-people', 4)])], 'yg-team-sec'),
+    TOP('Comité d’honneur', [WRAP([HEAD('FightxLife', 'Comité d’honneur', 'honneur', 'Notre comité d’honneur, qui partage l’expérience de chacun, aussi variée qu’intéressante, nous aide à penser nos projets et à choisir la meilleure voie pour assurer la pérennité de notre association.'),
         GRID(array_map(static fn(array $a): array => PERSON(F($a[0]), $a[1], $a[2]), $honour), 'yg-trainer-grid fx-people', 4)])], 'yg-content'),
-    SEC('Nos ambassadeurs', [WRAP([HEAD('FightxLife', 'Nos Ambassadeurs', 'Ambassadeurs', 'Nos ambassadrices nous soutiennent, nous aident à mieux faire connaître l’association et nous accompagnent dans nos différentes activités.'),
+    TOP('Nos ambassadeurs', [WRAP([HEAD('FightxLife', 'Nos Ambassadeurs', 'Ambassadeurs', 'Nos ambassadrices nous soutiennent, nous aident à mieux faire connaître l’association et nous accompagnent dans nos différentes activités.'),
         GRID(array_map(static fn(array $a): array => PERSON(F($a[0]), $a[1], 'Ambassadrice'), $ambassadors), 'yg-trainer-grid fx-people', 3), BOX([BTN('Devenir notre voix ? Nous contacter', '/contact/')], 'yg-center')])], 'yg-team-sec'),
-    SEC('Sponsors', [WRAP([HEAD('FightxLife', 'Nos sponsors', 'sponsors'), LOGOS($SPONSORS)])], 'yg-content fx-logos-sec'),
-    SEC('Partenaires', [WRAP([HEAD('FightxLife', 'Nos partenaires', 'partenaires'), LOGOS($PARTNERS)])], 'yg-content fx-logos-sec fx-pt0'),
+    TOP('Sponsors', [WRAP([HEAD('FightxLife', 'Nos sponsors', 'sponsors'), LOGOS($SPONSORS)])], 'yg-content fx-logos-sec'),
+    TOP('Partenaires', [WRAP([HEAD('FightxLife', 'Nos partenaires', 'partenaires'), LOGOS($PARTNERS)])], 'yg-content fx-logos-sec fx-pt0'),
 ], ['seo' => 'qui-sommes-nous']];
 
 $pages['cours'] = ['Cours', 'standalone', [
     BANNER('Cours de Boxe', 'Boxe', 'Cours', PAGEBG('cours')),
-    SEC('Intro', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
+    TOP('Intro', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
         BOX([IMGP(F('2022-05-stock-photo-partial-view-woman-boxing-gloves-removebg-preview.png'), 'Gants de boxe', 'yg-about__img')], 'yg-about__media'),
         BOX(array_merge([T('FightxLife', 'yg-eyebrow'), H('Des cours adaptés pour chacun', 'h2', 'yg-h2', 'pour chacun')], BODY([array_values(array_filter(C('pages', 'cours')['blocks'], static fn(array $b): bool => $b['t'] === 'rich'))[0]])), 'yg-about__copy'),
     ], 'yg-about')])], 'yg-about-sec'),
-    SEC('Nos cours', [WRAP([HEAD('FightxLife', 'Nos cours', 'cours'), GRID($coursCards)])], 'yg-content fx-soft'),
+    TOP('Nos cours', [WRAP([HEAD('FightxLife', 'Nos cours', 'cours'), GRID($coursCards)])], 'yg-content fx-soft'),
 ], ['seo' => 'cours']];
 
 $pages['nos-actions'] = ['Nos Actions', 'standalone', [
     BANNER('Nos Actions', 'Actions', 'Nos actions', PAGEBG('nos-actions')),
-    SEC('Intro', [WRAP([HEAD('FightxLife', 'Chaque action nous rapproche de l’humanité', 'l’humanité', 'FightxLife est active dans la société pour une meilleure qualité de vie auprès de personnes atteintes du cancer. Elle veille à une égalité des chances face à la maladie dans le monde sportif, et se tient aux côtés des enfants et des parents pendant ces moments difficiles.')])], 'yg-content fx-pb0'),
-    SEC('Soutiens un enfant', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
+    TOP('Intro', [WRAP([HEAD('FightxLife', 'Chaque action nous rapproche de l’humanité', 'l’humanité', 'FightxLife est active dans la société pour une meilleure qualité de vie auprès de personnes atteintes du cancer. Elle veille à une égalité des chances face à la maladie dans le monde sportif, et se tient aux côtés des enfants et des parents pendant ces moments difficiles.')])], 'yg-content fx-pb0'),
+    TOP('Soutiens un enfant', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
         BOX([IMGP(LOCAL($BG['smile-box'][0]), 'La SmileBox', 'yg-why__img fx-cover')], 'yg-why__media fx-media-photo'),
         BOX([HEAD('SmileBox', 'Soutiens un enfant !', 'enfant', 'L’association a créé la SmileBox, une box offerte gratuitement à tous les enfants diagnostiqués d’un cancer.', 'left'), BTN('Découvrir la SmileBox', '/smile-box/')], 'yg-why__copy'),
     ], 'yg-why')])], 'yg-why-sec'),
-    SEC('Projets', [WRAP([HEAD('FightxLife', 'Nos projets', 'projets'), GRID([
+    TOP('Projets', [WRAP([HEAD('FightxLife', 'Nos projets', 'projets'), GRID([
         CARD(LOCAL($BG['nos-actions'][2]), 'Solidarité', 'Ce projet dépasse nos frontières et sollicite une chaîne de solidarité : chaque personne compte, ici et ailleurs.', '/solidarite-5/'),
         CARD(LOCAL($BG['nos-actions'][3]), 'Visites hôpitaux', 'Tout au long de l’année, FightxLife rend visite aux enfants des services oncologie et pédiatrie et leur apporte un rayon de soleil.', '/les-hopitaux/'),
         CARD(LOCAL($BG['nos-actions'][4]), 'Gala', 'Chaque année, un Gala de charité pour informer et sensibiliser le public face au cancer, et recueillir des dons.', '/gala/'),
@@ -530,11 +530,11 @@ $pages['nos-actions'] = ['Nos Actions', 'standalone', [
 
 $pages['nous-soutenir'] = ['Nous Soutenir', 'standalone', [
     BANNER('Nous Soutenir', 'Soutenir', 'Nous soutenir', PAGEBG('nous-soutenir')),
-    SEC('Ensemble', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
+    TOP('Ensemble', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
         BOX([IMGP(LOCAL($BG['nous-soutenir'][0]), 'Une bénévole fait un cœur avec ses mains', 'yg-why__img fx-cover')], 'yg-why__media fx-media-photo'),
         BOX([HEAD('FightxLife', 'Ensemble contre le cancer', 'le cancer', 'FightxLife a besoin de ton aide, et aujourd’hui tu as le pouvoir de mener le travail de FightxLife au niveau suivant. Rejoins FightxLife dans le Combat pour la Vie face au cancer au travers de la boxe adaptée.', 'left'), BTN('Faire un don', '/donation/')], 'yg-why__copy'),
     ], 'yg-why')])], 'yg-why-sec'),
-    SEC('Merci', [WRAP([HEAD('FightxLife', 'Merci pour ton soutien !', 'soutien', 'Soutiens FightxLife dans sa lutte contre le cancer en faisant un don, en organisant une action, en faisant un partenariat ou encore en devenant bénévole. Quelle que soit la façon avec laquelle vous nous aiderez, FightxLife vous remercie !'),
+    TOP('Merci', [WRAP([HEAD('FightxLife', 'Merci pour ton soutien !', 'soutien', 'Soutiens FightxLife dans sa lutte contre le cancer en faisant un don, en organisant une action, en faisant un partenariat ou encore en devenant bénévole. Quelle que soit la façon avec laquelle vous nous aiderez, FightxLife vous remercie !'),
         GRID([
             BOX([IMGP(F('2022-06-donation.png'), '', 'fx-tile__img'), B('core.heading', ['text' => 'Je fais un don', 'level' => 'h3', 'url' => '/donation/'], [], 'yg-feature__title')], 'yg-feature fx-tile'),
             BOX([IMGP(F('2022-06-coup-de-main.png'), '', 'fx-tile__img'), B('core.heading', ['text' => 'Je deviens bénévole', 'level' => 'h3', 'url' => '/contact/'], [], 'yg-feature__title')], 'yg-feature fx-tile'),
@@ -546,7 +546,7 @@ $pages['nous-soutenir'] = ['Nous Soutenir', 'standalone', [
 $contactCard = static fn(string $icon, string $title, array $lines): array => BOX(array_merge([ICONTILE($icon, 'yg-contact__icon'), H($title, 'h3', 'yg-contact__title')], $lines), 'yg-contact__card');
 $pages['contact'] = ['Contact', 'standalone', [
     BANNER('Contact', 'Contact', 'Contact', PAGEBG('contact')),
-    SEC('Contact', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
+    TOP('Contact', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
         HEAD('Contact', 'Contacte-nous !', 'nous !', 'Tu as des questions sur FightxLife ? Tu souhaites t’investir en tant que bénévole, nous soutenir avec une levée de fonds ou devenir partenaire ? N’hésite plus, et contacte-nous via le formulaire !', 'left'),
         B('core.form', ['form_name' => 'contact', 'submit_text' => 'Envoyer', 'submit_variant' => 'primary', 'success_message' => 'Merci ! Nous avons bien reçu ton message et te répondrons rapidement.'], [
             B('core.form_field', ['field_type' => 'text', 'name' => 'name', 'label' => 'Nom', 'placeholder' => 'Nom', 'required' => true]),
@@ -559,7 +559,7 @@ $pages['contact'] = ['Contact', 'standalone', [
                 $contactCard('phone', 'Rezki Sara', [LNK('GSM : +32 483 12 72 98', 'tel:+32483127298', 'yg-contact__line'), LNK('contact@fightxlife.com', 'mailto:contact@fightxlife.com', 'yg-contact__line')]),
             ], 'yg-contact__cards'),
     ], 'yg-contact')])], 'yg-contact-sec'),
-    SEC('Map', [WRAP([B('core.map', ['latitude' => 50.8563, 'longitude' => 4.3366, 'zoom' => 15, 'height' => 'lg', 'title' => 'FightxLife, Rue Gabrielle Petit 32, Molenbeek'], [], 'yg-map')])], 'yg-map-sec'),
+    TOP('Map', [WRAP([B('core.map', ['latitude' => 50.8563, 'longitude' => 4.3366, 'zoom' => 15, 'height' => 'lg', 'title' => 'FightxLife, Rue Gabrielle Petit 32, Molenbeek'], [], 'yg-map')])], 'yg-map-sec'),
 ], ['seo' => 'contact']];
 
 // Presse: the live list of articles, each linking to the outlet.
@@ -587,14 +587,14 @@ foreach ($press as $k => $pr) {
 }
 $pages['presse'] = ['Presse', 'standalone', [
     BANNER('Presse', 'Presse', 'Presse', PAGEBG('presse')),
-    SEC('Radios & Podcasts', [WRAP([HEAD('FightxLife', 'Radios & Podcasts', 'Podcasts'), BOX([H('Positive Fem - Sara Rezki - Fightxlife', 'h3', 'yg-post__title'), T('Sara Rezki raconte FightxLife au micro de BX FM.', 'yg-post__text'),
+    TOP('Radios & Podcasts', [WRAP([HEAD('FightxLife', 'Radios & Podcasts', 'Podcasts'), BOX([H('Positive Fem - Sara Rezki - Fightxlife', 'h3', 'yg-post__title'), T('Sara Rezki raconte FightxLife au micro de BX FM.', 'yg-post__text'),
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'justify' => 'center', 'wrap' => 'wrap'], [BTN('Écouter sur SoundCloud', 'https://soundcloud.com/bxfmradio/positive-fem-sara-rezki-fightxlife'), BTN('Écouter sur Spotify', 'https://open.spotify.com/episode/4pBb3MgCQxSDA9F188P69t', 'yg-btn yg-btn--dark')], 'yg-hero__actions')], 'fx-podcast')])], 'yg-content fx-pb0'),
-    SEC('Articles', [WRAP([HEAD('FightxLife', 'Articles', 'Articles'), GRID($pressCards, 'yg-posts fx-press', 3)])], 'yg-content'),
+    TOP('Articles', [WRAP([HEAD('FightxLife', 'Articles', 'Articles'), GRID($pressCards, 'yg-posts fx-press', 3)])], 'yg-content'),
 ], ['seo' => 'presse']];
 
 $blogLoop = static fn(): array => B('core.query_loop', ['source' => 'posts', 'category' => CAT, 'per_page' => 15, 'columns' => 3, 'card_variant' => 'card', 'show_author' => false, 'show_category' => true, 'read_more_text' => 'Lire la suite', 'empty_message' => 'Aucun article.'], [], 'fx-loop');
-$pages['blog'] = ['Blog', 'standalone', [BANNER('Blog', 'Blog', 'Blog', PAGEBG('blog')), SEC('Articles', [WRAP([HEAD('Actualités', 'Le blog de FightxLife', 'FightxLife', 'Articles, conseils, infos et événements de l’association.'), $blogLoop()])], 'yg-content')], ['seo' => 'blog']];
-$pages['actualites'] = ['Actualités', 'standalone', [BANNER('Actualités', 'Actualités', 'Actualités', PAGEBG('blog')), SEC('Articles', [WRAP([$blogLoop()])], 'yg-content')],
+$pages['blog'] = ['Blog', 'standalone', [BANNER('Blog', 'Blog', 'Blog', PAGEBG('blog')), TOP('Articles', [WRAP([HEAD('Actualités', 'Le blog de FightxLife', 'FightxLife', 'Articles, conseils, infos et événements de l’association.'), $blogLoop()])], 'yg-content')], ['seo' => 'blog']];
+$pages['actualites'] = ['Actualités', 'standalone', [BANNER('Actualités', 'Actualités', 'Actualités', PAGEBG('blog')), TOP('Articles', [WRAP([$blogLoop()])], 'yg-content')],
     ['seo_title' => 'Actualités | Fightxlife', 'seo_desc' => 'Toutes les actualités de FightxLife : actions dans les hôpitaux, événements, partenariats et témoignages.']];
 
 // Events (newest first)
@@ -602,36 +602,36 @@ $eventSlugs = ['chaque-pas-compte', 'bounce-back-festival-baob', 'fightxlife-sou
     'fightxlife-au-festival-des-rencontres', 'village-de-noel-a-rouge-cloitre-auderghem', 'event-gala-octo-pink', 'colloque-free-clinic'];
 $eventsGrid = static fn(): array => GRID(array_map('EVENTCARD', $eventSlugs), 'yg-posts fx-events', 3);
 $pages['evenements'] = ['Evénements', 'standalone', [BANNER('Evénements', 'Evénements', 'Evénements', PAGEBG('evenements')),
-    SEC('Événements', [WRAP([HEAD('FightxLife', 'Nos événements', 'événements', 'FightxLife organise de nombreux événements tout au long de l’année.'), $eventsGrid()])], 'yg-content')], ['seo' => 'evenements']];
-$pages['events'] = ['Événements', 'standalone', [BANNER('Evénements Passés', 'Passés', 'Evénements', PAGEBG('evenements')), SEC('Événements', [WRAP([$eventsGrid()])], 'yg-content')],
+    TOP('Événements', [WRAP([HEAD('FightxLife', 'Nos événements', 'événements', 'FightxLife organise de nombreux événements tout au long de l’année.'), $eventsGrid()])], 'yg-content')], ['seo' => 'evenements']];
+$pages['events'] = ['Événements', 'standalone', [BANNER('Evénements Passés', 'Passés', 'Evénements', PAGEBG('evenements')), TOP('Événements', [WRAP([$eventsGrid()])], 'yg-content')],
     ['seo_title' => 'Événements Archive - Fightxlife', 'seo_desc' => 'Les événements passés de FightxLife : galas, festivals, marches solidaires et soirées pour la lutte contre le cancer.']];
 
 $shop = static fn(): array => SHOPGRID();
 $pages['e-shop'] = ['E-Shop', 'standalone', [BANNER('E-Shop', 'Shop', 'E-shop', PAGEBG('e-shop')),
-    SEC('Produits', [WRAP([HEAD('FightxLife', 'Arbore nos couleurs', 'couleurs', 'Acheter sur la boutique de FightxLife, c’est faire un don contre le cancer et nous soutenir dans la lutte contre la maladie.'), $shop()])], 'yg-content')], ['seo' => 'e-shop']];
-$pages['boutique'] = ['Boutique', 'standalone', [BANNER('Boutique', 'Boutique', 'Boutique', PAGEBG('e-shop')), SEC('Produits', [WRAP([$shop()])], 'yg-content')],
+    TOP('Produits', [WRAP([HEAD('FightxLife', 'Arbore nos couleurs', 'couleurs', 'Acheter sur la boutique de FightxLife, c’est faire un don contre le cancer et nous soutenir dans la lutte contre la maladie.'), $shop()])], 'yg-content')], ['seo' => 'e-shop']];
+$pages['boutique'] = ['Boutique', 'standalone', [BANNER('Boutique', 'Boutique', 'Boutique', PAGEBG('e-shop')), TOP('Produits', [WRAP([$shop()])], 'yg-content')],
     ['seo_title' => 'Boutique - Fightxlife', 'seo_desc' => 'La boutique FightxLife : casquettes, sweats et t-shirts pour soutenir la lutte contre le cancer.']];
 // The Shop's own pages, at the live store's addresses (Shop settings in fxl/shop.json). Never search results.
 $pages['panier'] = ['Panier', 'standalone', [BANNER('Panier', 'Panier', 'Panier', PAGEBG('e-shop')),
-    SEC('Panier', [WRAP([B('shop.cart', [], [], 'fx-shop-cart')])], 'yg-content')],
+    TOP('Panier', [WRAP([B('shop.cart', [], [], 'fx-shop-cart')])], 'yg-content')],
     ['seo_title' => 'Panier - Fightxlife', 'seo_desc' => 'Ton panier sur la boutique FightxLife.', 'seo_robots' => 'noindex,follow']];
 $pages['commande'] = ['Commande', 'standalone', [BANNER('Commande', 'Commande', 'Commande', PAGEBG('e-shop')),
-    SEC('Commande', [WRAP([B('shop.checkout', [], [], 'fx-shop-checkout')])], 'yg-content')],
+    TOP('Commande', [WRAP([B('shop.checkout', [], [], 'fx-shop-checkout')])], 'yg-content')],
     ['seo_title' => 'Commande - Fightxlife', 'seo_desc' => 'Finalise ta commande sur la boutique FightxLife.', 'seo_robots' => 'noindex,follow']];
 $pages['commande-recue'] = ['Commande reçue', 'standalone', [BANNER('Merci !', 'Merci', 'Commande reçue', PAGEBG('e-shop')),
-    SEC('Commande reçue', [WRAP([B('shop.order_confirmation', ['heading' => ''], [], 'fx-shop-order'), BOX([BTN('Retour à l’e-shop', '/e-shop/')], 'yg-center')])], 'yg-content')],
+    TOP('Commande reçue', [WRAP([B('shop.order_confirmation', ['heading' => ''], [], 'fx-shop-order'), BOX([BTN('Retour à l’e-shop', '/e-shop/')], 'yg-center')])], 'yg-content')],
     ['seo_title' => 'Commande reçue - Fightxlife', 'seo_desc' => 'Ta commande FightxLife.', 'seo_robots' => 'noindex,follow']];
 
 $pages['donation'] = ['Donation', 'standalone', [
     BANNER('Faire un don', 'don', 'Donation', PAGEBG('nous-soutenir')),
-    SEC('Don', [WRAP([HEAD('FightxLife', 'Ton don, nos actions', 'nos actions', 'Tes dons se traduisent en actions concrètes : visites dans les hôpitaux, SmileBox pour les enfants, cours de boxe adaptée. Choisis un montant, le paiement est sécurisé par Stripe.'),
+    TOP('Don', [WRAP([HEAD('FightxLife', 'Ton don, nos actions', 'nos actions', 'Tes dons se traduisent en actions concrètes : visites dans les hôpitaux, SmileBox pour les enfants, cours de boxe adaptée. Choisis un montant, le paiement est sécurisé par Stripe.'),
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'justify' => 'center', 'wrap' => 'wrap'], array_map(static fn(int $a): array =>
             B('payment.button', ['label' => "Donner {$a} €", 'amount' => $a, 'currency' => 'EUR', 'description' => 'Don à FightxLife ASBL'], [], 'yg-btn fx-pay'), [10, 25, 50, 100]), 'fx-donate'),
         T('Tu préfères faire un virement ou donner du matériel ? Écris-nous, nous te répondons rapidement.', 'yg-lead fx-donate__alt'), BOX([BTN('Nous contacter', '/contact/', 'yg-btn yg-btn--dark')], 'yg-center')])], 'yg-content'),
 ], ['seo_title' => 'Faire un don | Fightxlife', 'seo_desc' => 'Fais un don à FightxLife : tes dons financent les cours de boxe adaptée, les visites dans les hôpitaux et les SmileBox pour les enfants.']];
 
 foreach (['politique-de-confidentialite' => 'Politique de Confidentialité', 'conditions-generales-de-vente' => 'Conditions Générales de Vente'] as $slug => $title) {
-    $pages[$slug] = [$title, 'standalone', [BANNER($title, '', $title), SEC('Texte', [WRAP(BODY(C('pages', $slug)['blocks']), 'fx-legal')], 'yg-content')],
+    $pages[$slug] = [$title, 'standalone', [BANNER($title, '', $title), TOP('Texte', [WRAP(BODY(C('pages', $slug)['blocks']), 'fx-legal')], 'yg-content')],
         ['seo' => $slug, 'seo_desc_fallback' => "{$title} de l’ASBL FightxLife."]];
 }
 
@@ -675,7 +675,7 @@ foreach ($courseMeta as $slug => [$lieu, $horaires, $duree, $public, $tarifs]) {
         BOX([H('Pour qui ?', 'h3', 'fx-body__h fx-body__h3'), T($forWho, 'fx-panel__text')], 'fx-panel fx-panel--soft'),
         BOX([T('Inscription', 'yg-eyebrow'), H('Pour t’inscrire, connecte-toi !', 'h3', 'fx-cta__title'), T('Les inscriptions et les réservations se font dans l’espace membre FightxLife.', 'fx-panel__text'), BTN('Accéder à l’espace membre', MEMBRE)], 'fx-cta'),
     ];
-    $pages[$slug] = [$it['title'], 'standalone', [SEC('Cours', $body, 'fx-body')], ['seo' => $slug], 'cours',
+    $pages[$slug] = [$it['title'], 'standalone', [TOP('Cours', $body, 'fx-body')], ['seo' => $slug], 'cours',
         ['lieu' => $lieu, 'horaires' => $horaires, 'duree' => $duree, 'public' => $public, 'tarifs' => $tarifs]];
 }
 foreach (['smile-box', 'solidarite-5', 'les-hopitaux', 'gala', 'crowdfunding'] as $slug) {
@@ -683,13 +683,13 @@ foreach (['smile-box', 'solidarite-5', 'les-hopitaux', 'gala', 'crowdfunding'] a
     $body = BODY($it['blocks']);
     $bg = PAGEBG($slug);
     if ($bg !== '' && $slug !== 'smile-box') { array_unshift($body, IMGP($bg, $it['title'], 'fx-body__img fx-body__hero')); }
-    $pages[$slug] = [$it['title'], 'standalone', [SEC('Projet', $body, 'fx-body')], ['seo' => $slug], 'projet', ['accroche' => $it['seo_desc']]];
+    $pages[$slug] = [$it['title'], 'standalone', [TOP('Projet', $body, 'fx-body')], ['seo' => $slug], 'projet', ['accroche' => $it['seo_desc']]];
 }
 foreach ($eventSlugs as $slug) {
     $it = C('mec-events', $slug); $ev = $EXTRA['events'][$slug];
     $body = BODY($it['blocks']);
     if ($it['featured'] !== '' && LOCAL($it['featured']) !== '') { array_unshift($body, IMGP(LOCAL($it['featured']), $it['title'], 'fx-body__img fx-body__hero')); }
-    $pages[$slug] = [$it['title'], 'standalone', [SEC('Événement', $body, 'fx-body')], ['seo_item' => "mec-events:{$slug}"], 'evenement',
+    $pages[$slug] = [$it['title'], 'standalone', [TOP('Événement', $body, 'fx-body')], ['seo_item' => "mec-events:{$slug}"], 'evenement',
         ['date' => $ev['date'], 'heure' => $ev['heure'], 'tarif' => $ev['tarif'] !== '' ? $ev['tarif'] : 'Gratuit', 'lieu' => $ev['lieu']]];
 }
 // Articles: pages in "Actualités", original dates, featured image first.
@@ -697,13 +697,13 @@ foreach (array_filter($CONTENT, static fn(array $i): bool => $i['kind'] === 'pos
     $body = BODY($it['blocks']);
     $feat = LOCAL($it['featured']);
     if ($feat !== '') { array_unshift($body, IMGP($feat, $it['title'], 'fx-body__img fx-body__hero')); }
-    $pages[$it['slug']] = [$it['title'], 'standalone', [SEC('Article', $body, 'fx-body')],
+    $pages[$it['slug']] = [$it['title'], 'standalone', [TOP('Article', $body, 'fx-body')],
         ['seo_item' => "posts:{$it['slug']}", 'category' => CAT, 'excerpt' => mb_substr($it['seo_desc'] !== '' ? $it['seo_desc'] : $it['excerpt'], 0, 300)], 'article', [], $it['date']];
 }
 
 // ── Single templates ─────────────────────────────────────────────────────────────────────────────────────────────
 $row = static fn(string $label, string $key, string $tag = 'span'): array => B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'gap' => 'none'], [T($label, 'yg-info__label'), B('theme.field_value', ['field' => $key, 'tag' => $tag === 'div' ? 'div' : 'span'], [], 'yg-info__value')], 'yg-info__row');
-$titleBanner = static fn(string $crumb, string $crumbUrl): array => SEC('Banner', [WRAP([
+$titleBanner = static fn(string $crumb, string $crumbUrl): array => TOP('Banner', [WRAP([
     B('theme.post_title', ['level' => 'h1'], [], 'yg-banner__title'),
     B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'wrap' => 'wrap'], [LNK('Accueil', '/', 'yg-crumb__home'), T('›', 'yg-crumb__sep'), LNK($crumb, $crumbUrl, 'yg-crumb__here fx-crumb-link')], 'yg-crumbs'),
 ])], 'yg-banner');
@@ -713,8 +713,8 @@ $helpCard = BOX([
 ], 'yg-promo yg-promo--help');
 $templates = [
     'fxl-article' => ['Article', [['type' => 'include', 'condition' => 'category', 'value' => CAT]], [
-        SEC('Banner', [WRAP([B('theme.post_title', ['level' => 'h1', 'align' => 'center'], [], 'yg-banner__title'), B('theme.post_meta', ['show_author' => false, 'show_date' => true, 'show_category' => true, 'separator' => ''], [], 'yg-post-meta')])], 'yg-banner yg-banner--centered'),
-        SEC('Article', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
+        TOP('Banner', [WRAP([B('theme.post_title', ['level' => 'h1', 'align' => 'center'], [], 'yg-banner__title'), B('theme.post_meta', ['show_author' => false, 'show_date' => true, 'show_category' => true, 'separator' => ''], [], 'yg-post-meta')])], 'yg-banner yg-banner--centered'),
+        TOP('Article', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
             B('theme.post_content', [], [], 'yg-article'),
             BOX([
                 BOX([H('D’autres articles', 'h3', 'yg-widget__title'), B('core.query_loop', ['source' => 'posts', 'category' => CAT, 'per_page' => 4, 'columns' => 1, 'card_variant' => 'minimal', 'show_featured_image' => false, 'show_author' => false, 'show_category' => false, 'show_excerpt' => false, 'enable_pagination' => false, 'read_more_text' => 'Lire', 'title_level' => 'h4'], [], 'fx-recent')], 'yg-widget'),
@@ -725,7 +725,7 @@ $templates = [
     ]],
     'fxl-cours' => ['Cours', [['type' => 'include', 'condition' => 'post_type', 'value' => 'cours']], [
         $titleBanner('Cours', '/cours/'),
-        SEC('Cours', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
+        TOP('Cours', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
             B('theme.post_content', [], [], 'yg-detail__main'),
             BOX([BOX([
                 H('Infos pratiques', 'h3', 'fx-info__title'),
@@ -740,7 +740,7 @@ $templates = [
     ]],
     'fxl-projet' => ['Projet', [['type' => 'include', 'condition' => 'post_type', 'value' => 'projet']], [
         $titleBanner('Nos actions', '/nos-actions/'),
-        SEC('Projet', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
+        TOP('Projet', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
             B('theme.post_content', [], [], 'yg-detail__main'),
             BOX([BOX([H('Nos actions', 'h3', 'fx-info__title'), B('core.nav_menu', ['menu' => $menuActions, 'items' => [], 'layout' => 'vertical', 'aria_label' => 'Nos actions'], [], 'fx-side-nav'), BTN('Faire un don', '/donation/', 'yg-btn yg-btn--block')], 'yg-info fx-info--short'), $helpCard], 'yg-detail__side'),
         ], 'yg-detail')])], 'yg-content yg-detail-sec'),
@@ -748,7 +748,7 @@ $templates = [
     ]],
     'fxl-evenement' => ['Événement', [['type' => 'include', 'condition' => 'post_type', 'value' => 'evenement']], [
         $titleBanner('Evénements', '/evenements/'),
-        SEC('Événement', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
+        TOP('Événement', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
             B('theme.post_content', [], [], 'yg-detail__main'),
             BOX([BOX([H('Infos', 'h3', 'fx-info__title'), $row('Date', 'date'), $row('Heure', 'heure'), $row('Tarif', 'tarif'), BTN('Nous contacter', '/contact/', 'yg-btn yg-btn--block'),
                 B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center'], [T('Partager', 'yg-share__label'),
@@ -758,11 +758,11 @@ $templates = [
     ]],
     // A Shop product (/produit/{slug}/): the gallery beside the price, stock, options and Add to cart.
     'fxl-produit' => ['Produit', [['type' => 'include', 'condition' => 'singular', 'value' => 'product']], [
-        SEC('Banner', [WRAP([
+        TOP('Banner', [WRAP([
             B('shop.product_title', ['tag' => 'h1'], [], 'fx-shop-title'),
             B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'wrap' => 'wrap'], [LNK('Accueil', '/', 'yg-crumb__home'), T('›', 'yg-crumb__sep'), LNK('E-shop', '/e-shop/', 'yg-crumb__here fx-crumb-link')], 'yg-crumbs'),
         ])], 'yg-banner'),
-        SEC('Produit', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
+        TOP('Produit', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
             B('shop.product_image', ['ratio' => 'portrait', 'show_thumbnails' => true], [], 'fx-shop-gallery'),
             BOX([
                 B('shop.product_price', ['show_vat_note' => true], [], 'fx-shop-price'),
@@ -785,7 +785,7 @@ $n = 0;
 $shopPages = ['e-shop', 'boutique', 'panier', 'commande', 'commande-recue'];
 foreach ($pages as $slug => $def) {
     if ($SHOP_ONLY && !in_array($slug, $shopPages, true)) { continue; }
-    [$title, $route, $sections] = $def;
+    [$title, $route, $containers] = $def;
     $settings = $def[3] ?? [];
     $type = $def[4] ?? null; $values = $def[5] ?? []; $date = $def[6] ?? null;
     $src = isset($settings['seo']) ? C('pages', $settings['seo']) : (isset($settings['seo_item']) ? $CONTENT[$settings['seo_item']] : null);
@@ -796,23 +796,23 @@ foreach ($pages as $slug => $def) {
     if ($src && ($src['featured'] ?? '') !== '' && ($ogPath = LOCAL($src['featured'])) !== '') { $og = MID($ogPath) ?: null; }
     unset($settings['seo'], $settings['seo_item'], $settings['seo_title'], $settings['seo_desc'], $settings['seo_desc_fallback']);
     $pageSlug = $slug === 'accueil' ? 'accueil' : $slug;
-    $id = build_page($pageSlug, $title, 'page', $route, $sections, $settings, $seoTitle, $seoDesc, $og);
+    $id = build_page($pageSlug, $title, 'page', $route, $containers, $settings, $seoTitle, $seoDesc, $og);
     if ($type !== null) { PageMeta::save($tid, $id, $type, $values); }
     if ($date !== null) { Database::query('UPDATE studiobuilder_pages SET published_at = ? WHERE id = ?', [date('Y-m-d H:i:s', (int) strtotime($date)), $id]); }
     $n++;
 }
 $built = 0;
-foreach ($templates as $key => [$name, $rules, $sections]) {
+foreach ($templates as $key => [$name, $rules, $containers]) {
     if ($SHOP_ONLY && $key !== 'fxl-produit') { continue; }
     $built++;
     $doc = \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::emptyDocument('system', 'default', $name);
     $doc['seo']['robots'] = 'noindex,nofollow';
     $doc['settings']['conditions'] = ['rules' => $rules];
     $doc['settings']['template_type'] = 'single';
-    $doc['sections'] = $sections;
+    $doc['containers'] = $containers;
     check_doc($doc);
     $runtime->app->saveTemplate($actor, $key, 'page_template', 'single', $name, "FightxLife {$name} template", $doc, null, true);
-    build_page('template-' . $key, "[Theme] {$name}", 'system', 'standalone', $sections, ['conditions' => ['rules' => $rules], 'template_type' => 'single'], "{$name} | FightxLife");
+    build_page('template-' . $key, "[Theme] {$name}", 'system', 'standalone', $containers, ['conditions' => ['rules' => $rules], 'template_type' => 'single'], "{$name} | FightxLife");
 }
 
 // Redirects for retired WooCommerce addresses (301), and the duplicate account page.

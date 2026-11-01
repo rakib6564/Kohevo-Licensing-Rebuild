@@ -26,14 +26,6 @@ final class DocumentOperation
     public const OP_UPDATE_SETTINGS         = 'update_settings';
     public const OP_UPDATE_SEO              = 'update_seo';
     public const OP_UPDATE_TEMPLATE         = 'update_template';
-    public const OP_INSERT_SECTION          = 'insert_section';
-    public const OP_REMOVE_SECTION          = 'remove_section';
-    public const OP_MOVE_SECTION            = 'move_section';
-    public const OP_DUPLICATE_SECTION       = 'duplicate_section';
-    public const OP_UPDATE_SECTION_LABEL    = 'update_section_label';
-    public const OP_UPDATE_SECTION_LAYOUT   = 'update_section_layout';
-    public const OP_UPDATE_SECTION_VISIBILITY = 'update_section_visibility';
-    public const OP_UPDATE_SECTION_LOCKED   = 'update_section_locked';
     public const OP_INSERT_BLOCK            = 'insert_block';
     public const OP_REMOVE_BLOCK            = 'remove_block';
     public const OP_MOVE_BLOCK              = 'move_block';
@@ -53,22 +45,11 @@ final class DocumentOperation
     public const OP_UPDATE_BLOCK_TAG           = 'update_block_tag';
     public const OP_UPDATE_BLOCK_CUSTOM_CSS    = 'update_block_custom_css';
     public const OP_RESET_BLOCK_STYLE_PROPERTY = 'reset_block_style_property';
-    public const OP_UPDATE_SECTION_STYLE       = 'update_section_style';
-    public const OP_UPDATE_SECTION_ANIMATION   = 'update_section_animation';
-    public const OP_UPDATE_SECTION_INTERACTIONS = 'update_section_interactions';
 
     public const ALLOWED_OPS = [
         self::OP_UPDATE_SETTINGS,
         self::OP_UPDATE_SEO,
         self::OP_UPDATE_TEMPLATE,
-        self::OP_INSERT_SECTION,
-        self::OP_REMOVE_SECTION,
-        self::OP_MOVE_SECTION,
-        self::OP_DUPLICATE_SECTION,
-        self::OP_UPDATE_SECTION_LABEL,
-        self::OP_UPDATE_SECTION_LAYOUT,
-        self::OP_UPDATE_SECTION_VISIBILITY,
-        self::OP_UPDATE_SECTION_LOCKED,
         self::OP_INSERT_BLOCK,
         self::OP_REMOVE_BLOCK,
         self::OP_MOVE_BLOCK,
@@ -88,9 +69,6 @@ final class DocumentOperation
         self::OP_UPDATE_BLOCK_TAG,
         self::OP_UPDATE_BLOCK_CUSTOM_CSS,
         self::OP_RESET_BLOCK_STYLE_PROPERTY,
-        self::OP_UPDATE_SECTION_STYLE,
-        self::OP_UPDATE_SECTION_ANIMATION,
-        self::OP_UPDATE_SECTION_INTERACTIONS,
     ];
 
     /**
@@ -101,14 +79,6 @@ final class DocumentOperation
         self::OP_UPDATE_SETTINGS           => ['settings'],
         self::OP_UPDATE_SEO                => ['seo'],
         self::OP_UPDATE_TEMPLATE           => ['template_key'],
-        self::OP_INSERT_SECTION            => ['index'],
-        self::OP_REMOVE_SECTION            => ['section_id'],
-        self::OP_MOVE_SECTION              => ['section_id', 'to_index'],
-        self::OP_DUPLICATE_SECTION         => ['section_id'],
-        self::OP_UPDATE_SECTION_LABEL      => ['section_id', 'label'],
-        self::OP_UPDATE_SECTION_LAYOUT     => ['section_id', 'layout'],
-        self::OP_UPDATE_SECTION_VISIBILITY => ['section_id', 'visibility'],
-        self::OP_UPDATE_SECTION_LOCKED     => ['section_id', 'locked'],
         self::OP_INSERT_BLOCK              => ['parent_id', 'index', 'block'],
         self::OP_REMOVE_BLOCK              => ['block_id'],
         self::OP_MOVE_BLOCK                => ['block_id', 'parent_id', 'index'],
@@ -128,9 +98,21 @@ final class DocumentOperation
         self::OP_UPDATE_BLOCK_TAG          => ['block_id', 'tag'],
         self::OP_UPDATE_BLOCK_CUSTOM_CSS   => ['block_id', 'css'],
         self::OP_RESET_BLOCK_STYLE_PROPERTY => ['block_id', 'property'],
-        self::OP_UPDATE_SECTION_STYLE      => ['section_id', 'style'],
-        self::OP_UPDATE_SECTION_ANIMATION  => ['section_id', 'animation'],
-        self::OP_UPDATE_SECTION_INTERACTIONS => ['section_id', 'interactions'],
+    ];
+
+    /** The operations a section-based document had, and what replaced each. An old client is told, not just refused. */
+    private const RETIRED_OPS = [
+        'insert_section'              => 'insert_block with parent_id null',
+        'remove_section'              => 'remove_block',
+        'move_section'                => 'move_block with parent_id null',
+        'duplicate_section'           => 'duplicate_block',
+        'update_section_label'        => 'update_block_meta',
+        'update_section_locked'       => 'update_block_meta',
+        'update_section_layout'       => 'update_block_style',
+        'update_section_style'        => 'update_block_style',
+        'update_section_visibility'   => 'update_block_visibility',
+        'update_section_animation'    => 'update_block_animation',
+        'update_section_interactions' => 'update_block_interactions',
     ];
 
     /**
@@ -141,8 +123,9 @@ final class DocumentOperation
         public readonly array $payload,
     ) {
         if (!in_array($this->op, self::ALLOWED_OPS, true)) {
+            $instead = self::RETIRED_OPS[$this->op] ?? null;
             throw new StudioValidationException([
-                ['path' => '$.op', 'code' => 'unknown_operation', 'message' => "Unknown Studio document operation '{$this->op}'."],
+                ['path' => '$.op', 'code' => 'unknown_operation', 'message' => "Unknown Studio document operation '{$this->op}'." . ($instead !== null ? " Sections are gone: use {$instead}." : '')],
             ]);
         }
 
@@ -220,21 +203,6 @@ final class DocumentOperation
     public static function duplicateBlock(string $blockId): self
     {
         return new self(self::OP_DUPLICATE_BLOCK, ['block_id' => $blockId]);
-    }
-
-    public static function duplicateSection(string $sectionId): self
-    {
-        return new self(self::OP_DUPLICATE_SECTION, ['section_id' => $sectionId]);
-    }
-
-    public static function updateSectionLabel(string $sectionId, string $label): self
-    {
-        return new self(self::OP_UPDATE_SECTION_LABEL, ['section_id' => $sectionId, 'label' => $label]);
-    }
-
-    public static function updateSectionLocked(string $sectionId, bool $locked): self
-    {
-        return new self(self::OP_UPDATE_SECTION_LOCKED, ['section_id' => $sectionId, 'locked' => $locked]);
     }
 
     /**

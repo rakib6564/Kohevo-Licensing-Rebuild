@@ -5,7 +5,7 @@
 // Copy vs reference semantics are decided by the SERVER; these helpers only
 // pick which server command a library action maps to.
 
-import { asList, findNode, isGlobalSection, sectionsOf } from './doc.mjs';
+import { CONTAINER_TYPE, asList, containersOf, findNode, indexAfter, isGlobalContainer } from './doc.mjs';
 
 /** Human-safe slug for template keys / component identifiers (lowercase, hyphens). */
 export function slugify(text, max = 60) {
@@ -21,7 +21,7 @@ export function slugify(text, max = 60) {
 
 export const TEMPLATE_GROUPS = Object.freeze([
   { type: 'page_template', label: 'library_page_templates' },
-  { type: 'section_preset', label: 'library_section_presets' },
+  { type: 'container_preset', label: 'library_container_presets' },
   { type: 'block_preset', label: 'library_block_presets' },
   { type: 'header_preset', label: 'library_header_presets' },
   { type: 'footer_preset', label: 'library_footer_presets' },
@@ -39,7 +39,7 @@ export function templateGroupsFor(pageType) {
 
 /**
  * What a library card does with a template: a page, header or footer template REPLACES what the page holds (a header
- * inserted into a header would stack two of them); a section or block preset is inserted.
+ * inserted into a header would stack two of them); a Container or block preset is inserted.
  */
 export function templateAction(tpl) {
   return tpl && ['page_template', 'header_preset', 'footer_preset'].includes(tpl.template_type) ? 'apply' : 'insert';
@@ -64,7 +64,7 @@ export function groupTemplates(templates, pageType) {
 /**
  * What "Save as template" can produce for the current page/selection:
  * the whole document (page/header/footer templates) or the selected
- * section/block as a preset. The server re-checks every choice.
+ * top-level Container or block as a preset. The server re-checks every choice.
  */
 export function saveScopesFor(doc, pageType, selectedId) {
   const scopes = [];
@@ -72,8 +72,11 @@ export function saveScopesFor(doc, pageType, selectedId) {
   if (pageType === 'header_partial') scopes.push({ type: 'header_preset', label: 'template_scope_header', nodeId: null });
   if (pageType === 'footer_partial') scopes.push({ type: 'footer_preset', label: 'template_scope_footer', nodeId: null });
   const sel = selectedId ? findNode(doc, selectedId) : null;
-  if (sel && sel.kind === 'section' && !isGlobalSection(sel.node)) scopes.push({ type: 'section_preset', label: 'template_scope_section', nodeId: sel.node.id });
-  if (sel && sel.kind === 'block') scopes.push({ type: 'block_preset', label: 'template_scope_block', nodeId: sel.node.id });
+  if (sel && sel.parentId === null && sel.node.type === CONTAINER_TYPE) {
+    if (!isGlobalContainer(sel.node)) scopes.push({ type: 'container_preset', label: 'template_scope_container', nodeId: sel.node.id });
+  } else if (sel) {
+    scopes.push({ type: 'block_preset', label: 'template_scope_block', nodeId: sel.node.id });
+  }
   return scopes;
 }
 
@@ -91,36 +94,22 @@ export function templateOverwriteFor(key, templates, conflictKey, confirmedKey) 
 }
 
 /**
- * Where an inserted preset goes, from the current selection: a section preset
- * after the selected section (or at the end); a block preset at the block
- * insertion point (parent + index) — null when the page needs a section first.
+ * Where an inserted preset goes, from the current selection: a Container preset
+ * after the selected top-level Container (or at the end); a block preset at the
+ * block insertion point (parent + index), or at the end of the last Container
+ * when that point is the top level: null when the page needs a Container first.
  */
 export function insertTargetFor(doc, template, selectedId, insertionPoint) {
-  const sel = selectedId ? findNode(doc, selectedId) : null;
-  if (template.template_type === 'block_preset') {
-    const where = insertionPoint(doc, selectedId);
-    return where ? { index: where.index, parent_id: where.parentId } : null;
-  }
-  const sections = sectionsOf(doc);
-  if (sel && sel.kind === 'section') return { index: sel.index + 1, parent_id: null };
-  if (sel && sel.kind === 'block') {
-    const idx = sections.findIndex((s) => s.id === sel.sectionId);
-    return { index: (idx >= 0 ? idx : sections.length - 1) + 1, parent_id: null };
-  }
-  return { index: sections.length, parent_id: null };
+  if (template.template_type !== 'block_preset') return { index: indexAfter(doc, selectedId), parent_id: null };
+  const where = insertionPoint(doc, selectedId);
+  if (where && where.parentId) return { index: where.index, parent_id: where.parentId };
+  const open = containersOf(doc).filter((c) => !isGlobalContainer(c));
+  const last = open[open.length - 1];
+  return last ? { index: asList(last.children).length, parent_id: last.id } : null;
 }
 
-/** The section index a new global reference is inserted at (after the selection). */
-export function referenceIndexFor(doc, selectedId) {
-  const sel = selectedId ? findNode(doc, selectedId) : null;
-  const sections = sectionsOf(doc);
-  if (sel && sel.kind === 'section') return sel.index + 1;
-  if (sel && sel.kind === 'block') {
-    const idx = sections.findIndex((s) => s.id === sel.sectionId);
-    return (idx >= 0 ? idx : sections.length - 1) + 1;
-  }
-  return sections.length;
-}
+/** The top-level index a new global reference is inserted at (after the selection). */
+export const referenceIndexFor = indexAfter;
 
 export function componentByRef(components, ref) {
   return asList(components).find((c) => c.ref === ref) || null;
@@ -133,7 +122,7 @@ export function isHexColor(value) {
   return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.trim());
 }
 
-/** Display order of the built-in section preset categories (mirrors SectionPresetCatalog::CATEGORIES). */
+/** Display order of the built-in Container preset categories (mirrors ContainerPresetCatalog::CATEGORIES). */
 export const PRESET_CATEGORIES = ['hero', 'features', 'content', 'social-proof', 'pricing', 'cta', 'team', 'contact', 'footer'];
 
 /** Filter presets by query and group them by category in display order (unknown categories last). Pure. */

@@ -10,6 +10,8 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Registry;
 
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
+
 final class BlockUsage
 {
     /** How many page titles are kept per block type, so the answer stays small. */
@@ -41,11 +43,8 @@ final class BlockUsage
                     $walk($block['children'] ?? null, $depth + 1);
                 }
             };
-            foreach ((array) ($page['document']['sections'] ?? []) as $section) {
-                if (is_array($section)) {
-                    $walk($section['blocks'] ?? null, 0);
-                }
-            }
+            $document = is_array($page['document'] ?? null) ? DocumentUpgrader::structure($page['document']) : [];
+            $walk($document['containers'] ?? null, 0);
             foreach ($perPage as $type => $n) {
                 $usage[$type] ??= ['blocks' => 0, 'pages' => 0, 'sample' => []];
                 $usage[$type]['blocks'] += $n;

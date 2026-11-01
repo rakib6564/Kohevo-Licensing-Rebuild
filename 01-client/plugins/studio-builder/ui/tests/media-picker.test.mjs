@@ -101,7 +101,7 @@ test('video files: the Video widget\'s picker lists, checks and uploads video fi
 
 test('a URL field holding a video opens the video picker', () => {
   assert.equal(isVideoTarget({ key: 'hosted_url', label: 'Video File' }, ''), true, 'the Video widget\'s file');
-  assert.equal(isVideoTarget({ key: 'bg_video', label: 'Background Video' }, null), true, 'a section\'s background video');
+  assert.equal(isVideoTarget({ key: 'bg_video', label: 'Background Video' }, null), true, 'a Container\'s background video');
   assert.equal(isVideoTarget({ key: 'href', label: 'Link' }, '/uploads/media/2026/10/a.webm'), true, 'a value that is a video file');
   assert.equal(isVideoTarget({ key: 'url', label: 'Link URL' }, '/about'), false);
   assert.equal(isVideoTarget({ key: 'image', label: 'Image' }, '/a.png'), false);

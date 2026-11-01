@@ -53,7 +53,7 @@ export function ReportView({ report }) {
       <p className="sbx-hint">
         {t('import_summary', {
           pages: s.pages_count || 0, components: s.global_components_count || 0, templates: s.templates_count || 0, tokens: s.tokens_count || 0,
-          sections: s.sections_count || 0, blocks: s.blocks_count || 0, errors: s.errors_count || 0, warnings: s.warnings_count || 0,
+          containers: s.containers_count || 0, blocks: s.blocks_count || 0, errors: s.errors_count || 0, warnings: s.warnings_count || 0,
         })}
       </p>
       <IssueList title={t('import_errors')} issues={errors} />

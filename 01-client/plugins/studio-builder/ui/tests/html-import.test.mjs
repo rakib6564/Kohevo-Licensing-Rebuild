@@ -13,7 +13,7 @@ import { createTransport } from '../src/core/api.mjs';
 import { SyncEngine, STATUS } from '../src/core/sync.mjs';
 import * as ops from '../src/core/operations.mjs';
 import { t } from '../src/core/messages.mjs';
-import { manifest, doc, section, heading, manualScheduler, fakeServer } from './helpers.mjs';
+import { manifest, doc, topContainer, heading, manualScheduler, fakeServer } from './helpers.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PAGE = { id: 1, uuid: '11111111-1111-4111-8111-111111111111' };
@@ -71,7 +71,7 @@ function htmlServer(initial) {
     if (body.expected_revision_id !== server.currentId) {
       return { ok: false, status: 409, error: { code: 'concurrency_conflict', message: '', details: { current_revision_id: server.currentId } } };
     }
-    server.externalEdit((d) => { d.sections = [section([heading('From HTML')], 'Imported')]; });
+    server.externalEdit((d) => { d.containers = [topContainer([heading('From HTML')], 'Imported')]; });
     const snap = await server.transport.document();
     return { ok: true, status: 201, data: { ...snap.data, deduplicated: false, report: { dry_run: false, source_kind: 'html_css', committed: { pages: [{ mode: 'replaced' }] } } } };
   };
@@ -80,7 +80,7 @@ function htmlServer(initial) {
 
 test('html import: replace-draft goes through the engine command path — pending edits saved first, expected_revision_id carried, the imported draft adopted into the editor store', async () => {
   const sched = manualScheduler();
-  const server = htmlServer(doc([section([heading('Before')])]));
+  const server = htmlServer(doc([topContainer([heading('Before')])]));
   const engine = new SyncEngine({ transport: server.transport, pageId: 1, schedule: sched.schedule, cancel: sched.cancel });
   engine.load((await server.transport.document()).data, manifest);
   engine.apply({ op: 'update_seo', payload: { seo: { title: 'Local edit' } } });
@@ -89,19 +89,19 @@ test('html import: replace-draft goes through the engine command path — pendin
   assert.deepEqual(server.calls.map((c) => c[0]), ['operations', 'import_html'], 'the local edit was saved before importing');
   assert.equal(server.calls[1][1].target_page_id, PAGE.id);
   assert.equal(engine.getSnapshot().status, STATUS.SAVED);
-  assert.equal(engine.getSnapshot().working.sections[0].blocks[0].props.text, 'From HTML', 'the canvas/inspector now show the imported draft');
+  assert.equal(engine.getSnapshot().working.containers[0].children[0].props.text, 'From HTML', 'the canvas/inspector now show the imported draft');
 });
 
 test('html import: a stale replace (409) enters the conflict state and keeps the editor state intact', async () => {
   const sched = manualScheduler();
-  const server = htmlServer(doc([section([heading('Before')])]));
+  const server = htmlServer(doc([topContainer([heading('Before')])]));
   const engine = new SyncEngine({ transport: server.transport, pageId: 1, schedule: sched.schedule, cancel: sched.cancel });
   engine.load((await server.transport.document()).data, manifest);
   server.externalEdit((d) => { d.seo.title = 'Someone else'; });
   const ok = await engine.command((base) => server.transport.importHtml({ ...pk.htmlImportRequest({ html: HTML, mode: pk.MODES.REPLACE, page: PAGE, revisionId: base.expected_revision_id, dryRun: false }), expected_revision_id: base.expected_revision_id }), {});
   assert.equal(ok, false);
   assert.equal(engine.getSnapshot().status, STATUS.CONFLICT);
-  assert.equal(engine.getSnapshot().working.sections[0].blocks[0].props.text, 'Before');
+  assert.equal(engine.getSnapshot().working.containers[0].children[0].props.text, 'Before');
 });
 
 test('html import: every new UI string has an English text, and the host page supplies each one through __() with a French entry', () => {
@@ -161,7 +161,7 @@ test('html import UI: the import tab offers a source switch; HTML/CSS shows the 
 test('html import UI: the shared report view shows the conversion counts for an html_css report', { skip: skipReason || false }, () => {
   const report = {
     dry_run: true, can_commit: true, source_kind: 'html_css',
-    summary: { pages_count: 1, sections_count: 3, blocks_count: 6, errors_count: 0, warnings_count: 2 },
+    summary: { pages_count: 1, containers_count: 3, blocks_count: 6, errors_count: 0, warnings_count: 2 },
     conversion: { stripped_security: 4, unsupported_elements: 1, hidden_dropped: 2 },
     issues: [{ severity: 'warning', code: 'security_stripped', item: 'html', path: 'html:L3 body>script[1]', message: 'A <script> element was removed.' }],
     planned_actions: [{ action: 'create_page', slug: 'home' }],

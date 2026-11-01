@@ -207,6 +207,36 @@ final class StudioSchemaManager
         if (version_compare('1.0.0', $from, '>')) {
             // No additive alterations needed on top of v1.0.0 install.sql.
         }
+        if (version_compare('1.1.0', $from, '>')) {
+            self::renameEnumValue('studiobuilder_pages', 'page_type', ['page', 'landing', 'system', 'header_partial', 'footer_partial', 'container_preset'], 'page', 'section_preset', 'container_preset');
+            self::renameEnumValue('studiobuilder_templates', 'template_type', ['page_template', 'container_preset', 'header_preset', 'footer_preset', 'block_preset'], 'container_preset', 'section_preset', 'container_preset');
+            // The built-in presets keep their rows; a tenant's next library read refreshes their documents.
+            \Database::query("UPDATE `studiobuilder_templates` SET `category` = 'container' WHERE `category` = 'section'");
+            \Database::query("UPDATE IGNORE `studiobuilder_templates` SET `template_key` = CONCAT('system-container-', SUBSTRING(`template_key`, 16)) WHERE `is_system` = 1 AND `template_key` LIKE 'system-section-%'");
+        }
+    }
+
+    /**
+     * Rename a value of an ENUM column in three steps: widen the ENUM to hold both names, move the rows, narrow it.
+     * A column that no longer has the old value is left alone, so this is safe to run again.
+     *
+     * @param list<string> $values the column's values after the rename
+     */
+    private static function renameEnumValue(string $table, string $column, array $values, string $default, string $old, string $new): void
+    {
+        self::assertStudioTable($table);
+        self::assertIdentifier($column, 'column');
+        $type = (string) \Database::value(
+            'SELECT `COLUMN_TYPE` FROM INFORMATION_SCHEMA.COLUMNS WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = ? AND `COLUMN_NAME` = ?',
+            [$table, $column]
+        );
+        if (!str_contains($type, "'{$old}'")) {
+            return;
+        }
+        $enum = static fn(array $list): string => "ENUM('" . implode("','", $list) . "')";
+        \Database::query("ALTER TABLE `{$table}` MODIFY `{$column}` " . $enum([...$values, $old]) . ' NOT NULL');
+        \Database::query("UPDATE `{$table}` SET `{$column}` = ? WHERE `{$column}` = ?", [$new, $old]);
+        \Database::query("ALTER TABLE `{$table}` MODIFY `{$column}` " . $enum($values) . " NOT NULL DEFAULT '{$default}'");
     }
 
     /**

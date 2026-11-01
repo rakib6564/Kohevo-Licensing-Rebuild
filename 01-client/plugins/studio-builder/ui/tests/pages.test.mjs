@@ -5,7 +5,7 @@ import { copyNames, failureDetail, isChromePartial, isValidSlug, listablePages, 
 const page = (over = {}) => ({ id: 1, title: 'About us', slug: 'about', page_type: 'page', status: 'draft', route_mode: 'standalone', is_published: false, has_unpublished_changes: false, ...over });
 
 test('only pages and landing pages are navigable; partials, components and archived pages are not', () => {
-  const list = listablePages([page(), page({ id: 2, page_type: 'landing' }), page({ id: 3, page_type: 'header_partial' }), page({ id: 4, page_type: 'section_preset' }), page({ id: 5, status: 'archived' }), null]);
+  const list = listablePages([page(), page({ id: 2, page_type: 'landing' }), page({ id: 3, page_type: 'header_partial' }), page({ id: 4, page_type: 'container_preset' }), page({ id: 5, status: 'archived' }), null]);
   assert.deepEqual(list.map((p) => p.id), [1, 2]);
   assert.deepEqual(listablePages(undefined), []);
 });

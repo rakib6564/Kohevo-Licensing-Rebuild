@@ -19,17 +19,19 @@ export function block(type, props = {}, children = []) {
   };
 }
 
-export function section(blocks = [], label = 'Main') {
+/** A top-level Container, the shape `newContainer` writes (`label` goes to metadata, like an upgraded Section's). */
+export function topContainer(children = [], label = 'Main') {
   return {
-    blocks, global_ref: null, id: id('sec'), label,
-    layout: { background_token: 'surface.primary', columns: { base: 1, md: 12 }, gap: 'md', padding_y: { base: 'md', md: 'lg' }, width: 'wide' },
-    visibility: { auth_state: 'any', devices: ['base', 'sm', 'md', 'lg'] },
+    ...block('core.container', {}, children),
+    tag: 'section',
+    metadata: label ? { label } : {},
+    style: { surface_token: 'surface.primary', layout: { content_width: 'boxed', gutter: 'site' } },
   };
 }
 
-export function doc(sections = []) {
+export function doc(containers = []) {
   return {
-    document_type: 'page', schema_version: '1.0', sections,
+    containers, document_type: 'page', schema_version: '2.0',
     seo: { canonical_url: null, description: '', og_image_media_id: null, robots: 'index,follow', title: 'T' },
     settings: { container_width: 'wide', footer_mode: 'inherit', header_mode: 'inherit', token_group: 'default' },
     template_key: 'default',

@@ -158,21 +158,21 @@ unit('sprint6 unit: ThemeTemplateResolver conditional header and footer resoluti
         201 => [
             'id' => 201, 'page_id' => 101, 'uuid' => 'rev-header-default',
             'document_json' => json_encode([
-                'schema_version' => '1.0',
+                'schema_version' => '2.0',
                 'document_type'  => 'header_partial',
                 'template_key'   => 'default',
                 'settings'       => ['title' => 'Default Header'],
-                'sections'       => [],
+                'containers'       => [],
             ]),
         ],
         202 => [
             'id' => 202, 'page_id' => 102, 'uuid' => 'rev-header-tech',
             'document_json' => json_encode([
-                'schema_version' => '1.0',
+                'schema_version' => '2.0',
                 'document_type'  => 'header_partial',
                 'template_key'   => 'default',
                 'settings'       => ['title' => 'Tech Header'],
-                'sections'       => [],
+                'containers'       => [],
             ]),
         ],
     ];
@@ -228,31 +228,31 @@ unit('sprint6 unit: ThemeTemplateResolver archive, 404, and search resolution', 
         401 => [
             'id' => 401, 'page_id' => 301, 'uuid' => 'rev-404',
             'document_json' => json_encode([
-                'schema_version' => '1.0',
+                'schema_version' => '2.0',
                 'document_type'  => 'system',
                 'template_key'   => 'default',
                 'settings'       => ['title' => '404 Page'],
-                'sections'       => [],
+                'containers'       => [],
             ]),
         ],
         402 => [
             'id' => 402, 'page_id' => 302, 'uuid' => 'rev-archive',
             'document_json' => json_encode([
-                'schema_version' => '1.0',
+                'schema_version' => '2.0',
                 'document_type'  => 'system',
                 'template_key'   => 'default',
                 'settings'       => ['title' => 'Archive Page'],
-                'sections'       => [],
+                'containers'       => [],
             ]),
         ],
         403 => [
             'id' => 403, 'page_id' => 303, 'uuid' => 'rev-search',
             'document_json' => json_encode([
-                'schema_version' => '1.0',
+                'schema_version' => '2.0',
                 'document_type'  => 'system',
                 'template_key'   => 'default',
                 'settings'       => ['title' => 'Search Page'],
-                'sections'       => [],
+                'containers'       => [],
             ]),
         ],
     ];
@@ -422,7 +422,7 @@ unit('theme builder: template selection follows the PUBLISHED conditions and typ
         }
     };
     $doc = static fn(array $settings, string $type = 'header_partial'): string => json_encode([
-        'schema_version' => '1.0', 'document_type' => $type, 'template_key' => 'default', 'settings' => $settings, 'sections' => [],
+        'schema_version' => '2.0', 'document_type' => $type, 'template_key' => 'default', 'settings' => $settings, 'containers' => [],
     ]);
     $techRules  = ['rules' => [['type' => 'include', 'condition' => 'category', 'value' => 'Tech']]];
     $siteRules  = ['rules' => [['type' => 'include', 'condition' => 'entire_site']]];

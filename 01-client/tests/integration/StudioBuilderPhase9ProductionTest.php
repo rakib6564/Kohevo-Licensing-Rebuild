@@ -146,17 +146,10 @@ function sbd_clear_request(): void
 function sbd_doc(string $heading): array
 {
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', '');
-    $doc['sections'] = [[
-        'blocks'     => [[
+    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => [[
             'bindings' => [], 'children' => [], 'id' => CanonicalDocumentSchema::newBlockId(), 'props' => ['text' => $heading, 'level' => 'h2'],
             'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'type' => 'core.heading', 'version' => 1, 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        ]],
-        'global_ref' => null,
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => 'Main',
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ]];
+        ]], 'visibility' => CanonicalDocumentSchema::defaultVisibility()])];
     return $doc;
 }
 

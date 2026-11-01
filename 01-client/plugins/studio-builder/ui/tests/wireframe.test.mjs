@@ -26,11 +26,11 @@ test('every preset lays out inside its box with known shape kinds and positive s
 });
 
 test('layout is deterministic and does not mutate its input', () => {
-  const input = JSON.stringify(outlines['system-section-pricing']);
-  const a = layoutOutline(outlines['system-section-pricing']);
+  const input = JSON.stringify(outlines['system-container-pricing']);
+  const a = layoutOutline(outlines['system-container-pricing']);
   const b = layoutOutline(JSON.parse(input));
   assert.deepEqual(a, b);
-  assert.equal(JSON.stringify(outlines['system-section-pricing']), input);
+  assert.equal(JSON.stringify(outlines['system-container-pricing']), input);
 });
 
 test('different presets look different (no two share the same drawing)', () => {

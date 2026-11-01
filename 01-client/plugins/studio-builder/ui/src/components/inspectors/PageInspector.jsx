@@ -150,7 +150,7 @@ function ConditionsSetting({ page, settings, onSave, peers }) {
 }
 
 /**
- * A header partial's "Sticky header" (`settings.sticky_header`, the sticky shape a section takes): the whole header stays
+ * A header partial's "Sticky header" (`settings.sticky_header`, the sticky shape a Container takes): the whole header stays
  * at the top of the screen while the page scrolls. Off is the absence of the setting.
  */
 function StickyHeaderSetting({ value, onChange }) {

@@ -54,7 +54,7 @@ function look(string $mode, int $n): array
 function document(string $mode, int $blocks, int $looks): array
 {
     $doc = C::emptyDocument('page', 'default', 'T');
-    $sections = [];
+    $containers = [];
     $n = 0;
     for ($s = 0; $s < 10; $s++) {
         $list = [];
@@ -69,9 +69,9 @@ function document(string $mode, int $blocks, int $looks): array
             $list[] = $block;
             $n++;
         }
-        $sections[] = ['id' => 'sec_' . str_pad((string) $s, 20, 'a', STR_PAD_LEFT), 'label' => 'S' . $s, 'global_ref' => null, 'layout' => C::defaultSectionLayout(), 'visibility' => C::defaultVisibility(), 'blocks' => $list];
+        $containers[] = C::newContainer(['id' => 'blk_' . str_pad((string) $s, 20, 'a', STR_PAD_LEFT), 'metadata' => ['label' => 'S' . $s], 'children' => $list]);
     }
-    $doc['sections'] = $sections;
+    $doc['containers'] = $containers;
     return $doc;
 }
 

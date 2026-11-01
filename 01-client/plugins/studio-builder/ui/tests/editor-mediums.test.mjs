@@ -1,5 +1,5 @@
 // Editor fixes from the Studio Builder gap report: canvas drops follow the manifest's container rule (CL-M6),
-// selecting a block never moves it (CL-M10), section Layout controls a style overrides are shown as such (CL-M8),
+// selecting a block never moves it (CL-M10), a Container's spacing control a style overrides says so (CL-M8),
 // the older per-device hide checkboxes are not offered for new edits (CL-M5), and Site settings say which tokens
 // only blocks use (DT-M7).
 import { test } from 'node:test';
@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { canvasDropPosition } from '../src/core/canvas.mjs';
 import { legacyHideDevices } from '../src/core/responsiveStyle.mjs';
-import { sectionStyleOverrides } from '../src/core/styleSurface.mjs';
+import { paddingBeatsSpacing } from '../src/core/styleSurface.mjs';
 import { BLOCK_ONLY_TOKENS, tokenUsedOnlyByBlocks } from '../src/core/siteSettings.mjs';
 import { blockDefinition } from '../src/core/doc.mjs';
 
@@ -20,7 +20,7 @@ test('canvas drop: every block the manifest lets hold children takes a drop insi
     assert.equal(canvasDropPosition({ type, tagName: 'div', fraction: 0.5, allowsChildren }), 'inside', type);
   }
   assert.equal(canvasDropPosition({ type: 'core.heading', tagName: 'section', fraction: 0.5, allowsChildren }), 'after', 'a leaf block that renders a <section> does not');
-  assert.equal(canvasDropPosition({ type: 'section', tagName: 'section', fraction: 0.5, allowsChildren }), 'inside', 'a document section does');
+  assert.equal(canvasDropPosition({ type: 'core.container', tagName: 'section', fraction: 0.5, allowsChildren }), 'inside', 'a top-level Container does');
   assert.equal(canvasDropPosition({ type: 'core.card', fraction: 0.1, allowsChildren }), 'before', 'the top quarter is before');
   assert.equal(canvasDropPosition({ type: 'core.card', fraction: 0.9, allowsChildren }), 'after', 'the bottom quarter is after');
   assert.equal(canvasDropPosition({ type: 'layout.grid', fraction: 0.5 }), 'inside', 'without the manifest rule, layout blocks still take drops');
@@ -35,16 +35,13 @@ test('canvas selection: it never changes the selected block\'s position (CL-M10)
   assert.match(css, /\.sbx-selected \{\s*\n?\s*outline:/, 'the selection outline stays');
 });
 
-test('section Layout: a style background or vertical padding marks the matching Layout control overridden (CL-M8)', () => {
-  assert.deepEqual(sectionStyleOverrides({}), { background: false, paddingY: false });
-  assert.deepEqual(sectionStyleOverrides({ background: { color: '#fff' } }), { background: true, paddingY: false });
-  assert.equal(sectionStyleOverrides({ background: { image: { media_id: 4 } } }).background, true, 'an image too');
-  assert.equal(sectionStyleOverrides({ background: { color: '' } }).background, false, 'an empty value is not set');
-  assert.deepEqual(sectionStyleOverrides({ padding: { top: '2rem' } }), { background: false, paddingY: true });
-  assert.equal(sectionStyleOverrides({ padding: { left: '2rem' } }).paddingY, false, 'side padding does not override vertical padding');
-  const inspector = src('../src/components/inspectors/SectionInspector.jsx');
-  assert.match(inspector, /owned\(overridden\.paddingY, 'section_padding_overridden'/);
-  assert.match(inspector, /owned\(overridden\.background, 'section_bg_overridden'/);
+test('Container spacing: a top or bottom padding in the style marks the spacing control overridden (CL-M8)', () => {
+  assert.equal(paddingBeatsSpacing({}), false);
+  assert.equal(paddingBeatsSpacing({ padding: { top: '2rem' } }), true);
+  assert.equal(paddingBeatsSpacing({ padding: { bottom: '2rem' } }), true);
+  assert.equal(paddingBeatsSpacing({ padding: { top: '' } }), false, 'an empty value is not set');
+  assert.equal(paddingBeatsSpacing({ padding: { left: '2rem' } }), false, 'side padding does not override vertical padding');
+  assert.match(src('../src/components/inspectors/ContainerPane.jsx'), /paddingBeatsSpacing\(style\) && <p className="sbx-hint">\{t\('container_padding_overridden'\)\}/);
 });
 
 test('block Responsive: the older hide checkboxes show only for a stored value, so they can be removed (CL-M5)', () => {

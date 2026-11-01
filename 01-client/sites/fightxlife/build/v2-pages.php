@@ -424,7 +424,7 @@ function v2_hero(array $pg): array
     }, v2_ctas($ctas)));
     $photo = V2_PAGE_IMAGES[$pg['url']]['hero'] ?? V2_HERO_FALLBACK;
     v2_press_media($photo);
-    return SEC('Hero', [B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [BOX($copy), V2IMG($photo, $pg['h1'], 'v2-phero__photo')], 'v2-phero')], 'v2-phero-sec');
+    return TOP('Hero', [B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [BOX($copy), V2IMG($photo, $pg['h1'], 'v2-phero__photo')], 'v2-phero')], 'v2-phero-sec');
 }
 
 /** The section's module, when a document note asks for one. */
@@ -537,7 +537,7 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
             $cards = array_map(static fn(array $m): array => BOX([V2IMG($m[2], $m[0], 'v2-team__photo'), T($m[0], 'v2-team__name'), T($m[1], 'v2-team__role')], 'v2-team__card'), $people);
             $groups[] = BOX([T($group, 'v2-team__group'), B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'justify' => 'center', 'wrap' => 'wrap'], $cards, 'v2-team')], 'v2-team__block');
         }
-        return SEC($sec['h2'], [BOX(array_merge([KICK(), H($sec['h2'], 'h2', 'v2-h2')], array_filter([v2_rich($text)])), 'v2-head v2-head--center'), ...$groups],
+        return TOP($sec['h2'], [BOX(array_merge([KICK(), H($sec['h2'], 'h2', 'v2-h2')], array_filter([v2_rich($text)])), 'v2-head v2-head--center'), ...$groups],
             'v2-sec' . ($i % 2 === 1 ? ' v2-sec--soft' : ''));
     }
     $soft = $i % 2 === 1;
@@ -548,15 +548,15 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
 
     // The contact form keeps its own text beside the form.
     if ($module && str_contains($all, 'Contact form module')) {
-        return SEC($sec['h2'], [BOX($head, 'v2-head v2-head--center'), $module], 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
+        return TOP($sec['h2'], [BOX($head, 'v2-head v2-head--center'), $module], 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
     }
     if ($sec['id'] === 'dans-les-medias') {
-        return SEC($sec['h2'], v2_press($sec, $head), 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
+        return TOP($sec['h2'], v2_press($sec, $head), 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
     }
     // Upcoming events: there is none, so the document's empty state shows.
     if (str_contains($all, 'Upcoming events module')) {
         $body = array_filter([v2_rich($text)]);
-        return SEC($sec['h2'], [BOX(array_merge($head, $body, v2_ctas(array_map(static fn(array $c): array => ['kind' => 'Primary CTA'] + $c, $ctas))), 'v2-panel v2-narrow--center')], 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
+        return TOP($sec['h2'], [BOX(array_merge($head, $body, v2_ctas(array_map(static fn(array $c): array => ['kind' => 'Primary CTA'] + $c, $ctas))), 'v2-panel v2-narrow--center')], 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
     }
     // Figures and testimonials.
     if ($sec['id'] === 'chiffres') {
@@ -569,7 +569,7 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
                 $stats[] = BOX([B('core.stats', ['items' => [$figure]], [], 'v2-stat__counter'), T($m[5], 'v2-stat__text')], 'v2-stat');
             } else { $rest[] = $b; }
         }
-        return SEC($sec['h2'], [BOX($head, 'v2-head v2-head--center'), B('layout.grid', ['columns' => 3, 'gap' => 'none'], $stats, 'v2-stats'), BOX(array_filter([v2_rich($rest)]), 'v2-narrow v2-narrow--center v2-note')], 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
+        return TOP($sec['h2'], [BOX($head, 'v2-head v2-head--center'), B('layout.grid', ['columns' => 3, 'gap' => 'none'], $stats, 'v2-stats'), BOX(array_filter([v2_rich($rest)]), 'v2-narrow v2-narrow--center v2-note')], 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
     }
     if ($sec['id'] === 'temoignages') {
         $quotes = []; $q = null; $rest = [];
@@ -577,14 +577,14 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
             $p = $b['t'] === 'p' ? v2_plain($b['html']) : '';
             if (str_starts_with($p, '«')) { $q = $p; } elseif ($q !== null && mb_strlen($p) < 40) { $quotes[] = BOX([T($q, 'v2-q__text'), T($p, 'v2-q__name')], 'v2-q'); $q = null; } else { $rest[] = $b; }
         }
-        return SEC($sec['h2'], array_values(array_filter([BOX(array_merge($head, array_filter([v2_rich($rest)])), 'v2-head v2-head--center'), B('layout.grid', ['columns' => 3, 'gap' => 'none'], $quotes, 'v2-quotes')])), 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
+        return TOP($sec['h2'], array_values(array_filter([BOX(array_merge($head, array_filter([v2_rich($rest)])), 'v2-head v2-head--center'), B('layout.grid', ['columns' => 3, 'gap' => 'none'], $quotes, 'v2-quotes')])), 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
     }
 
     // The closing call to action: a pink band.
     $hasButton = (bool) array_filter($ctas, static fn(array $c): bool => in_array($c['kind'], V2_PRIMARY, true));
     if ($last && !$h3s && !$module && !$photo && $hasButton) {
         $band = BOX(array_merge($head, array_filter([v2_rich($text)]), v2_ctas($ctas)), 'v2-band');
-        return SEC($sec['h2'], [$band], 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
+        return TOP($sec['h2'], [$band], 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
     }
 
     $facts = $text ? v2_facts($text) : null;
@@ -616,7 +616,7 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
         if ($h3s) { $blocks[] = v2_cards($h3s, $pg['url']); }
         if ($ctas) { $blocks[] = BOX(v2_ctas($ctas), 'v2-center'); }
     }
-    return SEC($sec['h2'], $blocks, 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
+    return TOP($sec['h2'], $blocks, 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
 }
 
 /** Build every V2 page but the home page, each at "<slug>-v2", with the document's SEO title and description. */
@@ -632,21 +632,21 @@ function v2_build_pages(array $pages): array
     $ids = [];
     foreach ($pages as $pg) {
         if ($pg['url'] === '/') { continue; }
-        $sections = [v2_hero($pg)];
+        $containers = [v2_hero($pg)];
         $kept = array_values(array_filter($pg['sections'], static fn(array $sec): bool => !in_array($sec['id'], V2_FOLDED, true)));
         $n = count($kept);
         foreach ($kept as $i => $sec) {
             $s = v2_section($sec, $pg, $i, $i === $n - 1);
             if (!$s) { continue; }
             // The document's HTML id, so its anchor links (/waterxfight/#infos-pratiques) land on the section.
-            if ($sec['id'] !== '') { $s['blocks'][0]['attributes'] = ['id' => $sec['id']]; }
-            $sections[] = $s;
+            if ($sec['id'] !== '') { $s['children'][0]['attributes'] = ['id' => $sec['id']]; }
+            $containers[] = $s;
         }
-        foreach ($sections as &$s) { v2_relink($s); }
+        foreach ($containers as &$s) { v2_relink($s); }
         unset($s);
         $slug = trim(V2URL($pg['url']), '/');
         $photo = V2_PAGE_IMAGES[$pg['url']]['hero'] ?? null;
-        $ids[$pg['url']] = build_page($slug, V2_LIVE ? $pg['h1'] : $pg['h1'] . ' (V2)', 'page', 'standalone', $sections, V2_LIVE ? [] : ['seo_robots' => 'noindex,nofollow'], $pg['seo_title'], $pg['meta'],
+        $ids[$pg['url']] = build_page($slug, V2_LIVE ? $pg['h1'] : $pg['h1'] . ' (V2)', 'page', 'standalone', $containers, V2_LIVE ? [] : ['seo_robots' => 'noindex,nofollow'], $pg['seo_title'], $pg['meta'],
             $photo ? (MID('/uploads/media/fxl/' . $photo) ?: null) : null);
     }
     return $ids;

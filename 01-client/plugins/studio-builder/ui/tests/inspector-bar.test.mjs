@@ -50,26 +50,27 @@ test('the baseline is a copy, so later edits do not move it', () => {
   assert.equal(base.style.shadow, 'md');
 });
 
-const section = () => ({ id: 'sec_1', label: '', layout: { width: 'wide', gap: 'md', background_token: 'surface.alt' }, style: { background: { color: '#fff' } }, visibility: {}, blocks: [] });
+const top = () => ({ id: 'blk_top', type: 'core.container', props: { gap: 'md' }, metadata: { label: '' }, style: { surface_token: 'surface.alt', background: { color: '#fff' }, layout: { content_width: 'boxed', content_size: 'wide', gutter: 'site', padding_y: 'lg' } }, visibility: {}, children: [] });
 
-test('a section reset clears its style and theme background, and keeps how it arranges', () => {
-  const sec = section();
-  assert.equal(hasStyle(sec, 'section'), true);
-  const ops = resetOps(sec, 'section');
-  assert.deepEqual(ops.map((o) => o.op), ['update_section_style', 'update_section_layout']);
-  assert.deepEqual(ops[0].payload.style, {});
-  assert.deepEqual(ops[1].payload.layout, { width: 'wide', gap: 'md' });
-  assert.equal(hasStyle({ id: 's', layout: { width: 'wide' }, style: {} }, 'section'), false);
-  assert.deepEqual(resetOps({ id: 's', layout: { width: 'wide' }, style: {} }, 'section'), []);
+test('a Container reset clears its look and theme background, and keeps its box', () => {
+  const box = top();
+  assert.equal(hasStyle(box), true);
+  const ops = resetOps(box);
+  assert.deepEqual(ops.map((o) => o.op), ['update_block_style']);
+  assert.deepEqual(ops[0].payload.style, { layout: { content_width: 'boxed', content_size: 'wide', gutter: 'site' } });
+  assert.equal(ops[0].payload.block_id, 'blk_top');
+  const plain = { id: 's', type: 'core.container', style: { layout: { content_width: 'boxed', content_size: 'wide' } } };
+  assert.equal(hasStyle(plain), false);
+  assert.deepEqual(resetOps(plain), []);
 });
 
-test('a section discard restores the layout, style and visibility that changed', () => {
-  const base = editableState(section(), 'section');
-  const edited = { ...section(), layout: { width: 'narrow', gap: 'md' }, style: {} };
-  assert.equal(hasChanged(edited, base, 'section'), true);
-  const ops = discardOps(edited, base, 'section');
-  assert.deepEqual(ops.map((o) => o.op), ['update_section_layout', 'update_section_style']);
-  assert.deepEqual(ops[0].payload.layout, section().layout);
-  assert.deepEqual(ops[1].payload.style, section().style);
-  assert.equal(hasChanged(section(), base, 'section'), false);
+test('a Container discard restores the style and visibility that changed', () => {
+  const base = editableState(top());
+  const edited = { ...top(), style: {}, visibility: { devices: ['base'] } };
+  assert.equal(hasChanged(edited, base), true);
+  const ops = discardOps(edited, base);
+  assert.deepEqual(ops.map((o) => o.op), ['update_block_style', 'update_block_visibility']);
+  assert.deepEqual(ops[0].payload.style, top().style);
+  assert.deepEqual(ops[1].payload.visibility, {});
+  assert.equal(hasChanged(top(), base), false);
 });

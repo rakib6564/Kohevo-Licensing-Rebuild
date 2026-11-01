@@ -24,7 +24,7 @@ require_once SLATE_ROOT . '/src/autoload.php';
 
 use Slate\Module\StudioBuilder\Document\{CanonicalDocumentSchema, CanonicalJson};
 use Slate\Module\StudioBuilder\Domain\PageAddress;
-use Slate\Module\StudioBuilder\Presets\{ElementVariantCatalog, SectionPresetCatalog};
+use Slate\Module\StudioBuilder\Presets\{ContainerPresetCatalog, ElementVariantCatalog};
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
@@ -58,14 +58,11 @@ $snap = static function (string $name, array $doc) use ($comp, $tenants, $page, 
 
 $wrap = static function (array $blocks): array {
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'T');
-    $doc['sections'] = [[
-        'blocks' => $blocks, 'global_ref' => null, 'id' => 'sec_' . str_repeat('a', 24), 'label' => 'S',
-        'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ]];
+    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['id' => 'blk_' . str_repeat('a', 24), 'metadata' => ['label' => 'S'], 'children' => $blocks])];
     return $doc;
 };
 
-foreach (SectionPresetCatalog::all() as $preset) {
+foreach (ContainerPresetCatalog::all() as $preset) {
     $snap('preset-' . $preset['slug'], $preset['document']);
 }
 

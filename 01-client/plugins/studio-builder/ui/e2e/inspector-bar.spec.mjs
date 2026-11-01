@@ -102,7 +102,7 @@ test('the bar sits at the bottom of the Inspector panel even when the controls a
   }
 });
 
-test('a section has the bar too: Discard takes a layout change back, Reset clears its background styling', async ({ page }) => {
+test('a top-level Container has the bar too: Discard takes a layout change back, Reset clears its background styling', async ({ page }) => {
   test.setTimeout(90_000);
   await openBuilder(page);
   await settled(page);
@@ -119,7 +119,7 @@ test('a section has the bar too: Discard takes a layout change back, Reset clear
     const discard = bar.getByRole('button', { name: 'Discard' });
     await expect(discard).toBeDisabled();
 
-    const width = page.locator('select[id$="-width"]').first();
+    const width = page.locator('select[id$="-box-width"]').first();
     const was = await width.inputValue();
     const other = (await width.locator('option').evaluateAll((os) => os.map((o) => o.value))).find((v) => v !== was);
     await width.selectOption(other);
@@ -128,9 +128,9 @@ test('a section has the bar too: Discard takes a layout change back, Reset clear
     await expect(width).toHaveValue(was);
     await expect(discard).toBeDisabled();
 
-    await page.locator('[id^="sbx-sec-"][id$="-tab-style"]').click();
+    await page.locator('[id^="sbx-blk-"][id$="-tab-style"]').click();
     const bg = await openSection(page, 'background');
-    const colour = bg.locator('input[id$="-style-bg-text"]');
+    const colour = bg.locator('input[id$="-bg-text"]');
     await colour.fill('#335577');
     await colour.blur();
     await settled(page);

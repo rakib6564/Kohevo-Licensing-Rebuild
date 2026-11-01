@@ -103,9 +103,9 @@ final class HtmlImportConverter
         if (!$mapper->computeStyles()) {
             return $result(null);
         }
-        $sections = $mapper->sections();
+        $containers = $mapper->containers();
         $conversion += $parser->stats();
-        $problem = HtmlImportIr::check($sections);
+        $problem = HtmlImportIr::check($containers);
         if ($problem !== null) {
             $issues->error('source_limit_exceeded', 'html:', $problem, 'structure');
             return $result(null);
@@ -113,8 +113,8 @@ final class HtmlImportConverter
 
         $pageType = in_array($meta['page_type'] ?? 'page', self::PAGE_TYPES, true) ? (string) ($meta['page_type'] ?? 'page') : 'page';
         $title = $this->title($meta['title'] ?? null, $source['title'], $issues);
-        $out = $mapper->document($sections, $pageType, $title);
-        $conversion += $mapper->stats() + ['sections_out' => count($sections)];
+        $out = $mapper->document($containers, $pageType, $title);
+        $conversion += $mapper->stats() + ['containers_out' => count($containers)];
         if ($out === null) {
             return $result(null);
         }

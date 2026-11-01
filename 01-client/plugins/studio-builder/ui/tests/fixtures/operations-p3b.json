@@ -1,19 +1,24 @@
 {
  "_comment": "Shared by tests/operations-p3b.test.mjs (applyLocal) and tests/unit/StudioBuilderOperationsP3bTest.php (DocumentOperationApplier): both must produce the same document for every case. `set`/`unset` are applied to the original document to form the expectation.",
  "document": {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "document_type": "page",
   "template_key": "default",
   "settings": {},
   "seo": {},
-  "sections": [
+  "containers": [
    {
-    "id": "sec_aaaaaaaaaaaaaaaa",
-    "label": "One",
-    "global_ref": null,
-    "layout": {},
+    "id": "blk_caaaaaaaaaaaaaaa",
+    "type": "core.container",
+    "version": 2,
+    "props": {},
+    "style": {},
     "visibility": {},
-    "blocks": [
+    "bindings": {},
+    "metadata": {
+     "label": "One"
+    },
+    "children": [
      {
       "id": "blk_aaaaaaaaaaaaaaaa",
       "type": "core.heading",
@@ -107,12 +112,10 @@
     ]
    },
    {
-    "id": "sec_bbbbbbbbbbbbbbbb",
-    "label": "Two",
-    "global_ref": null,
-    "layout": {},
-    "visibility": {},
-    "blocks": [],
+    "id": "blk_cbbbbbbbbbbbbbbb",
+    "type": "core.container",
+    "version": 2,
+    "props": {},
     "style": {
      "padding": {
       "top": "2rem"
@@ -120,7 +123,13 @@
      "background": {
       "color": "#0b0c0f"
      }
-    }
+    },
+    "visibility": {},
+    "bindings": {},
+    "metadata": {
+     "label": "Two"
+    },
+    "children": []
    }
   ]
  },
@@ -139,9 +148,9 @@
    "set": [
     {
      "path": [
-      "sections",
+      "containers",
       0,
-      "blocks",
+      "children",
       0,
       "style_states"
      ],
@@ -164,9 +173,9 @@
    "set": [],
    "unset": [
     [
-     "sections",
+     "containers",
      0,
-     "blocks",
+     "children",
      0,
      "style_states"
     ]
@@ -186,9 +195,9 @@
    "set": [
     {
      "path": [
-      "sections",
+      "containers",
       0,
-      "blocks",
+      "children",
       0,
       "children",
       0,
@@ -222,9 +231,9 @@
    "set": [
     {
      "path": [
-      "sections",
+      "containers",
       0,
-      "blocks",
+      "children",
       0,
       "tag"
      ],
@@ -243,9 +252,9 @@
    "set": [],
    "unset": [
     [
-     "sections",
+     "containers",
      0,
-     "blocks",
+     "children",
      0,
      "children",
      0,
@@ -265,9 +274,9 @@
    "set": [],
    "unset": [
     [
-     "sections",
+     "containers",
      0,
-     "blocks",
+     "children",
      0,
      "tag"
     ]
@@ -301,9 +310,9 @@
    "set": [
     {
      "path": [
-      "sections",
+      "containers",
       0,
-      "blocks",
+      "children",
       0,
       "tag"
      ],
@@ -326,9 +335,9 @@
    "set": [
     {
      "path": [
-      "sections",
+      "containers",
       0,
-      "blocks",
+      "children",
       0,
       "tag"
      ],
@@ -336,9 +345,9 @@
     },
     {
      "path": [
-      "sections",
+      "containers",
       0,
-      "blocks",
+      "children",
       0,
       "link"
      ],
@@ -360,9 +369,9 @@
    "set": [
     {
      "path": [
-      "sections",
+      "containers",
       0,
-      "blocks",
+      "children",
       0,
       "tag"
      ],
@@ -409,20 +418,20 @@
    "error": true
   },
   {
-   "name": "section style set",
-   "op": "update_section_style",
+   "name": "top-level Container style set",
+   "op": "update_block_style",
    "payload": {
-    "section_id": "sec_aaaaaaaaaaaaaaaa",
     "style": {
      "padding": {
       "bottom": "1rem"
      }
-    }
+    },
+    "block_id": "blk_caaaaaaaaaaaaaaa"
    },
    "set": [
     {
      "path": [
-      "sections",
+      "containers",
       0,
       "style"
      ],
@@ -436,20 +445,20 @@
    "unset": []
   },
   {
-   "name": "section style replaced",
-   "op": "update_section_style",
+   "name": "top-level Container style replaced",
+   "op": "update_block_style",
    "payload": {
-    "section_id": "sec_bbbbbbbbbbbbbbbb",
     "style": {
      "background": {
       "color": "#ffffff"
      }
-    }
+    },
+    "block_id": "blk_cbbbbbbbbbbbbbbb"
    },
    "set": [
     {
      "path": [
-      "sections",
+      "containers",
       1,
       "style"
      ],
@@ -463,27 +472,30 @@
    "unset": []
   },
   {
-   "name": "section style clear with {}",
-   "op": "update_section_style",
+   "name": "top-level Container style clear with {}",
+   "op": "update_block_style",
    "payload": {
-    "section_id": "sec_bbbbbbbbbbbbbbbb",
-    "style": {}
+    "style": {},
+    "block_id": "blk_cbbbbbbbbbbbbbbb"
    },
-   "set": [],
-   "unset": [
-    [
-     "sections",
-     1,
-     "style"
-    ]
-   ]
+   "set": [
+    {
+     "path": [
+      "containers",
+      1,
+      "style"
+     ],
+     "value": {}
+    }
+   ],
+   "unset": []
   },
   {
-   "name": "section style target missing",
-   "op": "update_section_style",
+   "name": "top-level Container style target missing",
+   "op": "update_block_style",
    "payload": {
-    "section_id": "sec_zzzzzzzzzzzzzzzz",
-    "style": {}
+    "style": {},
+    "block_id": "blk_cmissing"
    },
    "error": true
   },
@@ -497,9 +509,9 @@
    "set": [],
    "unset": [
     [
-     "sections",
+     "containers",
      0,
-     "blocks",
+     "children",
      0,
      "style",
      "typography",
@@ -517,9 +529,9 @@
    "set": [],
    "unset": [
     [
-     "sections",
+     "containers",
      0,
-     "blocks",
+     "children",
      0,
      "style",
      "effects",
@@ -538,9 +550,9 @@
    "set": [],
    "unset": [
     [
-     "sections",
+     "containers",
      0,
-     "blocks",
+     "children",
      0,
      "children",
      0,
@@ -559,9 +571,9 @@
    "set": [],
    "unset": [
     [
-     "sections",
+     "containers",
      0,
-     "blocks",
+     "children",
      0,
      "style",
      "typography"
@@ -589,9 +601,9 @@
    "set": [],
    "unset": [
     [
-     "sections",
+     "containers",
      0,
-     "blocks",
+     "children",
      0,
      "style_states",
      "hover",
@@ -610,9 +622,9 @@
    "set": [],
    "unset": [
     [
-     "sections",
+     "containers",
      0,
-     "blocks",
+     "children",
      0,
      "children",
      0,
@@ -699,19 +711,19 @@
    "error": true
   },
   {
-   "name": "section animation set",
-   "op": "update_section_animation",
+   "name": "top-level Container animation set",
+   "op": "update_block_animation",
    "payload": {
-    "section_id": "sec_aaaaaaaaaaaaaaaa",
     "animation": {
      "type": "reveal_up",
      "duration_ms": 600
-    }
+    },
+    "block_id": "blk_caaaaaaaaaaaaaaa"
    },
    "set": [
     {
      "path": [
-      "sections",
+      "containers",
       0,
       "animation"
      ],
@@ -724,34 +736,37 @@
    "unset": []
   },
   {
-   "name": "section animation clear with {}",
-   "op": "update_section_animation",
+   "name": "top-level Container animation clear with {}",
+   "op": "update_block_animation",
    "payload": {
-    "section_id": "sec_aaaaaaaaaaaaaaaa",
-    "animation": {}
-   },
-   "set": [],
-   "unset": [
-    [
-     "sections",
-     0,
-     "animation"
-    ]
-   ]
-  },
-  {
-   "name": "section interactions set",
-   "op": "update_section_interactions",
-   "payload": {
-    "section_id": "sec_bbbbbbbbbbbbbbbb",
-    "interactions": {
-     "trigger": "viewport-enter"
-    }
+    "animation": {},
+    "block_id": "blk_caaaaaaaaaaaaaaa"
    },
    "set": [
     {
      "path": [
-      "sections",
+      "containers",
+      0,
+      "animation"
+     ],
+     "value": {}
+    }
+   ],
+   "unset": []
+  },
+  {
+   "name": "top-level Container interactions set",
+   "op": "update_block_interactions",
+   "payload": {
+    "interactions": {
+     "trigger": "viewport-enter"
+    },
+    "block_id": "blk_cbbbbbbbbbbbbbbb"
+   },
+   "set": [
+    {
+     "path": [
+      "containers",
       1,
       "interactions"
      ],
@@ -763,24 +778,24 @@
    "unset": []
   },
   {
-   "name": "section interactions target missing",
-   "op": "update_section_interactions",
+   "name": "top-level Container interactions target missing",
+   "op": "update_block_interactions",
    "payload": {
-    "section_id": "sec_zzzzzzzzzzzzzzzz",
     "interactions": {
      "trigger": "hover"
-    }
+    },
+    "block_id": "blk_cmissing"
    },
    "set": [],
    "unset": [],
    "error": true
   },
   {
-   "name": "section animation needs an object",
-   "op": "update_section_animation",
+   "name": "top-level Container animation needs an object",
+   "op": "update_block_animation",
    "payload": {
-    "section_id": "sec_aaaaaaaaaaaaaaaa",
-    "animation": "fade_up"
+    "animation": "fade_up",
+    "block_id": "blk_caaaaaaaaaaaaaaa"
    },
    "set": [],
    "unset": [],

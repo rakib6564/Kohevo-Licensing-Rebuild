@@ -3,10 +3,10 @@
  * Integration test for Kohevo Studio (studio-builder) — Sprint 3 Acceptance.
  *
  * Verifies Sprint 3 Acceptance Criteria (Section 59):
- *   - Operations: duplicate_block, duplicate_section, update_section_label, update_block_visibility.
+ *   - Operations: duplicate_block, update_block_meta, update_block_visibility.
  *   - Duplicate Block creates a deep clone of subtree with fresh block IDs, identical props/styles/responsive overrides.
- *   - Duplicate Section creates a cloned section with minted section ID and freshly minted block IDs.
- *   - Section label update renames section safely and rejects SQL/script injection fragments.
+ *   - Duplicating a top-level Container creates a clone with a minted id and freshly minted block ids.
+ *   - A label update renames a Container safely and rejects SQL/script injection fragments.
  *   - Hidden blocks are omitted from public HTML render.
  *   - Rollback / undo server round-trip restores previous draft revision.
  *   - Public runtime serves duplicated blocks and sections under HTTP 200.
@@ -163,11 +163,11 @@ unit('sprint3 integration: navigator operations (duplicate, move, rename, visibi
             assert_true($pageId > 0, 'page created');
 
             // 2. Insert section and visual tree
-            $opSec = new DocumentOperation('insert_section', ['index' => 0, 'section' => ['label' => 'Hero Banner']]);
+            $opSec = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Hero Banner']]]);
             $sRes = $rt->tenants->runAs(S3_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $pageId, [$opSec], $revId, 'Insert Hero Section'));
             $revId = (int) $sRes['revision']['id'];
             $secDoc = CanonicalJson::decode((string) $sRes['revision']['document_json']);
-            $secId = (string) $secDoc['sections'][0]['id'];
+            $secId = (string) $secDoc['containers'][0]['id'];
 
             $btnId = CanonicalDocumentSchema::newBlockId();
             $btnBlock = [
@@ -218,19 +218,19 @@ unit('sprint3 integration: navigator operations (duplicate, move, rename, visibi
             $insRes = $rt->tenants->runAs(S3_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $pageId, [$opBlock], $revId, 'Insert Container with Heading and Button'));
             $revId = (int) $insRes['revision']['id'];
             $insDoc = CanonicalJson::decode((string) $insRes['revision']['document_json']);
-            $actualHeadingId = (string) $insDoc['sections'][0]['blocks'][0]['children'][0]['id'];
-            $actualBtnId = (string) $insDoc['sections'][0]['blocks'][0]['children'][1]['id'];
+            $actualHeadingId = (string) $insDoc['containers'][0]['children'][0]['children'][0]['id'];
+            $actualBtnId = (string) $insDoc['containers'][0]['children'][0]['children'][1]['id'];
 
             // 3. Test update_section_label: valid rename
-            $opRename = DocumentOperation::updateSectionLabel($secId, 'Spotlight Hero');
+            $opRename = DocumentOperation::updateBlockMeta($secId, ['label' => 'Spotlight Hero']);
             $renRes = $rt->tenants->runAs(S3_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $pageId, [$opRename], $revId, 'Rename Section'));
             $revId = (int) $renRes['revision']['id'];
             $renDoc = CanonicalJson::decode((string) $renRes['revision']['document_json']);
-            assert_eq('Spotlight Hero', $renDoc['sections'][0]['label']);
+            assert_eq('Spotlight Hero', $renDoc['containers'][0]['metadata']['label']);
 
             // 3b. Test update_section_label: hostile / injected label rejected
             assert_throws(StudioValidationException::class, static function () use ($rt, $actorA, $pageId, $secId, $revId): void {
-                $badOp = DocumentOperation::updateSectionLabel($secId, '<script>alert("xss")</script>');
+                $badOp = DocumentOperation::updateBlockMeta($secId, ['label' => '<script>alert("xss")</script>']);
                 $rt->tenants->runAs(S3_TENANT_A, fn() => $rt->app->applyDocumentOperation($actorA, $pageId, [$badOp], $revId));
             }, 'hostile script tag in section label rejected');
 
@@ -239,7 +239,7 @@ unit('sprint3 integration: navigator operations (duplicate, move, rename, visibi
             $dupRes = $rt->tenants->runAs(S3_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $pageId, [$opDupBlock], $revId, 'Duplicate Heading'));
             $revId = (int) $dupRes['revision']['id'];
             $dupDoc = CanonicalJson::decode((string) $dupRes['revision']['document_json']);
-            $containerChildren = $dupDoc['sections'][0]['blocks'][0]['children'];
+            $containerChildren = $dupDoc['containers'][0]['children'][0]['children'];
             assert_eq(3, count($containerChildren), 'container now has 3 children (heading, cloned heading, button)');
 
             $clonedHeading = $containerChildren[1];
@@ -256,24 +256,24 @@ unit('sprint3 integration: navigator operations (duplicate, move, rename, visibi
             $hideRes = $rt->tenants->runAs(S3_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $pageId, [$opHide], $revId, 'Restrict Cloned Heading to Authenticated'));
             $revId = (int) $hideRes['revision']['id'];
             $hideDoc = CanonicalJson::decode((string) $hideRes['revision']['document_json']);
-            assert_eq('authenticated', $hideDoc['sections'][0]['blocks'][0]['children'][1]['visibility']['auth_state'], 'block visibility is updated');
+            assert_eq('authenticated', $hideDoc['containers'][0]['children'][0]['children'][1]['visibility']['auth_state'], 'block visibility is updated');
 
             // 6. Test duplicate_section: duplicate the entire section
-            $opDupSec = DocumentOperation::duplicateSection($secId);
+            $opDupSec = DocumentOperation::duplicateBlock($secId);
             $dupSecRes = $rt->tenants->runAs(S3_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $pageId, [$opDupSec], $revId, 'Duplicate Section'));
             $revId = (int) $dupSecRes['revision']['id'];
             $dupSecDoc = CanonicalJson::decode((string) $dupSecRes['revision']['document_json']);
-            assert_eq(2, count($dupSecDoc['sections']), 'page now has 2 sections');
+            assert_eq(2, count($dupSecDoc['containers']), 'page now has 2 sections');
 
-            $clonedSec = $dupSecDoc['sections'][1];
+            $clonedSec = $dupSecDoc['containers'][1];
             $clonedSecId = (string) $clonedSec['id'];
             assert_true($clonedSecId !== $secId, 'cloned section has new unique section ID');
-            assert_true(str_starts_with($clonedSecId, 'sec_'), 'cloned section ID has canonical sec_ prefix');
-            assert_eq('Spotlight Hero (Copy)', $clonedSec['label'], 'cloned section has (Copy) suffix in label');
+            assert_true(str_starts_with($clonedSecId, 'blk_'), 'cloned Container ID has the canonical blk_ prefix');
+            assert_eq('Spotlight Hero', $clonedSec['metadata']['label'], 'a cloned Container keeps its label, like any block');
 
             // Cloned section children must also have freshly minted IDs
-            $clonedSecContainer = $clonedSec['blocks'][0];
-            assert_true($clonedSecContainer['id'] !== $dupDoc['sections'][0]['blocks'][0]['id'], 'cloned section container has fresh ID');
+            $clonedSecContainer = $clonedSec['children'][0];
+            assert_true($clonedSecContainer['id'] !== $dupDoc['containers'][0]['children'][0]['id'], 'cloned section container has fresh ID');
 
             // 7. Test rollback / undo server operation
             // Roll back to the revision before duplicating section
@@ -281,7 +281,7 @@ unit('sprint3 integration: navigator operations (duplicate, move, rename, visibi
             $rbRes = $rt->tenants->runAs(S3_TENANT_A, static fn(): array => $rt->app->rollback($actorA, $pageId, $revBeforeDupSec, $revId));
             $revId = (int) $rbRes['revision']['id'];
             $rbDoc = CanonicalJson::decode((string) $rbRes['revision']['document_json']);
-            assert_eq(1, count($rbDoc['sections']), 'rollback restored document to 1 section');
+            assert_eq(1, count($rbDoc['containers']), 'rollback restored document to 1 section');
 
             // 8. Publish page and verify public rendering
             $pubRes = $rt->tenants->runAs(S3_TENANT_A, static fn(): array => $rt->app->publish($actorA, $pageId, $revId));

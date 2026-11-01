@@ -1254,7 +1254,7 @@
             "style_parts": [],
             "title": "Container",
             "type": "core.container",
-            "version": 1
+            "version": 2
         },
         {
             "allowed_binding_providers": [],
@@ -6260,123 +6260,6 @@
         {
             "allowed_binding_providers": [],
             "allowed_child_types": [],
-            "allows_children": true,
-            "binding_slots": [],
-            "category": "layout",
-            "default_props": {
-                "background_token": null,
-                "content_width": "boxed",
-                "min_height": "auto",
-                "padding_y": "md",
-                "tag": "section"
-            },
-            "description": "Full-width layout section",
-            "field_schema": [
-                {
-                    "key": "tag",
-                    "type": "enum",
-                    "label": "HTML Tag",
-                    "required": false,
-                    "default": "section",
-                    "allowed_values": [
-                        "section",
-                        "header",
-                        "footer",
-                        "article",
-                        "aside",
-                        "div"
-                    ]
-                },
-                {
-                    "key": "content_width",
-                    "type": "enum",
-                    "label": "Content Width",
-                    "required": false,
-                    "default": "boxed",
-                    "allowed_values": [
-                        "boxed",
-                        "full",
-                        "narrow"
-                    ]
-                },
-                {
-                    "key": "min_height",
-                    "type": "enum",
-                    "label": "Minimum Height",
-                    "required": false,
-                    "default": "auto",
-                    "allowed_values": [
-                        "auto",
-                        "screen",
-                        "half_screen",
-                        "sm",
-                        "md",
-                        "lg",
-                        "xl"
-                    ]
-                },
-                {
-                    "key": "padding_y",
-                    "type": "enum",
-                    "label": "Vertical Padding",
-                    "required": false,
-                    "default": "md",
-                    "allowed_values": [
-                        "none",
-                        "xs",
-                        "sm",
-                        "md",
-                        "lg",
-                        "xl",
-                        "2xl"
-                    ]
-                },
-                {
-                    "key": "background_token",
-                    "type": "token_ref",
-                    "label": "Background Token",
-                    "required": false,
-                    "default": null
-                }
-            ],
-            "icon": "layout-section",
-            "inline_text": [],
-            "label": "Section",
-            "required_entitlement": null,
-            "required_permission": "studio-builder.edit",
-            "style_capabilities": [
-                "align",
-                "surface_token",
-                "text_token",
-                "spacing_token",
-                "radius_token",
-                "shadow_token",
-                "font_token",
-                "border_token",
-                "typography",
-                "color",
-                "background",
-                "border",
-                "shadow",
-                "dimensions",
-                "opacity",
-                "z_index",
-                "layout",
-                "position",
-                "effects",
-                "margin",
-                "padding",
-                "text_shadow",
-                "overlay"
-            ],
-            "style_parts": [],
-            "title": "Section",
-            "type": "layout.section",
-            "version": 1
-        },
-        {
-            "allowed_binding_providers": [],
-            "allowed_child_types": [],
             "allows_children": false,
             "binding_slots": [],
             "category": "business",
@@ -8741,14 +8624,6 @@
             "wide",
             "full"
         ],
-        "section_widths": [
-            "default",
-            "narrow",
-            "normal",
-            "wide",
-            "full",
-            "custom"
-        ],
         "robots": [
             "index,follow",
             "noindex,follow",
@@ -8772,6 +8647,7 @@
             "radius_token",
             "shadow_token",
             "font_token",
+            "border_token",
             "typography",
             "color",
             "background",
@@ -8779,14 +8655,21 @@
             "shadow",
             "dimensions",
             "opacity",
-            "z_index"
+            "z_index",
+            "layout",
+            "position",
+            "effects",
+            "margin",
+            "padding",
+            "text_shadow",
+            "overlay"
         ]
     },
     "limits": {
-        "max_blocks": 250,
-        "max_nesting_depth": 6,
+        "max_blocks": 300,
+        "max_containers": 50,
+        "max_nesting_depth": 7,
         "max_repeater_items": 50,
-        "max_sections": 50,
         "seo_description_max": 1000,
         "seo_title_max": 255
     },
@@ -8799,21 +8682,21 @@
     },
     "templates": {
         "insertable_types": [
-            "section_preset",
+            "container_preset",
             "header_preset",
             "footer_preset",
             "block_preset"
         ],
         "types": [
             "page_template",
-            "section_preset",
+            "container_preset",
             "header_preset",
             "footer_preset",
             "block_preset"
         ]
     },
     "components": {
-        "document_type": "section_preset",
+        "document_type": "container_preset",
         "referencing_types": [
             "page",
             "landing",

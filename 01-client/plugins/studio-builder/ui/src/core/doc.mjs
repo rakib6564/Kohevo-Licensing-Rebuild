@@ -7,6 +7,8 @@
 // (DocumentOperationApplier + DocumentValidator). The server stays the final
 // authority; these checks exist so the UI never offers a move it would reject.
 
+export const CONTAINER_TYPE = 'core.container';
+
 /** PHP encodes an empty JSON object as `[]`; treat any non-object as `{}`. */
 export function asObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -16,33 +18,33 @@ export function asList(value) {
   return Array.isArray(value) ? value : [];
 }
 
-export function sectionsOf(doc) {
-  return asList(doc && doc.sections);
+export function containersOf(doc) {
+  return asList(doc && doc.containers);
 }
 
-/** Depth-first walk: calls visit(node, info) for every section and block. */
+/**
+ * Depth-first walk: calls visit(node, info) for every block, the top-level Containers (parentId null, depth 1) first
+ * of their subtrees. `topId` is the top-level Container the node sits in.
+ */
 export function walk(doc, visit) {
-  const sections = sectionsOf(doc);
-  sections.forEach((section, sIndex) => {
-    visit(section, { kind: 'section', parentId: null, index: sIndex, depth: 0, sectionId: section.id });
-    const walkBlocks = (blocks, parentId, depth) => {
-      asList(blocks).forEach((block, index) => {
-        visit(block, { kind: 'block', parentId, index, depth, sectionId: section.id });
-        walkBlocks(block.children, block.id, depth + 1);
-      });
-    };
-    walkBlocks(section.blocks, section.id, 1);
-  });
+  const walkBlocks = (blocks, parentId, depth, topId) => {
+    asList(blocks).forEach((block, index) => {
+      const top = topId || block.id;
+      visit(block, { kind: 'block', parentId, index, depth, topId: top });
+      walkBlocks(block.children, block.id, depth + 1, top);
+    });
+  };
+  walkBlocks(containersOf(doc), null, 1, null);
 }
 
-/** Every section and block in document order as `{id, parentId}` (range selection, bulk actions). */
+/** Every block in document order as `{id, parentId}` (range selection, bulk actions). */
 export function documentRows(doc) {
   const rows = [];
   walk(doc, (node, info) => { if (node && node.id) rows.push({ id: node.id, parentId: info.parentId }); });
   return rows;
 }
 
-/** @returns {null | {kind, node, parentId, index, depth, sectionId}} */
+/** @returns {null | {kind, node, parentId, index, depth, topId}} */
 export function findNode(doc, id) {
   if (!id) return null;
   let found = null;
@@ -60,15 +62,15 @@ export function nodeIds(doc) {
 
 export function countBlocks(doc) {
   let n = 0;
-  walk(doc, (_node, info) => { if (info.kind === 'block') n += 1; });
+  walk(doc, () => { n += 1; });
   return n;
 }
 
-/** The ordered child list of a parent (section → blocks, block → children). */
+/** The ordered child list of a parent (null: the top level). */
 export function childrenOf(doc, parentId) {
+  if (parentId === null || parentId === undefined) return containersOf(doc);
   const parent = findNode(doc, parentId);
-  if (!parent) return [];
-  return parent.kind === 'section' ? asList(parent.node.blocks) : asList(parent.node.children);
+  return parent ? asList(parent.node.children) : [];
 }
 
 /** Height of a block subtree (a leaf block is 1). */
@@ -86,21 +88,22 @@ export function isDescendant(doc, ancestorId, candidateId) {
     if (b.id === candidateId) { hit = true; return; }
     scan(b.children);
   });
-  scan(ancestor.kind === 'section' ? ancestor.node.blocks : ancestor.node.children);
+  scan(ancestor.node.children);
   return hit;
 }
 
 /**
  * Can a block of `type` (with a subtree of `height`) live directly inside
- * `parentId`? Mirrors the server: the parent is a section, or a registered
- * block whose manifest allows children and (when it lists any) this type;
- * the resulting depth must stay within limits.max_nesting_depth.
+ * `parentId`? Mirrors the server: the parent is null (the top level, Containers
+ * only) or a registered block whose manifest allows children and (when it lists
+ * any) this type; a reference owns no children; the resulting depth, counted
+ * from the top Container at 1, must stay within limits.max_nesting_depth.
  */
 export function canContain(doc, manifest, parentId, type, height = 1) {
+  const maxDepth = (manifest.limits && manifest.limits.max_nesting_depth) || 7;
+  if (parentId === null || parentId === undefined) return type === CONTAINER_TYPE && height <= maxDepth;
   const parent = findNode(doc, parentId);
-  if (!parent) return false;
-  const maxDepth = (manifest.limits && manifest.limits.max_nesting_depth) || 6;
-  if (parent.kind === 'section') return height <= maxDepth;
+  if (!parent || isGlobalContainer(parent.node)) return false;
   const def = blockDefinition(manifest, parent.node.type);
   if (!def || !def.allows_children) return false;
   const allowed = asList(def.allowed_child_types);
@@ -108,26 +111,26 @@ export function canContain(doc, manifest, parentId, type, height = 1) {
   return parent.depth + height <= maxDepth;
 }
 
-/** Whether moving block `blockId` into `parentId` is structurally valid. */
+/** Whether moving block `blockId` into `parentId` (null: the top level) is structurally valid. */
 export function canMoveBlock(doc, manifest, blockId, parentId) {
   const moving = findNode(doc, blockId);
-  if (!moving || moving.kind !== 'block') return false;
-  if (parentId === blockId || isDescendant(doc, blockId, parentId)) return false;
-  const parent = findNode(doc, parentId);
-  if (parent && parent.kind === 'section' && isGlobalSection(parent.node)) return false;
+  if (!moving) return false;
+  if (parentId === blockId || (parentId !== null && parentId !== undefined && isDescendant(doc, blockId, parentId))) return false;
+  if (isGlobalContainer(moving.node) && parentId !== null) return false; // a reference stays at the top level
+  const isTop = parentId === null || parentId === undefined;
+  if (isTop && moving.parentId !== null && !canInsertContainer(doc, manifest)) return false;
   return canContain(doc, manifest, parentId, moving.node.type, subtreeHeight(moving.node));
 }
 
 export function canInsertBlock(doc, manifest, parentId, type) {
-  const max = (manifest.limits && manifest.limits.max_blocks) || 250;
-  const parent = findNode(doc, parentId);
-  if (parent && parent.kind === 'section' && isGlobalSection(parent.node)) return false; // a reference owns no blocks
+  const max = (manifest.limits && manifest.limits.max_blocks) || 300;
+  if ((parentId === null || parentId === undefined) && !canInsertContainer(doc, manifest)) return false;
   return !!blockDefinition(manifest, type) && countBlocks(doc) < max && canContain(doc, manifest, parentId, type, 1);
 }
 
-export function canInsertSection(doc, manifest) {
-  const max = (manifest.limits && manifest.limits.max_sections) || 50;
-  return sectionsOf(doc).length < max;
+export function canInsertContainer(doc, manifest) {
+  const max = (manifest.limits && manifest.limits.max_containers) || 50;
+  return containersOf(doc).length < max;
 }
 
 export function blockDefinition(manifest, type) {
@@ -136,87 +139,93 @@ export function blockDefinition(manifest, type) {
 
 /**
  * Keyboard move targets. Up/down swap with the neighbouring sibling; at the
- * edge of a section the block continues into the adjacent section; at the
- * edge of a container it steps out next to the container. Every candidate is
- * checked with canMoveBlock before being offered.
+ * edge of a top-level Container the block continues into the adjacent one; at
+ * the edge of a nested Container it steps out next to that Container. Every
+ * candidate is checked with canMoveBlock before being offered.
  *
- * @returns {null | {parentId, index}} a `move_block` destination
+ * @returns {null | {parentId, index}} a `move_block` destination (parentId null: the top level)
  */
 export function blockMoveTarget(doc, manifest, blockId, direction) {
   const info = findNode(doc, blockId);
-  if (!info || info.kind !== 'block') return null;
+  if (!info) return null;
   const siblings = childrenOf(doc, info.parentId);
-  const parent = findNode(doc, info.parentId);
   if (direction === 'up' && info.index > 0) return { parentId: info.parentId, index: info.index - 1 };
   if (direction === 'down' && info.index < siblings.length - 1) return { parentId: info.parentId, index: info.index + 1 };
+  if (info.parentId === null) return null;
 
-  if (parent.kind === 'block') {
-    // Step out of the container, before (up) or after (down) it.
+  const parent = findNode(doc, info.parentId);
+  if (parent.parentId !== null) {
+    // Step out of the Container, before (up) or after (down) it.
     const grand = parent.parentId;
     const target = { parentId: grand, index: direction === 'up' ? parent.index : parent.index + 1 };
     return canMoveBlock(doc, manifest, blockId, grand) ? target : null;
   }
-  // Cross into the previous / next section.
-  const sections = sectionsOf(doc);
-  const next = sections[parent.index + (direction === 'up' ? -1 : 1)];
-  if (!next) return null;
-  return { parentId: next.id, index: direction === 'up' ? asList(next.blocks).length : 0 };
+  // Cross into the previous / next top-level Container.
+  const next = containersOf(doc)[parent.index + (direction === 'up' ? -1 : 1)];
+  if (!next || !canMoveBlock(doc, manifest, blockId, next.id)) return null;
+  return { parentId: next.id, index: direction === 'up' ? asList(next.children).length : 0 };
 }
 
 /** Indent: move into the previous sibling when it is a container that accepts this block. */
 export function blockIndentTarget(doc, manifest, blockId) {
   const info = findNode(doc, blockId);
-  if (!info || info.kind !== 'block' || info.index === 0) return null;
+  if (!info || info.index === 0) return null;
   const prev = childrenOf(doc, info.parentId)[info.index - 1];
   if (!prev || !canMoveBlock(doc, manifest, blockId, prev.id)) return null;
   return { parentId: prev.id, index: asList(prev.children).length };
 }
 
-/** Outdent: move out of the containing block, right after it. */
+/** Outdent: move out of the containing block, right after it (to the top level for a Container only). */
 export function blockOutdentTarget(doc, manifest, blockId) {
   const info = findNode(doc, blockId);
-  if (!info || info.kind !== 'block') return null;
+  if (!info || info.parentId === null) return null;
   const parent = findNode(doc, info.parentId);
-  if (!parent || parent.kind !== 'block') return null;
-  if (!canMoveBlock(doc, manifest, blockId, parent.parentId)) return null;
+  if (!parent || !canMoveBlock(doc, manifest, blockId, parent.parentId)) return null;
   return { parentId: parent.parentId, index: parent.index + 1 };
 }
 
 /**
- * Where "Insert" from the palette puts a new block: after the selected block
- * (same parent), inside the selected container/section (at the end), else at
- * the end of the last section. Returns null when a section must be created first.
+ * Where "Insert" from the palette puts a new block: inside the selected
+ * container (at the end), after the selected block (same parent), else at the
+ * end of the last Container; a new Container with nothing selected goes at the
+ * end of the page. Returns null when a Container must be created to hold it.
  */
 export function insertionPoint(doc, manifest, selectedId, type) {
   const sel = selectedId ? findNode(doc, selectedId) : null;
-  if (sel && sel.kind === 'section' && !isGlobalSection(sel.node)) return { parentId: sel.node.id, index: asList(sel.node.blocks).length };
-  if (sel && sel.kind === 'block') {
+  if (sel) {
     const def = blockDefinition(manifest, sel.node.type);
     if (def && def.allows_children && canContain(doc, manifest, sel.node.id, type)) {
       return { parentId: sel.node.id, index: asList(sel.node.children).length };
     }
     if (canContain(doc, manifest, sel.parentId, type)) return { parentId: sel.parentId, index: sel.index + 1 };
   }
-  const sections = sectionsOf(doc).filter((s) => !isGlobalSection(s));
-  if (!sections.length) return null;
-  const last = sections[sections.length - 1];
-  return { parentId: last.id, index: asList(last.blocks).length };
+  if (type === CONTAINER_TYPE) return { parentId: null, index: containersOf(doc).length };
+  const open = containersOf(doc).filter((c) => !isGlobalContainer(c));
+  if (!open.length) return null;
+  const last = open[open.length - 1];
+  return { parentId: last.id, index: asList(last.children).length };
 }
 
-/** A section that references a global component (Phase 6): it owns no content of its own. */
-export function isGlobalSection(node) {
+/** A top-level Container that references a global component: it owns no children of its own. */
+export function isGlobalContainer(node) {
   return !!(node && typeof node.global_ref === 'string' && node.global_ref !== '');
 }
 
+/** The index a new top-level Container takes to land right after the selection's top-level Container (or at the end). */
+export function indexAfter(doc, selectedId) {
+  const sel = selectedId ? findNode(doc, selectedId) : null;
+  const containers = containersOf(doc);
+  if (!sel) return containers.length;
+  return containers.findIndex((c) => c.id === sel.topId) + 1;
+}
+
 /** A short human label for a node (outline rows, announcements). */
-export function nodeLabel(node, manifest, kind) {
-  if (kind === 'section' || (node && Array.isArray(node.blocks))) {
-    const base = (node && node.label) || 'Section';
-    return isGlobalSection(node) ? `${base} (global)` : base;
-  }
+export function nodeLabel(node, manifest) {
   // A name the author gave this layer (block metadata) wins over the generated "Type: hint".
   const custom = asObject(node && node.metadata).label;
-  if (typeof custom === 'string' && custom.trim() !== '') return custom;
+  const named = typeof custom === 'string' && custom.trim() !== '';
+  if (isGlobalContainer(node)) return `${named ? custom : 'Container'} (global)`;
+  if (named) return custom;
   const def = blockDefinition(manifest, node && node.type);
   const base = def ? def.label : (node && node.type) || 'Block';
   const props = asObject(node && node.props);
@@ -226,7 +235,7 @@ export function nodeLabel(node, manifest, kind) {
 }
 
 /**
- * Return an array of ancestors from top-level section down to the target node.
+ * Return an array of ancestors from the top-level Container down to the target node.
  * Each entry: { id, kind, label }
  */
 export function ancestorPath(doc, id, manifest) {
@@ -237,7 +246,7 @@ export function ancestorPath(doc, id, manifest) {
     path.unshift({
       id: curr.node.id,
       kind: curr.kind,
-      label: nodeLabel(curr.node, manifest, curr.kind),
+      label: nodeLabel(curr.node, manifest),
     });
     curr = curr.parentId ? findNode(doc, curr.parentId) : null;
   }

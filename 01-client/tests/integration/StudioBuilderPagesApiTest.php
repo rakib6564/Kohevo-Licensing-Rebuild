@@ -35,7 +35,7 @@ use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Http\StudioApiRequest;
 use Slate\Module\StudioBuilder\Http\StudioApiResponse;
 use Slate\Module\StudioBuilder\Http\StudioAuthoringApi;
-use Slate\Module\StudioBuilder\Presets\SectionPresetCatalog;
+use Slate\Module\StudioBuilder\Presets\ContainerPresetCatalog;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntime;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
@@ -181,13 +181,13 @@ function sbpg_make_page(StudioRuntime $rt, int $tenantId, StudioActor $actor, st
     $created = sbpg_ok(sbpg_call($rt, $tenantId, $actor, 'POST', 'create_page', ['title' => $title, 'slug' => $slug, 'page_type' => $pageType, 'route_mode' => 'standalone']), "create {$slug}");
     $pageId = (int) $created['page']['id'];
     $rev = (int) $created['page']['active_draft_revision_id'];
-    $ops = [['op' => 'insert_section', 'payload' => ['index' => 0, 'section' => ['label' => $title . ' section']]]];
+    $ops = [['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => $title . ' section']]]]];
     if ($settings !== []) {
         $ops[] = ['op' => 'update_settings', 'payload' => ['settings' => $settings]];
     }
     $r = sbpg_ok(sbpg_call($rt, $tenantId, $actor, 'POST', 'operations', ['page_id' => $pageId, 'expected_revision_id' => $rev, 'operations' => $ops]), "section {$slug}");
     $rev = (int) $r['revision']['id'];
-    $sectionId = (string) $r['document']['sections'][0]['id'];
+    $sectionId = (string) $r['document']['containers'][0]['id'];
     foreach ($blocks as $i => $block) {
         $r = sbpg_ok(sbpg_call($rt, $tenantId, $actor, 'POST', 'operations', ['page_id' => $pageId, 'expected_revision_id' => $rev, 'operations' => [
             ['op' => 'insert_block', 'payload' => ['parent_id' => $sectionId, 'index' => $i, 'block' => $block]],
@@ -225,9 +225,9 @@ function sbpg_ids(array $document): array
             $walk(is_array($b['children'] ?? null) ? $b['children'] : []);
         }
     };
-    foreach ($document['sections'] ?? [] as $s) {
+    foreach ($document['containers'] ?? [] as $s) {
         $ids[] = (string) $s['id'];
-        $walk($s['blocks'] ?? []);
+        $walk($s['children'] ?? []);
     }
     return $ids;
 }
@@ -289,10 +289,10 @@ unit('page commands integration: rename, duplicate, archive, permissions and iso
             assert_eq('standalone', $copy['route_mode'], 'never the homepage');
             assert_eq('/about-copy', $copy['public_path']);
             $doc = sbpg_ok(sbpg_call($rt, SBPG_TENANT_A, $editor, 'GET', 'document', ['page' => (int) $copy['id']]), 'copy document')['document'];
-            $texts = array_map(static fn(array $b): string => (string) $b['props']['text'], $doc['sections'][0]['blocks']);
+            $texts = array_map(static fn(array $b): string => (string) $b['props']['text'], $doc['containers'][0]['children']);
             assert_eq(['Our story', 'Our team'], $texts, 'the document is copied');
             $srcDoc = sbpg_ok(sbpg_call($rt, SBPG_TENANT_A, $editor, 'GET', 'document', ['page' => $src['id']]), 'source document')['document'];
-            assert_eq(count($srcDoc['sections'][0]['blocks']), count($doc['sections'][0]['blocks']), 'the source is untouched');
+            assert_eq(count($srcDoc['containers'][0]['children']), count($doc['containers'][0]['children']), 'the source is untouched');
             assert_true($rt->tenants->runAs(SBPG_TENANT_A, static fn() => sbpg_public($rt, SBPG_TENANT_A, '/about-copy')) === null, 'a copy is not publicly served until published');
             assert_eq('duplicate_slug', sbpg_first_code(sbpg_call($rt, SBPG_TENANT_A, $editor, 'POST', 'duplicate_page', ['page_id' => $src['id'], 'title' => 'Again', 'slug' => 'about-copy'])), 'a taken slug is refused');
             $count = sbpg_count('SELECT COUNT(*) FROM studiobuilder_pages WHERE tenant_id = ?', [SBPG_TENANT_A]);

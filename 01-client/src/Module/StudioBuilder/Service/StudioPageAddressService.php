@@ -60,7 +60,7 @@ final class StudioPageAddressService
      *    tenant: the public runtime serves `page` before `landing` for one
      *    slug, so a same-slug pair would silently shadow one of them.
      *
-     * Non-public types (header/footer partials, section presets, system) never
+     * Non-public types (header/footer partials, Container presets, system) never
      * occupy a public address and are not restricted by either rule.
      */
     private function assertPublicAddressAvailable(string $slug, string $pageType, ?int $exceptPageId): void

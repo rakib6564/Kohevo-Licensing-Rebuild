@@ -65,7 +65,7 @@ function sbtm_revisions(array $rows): object
         {
             foreach ($this->rows as $r) {
                 if ((int) $r['id'] === $pageId && (int) $r['published_revision_id'] === $revId) {
-                    return ['id' => $revId, 'page_id' => $pageId, 'document_json' => json_encode(['settings' => json_decode((string) $r['settings_json'], true), 'sections' => []])];
+                    return ['id' => $revId, 'page_id' => $pageId, 'document_json' => json_encode(['settings' => json_decode((string) $r['settings_json'], true), 'containers' => []])];
                 }
             }
             return null;

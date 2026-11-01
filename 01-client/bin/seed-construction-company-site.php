@@ -30,6 +30,7 @@ use Slate\Data\Database;
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
@@ -160,16 +161,14 @@ $createAndPublishPage = function(
     return $pageId;
 };
 
-// Helpers for canonical sections and blocks
-$createSection = function(string $label, array $blocks, array $layoutOverrides = []): array {
-    return [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => $label,
-        'global_ref' => null,
-        'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), $layoutOverrides),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks'     => $blocks,
-    ];
+// Helpers for top-level Containers and blocks
+$createContainer = function(string $label, array $blocks, array $layoutOverrides = []): array {
+    return DocumentUpgrader::sectionToContainer([
+        'id'     => CanonicalDocumentSchema::newBlockId(),
+        'label'  => $label,
+        'layout' => $layoutOverrides,
+        'blocks' => $blocks,
+    ]);
 };
 
 $richText = function(string $html): array {
@@ -275,9 +274,9 @@ echo "2. Building & publishing Construction Company pages...\n\n";
 // PAGE 1: HOME (Homepage)
 // =========================================================================
 $docHome = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Vanguard Construction Group');
-$docHome['sections'] = [
+$docHome['containers'] = [
     // 1. Hero Section
-    $createSection('Hero: Precision Construction', [
+    $createContainer('Hero: Precision Construction', [
         $richText(
             '<p><strong>LICENSED GENERAL CONTRACTORS · EST. 1998 · $50M BONDING CAPACITY</strong></p>'
             . '<h1>Built With Precision. Engineered For Generations.</h1>'
@@ -293,7 +292,7 @@ $docHome['sections'] = [
     ], ['width' => 'wide', 'padding_y' => ['base' => 'xl', 'md' => '2xl'], 'background_token' => 'surface.primary']),
 
     // 2. Trust Credentials & Industry Accreditations
-    $createSection('Industry Certifications & Credentials', [
+    $createContainer('Industry Certifications & Credentials', [
         $richText(
             '<h3>Certified Excellence &amp; Jobsite Safety Accreditations</h3>'
             . '<p>🛡️ <strong>OSHA VPP Star Safety Certified</strong> · 🌱 <strong>LEED AP Gold &amp; Platinum Builders</strong> · 🏛️ <strong>Associated General Contractors (AGC) Member</strong> · 📜 <strong>Licensed, Bonded &amp; Insured ($50M Single / $100M Aggregate)</strong></p>'
@@ -301,7 +300,7 @@ $docHome['sections'] = [
     ], ['width' => 'full', 'padding_y' => ['base' => 'md', 'md' => 'md'], 'background_token' => 'surface.secondary']),
 
     // 3. Four Core Construction Sectors Tabs
-    $createSection('Specialized Construction Sectors', [
+    $createContainer('Specialized Construction Sectors', [
         $richText(
             '<h2>Comprehensive Capabilities Across Four Primary Sectors</h2>'
             . '<p>From urban commercial high-rises to custom architectural estates, our dedicated project teams deliver specialized craftsmanship with integrated project controls.</p>'
@@ -327,7 +326,7 @@ $docHome['sections'] = [
     ], ['width' => 'wide', 'padding_y' => ['base' => 'xl', 'md' => '2xl'], 'background_token' => 'surface.primary']),
 
     // 4. Featured Completed Projects Showcase
-    $createSection('Featured Projects Showcase', [
+    $createContainer('Featured Projects Showcase', [
         $richText(
             '<h2>Signature Projects Delivered Across Texas</h2>'
             . '<p>A selected preview of our 480+ completed builds. <a href="/projects">View the full portfolio directory ↗</a></p>'
@@ -343,7 +342,7 @@ $docHome['sections'] = [
     ], ['width' => 'wide', 'padding_y' => ['base' => 'xl', 'md' => '2xl'], 'background_token' => 'surface.secondary']),
 
     // 5. The Vanguard 4-Stage Construction Process Accordion
-    $createSection('4-Stage Project Delivery Framework', [
+    $createContainer('4-Stage Project Delivery Framework', [
         $richText(
             '<h2>Our Proven 4-Phase Delivery Framework</h2>'
             . '<p>We eliminate unpredictability from complex construction through digital BIM modeling, proactive supply chain procurement, and transparent weekly reporting.</p>'
@@ -369,7 +368,7 @@ $docHome['sections'] = [
     ], ['width' => 'wide', 'padding_y' => ['base' => 'xl', 'md' => '2xl'], 'background_token' => 'surface.primary']),
 
     // 6. Testimonials Carousel
-    $createSection('Owner & Architect Endorsements', [
+    $createContainer('Owner & Architect Endorsements', [
         $richText(
             '<h2>Trusted By Leading Developers &amp; Property Owners</h2>'
             . '<p>Read testimonials from commercial real estate trusts, institutional leaders, and custom homeowners.</p>'
@@ -394,7 +393,7 @@ $docHome['sections'] = [
     ], ['width' => 'wide', 'padding_y' => ['base' => 'xl', 'md' => '2xl'], 'background_token' => 'surface.secondary']),
 
     // 7. Bottom Call to Action
-    $createSection('Call to Action: Break Ground', [
+    $createContainer('Call to Action: Break Ground', [
         $richText(
             '<h2>Ready To Break Ground On Your Next Project?</h2>'
             . '<p>Speak directly with our chief estimators and senior project managers. Receive an initial constructability review and budget appraisal within 48 hours.</p>'
@@ -419,8 +418,8 @@ $createAndPublishPage(
 // PAGE 2: ABOUT US (/about)
 // =========================================================================
 $docAbout = CanonicalDocumentSchema::emptyDocument('page', 'default', 'About Us — Vanguard Construction Group');
-$docAbout['sections'] = [
-    $createSection('About Hero', [
+$docAbout['containers'] = [
+    $createContainer('About Hero', [
         $richText(
             '<p><strong>COMPANY OVERVIEW · ESTABLISHED 1998</strong></p>'
             . '<h1>Twenty-Eight Years of Unwavering Craftsmanship &amp; Integrity</h1>'
@@ -434,7 +433,7 @@ $docAbout['sections'] = [
         ])
     ], ['width' => 'wide', 'padding_y' => ['base' => 'xl', 'md' => '2xl'], 'background_token' => 'surface.primary']),
 
-    $createSection('Core Values & Safety First', [
+    $createContainer('Core Values & Safety First', [
         $richText(
             '<h2>Guiding Principles That Drive Every Jobsite</h2>'
             . '<h3>🛡️ Zero-Harm Safety Protocol</h3>'
@@ -446,7 +445,7 @@ $docAbout['sections'] = [
         )
     ], ['width' => 'wide', 'padding_y' => ['base' => 'lg', 'md' => 'xl'], 'background_token' => 'surface.secondary']),
 
-    $createSection('Executive Leadership Team', [
+    $createContainer('Executive Leadership Team', [
         $richText(
             '<h2>Seasoned Construction Leaders &amp; Engineers</h2>'
             . '<p>Our executive team brings over a century of combined field and design-build engineering experience to every project.</p>'
@@ -468,8 +467,8 @@ $createAndPublishPage('about', 'About Us — Vanguard Construction Group', 'page
 // PAGE 3: SERVICES (/services)
 // =========================================================================
 $docServices = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Services — Vanguard Construction Group');
-$docServices['sections'] = [
-    $createSection('Services Hero', [
+$docServices['containers'] = [
+    $createContainer('Services Hero', [
         $richText(
             '<p><strong>COMPREHENSIVE CAPABILITIES</strong></p>'
             . '<h1>Turnkey Construction &amp; Project Management Services</h1>'
@@ -477,7 +476,7 @@ $docServices['sections'] = [
         )
     ], ['width' => 'wide', 'padding_y' => ['base' => 'xl', 'md' => '2xl'], 'background_token' => 'surface.primary']),
 
-    $createSection('Full Scope of Services', [
+    $createContainer('Full Scope of Services', [
         $richText(
             '<h2>End-to-End Project Capabilities</h2>'
             . '<h3>01. Pre-Construction Planning &amp; Estimating</h3>'
@@ -495,7 +494,7 @@ $docServices['sections'] = [
         )
     ], ['width' => 'wide', 'padding_y' => ['base' => 'xl', 'md' => '2xl'], 'background_token' => 'surface.secondary']),
 
-    $createSection('Delivery Methods Comparison FAQ', [
+    $createContainer('Delivery Methods Comparison FAQ', [
         $richText(
             '<h2>Contracting &amp; Delivery Method Guidance</h2>'
             . '<p>We accommodate multiple standard contracting structures depending on your project financing and timeline priorities.</p>'
@@ -523,8 +522,8 @@ $createAndPublishPage('services', 'Services — Vanguard Construction Group', 'p
 // PAGE 4: PROJECTS / PORTFOLIO (/projects)
 // =========================================================================
 $docProjects = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Projects — Vanguard Construction Group');
-$docProjects['sections'] = [
-    $createSection('Projects Hero', [
+$docProjects['containers'] = [
+    $createContainer('Projects Hero', [
         $richText(
             '<p><strong>SELECTED WORK &amp; CASE STUDIES</strong></p>'
             . '<h1>Proven Track Record Across Over 480 Built Assets</h1>'
@@ -532,7 +531,7 @@ $docProjects['sections'] = [
         )
     ], ['width' => 'wide', 'padding_y' => ['base' => 'xl', 'md' => '2xl'], 'background_token' => 'surface.primary']),
 
-    $createSection('Detailed Project Portfolio', [
+    $createContainer('Detailed Project Portfolio', [
         $richText(
             '<h2>Signature Project Portfolio Case Studies</h2>'
             . '<h3>🏢 Apex Financial Tower — $78M</h3>'
@@ -569,8 +568,8 @@ $createAndPublishPage('projects', 'Projects — Vanguard Construction Group', 'p
 // PAGE 5: CONTACT & ESTIMATION (/contact)
 // =========================================================================
 $docContact = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Contact — Vanguard Construction Group');
-$docContact['sections'] = [
-    $createSection('Contact Hero & Inquiries', [
+$docContact['containers'] = [
+    $createContainer('Contact Hero & Inquiries', [
         $richText(
             '<p><strong>DIRECT CONSULTATION &amp; ESTIMATION DESK</strong></p>'
             . '<h1>Let\'s Discuss Your Upcoming Construction Build</h1>'
@@ -596,8 +595,8 @@ $createAndPublishPage('contact', 'Contact — Vanguard Construction Group', 'pag
 $docHeader = CanonicalDocumentSchema::emptyDocument('header_partial', 'default', 'Site Header');
 $docHeader['settings']['conditions'] = ['rules' => [['type' => 'include', 'condition' => 'entire_site']]];
 $docHeader['settings']['template_type'] = 'header';
-$docHeader['sections'] = [
-    $createSection('Sticky Construction Navigation Header', [
+$docHeader['containers'] = [
+    $createContainer('Sticky Construction Navigation Header', [
         $richText(
             '<p>🏗️ <strong>VANGUARD CONSTRUCTION GROUP</strong> · General Contractor Lic #TX-849201</p>'
             . '<p><a href="/home"><strong>Home</strong></a> · <a href="/about"><strong>About Us</strong></a> · <a href="/services"><strong>Services</strong></a> · <a href="/projects"><strong>Projects</strong></a> · <a href="/contact"><strong>Contact &amp; Free Quote</strong></a> · <a href="tel:5557284900">📞 (555) 728-4900</a></p>'
@@ -613,8 +612,8 @@ $createAndPublishPage('default', 'Vanguard Construction Header', 'header_partial
 $docFooter = CanonicalDocumentSchema::emptyDocument('footer_partial', 'default', 'Site Footer');
 $docFooter['settings']['conditions'] = ['rules' => [['type' => 'include', 'condition' => 'entire_site']]];
 $docFooter['settings']['template_type'] = 'footer';
-$docFooter['sections'] = [
-    $createSection('Construction Mega Footer', [
+$docFooter['containers'] = [
+    $createContainer('Construction Mega Footer', [
         $richText(
             '<p>🏗️ <strong>VANGUARD CONSTRUCTION GROUP</strong></p>'
             . '<p>Engineering excellence and master general contracting across Texas and the Southwest since 1998. General Contractor Lic #TX-849201. $50M Single / $100M Aggregate Bonding Capacity.</p>'

@@ -1,10 +1,9 @@
-// InspectorHost — what the Inspector shows for the current selection: a block or section Inspector, the lock
+// InspectorHost — what the Inspector shows for the current selection: a block Inspector, the lock
 // banner, the multi-selection note or the empty state. Docked on the right on a desktop, and inside the sheet on a phone.
 
 import { memo } from 'react';
 import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { BlockInspector } from './inspectors/BlockInspector.jsx';
-import { SectionInspector } from './inspectors/SectionInspector.jsx';
 import { findNode } from '../core/doc.mjs';
 import { effectivelyLocked, isLocked, lockIndex } from '../core/layerLock.mjs';
 import { t } from '../core/messages.mjs';
@@ -33,8 +32,7 @@ export const InspectorHost = memo(function InspectorHost({ onNavigate }) {
       </div>
     )}
     <fieldset className="sbx-lock-fieldset" disabled={locked}>
-      {inspected && inspected.kind === 'block' && <BlockInspector key={inspected.node.id} info={inspected} />}
-      {inspected && inspected.kind === 'section' && <SectionInspector key={inspected.node.id} info={inspected} />}
+      {inspected && <BlockInspector key={inspected.node.id} info={inspected} />}
     </fieldset>
     {multi && (
       <div className="sbx-inspector-empty" data-testid="inspector-multi" role="status">

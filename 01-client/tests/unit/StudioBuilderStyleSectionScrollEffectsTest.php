@@ -43,7 +43,7 @@ unit('scroll effects: sticky and parallax validate with fixed shapes and refuse 
         assert_true(!DocumentValidator::validate(sbsm_doc(sbsm_section(['interactions' => $interactions])), $registry)->isValid(), "refused: {$why}");
     }
     $kept = DocumentNormalizer::normalize(sbsm_doc(sbsm_section(['interactions' => ['sticky' => ['edge' => 'bottom', 'devices' => ['mobile']]]])), $registry);
-    assert_eq(['sticky' => ['devices' => ['mobile'], 'edge' => 'bottom']], $kept['sections'][0]['interactions'], 'the canonical form keeps the settings');
+    assert_eq(['sticky' => ['devices' => ['mobile'], 'edge' => 'bottom']], $kept['containers'][0]['interactions'], 'the canonical form keeps the settings');
 });
 
 unit('scroll effects: a sticky section is sticky in the stylesheet, with its edge, offset, devices and stuck effects on the tag', function (): void {
@@ -70,8 +70,8 @@ unit('scroll effects: a sticky section is sticky in the stylesheet, with its edg
 
 unit('scroll effects: a parallax background is painted by the layer the runtime moves; an element parallax moves the node', function (): void {
     $style = ['background' => ['image' => ['media_id' => 5, 'alt' => ''], 'fit' => 'cover']];
-    $normal = StyleSurface::sectionDeclarations($style, 'https://example.test/a.jpg');
-    $moving = StyleSurface::sectionDeclarations($style, 'https://example.test/a.jpg', true);
+    $normal = StyleSurface::declarations($style, 'https://example.test/a.jpg');
+    $moving = StyleSurface::declarations($style, 'https://example.test/a.jpg', true);
     assert_true(str_contains($normal, 'background-image:url("https://example.test/a.jpg")'), 'without parallax the node paints the image');
     assert_true(!str_contains($moving, 'background-image:') && str_contains($moving, '--sb-pbg-image:url("https://example.test/a.jpg")') && str_contains($moving, '--sb-pbg-size:cover'), 'with it the layer does');
 
@@ -97,8 +97,8 @@ unit('scroll effects: the runtime marks every sticky node, not only the first, a
 });
 
 unit('scroll effects: the markup and CSS match the browser fixture the runtime spec scrolls through', function (): void {
-    $header = sbsm_section(['id' => 'sec_sticky', 'interactions' => ['sticky' => ['edge' => 'top', 'shadow' => true, 'hide_on_scroll' => true]]]);
-    $tall = sbsm_section(['id' => 'sec_tall', 'interactions' => ['parallax' => ['speed' => 40]]]);
+    $header = sbsm_section(['id' => 'blk_sticky', 'interactions' => ['sticky' => ['edge' => 'top', 'shadow' => true, 'hide_on_scroll' => true]]]);
+    $tall = sbsm_section(['id' => 'blk_tall', 'interactions' => ['parallax' => ['speed' => 40]]]);
     $html = '<header class="sb-site-header sb-site-header--partial">' . sbsm_render($header) . '</header>'
         . '<main>' . sbsm_render($tall) . '</main>';
     $html = (string) preg_replace('/ data-sb-node="[^"]*" data-sb-type="[^"]*"/', '', $html); // block ids are random

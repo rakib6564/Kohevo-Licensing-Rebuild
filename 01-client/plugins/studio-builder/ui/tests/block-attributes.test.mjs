@@ -19,7 +19,7 @@ test('ids and class tokens: only what the page will keep', () => {
 });
 
 test('idOwner finds a duplicate at any depth and ignores the block being edited', () => {
-  const doc = { sections: [{ id: 's', blocks: [
+  const doc = { containers: [{ id: 's', children: [
     { id: 'a', attributes: { id: 'one' }, children: [{ id: 'c', attributes: { id: 'deep' } }] },
     { id: 'b', attributes: { id: 'two' } },
   ] }] };

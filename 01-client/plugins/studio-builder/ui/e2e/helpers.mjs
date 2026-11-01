@@ -28,7 +28,7 @@ export async function frameDocument(page) {
 }
 
 /**
- * Wait until the document has no optimistic client ids left (`tmp_*`). A block or section you just
+ * Wait until the document has no optimistic client ids left (`tmp_*`). A block or Container you just
  * added carries a temporary id until the server round trip returns its real one; reading an id (or
  * clicking a node) before that races the swap, which only shows on a slow runner.
  */

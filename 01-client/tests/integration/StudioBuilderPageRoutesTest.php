@@ -106,14 +106,10 @@ function sbpr_page(StudioRuntime $rt, StudioActor $actor, string $slug, string $
         if ($category !== '') {
             $doc['settings']['category'] = $category;
         }
-        $doc['sections'] = [[
-            'blocks' => [[
+        $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => [[
                 'bindings' => [], 'children' => [], 'id' => CanonicalDocumentSchema::newBlockId(), 'props' => ['text' => $text, 'level' => 'h2'],
                 'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'type' => 'core.heading', 'version' => 1, 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            ]],
-            'global_ref' => null, 'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Main',
-            'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        ]];
+            ]], 'visibility' => CanonicalDocumentSchema::defaultVisibility()])];
         $created = $rt->app->createPage($actor, ucfirst($slug), $slug, 'page', 'standalone');
         $id = (int) $created['page']['id'];
         if ($type !== '') {

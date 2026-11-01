@@ -181,7 +181,7 @@ function sbeb_ctx(string $mode, array $entitled = ['forms', 'booking']): RenderC
 function sbeb_block(string $type, array $props, array $bindings): array
 {
     return [
-        'id' => CanonicalDocumentSchema::newBlockId(), 'type' => $type, 'version' => 1, 'props' => $props,
+        'id' => CanonicalDocumentSchema::newBlockId(), 'type' => $type, 'version' => ($type === 'core.container' ? 2 : 1), 'props' => $props,
         'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'bindings' => $bindings, 'children' => [], 'animation' => [], 'interactions' => [],
     ];

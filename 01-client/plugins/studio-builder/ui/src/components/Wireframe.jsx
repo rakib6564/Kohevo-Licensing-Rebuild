@@ -8,8 +8,8 @@ export const Wireframe = memo(function Wireframe({ outline }) {
   const wf = useMemo(() => layoutOutline(outline), [outline]);
   return (
     <svg className="sbx-wf" viewBox={`0 0 ${wf.width} ${wf.height}`} preserveAspectRatio="xMidYMin meet" aria-hidden="true" focusable="false" data-testid="wireframe">
-      {wf.sections.map((s, i) => (
-        <rect key={`s${i}`} className={`sbx-wf__section${/inverse|accent/.test(s.bg) ? ' is-dark' : /secondary|muted/.test(s.bg) ? ' is-tint' : ''}`} x="0" y={s.y} width={wf.width} height={s.h} />
+      {wf.bands.map((s, i) => (
+        <rect key={`s${i}`} className={`sbx-wf__band${/inverse|accent/.test(s.bg) ? ' is-dark' : /secondary|muted/.test(s.bg) ? ' is-tint' : ''}`} x="0" y={s.y} width={wf.width} height={s.h} />
       ))}
       {wf.shapes.map((s, i) => (s.k === 'dot'
         ? <circle key={i} className="sbx-wf__dot" cx={s.x + s.w / 2} cy={s.y + s.h / 2} r={s.w / 2} />

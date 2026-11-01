@@ -277,7 +277,7 @@ final class BlockRegistry
         // 7. core.container (structural container capable of holding nested child blocks)
         $registry->register(new DeclarativeBlockDefinition(
             type: 'core.container',
-            version: 1,
+            version: CanonicalDocumentSchema::CONTAINER_VERSION,
             label: 'Container',
             title: 'Container',
             description: 'Inner constraint container',
@@ -315,6 +315,7 @@ final class BlockRegistry
                 ['key' => 'shape_bottom_front', 'type' => 'boolean', 'label' => 'Bottom Shape in Front', 'required' => false, 'default' => false],
             ]),
             allowsChildren: true,
+            upgrades: [1 => static fn (array $props): array => $props],
         ));
 
         return $registry;
@@ -345,25 +346,6 @@ final class BlockRegistry
      */
     public static function registerLayoutBlocks(self $registry): void
     {
-        // 8. layout.section
-        $registry->register(new DeclarativeBlockDefinition(
-            type: 'layout.section',
-            version: 1,
-            label: 'Section',
-            title: 'Section',
-            description: 'Full-width layout section',
-            category: 'layout',
-            icon: 'layout-section',
-            schema: FieldSchema::define([
-                ['key' => 'tag', 'type' => 'enum', 'label' => 'HTML Tag', 'required' => false, 'allowed_values' => ['section', 'header', 'footer', 'article', 'aside', 'div'], 'default' => 'section'],
-                ['key' => 'content_width', 'type' => 'enum', 'label' => 'Content Width', 'required' => false, 'allowed_values' => ['boxed', 'full', 'narrow'], 'default' => 'boxed'],
-                ['key' => 'min_height', 'type' => 'enum', 'label' => 'Minimum Height', 'required' => false, 'allowed_values' => ['auto', 'screen', 'half_screen', 'sm', 'md', 'lg', 'xl'], 'default' => 'auto'],
-                ['key' => 'padding_y', 'type' => 'enum', 'label' => 'Vertical Padding', 'required' => false, 'allowed_values' => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, 'default' => 'md'],
-                ['key' => 'background_token', 'type' => 'token_ref', 'label' => 'Background Token', 'required' => false, 'default' => null],
-            ]),
-            allowsChildren: true,
-        ));
-
         // 9. layout.container
         $registry->register(new DeclarativeBlockDefinition(
             type: 'layout.container',

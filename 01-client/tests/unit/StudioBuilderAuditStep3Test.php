@@ -31,8 +31,8 @@ use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 function sba3_doc(array $blocks): array
 {
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default');
-    $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation('insert_section', ['index' => 0, 'section' => ['label' => 'Main']]), BlockRegistry::withAllCoreBlocks());
-    $doc['sections'][0]['blocks'] = $blocks;
+    $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Main']]]), BlockRegistry::withAllCoreBlocks());
+    $doc['containers'][0]['children'] = $blocks;
     return $doc;
 }
 

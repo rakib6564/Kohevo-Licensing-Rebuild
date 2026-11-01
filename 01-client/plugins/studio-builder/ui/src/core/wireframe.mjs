@@ -1,4 +1,4 @@
-// Wireframe layout for the Add panel's section thumbnails.
+// Wireframe layout for the Add panel's preset thumbnails.
 //
 // Pure and deterministic: turns the server's structural outline of a preset (block types, item and
 // column counts, alignment; never any copy) into a list of rectangles inside a fixed-width box. The
@@ -11,19 +11,19 @@ const MAX_DEPTH = 6;
 
 const HEADING_H = { h1: 9, h2: 8, h3: 6, h4: 5, h5: 5, h6: 4 };
 
-/** @returns {{width:number,height:number,sections:{bg:string,y:number,h:number}[],shapes:{k:string,x:number,y:number,w:number,h:number}[]}} */
+/** @returns {{width:number,height:number,bands:{bg:string,y:number,h:number}[],shapes:{k:string,x:number,y:number,w:number,h:number}[]}} */
 export function layoutOutline(outline, width = WF_WIDTH) {
   const shapes = [];
-  const sections = [];
+  const bands = [];
   let y = 0;
-  for (const section of Array.isArray(outline) ? outline : []) {
+  for (const band of Array.isArray(outline) ? outline : []) {
     const top = y;
-    const inner = stack(section.nodes, PAD, y + PAD, width - PAD * 2, shapes, 0);
+    const inner = stack(band.nodes, PAD, y + PAD, width - PAD * 2, shapes, 0);
     const h = inner + PAD * 2;
-    sections.push({ bg: String(section.bg || ''), y: top, h });
+    bands.push({ bg: String(band.bg || ''), y: top, h });
     y = top + h;
   }
-  return { width, height: Math.max(y, 24), sections, shapes };
+  return { width, height: Math.max(y, 24), bands, shapes };
 }
 
 function stack(nodes, x, y, w, shapes, depth) {

@@ -210,25 +210,25 @@ test('Effects sliders write only values the server accepts, and the custom shado
   }
 });
 
-test('a section takes its own background and padding', async ({ page }) => {
+test('a Container takes its own background and padding', async ({ page }) => {
   await openBuilder(page);
   await settled(page);
   const before = await layerCount(page);
   try {
-    await insertQuote(page); // the sandbox page starts empty; adding a block creates its section
+    await insertQuote(page); // the sandbox page starts empty; adding a block creates its Container
     await page.getByRole('tab', { name: /^Layers$/ }).click();
     await page.locator('[role="treeitem"]').first().click();
     await showEdit(page); // a Layers pick leaves the panel on the tree
-    await expect(page.locator('[id^="sbx-sec-"][id$="-tab-style"]')).toBeVisible(); // a section has the same three tabs as a block
+    await expect(page.locator('[id^="sbx-blk-"][id$="-tab-style"]')).toBeVisible(); // a Container has the same three tabs as a block
     await openSection(page, 'background');
-    await page.locator('input[id$="-style-bg-text"]').fill('#123456');
+    await page.locator('[data-section="background"] input[id$="-bg-text"]').fill('#123456');
     await openSection(page, 'advanced');
-    const padding = page.getByRole('group', { name: 'Section padding' });
+    const padding = page.getByRole('group', { name: 'Padding', exact: true });
     await padding.getByLabel('Top', { exact: true }).fill('48px');
     await padding.getByLabel('Top', { exact: true }).blur();
     await settled(page);
     await expect(errors(page)).toHaveCount(0);
-    await expect.poll(async () => frameEval(page, '[data-sb-node^="sec_"]', (el) => `${getComputedStyle(el).backgroundColor}/${getComputedStyle(el).paddingTop}`, { last: false }), { timeout: 20_000 }).toBe('rgb(18, 52, 86)/48px');
+    await expect.poll(async () => frameEval(page, '.sb-top[data-sb-node]', (el) => `${getComputedStyle(el).backgroundColor}/${getComputedStyle(el).paddingTop}`, { last: false }), { timeout: 20_000 }).toBe('rgb(18, 52, 86)/48px');
   } finally {
     await restore(page, before);
   }

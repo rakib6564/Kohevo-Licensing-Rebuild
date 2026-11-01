@@ -81,7 +81,7 @@ test('Page widths are three site-wide sizes: a new Wide reaches the page, and a 
   const form = panel.getByTestId('site-settings');
   const group = form.locator('[data-ss-group="layout"]');
   await group.locator('summary').click();
-  await expect(group).toContainText('Each section picks Default, Narrow, Normal, Wide, Full or a custom width');
+  await expect(group).toContainText('Each Container picks Default, Narrow, Normal, Wide, Full or a custom width');
   const wide = group.locator('.sbx-ss__row', { hasText: 'Wide' }).first().locator('input[type="text"]');
   const save = form.getByTestId('site-settings-save');
   try {

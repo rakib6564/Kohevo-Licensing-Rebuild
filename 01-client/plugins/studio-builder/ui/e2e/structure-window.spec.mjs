@@ -10,27 +10,27 @@ test.afterEach(async ({ page }) => {
   await page.goto(`/plugins/studio-builder/admin/builder.php?page=${sandboxPageId()}&lang=en`);
 });
 
-/** Put one section on the shared sandbox page, run the check, and undo that section again. */
-async function withSection(page, run) {
+/** Put one Container on the shared sandbox page, run the check, and undo that Container again. */
+async function withContainer(page, run) {
   await openBuilder(page);
   await settled(page);
   const canvas = page.frameLocator('iframe.sbx-canvas__frame');
-  const sections = canvas.locator('[data-sb-node^="sec_"]');
+  const tops = canvas.locator('.sb-top[data-sb-node]');
   await expect(canvas.locator('body')).toBeAttached();
   await page.waitForTimeout(1500);
-  const initial = await sections.count();
+  const initial = await tops.count();
   await page.getByRole('tab', { name: /^Add$/ }).click();
-  await page.getByRole('tab', { name: 'Sections' }).click();
-  await page.locator('#sbx-leftpanel-blocks [data-preset="system-section-team"] .sbx-preset-card__insert').click();
+  await page.getByRole('tab', { name: 'Containers' }).click();
+  await page.locator('#sbx-leftpanel-blocks [data-preset="system-container-team"] .sbx-preset-card__insert').click();
   await settled(page);
-  await expect(sections).toHaveCount(initial + 1);
+  await expect(tops).toHaveCount(initial + 1);
   await expect(canvas.locator('[data-sb-node^="blk_"]').first()).toBeVisible();
   try {
     await run();
   } finally {
     for (let i = 0; i < 16; i++) {
       await settled(page);
-      if ((await sections.count()) <= initial) break;
+      if ((await tops.count()) <= initial) break;
       const undo = page.getByTestId('undo');
       if (!(await undoReady(undo))) break; // nothing left to undo: stop quietly so the test's own error is the one reported
       await undo.click();
@@ -40,7 +40,7 @@ async function withSection(page, run) {
 }
 
 test('the top bar opens a floating outline that can be dragged and closed', async ({ page }) => {
-  await withSection(page, async () => {
+  await withContainer(page, async () => {
     const win = page.getByTestId('structure-window');
     await expect(win).toHaveCount(0);
     await page.getByTestId('toggle-structure').click();
@@ -63,7 +63,7 @@ test('the top bar opens a floating outline that can be dragged and closed', asyn
 });
 
 test('picking a row in the window selects it, and Ctrl+I toggles the window', async ({ page }) => {
-  await withSection(page, async () => {
+  await withContainer(page, async () => {
     await page.locator('body').click({ position: { x: 4, y: 4 } });
     await page.keyboard.press('Control+i');
     const win = page.getByTestId('structure-window');
@@ -76,7 +76,7 @@ test('picking a row in the window selects it, and Ctrl+I toggles the window', as
 });
 
 test('Escape inside the window puts it away', async ({ page }) => {
-  await withSection(page, async () => {
+  await withContainer(page, async () => {
     await page.getByTestId('toggle-structure').click();
     const win = page.getByTestId('structure-window');
     await win.locator('[role="treeitem"]').first().focus();

@@ -422,15 +422,11 @@ unit('shop: catalogue, cart, checkout, payment and the Studio storefront (real M
             // A Product grid on an ordinary page: cards, the visitor's category filter and pages.
             $rt->tenants->runAs(SBSH_TENANT, static fn() => sbsh_as(SBSH_TENANT, static function () use ($rt, $actor): void {
                 $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Shop');
-                $doc['sections'] = [[
-                    'blocks' => [[
+                $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => [[
                         'bindings' => ['items' => ['provider' => 'shop.products']], 'children' => [], 'id' => CanonicalDocumentSchema::newBlockId(),
                         'props' => ['per_page' => 2, 'columns' => 4, 'show_filter' => true, 'heading' => 'Our <shop>'],
                         'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'type' => 'shop.products', 'version' => 1, 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                    ]],
-                    'global_ref' => null, 'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Main',
-                    'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                ]];
+                    ]], 'visibility' => CanonicalDocumentSchema::defaultVisibility()])];
                 $created = $rt->app->createPage($actor, 'Shop', 'shop-all', 'page', 'standalone');
                 $saved = $rt->app->saveDraft($actor, (int) $created['page']['id'], $doc, (int) $created['revision']['id']);
                 $rt->app->publish($actor, (int) $created['page']['id'], (int) $saved['revision']['id']);
@@ -450,15 +446,11 @@ unit('shop: catalogue, cart, checkout, payment and the Studio storefront (real M
             assert_true(str_contains($grid, 'sb-shop-card__choose') && str_contains($grid, 'href="' . $base . '/product/hoodie"'), 'in a grid, a product with options links to its page');
             $rt->tenants->runAs(SBSH_TENANT, static fn() => sbsh_as(SBSH_TENANT, static function () use ($rt, $actor): void {
                 $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Cards');
-                $doc['sections'] = [[
-                    'blocks' => [[
+                $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => [[
                         'bindings' => ['items' => ['provider' => 'shop.products']], 'children' => [], 'id' => CanonicalDocumentSchema::newBlockId(),
                         'props' => ['link_label' => 'Acheter →', 'show_icon' => true, 'icon' => 'heart'],
                         'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'type' => 'shop.products', 'version' => 1, 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                    ]],
-                    'global_ref' => null, 'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Main',
-                    'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                ]];
+                    ]], 'visibility' => CanonicalDocumentSchema::defaultVisibility()])];
                 $created = $rt->app->createPage($actor, 'Cards', 'shop-cards', 'page', 'standalone');
                 $saved = $rt->app->saveDraft($actor, (int) $created['page']['id'], $doc, (int) $created['revision']['id']);
                 $rt->app->publish($actor, (int) $created['page']['id'], (int) $saved['revision']['id']);

@@ -36,6 +36,8 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Mcp;
 
+use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Application\StudioApplicationService;
 use Slate\Module\StudioBuilder\Application\StudioEditorViews;
@@ -254,10 +256,10 @@ final class StudioMcpAdapter
                 self::expectedRevision($a),
             ), $includeDocument),
             'studio_create_global_component' => $this->createComponent($actor, $a, $includeDocument),
-            'studio_detach_global_component' => self::mutation($this->app->detachGlobalSection(
+            'studio_detach_global_component' => self::mutation($this->app->detachGlobalContainer(
                 $actor,
                 self::id($a, 'page_id'),
-                self::nodeId($a, 'section_id', 'sec'),
+                self::nodeId($a, 'container_id'),
                 self::expectedRevision($a),
             ), $includeDocument),
             'studio_rollback' => self::mutation($this->app->rollback(
@@ -344,13 +346,13 @@ final class StudioMcpAdapter
     private function createComponent(StudioActor $actor, array $a, bool $includeDocument): array
     {
         $fromPage = array_key_exists('page_id', $a) && $a['page_id'] !== null ? self::id($a, 'page_id') : null;
-        $sectionId = null;
+        $containerId = null;
         $expected = null;
         if ($fromPage !== null) {
-            $sectionId = self::nodeId($a, 'section_id', 'sec');
-            $expected  = self::expectedRevision($a);
+            $containerId = self::nodeId($a, 'container_id');
+            $expected    = self::expectedRevision($a);
         }
-        $result = $this->app->createGlobalComponent($actor, self::string($a, 'title', 255), self::string($a, 'slug', 191), $fromPage, $sectionId, $expected);
+        $result = $this->app->createGlobalComponent($actor, self::string($a, 'title', 255), self::string($a, 'slug', 191), $fromPage, $containerId, $expected);
         $out = ['component' => $result['component']];
         if (is_array($result['page'] ?? null)) {
             $out += self::mutation(['page' => $result['page'], 'revision' => $result['revision'] ?? [], 'deduplicated' => false], $includeDocument);
@@ -414,22 +416,23 @@ final class StudioMcpAdapter
      */
     public static function outline(array $document): array
     {
-        $sections = [];
-        foreach ((is_array($document['sections'] ?? null) ? $document['sections'] : []) as $section) {
-            if (!is_array($section)) {
+        $document = DocumentUpgrader::structure($document);
+        $containers = [];
+        foreach ((is_array($document['containers'] ?? null) ? $document['containers'] : []) as $container) {
+            if (!is_array($container)) {
                 continue;
             }
-            $sections[] = [
-                'id'         => (string) ($section['id'] ?? ''),
-                'label'      => mb_substr((string) ($section['label'] ?? ''), 0, 80, 'UTF-8'),
-                'global_ref' => isset($section['global_ref']) && is_string($section['global_ref']) ? $section['global_ref'] : null,
-                'blocks'     => self::outlineBlocks(is_array($section['blocks'] ?? null) ? $section['blocks'] : []),
+            $containers[] = [
+                'id'         => (string) ($container['id'] ?? ''),
+                'label'      => mb_substr((string) ($container['metadata']['label'] ?? ''), 0, 80, 'UTF-8'),
+                'global_ref' => isset($container['global_ref']) && is_string($container['global_ref']) ? $container['global_ref'] : null,
+                'children'   => self::outlineBlocks(is_array($container['children'] ?? null) ? $container['children'] : []),
             ];
         }
         return [
             'document_type' => (string) ($document['document_type'] ?? ''),
             'template_key'  => (string) ($document['template_key'] ?? ''),
-            'sections'      => $sections,
+            'containers'    => $containers,
         ];
     }
 
@@ -569,8 +572,7 @@ final class StudioMcpAdapter
             $operation = DocumentOperation::fromArray($op);
             // Layer locks are a human decision: an assistant may name layers but can never lock or unlock them
             // (otherwise it could lift a lock and then edit the layer it protects).
-            if ($operation->op === DocumentOperation::OP_UPDATE_SECTION_LOCKED
-                || ($operation->op === DocumentOperation::OP_UPDATE_BLOCK_META && array_key_exists('locked', $operation->payload))) {
+            if ($operation->op === DocumentOperation::OP_UPDATE_BLOCK_META && array_key_exists('locked', $operation->payload)) {
                 throw self::invalid("operations[{$i}]", 'lock_not_permitted', 'Layer locks are set by people in the builder; an assistant cannot lock or unlock layers.');
             }
             self::assertIdShapes($operation, $i);
@@ -582,15 +584,13 @@ final class StudioMcpAdapter
     /** Node ids named in an operation payload must have the canonical shape before the applier sees them. */
     private static function assertIdShapes(DocumentOperation $op, int $i): void
     {
-        $checks = [
-            'section_id' => '/^sec_[a-z0-9]{16,32}$/',
-            'block_id'   => '/^blk_[a-z0-9]{16,32}$/',
-            'parent_id'  => '/^(sec|blk)_[a-z0-9]{16,32}$/',
-        ];
-        foreach ($checks as $key => $pattern) {
+        foreach (['block_id', 'parent_id'] as $key) {
             if (array_key_exists($key, $op->payload)) {
                 $value = $op->payload[$key];
-                if (!is_string($value) || preg_match($pattern, $value) !== 1) {
+                if ($key === 'parent_id' && $value === null) {
+                    continue; // the top level of the page
+                }
+                if (!is_string($value) || preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $value) !== 1) {
                     throw self::invalid("operations[{$i}].payload.{$key}", 'invalid_field', "{$key} must be a canonical node id.");
                 }
             }
@@ -629,10 +629,10 @@ final class StudioMcpAdapter
     }
 
     /** @param array<string, mixed> $a */
-    private static function nodeId(array $a, string $key, string $prefix = 'sec|blk'): string
+    private static function nodeId(array $a, string $key): string
     {
         $value = self::string($a, $key, 64);
-        if (preg_match('/^(' . $prefix . ')_[a-z0-9]{16,32}$/', $value) !== 1) {
+        if (preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $value) !== 1) {
             throw self::invalid($key, 'invalid_field', "{$key} must be a canonical node id.");
         }
         return $value;

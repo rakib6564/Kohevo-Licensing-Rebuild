@@ -42,8 +42,8 @@ function sbhp_blocks(array $document): array
             $walk(is_array($b['children'] ?? null) ? $b['children'] : [], $shown);
         }
     };
-    foreach ($document['sections'] as $s) {
-        $walk($s['blocks'], CanonicalDocumentSchema::ALLOWED_BREAKPOINTS);
+    foreach ($document['containers'] as $s) {
+        $walk($s['children'], CanonicalDocumentSchema::ALLOWED_BREAKPOINTS);
     }
     return $out;
 }
@@ -61,7 +61,7 @@ unit('header presets: six headers with unique, reserved keys and one-line copy',
         assert_true(mb_strlen($p['description']) <= 80, "{$p['key']} description stays one line");
         assert_eq($p, HeaderPresetCatalog::find($p['key']), "find() returns {$p['key']}");
     }
-    assert_eq(null, HeaderPresetCatalog::find('system-section-hero-classic'), 'find() only knows headers');
+    assert_eq(null, HeaderPresetCatalog::find('system-container-hero-classic'), 'find() only knows headers');
 });
 
 unit('header presets: every header validates through the real pipeline as a header document, idempotently', function (): void {
@@ -73,9 +73,9 @@ unit('header presets: every header validates through the real pipeline as a head
         assert_eq('header_partial', $once['document_type']);
         assert_eq('header', $once['settings']['template_type'] ?? null, "{$p['key']} is a header");
         assert_true(!isset($once['settings']['conditions']), "{$p['key']} carries no display conditions: using it never activates it");
-        foreach ($once['sections'] as $s) {
+        foreach ($once['containers'] as $s) {
             assert_true(empty($s['global_ref']), "{$p['key']} owns its content");
-            assert_eq(['base' => 1, 'md' => 1], $s['layout']['columns'], "{$p['key']} section {$s['label']} is one column wide");
+            assert_false(($s['style']['layout']['display'] ?? 'flex') === 'grid' && ($s['style']['layout']['columns'] ?? 1) !== 1, "{$p['key']} top-level Container is one column wide");
         }
     }
 });
@@ -125,9 +125,9 @@ unit('header presets: deterministic, with unique ids and drawer ids that are val
     foreach (HeaderPresetCatalog::all() as $p) {
         assert_eq($first[$p['key']], CanonicalJson::encode($p['document']), "{$p['key']} is stable across rebuilds");
         $ids = array_map(static fn(array $e): string => (string) $e['block']['id'], sbhp_blocks($p['document']));
-        foreach ($p['document']['sections'] as $s) {
+        foreach ($p['document']['containers'] as $s) {
             $ids[] = (string) $s['id'];
-            assert_true(preg_match(CanonicalDocumentSchema::SECTION_ID_PATTERN, (string) $s['id']) === 1, "{$p['key']} section id");
+            assert_true(preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, (string) $s['id']) === 1, "{$p['key']} Container id");
         }
         assert_eq(count($ids), count(array_unique($ids)), "{$p['key']} ids are unique");
         foreach (sbhp_blocks($p['document']) as $entry) {
