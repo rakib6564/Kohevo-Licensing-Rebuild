@@ -271,6 +271,9 @@ class StudioBuilder extends Plugin
         return array_merge($items, [
             ['slug' => 'studio-templates', 'label' => $t('studio_nav_templates', 'Templates'), 'file' => 'admin/templates.php', 'icon' => 'layout', 'section' => $site],
             ['slug' => 'studio-menus', 'label' => $t('studio_nav_menus', 'Menus'), 'file' => 'admin/menus.php', 'icon' => 'list', 'section' => $site],
+            ['slug' => 'studio-site-mode', 'label' => $t('studio_nav_site_mode', 'Maintenance Mode'), 'file' => 'admin/site-mode.php', 'icon' => 'shield', 'section' => $site],
+            ['slug' => 'studio-saved-templates', 'label' => $t('studio_nav_saved_templates', 'Saved Templates'), 'file' => 'admin/saved-templates.php', 'icon' => 'layout', 'section' => $site],
+            ['slug' => 'studio-reading', 'label' => $t('studio_nav_reading', 'Reading'), 'file' => 'admin/reading.php', 'icon' => 'book', 'section' => $site],
             // Colours, fonts, widths and custom CSS are edited in the builder (Settings › Site); this opens it there.
             ['slug' => 'studio-design', 'label' => $t('studio_nav_design', 'Design'), 'file' => 'admin/themes.php', 'icon' => 'palette', 'section' => $site],
             ['slug' => 'studio-seo', 'label' => $t('studio_nav_seo', 'SEO'), 'file' => 'admin/seo.php', 'icon' => 'globe', 'section' => $search],
@@ -316,6 +319,9 @@ class StudioBuilder extends Plugin
         }
         \Slate\Module\StudioBuilder\Runtime\StudioScheduledPublisher::runSoon();
         $runtime = StudioRuntimeFactory::build()->publicRuntime;
+        if (!in_array(trim((string) $path, '/'), ['robots.txt', 'sitemap.xml'], true) && ($closed = self::closedSite($runtime)) !== null) {
+            return self::send($closed);
+        }
         // A browser is shown the sitemap as a readable page; `?format=xml` (the page's own link) always returns the XML.
         $accept = isset($_SERVER['HTTP_ACCEPT']) && is_string($_SERVER['HTTP_ACCEPT']) && ($_GET['format'] ?? '') !== 'xml'
             ? substr($_SERVER['HTTP_ACCEPT'], 0, 400) : null;
@@ -354,7 +360,23 @@ class StudioBuilder extends Plugin
             return false;
         }
         $runtime = StudioRuntimeFactory::build()->publicRuntime;
+        $closed = self::closedSite($runtime);
+        if ($closed !== null) {
+            return self::send($closed);
+        }
         return self::send(self::publicResponse(static fn(?string $ifNoneMatch) => $runtime->handleHomepage($ifNoneMatch)));
+    }
+
+    /** The Coming Soon or Maintenance answer for this visitor, or null when the site is open to them. */
+    private static function closedSite(\Slate\Module\StudioBuilder\Runtime\StudioPublicRuntime $runtime): ?\Slate\Module\StudioBuilder\Runtime\PublicResponse
+    {
+        $response = $runtime->siteModeResponse();
+        if ($response === null) {
+            return null;
+        }
+        $mode = \Slate\Module\StudioBuilder\Meta\SiteMode::read((int) current_tenant_id());
+        $passes = \Auth::check() && ($mode['access'] === 'logged_in' || \Auth::can('studio-builder.edit') || \Auth::isSuperAdmin());
+        return $passes ? null : $response;
     }
 
     /**

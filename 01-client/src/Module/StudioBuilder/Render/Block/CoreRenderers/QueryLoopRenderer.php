@@ -39,6 +39,11 @@ final class QueryLoopRenderer implements BlockRendererInterface
     {
         $rows = $scope->rows('items');
         $perPage = max(1, (int) $scope->prop('per_page', 6));
+        // An archive's own list follows Reading; a loop of another content type on the template keeps its number.
+        $archiveItems = (int) $scope->context()->attribute('archive_items', 0);
+        if ($archiveItems > 0 && in_array($scope->string('content_type', ''), ['', (string) $scope->context()->attribute('content_type', '')], true)) {
+            $perPage = $archiveItems;
+        }
         $currentPage = self::currentPage($scope);
 
         // If no binding slot provided rows, execute PostsProvider directly

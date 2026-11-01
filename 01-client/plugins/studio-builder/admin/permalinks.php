@@ -66,14 +66,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     AuditLog::record('studio.post_type_route_changed', (string) $tenantId, ['key' => $key, 'route' => $type['route']]);
                 }
             }
-            sb_flash_redirect('permalinks.php', ['type' => 'success', 'msg' => __('studio_permalinks_saved', 'Permalinks saved. If you changed a base, items no longer open at their old addresses: add Redirects for any you need to keep.')]);
+            sb_flash_redirect('permalinks.php', ['type' => 'success', 'msg' => __('studio_permalinks_saved', 'Permalinks saved.')]);
         }
     }
 }
 $flash = $flash ?? sb_take_flash();
 
-$slash = (string) Database::setting(PageRoutes::SETTING_TRAILING_SLASH, $tenantId) === '1';
+$slash = isset($_POST['trailing_slash']) ? !empty($_POST['trailing_slash']) : (string) Database::setting(PageRoutes::SETTING_TRAILING_SLASH, $tenantId) === '1';
 $dis = $canEdit ? '' : ' disabled';
+$site = rtrim((string) preg_replace('~^https?://~', '', (string) SLATE_URL), '/') . '/';
+$end = $slash ? '/' : '';
+$sample = __('studio_permalinks_sample', 'item-slug');
+$counts = array_count_values(array_map('strval', PageMeta::typesByPage($tenantId)));
 
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
@@ -85,45 +89,99 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <div class="sb-screen-head">
         <div>
             <h2><?= e(__('studio_permalinks_heading', 'Permalinks')) ?></h2>
-            <p><?= e(__('studio_permalinks_intro', 'How the addresses of your pages and content are formed. A page lives at /its-slug; an item lives under its content type’s base.')) ?></p>
+            <p><?= e(__('studio_permalinks_intro', 'Choose how the addresses of your pages and content look.')) ?></p>
         </div>
     </div>
 
-    <form method="post" class="sb-card">
+    <form method="post" class="sb-permalinks" data-testid="permalinks-form">
         <?= csrf_field() ?>
 
-        <div class="sb-field">
-            <span class="sb-field__label"><?= e(__('studio_permalinks_bases', 'Content type addresses')) ?></span>
-            <?php foreach ($types as $key => $type): ?>
-                <?php $name = (string) $type['plural']; ?>
-                <div class="sb-field">
-                    <?php if (!empty($type['rewrite'])): ?>
-                        <label class="sb-field__label" for="sb-base-<?= e((string) $key) ?>"><?= e($name) ?></label>
-                        <input type="text" class="form-control" id="sb-base-<?= e((string) $key) ?>" name="base[<?= e((string) $key) ?>]" maxlength="120" value="<?= e('/' . trim((string) ($posted[$key] ?? $type['rewrite_slug']), '/')) ?>"<?= $dis ?>>
-                        <p class="sb-field__hint"><code><?= e('/' . trim((string) $type['rewrite_slug'], '/') . '/' . __('studio_permalinks_sample', 'item-slug') . ($slash ? '/' : '')) ?></code></p>
-                    <?php else: ?>
-                        <span class="sb-field__label"><?= e($name) ?></span>
-                        <p class="sb-field__hint"><code><?= e('/' . __('studio_permalinks_sample', 'item-slug') . ($slash ? '/' : '')) ?></code> · <a href="post-type-edit.php?key=<?= e(rawurlencode((string) $key)) ?>"><?= e(__('studio_permalinks_edit_type', 'Rewrite is off for this type')) ?></a></p>
-                    <?php endif; ?>
+        <section class="sb-card sb-form-card">
+            <div class="sb-card__head">
+                <div>
+                    <div class="sb-card__title"><?= e(__('studio_permalinks_bases', 'Content addresses')) ?></div>
+                    <p class="sb-card__sub"><?= e(__('studio_permalinks_bases_sub', 'Each content type keeps its items under one base.')) ?></p>
                 </div>
-            <?php endforeach; ?>
-            <?php if ($types === []): ?>
-                <p class="sb-field__hint"><?= e(__('studio_permalinks_no_types', 'No content types yet. Pages live at /their-slug.')) ?></p>
-            <?php endif; ?>
-        </div>
+            </div>
 
-        <div class="sb-field">
-            <label class="sb-check" for="sb-trailing-slash" style="display: flex; gap: 8px; align-items: flex-start;">
-                <input type="checkbox" name="trailing_slash" id="sb-trailing-slash" value="1" <?= $slash ? 'checked' : '' ?><?= $dis ?>>
-                <span><?= e(__('studio_seo_trailing_slash', 'Page addresses end with a slash')) ?> (<code>/contact/</code>)</span>
-            </label>
-            <p class="sb-field__hint"><?= e(__('studio_seo_trailing_slash_hint', 'Both forms open the page; this sets the one in canonical tags, the sitemap and post links. Turn it on for a site moved from WordPress, so search engines keep the addresses they know.')) ?></p>
-        </div>
+            <div class="sb-url-list">
+                <div class="sb-url-row">
+                    <div class="sb-url-row__name"><strong><?= e(__('studio_permalinks_pages', 'Pages')) ?></strong></div>
+                    <div class="sb-url-preview"><span class="sb-url-preview__site"><?= e($site) ?></span><?= e(__('studio_permalinks_page_sample', 'page-slug')) ?><span data-slash><?= e($end) ?></span></div>
+                </div>
+                <?php foreach ($types as $key => $type): ?>
+                    <?php
+                    $key = (string) $key;
+                    $count = (int) ($counts[$key] ?? 0);
+                    $saved = trim((string) $type['rewrite_slug'], '/');
+                    ?>
+                    <div class="sb-url-row">
+                        <div class="sb-url-row__name">
+                            <label for="sb-base-<?= e($key) ?>"><strong><?= e((string) $type['plural']) ?></strong></label>
+                            <a href="pages.php?type=<?= e(rawurlencode($key)) ?>"><?= e(sprintf($count === 1 ? __('studio_permalinks_one_item', '%d item') : __('studio_permalinks_items', '%d items'), $count)) ?></a>
+                        </div>
+                        <?php if (!empty($type['rewrite'])): ?>
+                            <div>
+                                <div class="sb-url-input">
+                                    <span class="sb-url-input__site"><?= e($site) ?></span>
+                                    <input type="text" id="sb-base-<?= e($key) ?>" name="base[<?= e($key) ?>]" maxlength="120" spellcheck="false" autocomplete="off" value="<?= e(trim((string) ($posted[$key] ?? $saved), '/')) ?>" data-saved="<?= e($saved) ?>" aria-describedby="sb-base-<?= e($key) ?>-warn"<?= $dis ?>>
+                                    <span class="sb-url-input__end">/<?= e($sample) ?><span data-slash><?= e($end) ?></span></span>
+                                </div>
+                                <p class="sb-url-warn" id="sb-base-<?= e($key) ?>-warn" role="status" hidden>
+                                    <?= e($count > 0 ? sprintf($count === 1 ? __('studio_permalinks_warn_one', 'This item stops opening at its old address.') : __('studio_permalinks_warn', 'These %d items stop opening at their old addresses.'), $count) : __('studio_permalinks_warn_none', 'This changes the base for new items.')) ?>
+                                    <?php if ($count > 0): ?><a href="redirects.php"><?= e(__('studio_permalinks_warn_link', 'Set up redirects')) ?></a><?php endif; ?>
+                                </p>
+                            </div>
+                        <?php else: ?>
+                            <div class="sb-url-preview"><span class="sb-url-preview__site"><?= e($site) ?></span><?= e($sample) ?><span data-slash><?= e($end) ?></span> <a href="post-type-edit.php?key=<?= e(rawurlencode($key)) ?>"><?= e(__('studio_permalinks_edit_type', 'Add a base')) ?></a></div>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <?php if ($types === []): ?>
+                <p class="sb-card__note"><?= e(__('studio_permalinks_no_types', 'Content types you add appear here.')) ?> <a href="types-fields.php"><?= e(__('studio_nav_content_types', 'Content types')) ?></a></p>
+            <?php endif; ?>
+        </section>
+
+        <section class="sb-card sb-form-card">
+            <div class="sb-card__head">
+                <div>
+                    <div class="sb-card__title"><?= e(__('studio_permalinks_format', 'Address ending')) ?></div>
+                    <p class="sb-card__sub"><?= e(__('studio_permalinks_format_sub', 'Both forms open the page. This sets the one used in links, canonical tags and the sitemap.')) ?></p>
+                </div>
+            </div>
+            <div class="sb-url-choices" role="radiogroup" aria-label="<?= e(__('studio_permalinks_format', 'Address ending')) ?>">
+                <label class="sb-url-choice">
+                    <input type="radio" name="trailing_slash" value="1" <?= $slash ? 'checked' : '' ?><?= $dis ?>>
+                    <span><strong><?= e(__('studio_permalinks_slash', 'With a slash')) ?></strong><code>/contact/</code><small><?= e(__('studio_permalinks_slash_hint', 'For a site moved from WordPress, so search engines keep the addresses they know.')) ?></small></span>
+                </label>
+                <label class="sb-url-choice">
+                    <input type="radio" name="trailing_slash" value="0" <?= $slash ? '' : 'checked' ?><?= $dis ?>>
+                    <span><strong><?= e(__('studio_permalinks_no_slash', 'Without a slash')) ?></strong><code>/contact</code><small><?= e(__('studio_permalinks_no_slash_hint', 'Shorter addresses, for a new site.')) ?></small></span>
+                </label>
+            </div>
+        </section>
 
         <?php if ($canEdit): ?>
-            <button type="submit" class="btn btn-primary"><?= e(__('save_changes', 'Save changes')) ?></button>
+            <div class="sb-url-save">
+                <button type="submit" class="btn btn-primary"><?= e(__('save_changes', 'Save changes')) ?></button>
+            </div>
         <?php endif; ?>
     </form>
 </div>
+
+<script>
+(function () {
+    var form = document.querySelector('[data-testid="permalinks-form"]');
+    form.addEventListener('input', function (event) {
+        var target = event.target;
+        if (target.name === 'trailing_slash') {
+            form.querySelectorAll('[data-slash]').forEach(function (el) { el.textContent = target.value === '1' ? '/' : ''; });
+        } else if (target.hasAttribute('data-saved')) {
+            document.getElementById(target.id + '-warn').hidden = target.value.replace(/^\/+|\/+$/g, '') === target.dataset.saved;
+        }
+    });
+})();
+</script>
 
 <?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>

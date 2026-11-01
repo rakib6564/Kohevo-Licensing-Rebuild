@@ -31,7 +31,10 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Runtime;
 
+use Slate\Module\StudioBuilder\Meta\ReadingSettings;
+use Slate\Module\StudioBuilder\Meta\SiteMode;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
+use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Meta\PageRoutes;
 use Slate\Module\StudioBuilder\Meta\PostTypeSettings;
@@ -130,6 +133,7 @@ final class StudioPublicRuntime
             return null;
         }
         return $this->movedUnderPrefix($slug)
+            ?? $this->postsPage($slug, $ifNoneMatch)
             ?? $this->serve(fn(): ?array => $this->findPublishedBySlug($slug), $ifNoneMatch)
             ?? $this->typeArchive($trimmedPath, $ifNoneMatch);
     }
@@ -143,15 +147,51 @@ final class StudioPublicRuntime
         if ($this->themeTemplates === null || !$this->tenants->isScoped() || $this->tenants->id() <= 0) {
             return null;
         }
-        $tenantId = $this->tenants->id();
         try {
-            $key = PageRoutes::archiveType($tenantId, $path);
-            $type = $key !== '' ? (PageMeta::postTypes($tenantId)[$key] ?? null) : null;
+            $key = PageRoutes::archiveType($this->tenants->id(), $path);
         } catch (\Throwable $e) {
             self::log('type-archive', $e);
             return null;
         }
-        if ($type === null || $this->reserved->isReserved(explode('/', trim($path, '/'))[0])) {
+        if ($key === '' || $this->reserved->isReserved(explode('/', trim($path, '/'))[0])) {
+            return null;
+        }
+        return $this->archiveOfType($key, $ifNoneMatch);
+    }
+
+    /** Whether a published Archive template can show a content type's list. For the Reading screen. */
+    public function hasTypeArchive(string $key): bool
+    {
+        return $this->resolveThemeTemplate(fn(ThemeTemplateResolver $t): ?array => $t->resolveArchive('content_type', $key, ['content_type' => $key])) !== null;
+    }
+
+    /** The page Reading names as the posts page lists the posts instead of its own content; without a template it stays a page. */
+    private function postsPage(string $slug, ?string $ifNoneMatch): ?PublicResponse
+    {
+        if (!$this->tenants->isScoped() || $this->tenants->id() <= 0) {
+            return null;
+        }
+        $reading = ReadingSettings::read($this->tenants->id());
+        if ($reading['posts_page'] <= 0 || $reading['posts_type'] === '' || (int) ($this->findPublishedBySlug($slug)['id'] ?? 0) !== $reading['posts_page']) {
+            return null;
+        }
+        return $this->archiveOfType($reading['posts_type'], $ifNoneMatch);
+    }
+
+    /** A content type's list, shown by the Archive template; null when the type is gone or no such template is published. */
+    private function archiveOfType(string $key, ?string $ifNoneMatch): ?PublicResponse
+    {
+        if ($this->themeTemplates === null || !$this->tenants->isScoped() || $this->tenants->id() <= 0) {
+            return null;
+        }
+        $tenantId = $this->tenants->id();
+        try {
+            $type = PageMeta::postTypes($tenantId)[$key] ?? null;
+        } catch (\Throwable $e) {
+            self::log('type-archive', $e);
+            return null;
+        }
+        if ($type === null) {
             return null;
         }
         $label = PostTypeSettings::label($type, 'archives');
@@ -164,6 +204,7 @@ final class StudioPublicRuntime
             'term'         => $label,
             'archive_description' => (string) ($type['description'] ?? ''),
             'content_type' => $key,
+            'archive_items' => ReadingSettings::read($tenantId)['archive_items'],
         ]);
     }
 
@@ -207,8 +248,51 @@ final class StudioPublicRuntime
         }
     }
 
+    /**
+     * What a visitor gets while the site is in Coming Soon or Maintenance mode, or null while it is live. A person who
+     * may pass is decided by the caller, which has the session. Never cached: the same address serves the real page again
+     * the moment the mode ends.
+     */
+    public function siteModeResponse(): ?PublicResponse
+    {
+        if (!$this->tenants->isScoped() || $this->tenants->id() <= 0 || !$this->isEntitled($this->tenants->id(), self::ENTITLEMENT_KEY)) {
+            return null;
+        }
+        $mode = SiteMode::read($this->tenants->id());
+        if ($mode['mode'] === SiteMode::OFF) {
+            return null;
+        }
+        $status = $mode['mode'] === SiteMode::MAINTENANCE ? 503 : 200;
+        $headers = ['Cache-Control' => 'no-store'] + ($status === 503 ? ['Retry-After' => '3600'] : []);
+        $response = null;
+        try {
+            $row = $mode['template'] > 0 ? $this->pages->find($mode['template']) : null;
+            $response = $row !== null ? $this->serveTemplate(PageAddress::fromRow($row), null, $status) : null;
+        } catch (\Throwable $e) {
+            self::log('site mode', $e);
+        }
+        if ($response !== null && $response->status === $status) {
+            return $response->withHeaders($headers);
+        }
+        // No usable template: the site still stays closed.
+        $body = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>'
+            . Html::e($this->renderer->siteContext()->siteName) . '</title></head><body style="margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,sans-serif;text-align:center"><main><h1>'
+            . Html::e($this->renderer->siteContext()->siteName) . '</h1></main></body></html>';
+        $headers['Content-Type'] = 'text/html; charset=utf-8';
+        return $status === 503 ? PublicResponse::unavailable($headers, $body) : PublicResponse::ok($headers, $body);
+    }
+
     public function handleHomepage(?string $ifNoneMatch = null): ?PublicResponse
     {
+        if ($this->tenants->isScoped() && $this->tenants->id() > 0) {
+            $reading = ReadingSettings::read($this->tenants->id());
+            if ($reading['home'] === 'posts' && $reading['posts_type'] !== '') {
+                $latest = $this->archiveOfType($reading['posts_type'], $ifNoneMatch);
+                if ($latest !== null) {
+                    return $latest;
+                }
+            }
+        }
         return $this->serve(fn(): ?array => $this->pages->findPublishedHomepage(StudioRenderService::PUBLIC_PAGE_TYPES), $ifNoneMatch);
     }
 
@@ -266,6 +350,7 @@ final class StudioPublicRuntime
         return $this->serveTemplate($page, $ifNoneMatch, 200, [
             'archive_type' => $type,
             'term'         => $term,
+            'archive_items' => ReadingSettings::read($this->tenants->id())['archive_items'],
             'category'     => $type === 'category' ? $term : '',
             'tag'          => $type === 'tag' ? $term : '',
         ]);
@@ -403,7 +488,7 @@ final class StudioPublicRuntime
             $path = substr($path, 0, $q);
         }
         $path = trim($path, '/');
-        return ($path === 'robots.txt' || $path === 'sitemap.xml') ? $path : null;
+        return in_array($path, ['robots.txt', 'sitemap.xml', 'feed'], true) ? $path : null;
     }
 
     private function serveSeoFile(string $file, ?string $ifNoneMatch, ?string $accept = null): ?PublicResponse
@@ -418,7 +503,10 @@ final class StudioPublicRuntime
         $readable = false;
         try {
             $site = $this->sitemap->site();
-            if ($file === 'robots.txt') {
+            if ($file === 'feed') {
+                $type = 'application/rss+xml; charset=utf-8';
+                $body = StudioFeed::xml($this->tenants, $site);
+            } elseif ($file === 'robots.txt') {
                 $type = 'text/plain; charset=utf-8';
                 $body = StudioSitemapService::robotsTxt($site);
             } else {
@@ -447,6 +535,9 @@ final class StudioPublicRuntime
             'Cache-Control'          => 'public, no-cache',
             'ETag'                   => '"' . $etag . '"',
         ];
+        if ($file === 'feed' && str_starts_with($site->seo->robotsFor('index,follow'), 'noindex')) {
+            $headers['X-Robots-Tag'] = 'noindex';
+        }
         if ($file === 'sitemap.xml') {
             // The same address has two representations; a cache must not hand a crawler the page, or a browser the XML.
             $headers['Vary'] = 'Accept';
@@ -549,9 +640,11 @@ final class StudioPublicRuntime
         if ($result->etag !== null && $ifNoneMatch !== null && self::etagMatches($ifNoneMatch, $result->etag)) {
             return PublicResponse::notModified($headers);
         }
-        return $statusCode === 404
-            ? PublicResponse::notFound($headers, $result->html)
-            : PublicResponse::ok($headers, $result->html);
+        return match ($statusCode) {
+            404 => PublicResponse::notFound($headers, $result->html),
+            503 => PublicResponse::unavailable($headers, $result->html),
+            default => PublicResponse::ok($headers, $result->html),
+        };
     }
 
     /**

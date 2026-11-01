@@ -310,7 +310,7 @@ final class DocumentValidator
             $errors[] = ValidationResult::issue('$.settings.tags', 'invalid_tags', 'Invalid settings.tags value.');
         }
 
-        if (isset($settings['template_type']) && (!is_string($settings['template_type']) || !in_array($settings['template_type'], ['loop', 'header', 'footer', 'single', 'archive', 'search', '404', 'not_found', 'default', 'custom', 'page_template'], true))) {
+        if (isset($settings['template_type']) && (!is_string($settings['template_type']) || !in_array($settings['template_type'], ['loop', 'maintenance', 'header', 'footer', 'single', 'archive', 'search', '404', 'not_found', 'default', 'custom', 'page_template'], true))) {
             $errors[] = ValidationResult::issue('$.settings.template_type', 'invalid_template_type', 'Invalid settings.template_type value.');
         }
 

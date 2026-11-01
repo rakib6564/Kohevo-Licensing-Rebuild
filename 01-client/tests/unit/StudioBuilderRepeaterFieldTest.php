@@ -7,7 +7,10 @@ declare(strict_types=1);
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\DocumentNormalizer;
+use Slate\Module\StudioBuilder\Application\SiteModeTemplates;
 use Slate\Module\StudioBuilder\Meta\LoopTemplates;
+use Slate\Module\StudioBuilder\Meta\SiteMode;
+use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 use Slate\Module\StudioBuilder\Operation\DocumentOperation;
 use Slate\Module\StudioBuilder\Operation\DocumentOperationApplier;
 use Slate\Module\StudioBuilder\Meta\MetaFieldTypes;
@@ -183,6 +186,23 @@ unit('dynamic tags: values stay safe, and images, buttons and repeater rows take
     $definition = BlockRegistry::withAllCoreBlocks()->get('core.icon_list');
     assert_true(DynamicTags::fieldAt($definition, 'items.0.text') !== null && DynamicTags::fieldAt($definition, 'items.0.nope') === null);
     assert_true(DynamicTags::fieldAt(BlockRegistry::withAllCoreBlocks()->get('core.heading'), 'highlight') === null, 'a word to match is no place for a tag');
+});
+
+unit('reading: feed items are escaped, and the settings stay inside their limits', function (): void {
+    $source = (string) file_get_contents(SLATE_ROOT . '/src/Module/StudioBuilder/Runtime/StudioFeed.php');
+    assert_true(str_contains($source, 'ENT_XML1') && str_contains($source, 'RichTextSanitizer::sanitize'));
+    assert_true(in_array('feed', \Slate\Module\StudioBuilder\Runtime\StudioReservedRoutes::RESERVED, true), 'no page can sit on the feed address');
+    $screen = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/admin/reading.php');
+    assert_true(str_contains($screen, 'csrf_verify()') && str_contains($screen, 'studio-builder.publish') && str_contains($screen, 'updatePageAddress'));
+});
+
+unit('site mode: the prebuilt templates are valid documents, branded by tags and without site chrome', function (): void {
+    foreach ([SiteMode::COMING_SOON, SiteMode::MAINTENANCE] as $mode) {
+        $document = DocumentNormalizer::validateAndNormalize(SiteModeTemplates::document($mode), ModuleBlockDefinitions::studioRegistry());
+        assert_eq('maintenance', $document['settings']['template_type']);
+        assert_eq('hidden', $document['settings']['header_mode']);
+        assert_eq('site_logo', $document['containers'][0]['children'][0]['dynamic']['media']['tag']);
+    }
 });
 
 unit('dynamic tags: the validator refuses a bad map, a required setting can be left to its tag, and older props become tags', function (): void {
