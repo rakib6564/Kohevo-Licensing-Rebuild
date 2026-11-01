@@ -319,7 +319,7 @@ class StudioBuilder extends Plugin
         }
         \Slate\Module\StudioBuilder\Runtime\StudioScheduledPublisher::runSoon();
         $runtime = StudioRuntimeFactory::build()->publicRuntime;
-        if (!in_array(trim((string) $path, '/'), ['robots.txt', 'sitemap.xml'], true) && ($closed = self::closedSite($runtime)) !== null) {
+        if (!in_array(trim((string) $path, '/'), ['robots.txt', 'sitemap.xml', 'sitemap_index.xml', 'llms.txt'], true) && ($closed = self::closedSite($runtime)) !== null) {
             return self::send($closed);
         }
         // A browser is shown the sitemap as a readable page; `?format=xml` (the page's own link) always returns the XML.

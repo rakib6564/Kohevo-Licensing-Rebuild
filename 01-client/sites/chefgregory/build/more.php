@@ -13,7 +13,7 @@ build_page('help-us-help-you', 'Help Us Help You', 'page', 'standalone', [
             EYE('The Questionnaire'),
             H('Share Your Vision', 'h2', '46px', '34px'),
             P('This questionnaire will help you and your event coordinator get on the same page more quickly. If you are planning an event within the next year and would like a proposal so you can see the bottom line, it helps your event planner to have some background before contacting you.'),
-            B('core.form', ['form_name' => 'Help Us Help You', 'submit_text' => 'Send My Event Details', 'submit_variant' => 'primary', 'success_message' => 'Thank you for choosing Chef Gregory’s. We look forward to serving you and your guests.'], [
+            B('core.form', ['form_name' => 'Help Us Help You', 'notify_email' => 'chef@chefgregory.com', 'submit_text' => 'Send My Event Details', 'submit_variant' => 'primary', 'success_message' => 'Thank you for choosing Chef Gregory’s. We look forward to serving you and your guests.'], [
                 $part('About You'),
                 $f('text', 'name', 'Your name', '50', true), $f('text', 'company', 'Your company, if applicable'),
                 $f('email', 'email', 'Email', '50', true), $f('tel', 'mobile', 'Mobile'),

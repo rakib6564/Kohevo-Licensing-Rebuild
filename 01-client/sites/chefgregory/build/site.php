@@ -68,15 +68,7 @@ say('  + content types');
 // ── Items ──────────────────────────────────────────────────────────────────────
 $tops = static fn(array $list, array $mlist, int $from, ?int $to = null): array => array_map(static fn(array $t, ?array $m): array => top($t, $m), array_slice($list, $from, $to), array_slice($mlist, $from, $to) + array_fill(0, count(array_slice($list, $from, $to)), null));
 
-// Every catering area sits under /catering/; the live site's flat addresses answer with a 301 to it.
-$areas = array_values(array_filter(array_keys($CAP), static fn($u) => preg_match('~^/(catering/.+|catering-in-.+|paso-robles-wedding-catering/)$~', $u)));
-$redirects = [];
-foreach ($areas as $u) {
-    $slug = preg_replace('~^catering-in-~', '', basename($u));
-    if (!str_starts_with($u, '/catering/')) { $redirects[] = ['from' => rtrim($u, '/'), 'to' => "/catering/{$slug}/", 'code' => 301]; }
-}
-$redirects[] = ['from' => '/contact/help-us-help-you', 'to' => '/help-us-help-you/', 'code' => 301];
-Database::setSetting('studio_redirects', json_encode($redirects, JSON_UNESCAPED_SLASHES), $tid);
+Database::setSetting('studio_redirects', '[]', $tid);
 
 // ── Pages ──────────────────────────────────────────────────────────────────────
 $pages = array_values(array_filter(array_keys($CAP), static fn($u) => !preg_match('~^/(service/.+|blog-post/.+|recipe/.+|catering/.+|catering-in-.+|paso-robles-wedding-catering/)$~', $u)));
@@ -91,3 +83,9 @@ foreach ($pages as $u) {
 require __DIR__ . '/thanksgiving.php';
 
 require __DIR__ . '/design.php';
+
+// Addresses that follow no one pattern stay exactly as on the live site.
+$own = ['' . (int) Database::value("SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND slug = 'help-us-help-you' AND page_type = 'page' AND status <> 'archived'", [$tid]) => 'contact'];
+foreach ($AREAPAGES as $slug => $flat) { if ($flat) { $own[(string) $AREAIDS[$slug]] = ''; } }
+Database::setSetting(PageRoutes::SETTING_PAGE_PREFIXES, json_encode($own), $tid);
+PageRoutes::forget($tid);

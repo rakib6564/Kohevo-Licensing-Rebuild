@@ -89,7 +89,7 @@ function BOOK(): array
 ], ['background' => ['color' => INK, 'image' => IMGREF('2026-06-brisket.webp'), 'fit' => 'cover', 'repeat' => 'no-repeat', 'position' => 'center', 'overlay' => ['color' => 'rgba(29,24,21,.74)']], 'padding' => ['top' => '130px', 'right' => '24px', 'bottom' => '130px', 'left' => '24px'], 'layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '16px', 'align' => 'center', 'content_width' => 'boxed', 'content_max' => '760px']], ['mobile' => ['style' => ['padding' => ['top' => '84px', 'right' => '20px', 'bottom' => '84px', 'left' => '20px']]]]);
 }
 
-$AREAS = [['Atascadero', '/catering/atascadero/'], ['Paso Robles', '/catering/paso-robles/'], ['Templeton', '/catering/templeton/'], ['San Luis Obispo', '/catering/san-luis-obispo/'], ['Morro Bay', '/catering/morro-bay/'], ['Los Osos', '/catering/los-osos/'], ['Cambria', '/catering/cambria/'], ['Pismo Beach', '/catering/pismo-beach/'], ['Arroyo Grande', '/catering/arroyo-grande/'], ['Nipomo', '/catering/nipomo/'], ['San Miguel', '/catering/san-miguel/']];
+$AREAS = [['Atascadero', '/catering-in-atascadero/'], ['Paso Robles', '/catering/paso-robles/'], ['Templeton', '/catering/templeton/'], ['San Luis Obispo', '/catering/san-luis-obispo/'], ['Morro Bay', '/catering-in-morro-bay/'], ['Los Osos', '/catering-in-los-osos/'], ['Cambria', '/catering-in-cambria/'], ['Pismo Beach', '/catering-in-pismo-beach/'], ['Arroyo Grande', '/catering-in-arroyo-grande/'], ['Nipomo', '/catering-in-nipomo/'], ['San Miguel', '/catering/san-miguel/']];
 $SERVICES = [['Wedding Catering', '/service/wedding-catering/'], ['Corporate Catering', '/service/corporate-catering/'], ['Winery Dinners', '/service/winery-dinner-catering/'], ['Private Chef Services', '/service/private-chef-catering/'], ['BBQ & Casual Events', '/service/bbq-catering/'], ['Cocktail & Bar Service', '/service/bar-service-catering/'], ['Special Celebrations', '/service/special-celebrations-catering/']];
 
 // ── Header ─────────────────────────────────────────────────────────────────────
@@ -97,7 +97,7 @@ $sub = static fn(array $list): array => array_map(static fn(array $x): array => 
 StudioMenus::save($tid, 'header', 'Header', [
     ['label' => 'About', 'url' => '/about-us/'], ['label' => 'Services', 'url' => '/services/', 'children' => $sub($SERVICES)],
     ['label' => 'Service Areas', 'url' => '/catering/', 'children' => $sub($AREAS)], ['label' => 'Gallery', 'url' => '/gallery/'],
-    ['label' => 'Recipes', 'url' => '/recipe/'], ['label' => 'Blog', 'url' => '/blog-post/'], ['label' => 'Contact', 'url' => '/contact/'],
+    ['label' => 'Recipes', 'url' => '/recipe/'], ['label' => 'Blog', 'url' => '/blog-post/'], ['label' => 'Help Us Help You', 'url' => '/contact/help-us-help-you/'], ['label' => 'Contact', 'url' => '/contact/'],
 ], 'header');
 $strip = CTOP('Top strip', [
     B('core.link', ['link' => L('Thanksgiving Menu →', '/thanksgiving-menu/'), 'style' => 'plain'], [], ['color' => EMBERLT, 'typography' => ['size' => '13px', 'font_family' => BODY, 'weight' => '600', 'letter_spacing' => '.6px']]),
@@ -128,7 +128,7 @@ $ft = CTOP('Footer', [
             P('By appointment. We respond within 24 hours.', '#b9ab9b', '14px'),
             ROW(array_map(static fn(array $s): array => B('core.link', ['link' => L($s[0], $s[1]), 'style' => 'plain'], [], ['color' => EMBERLT, 'typography' => ['size' => '14px', 'font_family' => BODY, 'weight' => '600']], ['classNames' => ['cg-link']]), [['Facebook', 'https://www.facebook.com/ChefgregoryOU812/'], ['Instagram', 'https://www.instagram.com/chefgregoryou812/'], ['Yelp', 'https://www.yelp.com/biz/chef-gregorys-gourmet-catering-atascadero']]), '20px', [], []),
         ], '18px'), '34%'),
-        W($fcol('Plan', [['About Us', '/about-us/'], ['Services', '/services/'], ['Pricing', '/holiday-services/'], ['Plan Your Event', '/help-us-help-you/'], ['Contact', '/contact/'], ['Blog', '/blog-post/'], ['Recipes', '/recipe/'], ['All Services', '/service/'], ['Thanksgiving Menu', '/thanksgiving-menu/']]), '18%'),
+        W($fcol('Plan', [['About Us', '/about-us/'], ['Services', '/services/'], ['Pricing', '/holiday-services/'], ['Plan Your Event', '/contact/help-us-help-you/'], ['Contact', '/contact/'], ['Blog', '/blog-post/'], ['Recipes', '/recipe/'], ['All Services', '/service/'], ['Thanksgiving Menu', '/thanksgiving-menu/']]), '18%'),
         W($fcol('Food', [['Food Items', '/items-for-catered-events/'], ['Plated And Styled', '/plated-and-styled/'], ['Canapés & Hors d’oeuvres', '/canapes/'], ['Corporate Breakfast', '/corporate-breakfast-continental/'], ['Cooking Classes', '/cooking-classes/'], ['Gourmet Me Now', '/gourmet-me-now/'], ['Products', 'https://gourmetmenow.com/products/'], ['Ginger Soy Dressing', '/ginger-soy-dressing/']]), '22%'),
         W($fcol('Catering Areas', $AREAS), '18%'),
     ], '32px', [], ['layout' => ['direction' => 'column', 'gap' => '40px']], ['justify' => 'between']),

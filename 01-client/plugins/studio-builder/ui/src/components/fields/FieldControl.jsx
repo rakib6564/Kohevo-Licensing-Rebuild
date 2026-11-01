@@ -275,13 +275,13 @@ function objectField(f, value, onChange, manifest, mediaPicker, presenters, bloc
       onChange={set}
     />
   );
+  const warning = f.key === 'highlight' && highlightMissing(value)
+    ? <p className="sbx-hint sbx-hint--warn" role="status">{t('highlight_not_found')}</p>
+    : null;
   if (f.type !== 'repeater' && f.type !== 'object' && f.type !== 'link') {
-    return <DynamicField key={f.key} field={f} path={`${pathPrefix}${f.key}`} inline={['string', 'text', 'url'].includes(f.type)}>{control}</DynamicField>;
+    return <Fragment key={f.key}><DynamicField field={f} path={`${pathPrefix}${f.key}`} inline={['string', 'text', 'url'].includes(f.type)}>{control}</DynamicField>{warning}</Fragment>;
   }
-  if (f.key === 'highlight' && highlightMissing(value)) {
-    return <Fragment key={f.key}>{control}<p className="sbx-hint sbx-hint--warn" role="status">{t('highlight_not_found')}</p></Fragment>;
-  }
-  return control;
+  return warning ? <Fragment key={f.key}>{control}{warning}</Fragment> : control;
 }
 
 /** The token chooser: a named, sampled list (see TokenPicker). Kept under its old name for existing callers. */

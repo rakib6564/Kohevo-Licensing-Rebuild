@@ -193,3 +193,12 @@ unit('phase9c sitemap page: a browser is told apart from a crawler by Accept, an
     $hidden = \Slate\Module\StudioBuilder\Runtime\SitemapPage::html([], 'S', 'https://site.example/', true);
     assert_true(str_contains($hidden, 'hidden from search engines') && !str_contains($hidden, 'No pages are published yet.'), 'a noindex site says why it lists nothing');
 });
+
+unit('llms.txt lists the sitemap entries by title, and falls back to the address', function (): void {
+    $txt = \Slate\Module\StudioBuilder\Runtime\StudioSitemapService::llmsTxt([
+        ['loc' => 'https://site.example/', 'title' => 'Home'],
+        ['loc' => 'https://site.example/about/', 'title' => 'About [us]'],
+        ['loc' => 'https://site.example/item/one/'],
+    ], 'Site');
+    assert_eq("# Site\n\n## Pages\n- [Home](https://site.example/)\n- [About (us)](https://site.example/about/)\n- [item/one](https://site.example/item/one/)\n", $txt);
+});

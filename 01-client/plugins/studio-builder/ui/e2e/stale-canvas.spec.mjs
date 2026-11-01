@@ -32,7 +32,7 @@ test('a text edit made while the render of the previous save is on its way is st
     await expect(heading).toHaveCount(1, { timeout: 10_000 });
     await expect(canvas(page).locator('.sbx-pending')).toHaveCount(0, { timeout: 10_000 });
 
-    const text = page.getByLabel('Heading Text', { exact: false }).first();
+    const text = page.locator('#sbx-leftpanel-inspector').getByRole('textbox', { name: 'Title', exact: true });
     await text.fill('Edited fast');
     await text.blur();
     await expect(heading).toHaveText('Edited fast', { timeout: 5_000 }); // painted at once

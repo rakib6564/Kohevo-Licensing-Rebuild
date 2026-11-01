@@ -122,7 +122,7 @@ $servicesPage = static fn(): array => [
             EYE('Our Services', EMBERLT),
             H('We Provide Premium Catering Services', 'h1', '64px', '42px', CREAM),
             P('Whether it’s a wedding, a memorial, or an intimate gathering with friends, we’re here to elevate your event. Our team expertly handles every detail related to food and catering, so you can focus on what truly matters: enjoying time with your guests.', '#d9cdbd'),
-            ROW([BTN('Book Your Tasting', '/contact/'), BTN('Plan Your Event', '/help-us-help-you/', 'light')], '12px', ['margin' => ['top' => '10px']], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']], ['wrap' => 'wrap']),
+            ROW([BTN('Book Your Tasting', '/contact/'), BTN('Plan Your Event', '/contact/help-us-help-you/', 'light')], '12px', ['margin' => ['top' => '10px']], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']], ['wrap' => 'wrap']),
         ], '20px'), '50%'),
         W(PIC('2022-04-food-catering-cuisine-culinary-gourmet-party-conce-pa7gygx.jpg', 'Guests sharing a catered meal', '480px', '250px'), '44%'),
     ], '48px', [], ['layout' => ['direction' => 'column', 'gap' => '32px']], ['justify' => 'between', 'align' => 'center'])], INK, ['padding' => ['top' => '56px', 'right' => '24px', 'bottom' => '64px', 'left' => '24px']], WRAP(), '40px'),
@@ -132,7 +132,7 @@ $servicesPage = static fn(): array => [
         SVCGRID(),
     ], CREAM, GUT(), WRAP()),
     SEC('Planning', [ROW([
-        W(VBOX([EYE('Good to know'), H('Planning Your Catering', 'h2', '50px', '36px'), P('How we approach each kind of event, from weddings and platters to dine-in service and cooking classes.'), ROW([BTN('Plan Your Event', '/help-us-help-you/', 'dark')], '0px', ['margin' => ['top' => '8px']], [])], '14px', [], ['classNames' => ['cg-sticky']]), '36%'),
+        W(VBOX([EYE('Good to know'), H('Planning Your Catering', 'h2', '50px', '36px'), P('How we approach each kind of event, from weddings and platters to dine-in service and cooking classes.'), ROW([BTN('Plan Your Event', '/contact/help-us-help-you/', 'dark')], '0px', ['margin' => ['top' => '8px']], [])], '14px', [], ['classNames' => ['cg-sticky']]), '36%'),
         W(ACC($GLOBALS['rows']), '58%'),
     ], '48px', [], ['layout' => ['direction' => 'column', 'gap' => '32px']], ['justify' => 'between', 'align' => 'start'])], SAND, GUT('96px', '96px'), WRAP(), '60px'),
     BOOK(),

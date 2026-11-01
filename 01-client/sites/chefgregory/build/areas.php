@@ -7,7 +7,8 @@ $AREAIMG = ['paso-robles' => '2026-03-hills.webp', 'paso-robles-wedding-catering
 
 foreach (array_values(array_filter(array_keys($CAP), static fn($u) => preg_match('~^/(catering/.+|catering-in-.+|paso-robles-wedding-catering/)$~', $u))) as $u) {
     $x = $MAIN($u);
-    $slug = (string) preg_replace('~^catering-in-~', '', basename($u));
+    $slug = basename($u);
+    $key = (string) preg_replace('~^catering-in-~', '', $slug);
     $heads = []; $texts = []; $accs = [];
     foreach ($x['d'] as $top) { collect($top, 'heading', $heads); collect($top, 'text-editor', $texts); collect($top, 'accordion', $accs); }
     $title = trim(html_entity_decode($WP[$u]['title']['rendered'] ?? ''));
@@ -15,15 +16,16 @@ foreach (array_values(array_filter(array_keys($CAP), static fn($u) => preg_match
     $town = trim((string) preg_replace('/^Catering in /', '', $title));
     $eyebrow = count($heads) >= 4 ? trim((string) $heads[0]['text']) : "{$town} · Central Coast";
     $h2 = trim((string) $heads[count($heads) - 1]['text']);
-    $body = (string) preg_replace('~href="/(?:catering-in-)?([a-z-]+)/?"~', 'href="/catering/$1/"', clean_html((string) $texts[array_key_last($texts)]['html']));
-    $body = str_replace(['/catering/contact/', '/catering/services/'], ['/contact/', '/services/'], $body);
-    $hero = $AREAIMG[$slug] ?? '2026-03-hills.webp';
+    $body = clean_html((string) $texts[array_key_last($texts)]['html']);
+    $hero = $AREAIMG[$key] ?? '2026-03-hills.webp';
     $rows = array_map(static fn(array $i): array => ['question' => $i['title'], 'answer' => clean_html((string) $i['html'])], $accs[0]['items'] ?? []);
-    build_page($slug, $title, 'page', 'standalone', [], ['type' => 'area', 'fields' => ['hero_image' => MEDIA_DIR . $hero, 'eyebrow' => $eyebrow, 'area_heading' => $h2, 'area_description' => $body, 'faq' => $rows], 'seo_title' => $CAP[$u]['d']['title'], 'seo_desc' => $meta($u), 'image' => $hero, 'settings' => ['excerpt' => SENTENCES(plain($body), 170)]]);
+    if ($slug !== $key) { Database::query("UPDATE studiobuilder_pages SET status = 'archived' WHERE tenant_id = ? AND slug = ? AND page_type = 'page'", [$tid, $key]); } // an earlier build's shorter address
+    $AREAPAGES[$slug] = !str_starts_with($u, '/catering/');
+    $AREAIDS[$slug] = build_page($slug, $title, 'page', 'standalone', [], ['type' => 'area', 'fields' => ['hero_image' => MEDIA_DIR . $hero, 'eyebrow' => $eyebrow, 'area_heading' => $h2, 'area_description' => $body, 'faq' => $rows], 'seo_title' => $CAP[$u]['d']['title'], 'seo_desc' => $meta($u), 'image' => $hero, 'settings' => ['excerpt' => SENTENCES(plain($body), 170)]]);
 }
 
 $chips = [];
-foreach ([...$AREAS, ['Paso Robles Weddings', '/catering/paso-robles-wedding-catering/']] as [$label, $href]) { $chips[] = B('core.link', ['link' => L($label, $href), 'style' => 'plain'], [], ['color' => CREAM, 'typography' => ['size' => '15px', 'font_family' => BODY, 'weight' => '500']], ['classNames' => ['cg-link']]); }
+foreach ([...$AREAS, ['Paso Robles Weddings', '/paso-robles-wedding-catering/']] as [$label, $href]) { $chips[] = B('core.link', ['link' => L($label, $href), 'style' => 'plain'], [], ['color' => CREAM, 'typography' => ['size' => '15px', 'font_family' => BODY, 'weight' => '500']], ['classNames' => ['cg-link']]); }
 
 SINGLE('template-area', 'Single: Catering Area', 'area', [
     SEC('Hero', [ROW([
@@ -43,7 +45,7 @@ SINGLE('template-area', 'Single: Catering Area', 'area', [
             VBOX([
                 H('Every Event Includes', 'h2', '32px', '28px', CREAM),
                 B('core.list', ['style' => 'check', 'items' => array_map(static fn(string $t): array => ['text' => $t], ['A complimentary pre-event tasting', 'A custom menu by Chef Gregory', 'Fresh, local ingredients', 'Setup and service, start to finish'])], [], ['color' => CREAM, 'typography' => ['size' => '16px', 'font_family' => BODY, 'weight' => '500']], ['style_parts' => ['marker' => ['color' => EMBERLT]]]),
-                ROW([BTN('Plan Your Event', '/help-us-help-you/')], '0px', ['margin' => ['top' => '10px']], []),
+                ROW([BTN('Plan Your Event', '/contact/help-us-help-you/')], '0px', ['margin' => ['top' => '10px']], []),
             ], '12px', ['padding' => ['top' => '28px', 'right' => '28px', 'bottom' => '28px', 'left' => '28px']]),
         ], '0px', ['background' => ['color' => INK]], ['classNames' => ['cg-sticky']]), '34%'),
     ], '48px', [], ['layout' => ['direction' => 'column', 'gap' => '40px']], ['justify' => 'between', 'align' => 'start'])], CREAM, GUT('96px', '96px'), WRAP(), '60px'),

@@ -71,7 +71,7 @@ $contact = tgSec('Contact', [
             B('core.rich_text', ['content' => '<p>Phone: <a href="tel:949-547-8117">949-547-8117</a></p><p>Email: <a href="mailto:chef@chefgregory.com">chef@chefgregory.com</a></p><p>Location: Atascadero, CA</p>'], [], ['color' => TG_TEXT, 'typography' => ['size' => '16px', 'font_family' => TG_SANS]]),
             tgT('For Thanksgiving orders, please place your order online so we can confirm your pickup time.'), tgBtn('Order Now', TG_ORDER),
         ], ['layout' => ['gap' => '16px']]),
-        B('core.form', ['form_name' => 'Thanksgiving contact', 'submit_text' => 'Send Message', 'submit_variant' => 'primary', 'success_message' => 'Thank you. We will be in touch.'], [$field('text', 'name', 'Name', true), $field('email', 'email', 'Email', true), $field('tel', 'phone', 'Phone', false), $field('textarea', 'message', 'Message', true)]),
+        B('core.form', ['form_name' => 'Thanksgiving contact', 'notify_email' => 'chef@chefgregory.com', 'submit_text' => 'Send Message', 'submit_variant' => 'primary', 'success_message' => 'Thank you. We will be in touch.'], [$field('text', 'name', 'Name', true), $field('email', 'email', 'Email', true), $field('tel', 'phone', 'Phone', false), $field('textarea', 'message', 'Message', true)]),
     ]),
 ], '#ffffff', '960px');
 $foot = tgSec('Thanksgiving footer', [tgGrid(3, [

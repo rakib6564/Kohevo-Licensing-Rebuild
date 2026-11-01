@@ -253,7 +253,7 @@ function widget(array $n, ?array $m): array
                 $type = in_array($f['type'], ['text', 'email', 'tel', 'textarea', 'select', 'number', 'date'], true) ? $f['type'] : ($f['type'] === 'select-one' ? 'select' : 'text');
                 $fields[] = B('core.form_field', ['field_type' => $type, 'name' => preg_replace('/[^a-z0-9_]/', '_', strtolower($f['label'] ?: $f['name'])) ?: 'field', 'label' => $f['label'] ?: $f['ph'], 'placeholder' => $f['ph'], 'required' => $f['req']] + ($f['opts'] ? ['options' => implode(', ', $f['opts'])] : []));
             }
-            return [B('core.form', ['form_name' => 'Contact', 'submit_text' => $n['submit'] ?: 'Send', 'submit_variant' => 'primary', 'success_message' => 'Thank you. We respond within 24 hours.'], $fields, $base)];
+            return [B('core.form', ['form_name' => 'Contact', 'notify_email' => 'chef@chefgregory.com', 'submit_text' => $n['submit'] ?: 'Send', 'submit_variant' => 'primary', 'success_message' => 'Thank you. We respond within 24 hours.'], $fields, $base)];
         case 'video':
             return preg_match('~src="(https?://[^"]+)"~', (string) ($n['html'] ?? ''), $v) ? [B('core.video', ['source' => 'hosted', 'hosted_url' => $v[1]], [], $base)] : [];
         case 'jet-listing-grid': case 'loop-grid':

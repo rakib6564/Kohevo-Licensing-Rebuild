@@ -99,20 +99,20 @@ test('a block that declares no inline text is not editable in place', async ({ p
   }
 });
 
-test('a heading highlights one word, in the accent colour', async ({ page }) => {
+test('a Dual Color Heading shows its coloured part in the accent colour', async ({ page }) => {
   await openBuilder(page);
   await settled(page);
   const before = await layerCount(page);
   try {
-    await insertBlock(page, 'core.heading');
-    const word = page.getByLabel('Highlighted Word', { exact: true });
+    await insertBlock(page, 'core.dual_heading');
+    const word = page.getByLabel('Colored text', { exact: true }).first();
     await word.fill('Heading');
     await word.blur();
     await settled(page);
     const frame = await frameDocument(page);
-    const hl = frame.locator('[data-sb-type="core.heading"] .sb-heading .sb-hl').last();
+    const hl = frame.locator('[data-sb-type="core.dual_heading"] .sb-dual-heading__highlight').last();
     await expect(hl).toHaveText('Heading', { timeout: 20_000 });
-    await expect.poll(async () => frameEval(page, '[data-sb-type="core.heading"] .sb-heading .sb-hl', (el) => getComputedStyle(el).color !== getComputedStyle(el.parentElement).color), { timeout: 10_000 }).toBe(true);
+    await expect.poll(async () => frameEval(page, '[data-sb-type="core.dual_heading"] .sb-dual-heading__highlight', (el) => getComputedStyle(el).color !== getComputedStyle(el.parentElement).color), { timeout: 10_000 }).toBe(true);
     await expect(page.getByRole('alert')).toHaveCount(0);
   } finally {
     await restore(page, before);

@@ -480,7 +480,7 @@ final class StudioPublicRuntime
         return $path;
     }
 
-    /** `robots.txt` / `sitemap.xml` (the whole path, nothing else), else null. */
+    /** `robots.txt` / `sitemap.xml` / `llms.txt` / `feed` (the whole path, nothing else), else null. `sitemap_index.xml` is the WordPress SEO address search engines may already know. */
     private function seoFileFromPath(string $path): ?string
     {
         $path = trim($path);
@@ -488,7 +488,10 @@ final class StudioPublicRuntime
             $path = substr($path, 0, $q);
         }
         $path = trim($path, '/');
-        return in_array($path, ['robots.txt', 'sitemap.xml', 'feed'], true) ? $path : null;
+        if ($path === 'sitemap_index.xml') {
+            return 'sitemap.xml';
+        }
+        return in_array($path, ['robots.txt', 'sitemap.xml', 'llms.txt', 'feed'], true) ? $path : null;
     }
 
     private function serveSeoFile(string $file, ?string $ifNoneMatch, ?string $accept = null): ?PublicResponse
@@ -509,6 +512,9 @@ final class StudioPublicRuntime
             } elseif ($file === 'robots.txt') {
                 $type = 'text/plain; charset=utf-8';
                 $body = StudioSitemapService::robotsTxt($site);
+            } elseif ($file === 'llms.txt') {
+                $type = 'text/plain; charset=utf-8';
+                $body = StudioSitemapService::llmsTxt($this->sitemap->entries($site), $site->siteName);
             } else {
                 if ($site->baseUrl === '') {
                     return null; // no configured base URL: no sitemap rather than one on an invented host

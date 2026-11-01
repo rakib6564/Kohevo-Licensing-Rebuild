@@ -61,7 +61,7 @@ build_page('contact', 'Contact', 'page', 'standalone', [
         W(VBOX([
             EYE('Booking Inquiry'),
             H('Tell Us About Your Event', 'h2', '46px', '34px'),
-            B('core.form', ['form_name' => 'Booking Inquiry', 'submit_text' => 'Submit Booking Inquiry', 'submit_variant' => 'primary', 'success_message' => 'Thank you. We respond within 24 hours.'], [
+            B('core.form', ['form_name' => 'Booking Inquiry', 'notify_email' => 'chef@chefgregory.com', 'submit_text' => 'Submit Booking Inquiry', 'submit_variant' => 'primary', 'success_message' => 'Thank you. We respond within 24 hours.'], [
                 $fld('text', 'first_name', 'First name', 'Jane', true), $fld('text', 'last_name', 'Last name', 'Williamson', true),
                 $fld('email', 'email', 'Email address', 'jane@example.com', true), $fld('tel', 'phone', 'Phone number', '(805) 555-0100'),
                 $fld('select', 'event_type', 'Event type', '', false, '50', 'Select Event Type..., Wedding Reception, Rehearsal Dinner, Corporate Event, Winery Dinner, Bar / Bat Mitzvah, Holiday Party, Anniversary Dinner, Private Chef Experience, Cooking Class, Other'),

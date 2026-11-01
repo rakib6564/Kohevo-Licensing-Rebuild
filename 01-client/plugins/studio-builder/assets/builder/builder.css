@@ -2757,6 +2757,9 @@ html, body.sbx-body {
   .sbx-left .sbx-field input:not([type]), .sbx-left .sbx-field textarea, .sbx-left .sbx-field select { min-height: 44px; font-size: 16px; }
   .sbx-left .sbx-inspector .sbx-btn { min-height: 44px; padding: 0 14px; font-size: var(--sbx-fs-lg); }
   .sbx-left .sbx-inspector .sbx-tab { min-height: 44px; }
+  .sbx-left .sbx-inspector .sbx-dyn__open { min-width: 44px; min-height: 44px; }
+  .sbx-left .sbx-inspector .sbx-dyn__input .sbx-dyn__open { top: 0; right: 0; width: 44px; height: 44px; }
+  .sbx-left .sbx-inspector .sbx-dyn__input input, .sbx-left .sbx-inspector .sbx-dyn__input textarea { padding-right: 50px; }
   .sbx-left .sbx-inspector .sbx-tp__btn, .sbx-left .sbx-inspector .sbx-tp__opt { min-height: 44px; }
   .sbx-left .sbx-isec__toggle { min-height: 48px; font-size: 15px; }
   .sbx-left .sbx-segmented-pill { min-height: 44px; padding: 0 16px; font-size: var(--sbx-fs-lg); }
