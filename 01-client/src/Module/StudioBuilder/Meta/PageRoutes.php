@@ -95,6 +95,39 @@ final class PageRoutes
         return self::$cache[$tenantId]['types'][$pageId] ?? '';
     }
 
+    /** Whether a page has a public address: false for an item of a type that is not public or not publicly queryable. */
+    public static function isQueryable(int $tenantId, int $pageId): bool
+    {
+        $type = self::typeOfPage($tenantId, $pageId);
+        if ($type === '') {
+            return true;
+        }
+        try {
+            $settings = PageMeta::postTypes($tenantId)[$type] ?? null;
+        } catch (\Throwable) {
+            return true;
+        }
+        return $settings === null || PostTypeSettings::isQueryable($settings);
+    }
+
+    /**
+     * The content type whose archive lives at this address, '' for none: a public type with Has archive on, at its prefix.
+     */
+    public static function archiveType(int $tenantId, string $path): string
+    {
+        $prefix = self::normalizePrefix($path);
+        if ($prefix === null || $prefix === '') {
+            return '';
+        }
+        foreach (self::prefixes($tenantId) as $key => $own) {
+            if ($own === $prefix) {
+                $type = PageMeta::postTypes($tenantId)[$key] ?? null;
+                return $type !== null && !empty($type['has_archive']) && PostTypeSettings::isQueryable($type) ? (string) $key : '';
+            }
+        }
+        return '';
+    }
+
     /** The prefix a page lives under, '' for none. */
     public static function prefixForPage(int $tenantId, int $pageId): string
     {

@@ -184,9 +184,12 @@ final class ThemeTemplateResolver
             // No author known: author conditions do not match.
         }
         try {
-            $type = PageMeta::read($tenantId, $pageId)['type'];
-            if ($type !== '') {
-                $context['content_type'] = $type;
+            $meta = PageMeta::read($tenantId, $pageId);
+            if ($meta['type'] !== '') {
+                $context['content_type'] = $meta['type'];
+            }
+            if ($meta['template'] !== '') {
+                $context['template_uuid'] = $meta['template'];
             }
         } catch (\Throwable) {
             // No custom content type: the page type stands in for it.
@@ -250,7 +253,31 @@ final class ThemeTemplateResolver
      */
     public function resolveSingle(PageAddress $page, array $context = []): ?array
     {
+        // An item pinned to a template on its screen shows that one while it is published; once it is gone, the conditions choose.
+        $pin = $context['template_uuid'] ?? '';
+        if (is_string($pin) && $pin !== '') {
+            $hit = $this->resolveTemplate('single', ['template_pin' => true], static fn(array $settings, array $row): bool => ($row['uuid'] ?? '') === $pin);
+            if ($hit !== null) {
+                return $hit;
+            }
+        }
         return $this->resolveTemplate('single', array_merge(self::pageContext($page), $context));
+    }
+
+    /**
+     * The published Single templates, for an item's Template choice.
+     *
+     * @return list<array{uuid: string, title: string}>
+     */
+    public function singleTemplates(): array
+    {
+        $out = [];
+        foreach ($this->templateIndex() as ['row' => $row, 'settings' => $settings]) {
+            if (self::isRoleMatch('single', $settings, (string) ($row['slug'] ?? ''))) {
+                $out[] = ['uuid' => (string) ($row['uuid'] ?? ''), 'title' => (string) ($row['title'] ?? '')];
+            }
+        }
+        return $out;
     }
 
     /**
@@ -351,11 +378,11 @@ final class ThemeTemplateResolver
         foreach ($this->templateIndex() as ['row' => $row, 'settings' => $settings]) {
             $slug = (string) ($row['slug'] ?? '');
 
-            if (!self::isRoleMatch($role, $settings, $slug) || ($accepts !== null && !$accepts($settings))) {
+            if (!self::isRoleMatch($role, $settings, $slug) || ($accepts !== null && !$accepts($settings, $row))) {
                 continue;
             }
 
-            $conditions = $settings['conditions'] ?? null;
+            $conditions = !empty($evalContext['template_pin']) ? null : ($settings['conditions'] ?? null);
             $score = 100; // default base match score for matching role
 
             if (!empty($conditions)) {

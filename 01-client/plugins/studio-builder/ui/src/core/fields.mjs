@@ -41,6 +41,7 @@ export function datetimeFromLocal(value) {
 export function controlFor(field) {
   if (field && field.type === 'string' && field.format === 'color') return 'color';
   if (field && field.type === 'string' && field.format === 'meta_field') return 'metafield';
+  if (field && field.type === 'string' && field.format === 'content_type') return 'posttype';
   if (field && field.type === 'string' && field.format === 'datetime') return 'datetime';
   return CONTROL[field && field.type] || null;
 }

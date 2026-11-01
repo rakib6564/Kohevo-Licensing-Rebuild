@@ -105,6 +105,10 @@ if (!function_exists('slate_data_row')) {
             echo '<span class="data-row-value">' . e((string)$value) . '</span>';
         }
 
+        foreach ((array)($args['cells'] ?? []) as $cell) {
+            echo '<span class="data-row-cell">' . e((string)$cell) . '</span>';
+        }
+
         if (is_array($badge) && isset($badge[0])) {
             $mod = isset($badge[1]) ? preg_replace('/[^a-z0-9_-]/', '', (string)$badge[1]) : '';
             echo '<span class="badge' . ($mod !== '' ? ' badge-' . e($mod) : '') . '">'
@@ -164,7 +168,11 @@ if (!function_exists('slate_data_list_head')) {
                . e((string)$opts['select_all']) . '"></label>';
         }
         echo '<span class="data-list-head-main">' . e((string)($cols['main'] ?? '')) . '</span>';
-        if (isset($cols['value'])) echo '<span class="data-list-head-value">' . e((string)$cols['value']) . '</span>';
+        if (isset($cols['value']) && empty($cols['cells_html'])) echo '<span class="data-list-head-value">' . e((string)$cols['value']) . '</span>';
+        foreach ((array)($cols['cells_html'] ?? []) as $cell) {
+            // Caller-escaped: a sortable column's head is a link.
+            echo '<span class="data-list-head-cell">' . $cell . '</span>';
+        }
         if (isset($cols['badge'])) echo '<span class="data-list-head-badge">' . e((string)$cols['badge']) . '</span>';
         echo '<span class="data-list-head-chevron" aria-hidden="true"></span>';
         echo '</div>';

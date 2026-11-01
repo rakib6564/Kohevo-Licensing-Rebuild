@@ -1,8 +1,7 @@
 // A page's content type and custom fields: pick a type, fill its fields, save, and see them again after a reload.
 import { test, expect } from '@playwright/test';
-import { ensurePostType } from './helpers.mjs';
+import { addMetaField, ensurePostType, removeMetaField } from './helpers.mjs';
 
-const TYPES = '/plugins/studio-builder/admin/types-fields.php';
 const NEW = '/plugins/studio-builder/admin/page-new.php';
 
 test.beforeEach(async ({}, info) => {
@@ -15,22 +14,8 @@ test('a page takes a content type, shows only that type\'s fields, validates the
   await ensurePostType(page, 'services', 'Service');
 
   // Two fields on Services: a select and a required number.
-  for (const f of [
-    { label: 'Mode', key, type: 'select', choices: 'remote : Remote\nonsite : On-site' },
-    { label: 'Seats', key: `seats_${stamp}`, type: 'number', required: true },
-  ]) {
-    await page.goto(TYPES);
-    await page.evaluate(() => { document.getElementById('sb-field-drawer').style.display = 'block'; });
-    const d = page.locator('#sb-field-drawer');
-    await d.locator('select[name="post_type"]').selectOption('services');
-    await d.locator('#sb-meta-type').selectOption(f.type);
-    await d.locator('input[name="label"]').fill(f.label);
-    await d.locator('input[name="key"]').fill(f.key);
-    if (f.choices) await d.locator('textarea[name="choices"]').fill(f.choices);
-    if (f.required) await d.locator('input[name="required"]').check();
-    await d.getByRole('button', { name: /Save Field/ }).click();
-    await expect(page.locator('.alert-success')).toContainText(f.label);
-  }
+  await addMetaField(page, 'services', { label: 'Mode', key, type: 'select', choices: 'remote : Remote\nonsite : On-site' });
+  await addMetaField(page, 'services', { label: 'Seats', key: `seats_${stamp}`, type: 'number', required: true });
 
   // A new page.
   await page.goto(NEW);
@@ -57,6 +42,9 @@ test('a page takes a content type, shows only that type\'s fields, validates the
   await card.getByRole('button', { name: /Save/ }).click();
   await expect(page.locator('.alert-success')).toContainText('Custom fields saved');
 
+  // A page with a type is an item now: its own screen, with the same fields, saved by Update.
+  await expect(page.getByTestId('item-settings')).toBeVisible();
+
   // After a reload the choice, the number and the type are all still there; the other type's fields are not posted.
   await page.goto(edit);
   await expect(page.locator('#sb-ctype')).toHaveValue('services');
@@ -65,7 +53,7 @@ test('a page takes a content type, shows only that type\'s fields, validates the
 
   // Switching to None keeps no type.
   await page.locator('#sb-ctype').selectOption('');
-  await page.locator('[data-testid="page-meta-form"]').getByRole('button', { name: /Save/ }).click();
+  await page.getByTestId('item-update').click();
   await page.goto(edit);
   await expect(page.locator('#sb-ctype')).toHaveValue('');
 
@@ -73,13 +61,5 @@ test('a page takes a content type, shows only that type\'s fields, validates the
   page.once('dialog', (dlg) => void dlg.accept());
   await page.goto(edit);
   await page.getByRole('button', { name: /Delete/ }).last().click().catch(() => {});
-  for (const k of [key, `seats_${stamp}`]) {
-    await page.goto(TYPES);
-    const row = page.locator('.data-row', { hasText: k }).first();
-    if (await row.count()) {
-      await row.locator('.data-row-summary').click();
-      page.once('dialog', (dlg) => void dlg.accept());
-      await row.getByRole('button', { name: /Delete/ }).click();
-    }
-  }
+  for (const k of [key, `seats_${stamp}`]) await removeMetaField(page, 'services', k);
 });

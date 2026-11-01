@@ -231,8 +231,8 @@ unit('studio admin lists: one page at a time; a page past the end shows the last
 unit('studio admin content lists: an item row names its type and offers Fields; a plain page row does not', function (): void {
     $html = PageListView::render([sbal_page(7, 'Boxe Molenbeek', true, false), sbal_page(8, 'Contact', true, false)], true, '/b', '/p', true, 'page-edit.php', [7 => 'Cours']);
     $x = sbal_xpath($html);
-    assert_eq(1, $x->query('//a[@href="page-edit.php?id=7#sb-meta-form"]')->length, 'the item links to its fields');
-    assert_eq(0, $x->query('//a[@href="page-edit.php?id=8#sb-meta-form"]')->length, 'a plain page has no Fields button');
+    assert_eq(1, $x->query('//a[@href="page-edit.php?id=7#sb-item-form"]')->length, 'the item links to its fields');
+    assert_eq(0, $x->query('//a[@href="page-edit.php?id=8#sb-item-form"]')->length, 'a plain page has no Fields button');
     assert_true(str_contains($html, '>Cours<'), 'the item shows its type name: ' . $html);
 });
 
@@ -250,7 +250,8 @@ unit('studio admin content lists: Pages lists plain pages, ?type= one type; temp
     $plugin = (string) file_get_contents($dir . '/StudioBuilder.php');
     assert_true(str_contains($plugin, "'admin/pages.php?type=' . rawurlencode((string) \$key)") && str_contains($plugin, 'PageMeta::showsInMenu($type)'), 'each type the site keeps in the sidebar has its own entry');
     $types = (string) file_get_contents($dir . '/admin/types-fields.php');
-    assert_true(str_contains($types, "\$action === 'toggle_menu'") && str_contains($types, 'name="show_in_menu" value="1" checked'), 'Types & fields sets it, on by default');
+    $edit = (string) file_get_contents($dir . '/admin/post-type-edit.php');
+    assert_true(str_contains($edit, "\$check('show_in_menu'") && str_contains($types, 'post-type-edit.php'), 'the type\'s edit screen sets it');
 });
 
 unit('studio admin content lists: kinds read as words, type lists have their own tab, and the pager counts their items', function (): void {
@@ -263,5 +264,5 @@ unit('studio admin content lists: kinds read as words, type lists have their own
     foreach (['pages.php' => "\$type !== null ? 'studio-type-' . \$typeKey : 'studio-pages'", 'page-edit.php' => "\$currentNav = 'studio-type-' . \$itemTypeKey", 'page-new.php' => "\$newType !== null ? 'studio-type-' . \$formValues['content_type'] : 'studio-pages'"] as $file => $active) {
         assert_true(str_contains((string) file_get_contents($dir . '/' . $file), $active), "{$file} marks its type's sidebar entry");
     }
-    assert_true(str_contains((string) file_get_contents($dir . '/pages.php'), "'label' => \$type !== null ? mb_strtolower(\$pageTitle)"), 'the pager counts "3 cours", not pages');
+    assert_true(str_contains((string) file_get_contents($dir . '/pages.php'), "'label' => \$type !== null ? mb_strtolower((string) \$type['plural'])"), 'the pager counts "3 cours", not pages');
 });

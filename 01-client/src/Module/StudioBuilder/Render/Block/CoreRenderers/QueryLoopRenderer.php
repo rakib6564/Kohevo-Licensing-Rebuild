@@ -49,6 +49,7 @@ final class QueryLoopRenderer implements BlockRendererInterface
                     'tag'       => $scope->string('tag', '') !== '' ? $scope->string('tag', '') : $listing['tag'],
                     'author_id' => (int) $scope->prop('author_id', 0) > 0 ? (int) $scope->prop('author_id', 0) : $listing['author_id'],
                     'search'    => $listing['search'],
+                    'content_type' => $scope->string('content_type', '') !== '' ? $scope->string('content_type', '') : $listing['content_type'],
                     'order_by'  => $scope->string('order_by', 'published_at'),
                     'order'     => $scope->string('order', 'desc'),
                     'limit'     => $perPage,
@@ -193,7 +194,7 @@ final class QueryLoopRenderer implements BlockRendererInterface
      * term and its search query (render attributes set by the public runtime). A loop with its own filter keeps it;
      * one without lists the archive's or the search's posts instead of every post.
      *
-     * @return array{category: string, tag: string, author_id: int, search: string}
+     * @return array{category: string, tag: string, author_id: int, search: string, content_type: string}
      */
     private static function listing(BlockRenderScope $scope): array
     {
@@ -205,6 +206,7 @@ final class QueryLoopRenderer implements BlockRendererInterface
             'tag'       => mb_substr($str('tag'), 0, 80),
             'author_id' => $type === 'author' && ctype_digit($str('term')) ? (int) $str('term') : 0,
             'search'    => $str('search_query'),
+            'content_type' => $type === 'content_type' ? $str('content_type') : '',
         ];
     }
 

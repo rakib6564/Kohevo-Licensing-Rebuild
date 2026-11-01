@@ -3914,6 +3914,7 @@
                 "card_variant": "card",
                 "category": "",
                 "columns": 3,
+                "content_type": "",
                 "empty_message": "No posts found.",
                 "enable_pagination": true,
                 "gap": "md",
@@ -3943,6 +3944,15 @@
                         "pages",
                         "custom"
                     ]
+                },
+                {
+                    "key": "content_type",
+                    "type": "string",
+                    "label": "Content Type",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "content_type"
                 },
                 {
                     "key": "category",

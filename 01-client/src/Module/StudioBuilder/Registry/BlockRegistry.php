@@ -433,6 +433,7 @@ final class BlockRegistry
             icon: 'grid-panes',
             schema: FieldSchema::define([
                 ['key' => 'source', 'type' => 'enum', 'label' => 'Source', 'required' => false, 'allowed_values' => ['posts', 'pages', 'custom'], 'default' => 'posts'],
+                ['key' => 'content_type', 'type' => 'string', 'label' => 'Content Type', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'content_type'],
                 ['key' => 'category', 'type' => 'string', 'label' => 'Category', 'required' => false, 'default' => '', 'max_length' => 80],
                 ['key' => 'tag', 'type' => 'string', 'label' => 'Tag', 'required' => false, 'default' => '', 'max_length' => 80],
                 ['key' => 'author_id', 'type' => 'number', 'label' => 'Author ID', 'required' => false, 'default' => 0, 'integer_only' => true],

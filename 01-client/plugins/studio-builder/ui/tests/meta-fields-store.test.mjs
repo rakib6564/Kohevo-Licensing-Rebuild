@@ -5,6 +5,7 @@ import { controlFor } from '../src/core/fields.mjs';
 
 test('a string field with the meta_field format gets the field dropdown', () => {
   assert.equal(controlFor({ type: 'string', format: 'meta_field' }), 'metafield');
+  assert.equal(controlFor({ type: 'string', format: 'content_type' }), 'posttype');
   assert.equal(controlFor({ type: 'string' }), 'text');
 });
 

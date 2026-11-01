@@ -4,8 +4,10 @@
  *
  * The types and field definitions are tenant settings (`studio_custom_post_types`, `studio_meta_fields`); this class holds
  * the values a page carries. A site has no types until it creates them: Studio ships none built in. Values are stored per page in the tenant setting
- * `studio_page_meta_<page id>` as `{"type": "<post type>", "values": {"<field key>": value}}`. They are not kept in the
- * page's `settings_json` because every builder save rewrites that column from the document.
+ * `studio_page_meta_<page id>` as `{"type": "<post type>", "values": {"<field key>": value}, "template": "<uuid>"}`. They
+ * are not kept in the page's `settings_json` because every builder save rewrites that column from the document.
+ * `template` is the Single template the item was pinned to on its screen, by uuid because a backup keeps uuids and not
+ * ids; absent means the display conditions choose.
  *
  * `clean()` is the only way a value gets in: it keeps what the field's type allows and its options permit, and drops the
  * rest, whatever was posted.
@@ -28,7 +30,108 @@ final class PageMeta
     public static function postTypes(int $tenantId): array
     {
         $custom = self::json((string) Database::setting('studio_custom_post_types', $tenantId));
-        return array_filter($custom, static fn($t): bool => is_array($t) && isset($t['key']));
+        return array_map(PostTypeSettings::normalize(...), array_filter($custom, static fn($t): bool => is_array($t) && isset($t['key'])));
+    }
+
+    /**
+     * Save the site's post types, in the stored shape.
+     *
+     * @param array<string, array<string, mixed>> $types
+     */
+    public static function savePostTypes(int $tenantId, array $types): void
+    {
+        Database::setSetting('studio_custom_post_types', json_encode($types, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
+        PageRoutes::forget($tenantId);
+    }
+
+    /** @param list<array<string, mixed>> $fields every field definition of the site */
+    public static function saveFields(int $tenantId, array $fields): void
+    {
+        Database::setSetting('studio_meta_fields', json_encode(array_values($fields), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
+    }
+
+    /**
+     * Replace one type's fields, keeping the others'. A field whose key changed takes its saved values along, so renaming
+     * a key on the screen loses nothing.
+     *
+     * @param list<array<string, mixed>> $fields the type's fields, in order
+     */
+    public static function replaceFieldsFor(int $tenantId, string $postType, array $fields): void
+    {
+        $before = self::fieldsFor($tenantId, $postType);
+        $others = array_filter(self::allFields($tenantId), static fn(array $f): bool => ($f['post_type'] ?? '') !== $postType);
+        self::saveFields($tenantId, [...$others, ...$fields]);
+
+        $oldKeys = array_column($before, 'key', 'id');
+        $renames = [];
+        foreach ($fields as $f) {
+            $old = $oldKeys[$f['id'] ?? ''] ?? null;
+            if ($old !== null && $old !== $f['key']) {
+                $renames[(string) $old] = (string) $f['key'];
+            }
+        }
+        if ($renames !== []) {
+            foreach (self::pageIdsOfType($tenantId, $postType) as $pageId) {
+                $data = self::json((string) Database::setting(self::SETTING_PREFIX . $pageId, $tenantId));
+                $values = is_array($data['values'] ?? null) ? $data['values'] : [];
+                $moved = [];
+                foreach ($values as $k => $v) {
+                    $moved[$renames[$k] ?? $k] = $v;
+                }
+                $data['values'] = (object) $moved;
+                Database::setSetting(self::SETTING_PREFIX . $pageId, json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
+            }
+        }
+    }
+
+    /**
+     * Delete metadata: every item of the type keeps its type and its template, and loses its field values.
+     *
+     * @return int how many items were cleared
+     */
+    public static function clearValues(int $tenantId, string $postType): int
+    {
+        $ids = self::pageIdsOfType($tenantId, $postType);
+        foreach ($ids as $pageId) {
+            $data = self::json((string) Database::setting(self::SETTING_PREFIX . $pageId, $tenantId));
+            $data['values'] = new \stdClass();
+            Database::setSetting(self::SETTING_PREFIX . $pageId, json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
+        }
+        return count($ids);
+    }
+
+    /**
+     * The saved values of every item of a type, for the admin list's columns and filters (one query).
+     *
+     * @return array<int, array<string, mixed>> page id => field values
+     */
+    public static function valuesByPage(int $tenantId, string $postType): array
+    {
+        $rows = Database::all('SELECT setting_key, setting_value FROM settings WHERE tenant_id = ? AND setting_key LIKE ?', [$tenantId, self::SETTING_PREFIX . '%']);
+        $out = [];
+        foreach ($rows as $row) {
+            $data = self::json((string) $row['setting_value']);
+            if (($data['type'] ?? '') === $postType) {
+                $out[(int) substr((string) $row['setting_key'], strlen(self::SETTING_PREFIX))] = is_array($data['values'] ?? null) ? $data['values'] : [];
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * The pages Query Loops must leave out: items of a type that is not public, and when searching, of one excluded from
+     * search. Nothing is read beyond the types when every type is listed, which is the usual case.
+     *
+     * @return list<int>
+     */
+    public static function unlistedPageIds(int $tenantId, bool $search): array
+    {
+        $hidden = array_keys(array_filter(self::postTypes($tenantId), static fn(array $t): bool => !PostTypeSettings::isListed($t, $search)));
+        $ids = [];
+        foreach ($hidden as $key) {
+            array_push($ids, ...self::pageIdsOfType($tenantId, (string) $key));
+        }
+        return $ids;
     }
 
     /** @return list<array<string, mixed>> every field definition this site saved */
@@ -43,14 +146,29 @@ final class PageMeta
         return array_values(array_filter(self::allFields($tenantId), static fn(array $f): bool => ($f['post_type'] ?? '') === $postType));
     }
 
-    /** @return array{type: string, values: array<string, mixed>} */
+    /** @return array{type: string, values: array<string, mixed>, template: string} */
     public static function read(int $tenantId, int $pageId): array
     {
         $data = self::json((string) Database::setting(self::SETTING_PREFIX . $pageId, $tenantId));
         return [
             'type'   => is_string($data['type'] ?? null) ? $data['type'] : '',
             'values' => is_array($data['values'] ?? null) ? $data['values'] : [],
+            'template' => is_string($data['template'] ?? null) ? $data['template'] : '',
         ];
+    }
+
+    /** Pin an item to one Single template, or give the choice back to the display conditions with ''. */
+    public static function setTemplate(int $tenantId, int $pageId, string $templateUuid): void
+    {
+        $data = self::json((string) Database::setting(self::SETTING_PREFIX . $pageId, $tenantId));
+        $data['type'] ??= '';
+        $data['values'] = (object) (is_array($data['values'] ?? null) ? $data['values'] : []);
+        if ($templateUuid === '') {
+            unset($data['template']);
+        } else {
+            $data['template'] = $templateUuid;
+        }
+        Database::setSetting(self::SETTING_PREFIX . $pageId, json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
     }
 
     /**
@@ -61,8 +179,10 @@ final class PageMeta
      */
     public static function save(int $tenantId, int $pageId, string $postType, array $posted): array
     {
+        $pin = self::read($tenantId, $pageId)['template'];
+        $keep = $pin !== '' ? ['template' => $pin] : [];
         if ($postType === '') {
-            Database::setSetting(self::SETTING_PREFIX . $pageId, json_encode(['type' => '', 'values' => new \stdClass()]), $tenantId);
+            Database::setSetting(self::SETTING_PREFIX . $pageId, json_encode(['type' => '', 'values' => new \stdClass()] + $keep), $tenantId);
             PageRoutes::forget($tenantId);
             return ['errors' => []];
         }
@@ -84,7 +204,7 @@ final class PageMeta
             $values[$key] = $r['value'];
         }
         if ($errors === []) {
-            Database::setSetting(self::SETTING_PREFIX . $pageId, json_encode(['type' => $postType, 'values' => (object) $values], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
+            Database::setSetting(self::SETTING_PREFIX . $pageId, json_encode(['type' => $postType, 'values' => (object) $values] + $keep, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
             PageRoutes::forget($tenantId);
         }
         return ['errors' => $errors];
@@ -108,7 +228,7 @@ final class PageMeta
     /** Whether a type has its own entry in the admin sidebar (on unless the site turned it off). */
     public static function showsInMenu(array $type): bool
     {
-        return ($type['show_in_menu'] ?? true) !== false;
+        return PostTypeSettings::inSidebar($type);
     }
 
     /**

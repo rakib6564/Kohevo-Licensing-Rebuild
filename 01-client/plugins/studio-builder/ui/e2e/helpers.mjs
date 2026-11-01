@@ -147,14 +147,40 @@ export async function archivePage(page, id) {
   }, { id });
 }
 
-/** Make sure the site has a post type with this key (Studio ships none built in); creates it on Types & fields if missing. */
+/** Make sure the site has a post type with this key (Studio ships none built in); creates it on its edit screen if missing. */
 export async function ensurePostType(page, key, singular) {
   await page.goto('/plugins/studio-builder/admin/types-fields.php');
   if (await page.locator(`[data-post-type="${key}"]`).count()) return;
-  await page.evaluate(() => { document.getElementById('sb-cpt-drawer').style.display = 'block'; });
-  const d = page.locator('#sb-cpt-drawer');
-  await d.locator('input[name="key"]').fill(key);
-  await d.locator('input[name="singular"]').fill(singular);
-  await d.getByRole('button', { name: /Save Post Type/ }).click();
+  await page.goto('/plugins/studio-builder/admin/post-type-edit.php');
+  await page.locator('#sb-type-name').fill(`${singular}s`);
+  await page.locator('#sb-type-singular').fill(singular);
+  await page.locator('#sb-type-key').fill(key);
+  await page.getByTestId('type-update').click();
+  await page.goto('/plugins/studio-builder/admin/types-fields.php');
   await expect(page.locator(`[data-post-type="${key}"]`)).toHaveCount(1);
+}
+
+/** Add one meta field to a post type on its edit screen. `f`: label, key, type, choices, help, required. */
+export async function addMetaField(page, typeKey, f) {
+  await page.goto(`/plugins/studio-builder/admin/post-type-edit.php?key=${typeKey}`);
+  await page.locator('[data-add="field"]').click();
+  const row = page.getByTestId('meta-field-row').last();
+  await row.locator('input[name$="[label]"]').fill(f.label);
+  await row.locator('input[name$="[key]"]').fill(f.key);
+  if (f.type) await row.locator('[data-field-type]').selectOption(f.type);
+  if (f.choices) await row.locator('textarea[name$="[choices]"]').fill(f.choices);
+  if (f.help) await row.locator('input[name$="[help]"]').fill(f.help);
+  if (f.required) await row.locator('input[name$="[required]"]').check();
+  await page.getByTestId('type-update').click();
+  await expect(page.locator('.alert-success')).toContainText('saved');
+}
+
+/** Remove one meta field from a post type on its edit screen. */
+export async function removeMetaField(page, typeKey, key) {
+  await page.goto(`/plugins/studio-builder/admin/post-type-edit.php?key=${typeKey}`);
+  const row = page.getByTestId('meta-field-row').filter({ has: page.locator(`code:text-is("${key}")`) });
+  if (!(await row.count())) return;
+  await row.locator('[data-row-act="delete"]').click();
+  await page.getByTestId('type-update').click();
+  await expect(page.locator('.alert-success')).toContainText('saved');
 }

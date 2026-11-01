@@ -23,9 +23,12 @@ final class PageListView
      * @param string                     $settingsUrl the page-settings screen (`?id=` is appended); empty offers no link
      * @param array<int, string>         $typeLabels page id => its content type's name: the row shows that name as its
      *                                               type and offers Fields (the settings screen's content-type card)
+     * @param list<array{title: string, source: string, prefix: string, suffix: string, sortable: bool, field: ?array<string, mixed>}> $columns a content type's admin columns (`columns()`)
+     * @param array<int, array<string, mixed>> $values page id => field values, for those columns
+     * @param array{base?: array<string, mixed>, key?: string, dir?: string} $sort the list's query and current sort, for the column heads
      * @return string the .data-list markup (no script tag; see slate_data_list_script())
      */
-    public static function render(array $pages, bool $canEdit, string $builderUrl, string $previewUrl, bool $canDelete = false, string $settingsUrl = '', array $typeLabels = []): string
+    public static function render(array $pages, bool $canEdit, string $builderUrl, string $previewUrl, bool $canDelete = false, string $settingsUrl = '', array $typeLabels = [], array $columns = [], array $values = [], array $sort = []): string
     {
         if (!function_exists('slate_data_row')) {
             require_once dirname(__DIR__, 4) . '/includes/ui_components.php';
@@ -39,7 +42,7 @@ final class PageListView
         echo '<div class="data-list is-columnar" data-single-open id="studio-page-list">';
         echo self::selectBar($canDelete, 'delete', \__('studio_delete_pages', 'Delete'), \__('studio_delete_pages_confirm', 'Delete %d selected page(s)? They leave your site and this list. Their history is kept.'));
         \slate_data_list_head(
-            ['main' => \__('title', 'Title'), 'value' => \__('studio_page_type', 'Type'), 'badge' => \__('status', 'Status')],
+            ['main' => \__('title', 'Title'), 'value' => \__('studio_page_type', 'Type'), 'badge' => \__('status', 'Status'), 'cells_html' => array_map(static fn(array $c): string => self::columnHead($c, $sort), $columns)],
             ['select_all' => \__('studio_select_all_pages', 'Select all pages')]
         );
         foreach ($pages as $p) {
@@ -47,7 +50,8 @@ final class PageListView
             $published   = !empty($p['is_published']);
             $hasChanges  = $published && !empty($p['has_unpublished_changes']);
             $title       = (string) $p['title'];
-            $statusLabel = $published ? \__('studio_status_published', 'Published') : \__('studio_status_draft', 'Draft');
+            $scheduled   = ($p['status'] ?? '') === 'scheduled';
+            $statusLabel = self::statusLabel($p);
             $typeLabel   = $typeLabels[$id] ?? self::kindLabel((string) $p['page_type']);
 
             $detail = [
@@ -69,7 +73,7 @@ final class PageListView
                     . \e(\__('studio_page_settings', 'Settings')) . '</a> ';
             }
             if ($settingsUrl !== '' && isset($typeLabels[$id])) {
-                $actions .= '<a class="btn btn-sm btn-ghost" href="' . \e($settingsUrl . '?id=' . $id . '#sb-meta-form') . '">'
+                $actions .= '<a class="btn btn-sm btn-ghost" href="' . \e($settingsUrl . '?id=' . $id . '#sb-item-form') . '">'
                     . \e(\__('studio_item_fields', 'Fields')) . '</a> ';
             }
             $actions .= '<a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="' . \e($previewUrl . '?page=' . $id) . '">'
@@ -81,8 +85,9 @@ final class PageListView
                 'avatar_color' => $published ? 'success' : 'muted',
                 'title'        => $title,
                 'meta'         => (string) $p['public_path'],
-                'value'        => $typeLabel,
-                'badge'        => [$statusLabel, $published ? 'active' : 'warning'],
+                'value'        => $columns !== [] ? null : $typeLabel,
+                'cells'        => array_map(static fn(array $c): string => self::cell($c, $p, $values[$id] ?? []), $columns),
+                'badge'        => [$statusLabel, $published ? 'active' : ($scheduled ? 'info' : 'warning')],
                 'detail'       => $detail,
                 'actions'      => $actions,
             ]);
@@ -90,6 +95,172 @@ final class PageListView
         echo '</div>';
 
         return (string) ob_get_clean();
+    }
+
+    /**
+     * A type's admin columns ready to show: the title each one reads, and its field.
+     *
+     * @param list<array<string, mixed>> $stored
+     * @param array<string, array<string, mixed>> $fields field key => field
+     * @return list<array{title: string, source: string, prefix: string, suffix: string, sortable: bool, field: ?array<string, mixed>}>
+     */
+    public static function columns(array $stored, array $fields): array
+    {
+        $out = [];
+        foreach ($stored as $c) {
+            $source = (string) ($c['source'] ?? '');
+            $field = $fields[$source] ?? null;
+            $builtIn = match ($source) {
+                '_status'  => \__('status', 'Status'),
+                '_date'    => \__('studio_item_publish_date', 'Publish date'),
+                '_updated' => \__('updated', 'Updated'),
+                '_slug'    => \__('studio_address', 'Address'),
+                default    => null,
+            };
+            if ($field === null && $builtIn === null) {
+                continue; // a field deleted since
+            }
+            $title = trim((string) ($c['label'] ?? ''));
+            $out[] = [
+                'title'    => $title !== '' ? $title : ($builtIn ?? (string) ($field['label'] ?? $source)),
+                'source'   => $source,
+                'prefix'   => (string) ($c['prefix'] ?? ''),
+                'suffix'   => (string) ($c['suffix'] ?? ''),
+                'sortable' => !empty($c['sortable']),
+                'field'    => $field,
+            ];
+        }
+        return $out;
+    }
+
+    /** A filter's title: its own, else its field's label. @param array<string, mixed> $filter @param array<string, array<string, mixed>> $fields */
+    public static function filterTitle(array $filter, array $fields): string
+    {
+        $title = trim((string) ($filter['label'] ?? ''));
+        return $title !== '' ? $title : (string) ($fields[$filter['source'] ?? '']['label'] ?? $filter['source'] ?? '');
+    }
+
+    /**
+     * What each admin filter offers: a choice field's choices, Yes and No for a toggle, else the values saved so far.
+     * A filter on a field deleted since offers nothing and is left out.
+     *
+     * @param list<array<string, mixed>> $filters
+     * @param array<string, array<string, mixed>> $fields
+     * @param array<int, array<string, mixed>> $values
+     * @return array<string, array<string, string>> field key => value => text
+     */
+    public static function filterChoices(array $filters, array $fields, array $values): array
+    {
+        $out = [];
+        foreach ($filters as $f) {
+            $key = (string) ($f['source'] ?? '');
+            $field = $fields[$key] ?? null;
+            if ($field === null) {
+                continue;
+            }
+            $choices = is_array($field['options']['choices'] ?? null) ? $field['options']['choices'] : [];
+            if (($field['type'] ?? '') === 'boolean') {
+                $out[$key] = ['1' => \__('studio_yes', 'Yes'), '0' => \__('studio_no', 'No')];
+            } elseif ($choices !== []) {
+                $out[$key] = array_column($choices, 'label', 'value');
+            } else {
+                $seen = [];
+                foreach ($values as $row) {
+                    foreach (self::valueWords($row[$key] ?? null) as $word) {
+                        $seen[$word] = mb_substr($word, 0, 60);
+                    }
+                }
+                uksort($seen, 'strnatcasecmp');
+                $out[$key] = array_slice($seen, 0, 100, true);
+            }
+        }
+        return $out;
+    }
+
+    /** A saved value as the words a filter compares: one for a scalar, one per entry for a list. @return list<string> */
+    public static function valueWords(mixed $value): array
+    {
+        if (is_bool($value)) {
+            return [$value ? '1' : '0'];
+        }
+        if (is_scalar($value)) {
+            return (string) $value === '' ? [] : [(string) $value];
+        }
+        return is_array($value) ? array_values(array_filter(array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $value), static fn(string $v): bool => $v !== '')) : [];
+    }
+
+    /**
+     * The rows sorted by one column; an empty value goes last either way.
+     *
+     * @param list<array<string, mixed>> $pages
+     * @param array<int, array<string, mixed>> $values
+     * @return list<array<string, mixed>>
+     */
+    public static function sorted(array $pages, string $source, string $dir, array $values): array
+    {
+        $of = static function (array $p) use ($source, $values): string {
+            $raw = match ($source) {
+                '_status'  => (string) ($p['status'] ?? ''),
+                '_date'    => (string) ($p['published_at'] ?? ''),
+                '_updated' => (string) ($p['updated_at'] ?? ''),
+                '_slug'    => (string) ($p['public_path'] ?? ''),
+                default    => $values[(int) $p['id']][$source] ?? '',
+            };
+            return implode(' ', self::valueWords($raw));
+        };
+        $sign = $dir === 'desc' ? -1 : 1;
+        usort($pages, static function (array $a, array $b) use ($of, $sign): int {
+            [$x, $y] = [$of($a), $of($b)];
+            if (($x === '') !== ($y === '')) {
+                return $x === '' ? 1 : -1;
+            }
+            return $sign * strnatcasecmp($x, $y);
+        });
+        return $pages;
+    }
+
+    /** @param array<string, mixed> $column @param array{base?: array<string, mixed>, key?: string, dir?: string} $sort */
+    private static function columnHead(array $column, array $sort): string
+    {
+        $title = \e((string) $column['title']);
+        if (empty($column['sortable'])) {
+            return $title;
+        }
+        $active = ($sort['key'] ?? '') === $column['source'];
+        $dir = $active && ($sort['dir'] ?? 'asc') === 'asc' ? 'desc' : 'asc';
+        return '<a href="pages.php?' . \e(http_build_query(($sort['base'] ?? []) + ['sort' => $column['source'], 'dir' => $dir])) . '">' . $title
+            . ($active ? (($sort['dir'] ?? 'asc') === 'asc' ? ' ↑' : ' ↓') : '') . '</a>';
+    }
+
+    /** @param array<string, mixed> $page */
+    private static function statusLabel(array $page): string
+    {
+        return !empty($page['is_published']) ? \__('studio_status_published', 'Published')
+            : (($page['status'] ?? '') === 'scheduled' ? \__('studio_status_scheduled', 'Scheduled') : \__('studio_status_draft', 'Draft'));
+    }
+
+    /** One row's value for one admin column, as text. @param array<string, mixed> $column @param array<string, mixed> $page @param array<string, mixed> $values */
+    private static function cell(array $column, array $page, array $values): string
+    {
+        $source = (string) $column['source'];
+        $text = match ($source) {
+            '_status'  => self::statusLabel($page),
+            '_date'    => substr((string) ($page['published_at'] ?? ''), 0, 10),
+            '_updated' => substr((string) ($page['updated_at'] ?? ''), 0, 10),
+            '_slug'    => (string) ($page['public_path'] ?? ''),
+            default    => self::fieldText($column['field'] ?? [], $values[$source] ?? null),
+        };
+        return $text === '' ? '—' : (string) $column['prefix'] . $text . (string) $column['suffix'];
+    }
+
+    /** A saved field value as a person reads it: a choice's label, Yes or No for a toggle. @param array<string, mixed> $field */
+    private static function fieldText(array $field, mixed $value): string
+    {
+        if (($field['type'] ?? '') === 'boolean') {
+            return $value === null ? '' : ($value ? \__('studio_yes', 'Yes') : \__('studio_no', 'No'));
+        }
+        $labels = is_array($field['options']['choices'] ?? null) ? array_column($field['options']['choices'], 'label', 'value') : [];
+        return mb_substr(implode(', ', array_map(static fn(string $w): string => (string) ($labels[$w] ?? $w), self::valueWords($value))), 0, 80);
     }
 
     /** A page kind as one word that fits the list's type pill: "Header", "Template", not the stored `header_partial` or `system`. */

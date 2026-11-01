@@ -96,6 +96,9 @@ final class StudioSitemapService
         foreach ($rows as $row) {
             $id = (int) $row['id'];
             $slug = (string) $row['slug'];
+            if (!\Slate\Module\StudioBuilder\Meta\PageRoutes::isQueryable($this->tenants->id(), $id)) {
+                continue; // an item of a type with no public address
+            }
             if (($row['route_mode'] ?? '') === 'homepage') {
                 if ($id !== $homeId) {
                     continue; // a losing homepage-mode page is only a duplicate of `/`

@@ -126,7 +126,7 @@ unit('live changes: menus and a published page\'s address, archive and custom fi
         assert_true(str_contains($src, "\$canEdit    = Auth::can('studio-builder.publish') || Auth::isSuperAdmin();"), "{$file} needs publish");
     }
     $app = (string) file_get_contents(SLATE_ROOT . '/src/Module/StudioBuilder/Application/StudioApplicationService.php');
-    assert_eq(2, substr_count($app, '$this->authorizeLiveChange($actor, $current);'), 'archive and readdress check it');
+    assert_eq(5, substr_count($app, '$this->authorizeLiveChange($actor, $current);'), 'archive, readdress, unpublish, schedule and the publish date check it');
     assert_true(str_contains($app, 'if ($actor->isAiOrigin()) {'), 'an AI origin is refused');
     $edit = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/admin/page-edit.php');
     assert_true(str_contains($edit, "\$action === 'save_meta' && \$hasMeta && !\$studioApp->canChangeLive(\$studioActor, \$page)"), 'custom fields of a published page');

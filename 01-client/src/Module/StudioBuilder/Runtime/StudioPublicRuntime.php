@@ -32,7 +32,9 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Runtime;
 
 use Slate\Module\StudioBuilder\Domain\PageAddress;
+use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Meta\PageRoutes;
+use Slate\Module\StudioBuilder\Meta\PostTypeSettings;
 use Slate\Module\StudioBuilder\Registry\PluginSingleInterface;
 use Slate\Module\StudioBuilder\Registry\PluginWidgetCatalog;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
@@ -119,7 +121,8 @@ final class StudioPublicRuntime
             if ($this->reserved->isReserved(explode('/', $typed['prefix'])[0])) {
                 return null;
             }
-            return $this->serve(fn(): ?array => $this->findPublishedTyped($typed['prefix'], $typed['slug']), $ifNoneMatch);
+            return $this->serve(fn(): ?array => $this->findPublishedTyped($typed['prefix'], $typed['slug']), $ifNoneMatch)
+                ?? $this->typeArchive($trimmedPath, $ifNoneMatch);
         }
 
         $slug = $this->slugFromPath($path);
@@ -127,7 +130,40 @@ final class StudioPublicRuntime
             return null;
         }
         return $this->movedUnderPrefix($slug)
-            ?? $this->serve(fn(): ?array => $this->findPublishedBySlug($slug), $ifNoneMatch);
+            ?? $this->serve(fn(): ?array => $this->findPublishedBySlug($slug), $ifNoneMatch)
+            ?? $this->typeArchive($trimmedPath, $ifNoneMatch);
+    }
+
+    /**
+     * `/{prefix}`: the archive of the content type living there, shown by the Archive template. Asked only after no page
+     * answered, so a page already at that address keeps it.
+     */
+    private function typeArchive(string $path, ?string $ifNoneMatch): ?PublicResponse
+    {
+        if ($this->themeTemplates === null || !$this->tenants->isScoped() || $this->tenants->id() <= 0) {
+            return null;
+        }
+        $tenantId = $this->tenants->id();
+        try {
+            $key = PageRoutes::archiveType($tenantId, $path);
+            $type = $key !== '' ? (PageMeta::postTypes($tenantId)[$key] ?? null) : null;
+        } catch (\Throwable $e) {
+            self::log('type-archive', $e);
+            return null;
+        }
+        if ($type === null || $this->reserved->isReserved(explode('/', trim($path, '/'))[0])) {
+            return null;
+        }
+        $label = PostTypeSettings::label($type, 'archives');
+        $tpl = $this->resolveThemeTemplate(fn(ThemeTemplateResolver $t): ?array => $t->resolveArchive('content_type', $label, ['content_type' => $key]));
+        if ($tpl === null) {
+            return null;
+        }
+        return $this->serveTemplate(PageAddress::fromRow($tpl['page']), $ifNoneMatch, 200, [
+            'archive_type' => 'content_type',
+            'term'         => $label,
+            'content_type' => $key,
+        ]);
     }
 
     /** A 301 from `/{slug}` to `/{prefix}/{slug}` when the published page there lives under its content type's prefix. */
@@ -553,6 +589,7 @@ final class StudioPublicRuntime
             // Template-ness is read from what was PUBLISHED: a draft that names a template_type must not take the
             // live page offline before anyone publishes it.
             if ($row !== null && ($row['status'] ?? null) === 'published' && !empty($row['published_revision_id'])
+                && PageRoutes::isQueryable($this->tenants->id(), (int) $row['id'])
                 && !self::isThemeTemplate($row, PublishedPageData::settingsOf($this->tenants->id(), $row))) {
                 return $row;
             }

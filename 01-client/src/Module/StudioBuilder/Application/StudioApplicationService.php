@@ -1169,6 +1169,117 @@ final class StudioApplicationService
     }
 
     /**
+     * Take a published or scheduled page off the site, as a draft: its content and its published revision stay, so
+     * publishing it again puts it back. A theme template, header or footer is left to the Templates screen.
+     *
+     * @return array<string, mixed> the page view
+     */
+    public function unpublish(StudioActor $actor, int $pageId): array
+    {
+        $this->authorize($actor, StudioPermissions::PUBLISH);
+        $current = $this->pageRepo->find($pageId);
+        if ($current === null) {
+            throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
+        }
+        $this->authorizeLiveChange($actor, $current);
+        $this->pageRepo->update($pageId, ['status' => 'draft', 'scheduled_for' => null, 'updated_by' => (int) $actor->userId ?: null]);
+        $this->invalidator?->invalidatePage($pageId);
+        $this->invalidateSharedContent($current);
+        $this->audit($actor, 'studio.page.unpublished', (string) $pageId);
+        return StudioEditorViews::page($this->pageRepo->find($pageId) ?? $current);
+    }
+
+    /**
+     * Publish a page's draft at a later time (Runtime/StudioScheduledPublisher). Until then it is off the site, even if it
+     * was live.
+     *
+     * @param string $date `Y-m-d H:i:s`, on the database's clock
+     * @return array<string, mixed> the page view
+     */
+    public function schedulePublish(StudioActor $actor, int $pageId, string $date): array
+    {
+        $this->authorize($actor, StudioPermissions::PUBLISH);
+        $current = $this->pageRepo->find($pageId);
+        if ($current === null) {
+            throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
+        }
+        $this->authorizeLiveChange($actor, $current);
+        $this->pageRepo->update($pageId, ['status' => 'scheduled', 'scheduled_for' => $date, 'updated_by' => (int) $actor->userId ?: null]);
+        $this->invalidator?->invalidatePage($pageId);
+        $this->invalidateSharedContent($current);
+        $this->audit($actor, 'studio.page.scheduled', (string) $pageId, ['scheduled_for' => $date]);
+        return StudioEditorViews::page($this->pageRepo->find($pageId) ?? $current);
+    }
+
+    /**
+     * Change the date a published page shows and sorts by.
+     *
+     * @param string $date `Y-m-d H:i:s`
+     * @return array<string, mixed> the page view
+     */
+    public function setPublishDate(StudioActor $actor, int $pageId, string $date): array
+    {
+        $this->authorize($actor, StudioPermissions::PUBLISH);
+        $current = $this->pageRepo->find($pageId);
+        if ($current === null) {
+            throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
+        }
+        $this->authorizeLiveChange($actor, $current);
+        $this->pageRepo->update($pageId, ['published_at' => $date, 'updated_by' => (int) $actor->userId ?: null]);
+        $this->invalidator?->invalidatePage($pageId);
+        $this->audit($actor, 'studio.page.date_changed', (string) $pageId, ['published_at' => $date]);
+        return StudioEditorViews::page($this->pageRepo->find($pageId) ?? $current);
+    }
+
+    /**
+     * The published Single templates an item can be pinned to.
+     *
+     * @return list<array{uuid: string, title: string}>
+     */
+    public function singleTemplates(StudioActor $actor): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        return (new ThemeTemplateResolver($this->pageRepo, $this->revisionRepo))->singleTemplates();
+    }
+
+    /**
+     * Save what an item's screen keeps in its document: the SEO box, the featured image and the excerpt. It is a draft
+     * like any builder save; the screen decides whether it also goes live.
+     *
+     * @param array{title: string, description: string, robots: ?string, og_image_media_id: ?int, excerpt: ?string} $item
+     *        `excerpt` null leaves the excerpt alone (a type without one)
+     * @return bool whether the document changed
+     */
+    public function saveItemDocument(StudioActor $actor, int $pageId, array $item): bool
+    {
+        $loaded = $this->loadEditorDocument($actor, $pageId);
+        $document = $loaded['document'];
+        $seo = is_array($document['seo'] ?? null) ? $document['seo'] : [];
+        $settings = is_array($document['settings'] ?? null) ? $document['settings'] : [];
+        $before = [$seo, $settings];
+
+        $seo['title'] = $item['title'];
+        $seo['description'] = $item['description'];
+        foreach (['robots', 'og_image_media_id'] as $key) {
+            if ($item[$key] === null || $item[$key] === '') {
+                unset($seo[$key]);
+            } else {
+                $seo[$key] = $item[$key];
+            }
+        }
+        if ($item['excerpt'] !== null) {
+            $settings['excerpt'] = $item['excerpt'];
+        }
+        if ([$seo, $settings] === $before) {
+            return false;
+        }
+        $document['seo'] = $seo;
+        $document['settings'] = $settings;
+        $this->saveDraft($actor, $pageId, $document, isset($loaded['revision']['id']) ? (int) $loaded['revision']['id'] : null);
+        return true;
+    }
+
+    /**
      * The page's Studio forms become Forms forms (StudioFormSync), after the publish has committed: a Forms problem is
      * logged and never undoes a publish.
      *

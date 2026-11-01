@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Provider;
 
 use Slate\Data\Database;
+use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Render\Media\CoreMediaResolver;
 use Slate\Module\StudioBuilder\Runtime\PublishedPageData;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
@@ -103,6 +104,21 @@ final class PostsProvider implements PublicDataProviderInterface
             $sql .= ' AND (p.title LIKE ? OR p.slug LIKE ?)';
             $sqlParams[] = $like;
             $sqlParams[] = $like;
+        }
+
+        // A content type's archive lists that type; a type that is not public is listed nowhere. An archive of a type
+        // with no items is empty, not every post.
+        $contentType = trim((string) ($params['content_type'] ?? ''));
+        if ($contentType !== '') {
+            $ids = PageMeta::pageIdsOfType($tenantId, $contentType);
+            if ($ids === []) {
+                return [];
+            }
+            $sql .= ' AND p.id IN (' . implode(',', array_map('intval', $ids)) . ')';
+        }
+        $unlisted = PageMeta::unlistedPageIds($tenantId, $search !== '');
+        if ($unlisted !== []) {
+            $sql .= ' AND p.id NOT IN (' . implode(',', array_map('intval', $unlisted)) . ')';
         }
 
         $sql .= " ORDER BY p.{$orderBy} {$order}, p.id {$order}";

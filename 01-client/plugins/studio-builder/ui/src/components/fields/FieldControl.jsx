@@ -16,7 +16,7 @@ import { UrlControl } from './UrlControl.jsx';
 import { PropChoice, PropTiles } from './PropPresenters.jsx';
 import { TokenPicker } from './TokenPicker.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
-import { getMetaFields, isKnownMetaField, metaFieldGroups } from '../../core/metaFields.mjs';
+import { getMetaFields, getPostTypes, isKnownMetaField, metaFieldGroups } from '../../core/metaFields.mjs';
 import { sizedLabeller, tableFor } from '../../core/optionValues.mjs';
 import { Check, Field } from '../ui/index.js';
 import { DeviceProp } from './DeviceProp.jsx';
@@ -124,6 +124,18 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
             ))}
           </select>
           {getMetaFields().length === 0 ? <p className="sbx-hint">{t('meta_field_empty')}</p> : null}
+        </FieldRow>
+      );
+    }
+    case 'posttype': {
+      const known = getPostTypes().some((c) => c.key === draft);
+      return (
+        <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
+          <select {...common} value={draft ?? ''} onChange={(e) => update(e.target.value)} data-testid="post-type-select">
+            <option value="">{t('post_type_all')}</option>
+            {draft && !known ? <option value={draft}>{t('post_type_missing', { key: draft })}</option> : null}
+            {getPostTypes().map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+          </select>
         </FieldRow>
       );
     }

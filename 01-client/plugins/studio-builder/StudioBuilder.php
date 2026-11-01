@@ -57,6 +57,7 @@ class StudioBuilder extends Plugin
 
         \Hook::addFilter('public_fallback', [self::class, 'servePublicPath'], 10, 2);
         \Hook::addFilter('public_homepage', [self::class, 'servePublicHomepage'], 10, 1);
+        \Hook::addAction('frequent_cron', [\Slate\Module\StudioBuilder\Runtime\StudioScheduledPublisher::class, 'run']);
         \Hook::addFilter('admin_nav_items', [$this, 'addAdminNav']);
         \Hook::addAction('admin_head', [$this, 'adminHead']);
         \Hook::addFilter('admin_topbar_actions', [$this, 'addTopbarActions']);
@@ -259,9 +260,9 @@ class StudioBuilder extends Plugin
         // Each content type the site made has its own list, right under Pages (Content types › Show in the sidebar).
         try {
             $tenantId = function_exists('current_tenant_id') ? current_tenant_id() : 0;
-            foreach (\Slate\Module\StudioBuilder\Meta\PageMeta::postTypes($tenantId) as $key => $type) {
+            foreach (\Slate\Module\StudioBuilder\Meta\PostTypeSettings::sorted(\Slate\Module\StudioBuilder\Meta\PageMeta::postTypes($tenantId)) as $key => $type) {
                 if (\Slate\Module\StudioBuilder\Meta\PageMeta::showsInMenu($type)) {
-                    $items[] = ['slug' => 'studio-type-' . $key, 'label' => (string) ($type['plural'] ?? $type['singular'] ?? $key), 'file' => 'admin/pages.php?type=' . rawurlencode((string) $key), 'icon' => 'folder', 'section' => $content];
+                    $items[] = ['slug' => 'studio-type-' . $key, 'label' => \Slate\Module\StudioBuilder\Meta\PostTypeSettings::label($type, 'menu_name'), 'file' => 'admin/pages.php?type=' . rawurlencode((string) $key), 'icon' => (string) $type['menu_icon'], 'section' => $content];
                 }
             }
         } catch (\Throwable $e) {
@@ -312,6 +313,7 @@ class StudioBuilder extends Plugin
         if (!self::isReadRequest()) {
             return false;
         }
+        \Slate\Module\StudioBuilder\Runtime\StudioScheduledPublisher::runSoon();
         $runtime = StudioRuntimeFactory::build()->publicRuntime;
         // A browser is shown the sitemap as a readable page; `?format=xml` (the page's own link) always returns the XML.
         $accept = isset($_SERVER['HTTP_ACCEPT']) && is_string($_SERVER['HTTP_ACCEPT']) && ($_GET['format'] ?? '') !== 'xml'

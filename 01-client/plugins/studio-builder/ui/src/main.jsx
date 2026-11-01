@@ -8,7 +8,7 @@
 import { createRoot } from 'react-dom/client';
 import { StudioShell } from './components/StudioShell.jsx';
 import { setMessages } from './core/messages.mjs';
-import { setMetaFields } from './core/metaFields.mjs';
+import { setMetaFields, setPostTypes } from './core/metaFields.mjs';
 import { setContentTypes } from './core/conditions.mjs';
 
 function readBoot() {
@@ -27,6 +27,7 @@ const root = document.getElementById('sb-builder-root');
 if (boot && root) {
   if (boot.messages) setMessages(boot.messages);
   setMetaFields(boot.metaFields);
+  setPostTypes(boot.postTypes);
   setContentTypes(boot.contentTypes);
   createRoot(root).render(<StudioShell boot={boot} />);
 }
