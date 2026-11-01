@@ -48,6 +48,8 @@ final class PostTypeForm
         $opt = is_array($f['options'] ?? null) ? $f['options'] : [];
         $choices = implode("\n", array_map(static fn(array $c): string => (string) ($c['value'] ?? '') . ' : ' . (string) ($c['label'] ?? ''), is_array($opt['choices'] ?? null) ? $opt['choices'] : []));
 
+        $subfields = implode("\n", array_map(static fn(array $s): string => (string) ($s['key'] ?? '') . ' : ' . (string) ($s['label'] ?? '') . ' : ' . (string) ($s['type'] ?? 'text'), MetaFieldTypes::subfields($f)));
+
         $select = '<select name="' . $name('type') . '" data-field-type>';
         foreach (MetaFieldTypes::GROUPS as $group => $groupLabel) {
             $select .= '<optgroup label="' . $h($groupLabel) . '">';
@@ -69,6 +71,7 @@ final class PostTypeForm
         $number = static fn(string $k, string $attr = 'step="any"'): string => '<input type="number" ' . $attr . ' name="' . $name($k) . '" value="' . $h($opt[$k] ?? '') . '">';
         $options = '<div class="sb-form-grid sb-field-options" data-field-options>'
             . self::field(\__('studio_tf_choices', 'Choices'), '<textarea name="' . $name('choices') . '" rows="4">' . $h($choices) . '</textarea>', sprintf(\e(\__('studio_tf_choices_hint', 'One per line, as %1$s or %2$s.')), '<code>value</code>', '<code>value : Label</code>'), 'sb-field--wide" data-opt="choices')
+            . self::field(\__('studio_tf_subfields', 'Sub-fields'), '<textarea name="' . $name('subfields') . '" rows="4">' . $h($subfields) . '</textarea>', \e(\__('studio_tf_subfields_hint', 'One per line, as key : Label : type. Types: text, textarea, richtext, image, url, number.')), 'sb-field--wide" data-opt="subfields')
             . self::field(\__('studio_tf_links_to', 'Links to'), $target, '', '" data-opt="target')
             . self::field(\__('studio_tf_min', 'Minimum'), $number('min'), '', '" data-opt="min')
             . self::field(\__('studio_tf_max', 'Maximum'), $number('max'), '', '" data-opt="max')

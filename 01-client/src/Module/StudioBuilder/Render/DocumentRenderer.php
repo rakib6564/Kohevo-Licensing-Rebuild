@@ -39,6 +39,7 @@ use Slate\Module\StudioBuilder\Document\StyleValueGuard;
 use Slate\Module\StudioBuilder\Registry\BlockDefinitionInterface;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
+use Slate\Module\StudioBuilder\Render\Block\RepeatingChildrenInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
 use Slate\Module\StudioBuilder\Render\Block\WrapperClassesInterface;
@@ -106,6 +107,12 @@ final class DocumentRenderer
             return '';
         }
 
+        // A block tied to a field goes when the page shown leaves that field empty. The editor keeps it, to be selected.
+        $whenField = (string) ($visibility['when_field'] ?? '');
+        if (!$deferDynamic && $whenField !== '' && !$context->emitsNodeMetadata() && !self::fieldHasValue($context, $whenField)) {
+            return '';
+        }
+
         $type       = (string) ($block['type'] ?? '');
         $definition = $this->registry->get($type);
         $renderer   = $this->renderers->get($type);
@@ -134,9 +141,12 @@ final class DocumentRenderer
 
         $children = '';
         if ($definition->allowsChildren()) {
-            foreach ((array) ($block['children'] ?? []) as $child) {
-                if (is_array($child)) {
-                    $children .= $this->renderBlock($child, $context, $theme, $collector, $deferDynamic);
+            $contexts = $renderer instanceof RepeatingChildrenInterface ? $renderer->childContexts($block, $context) : [$context];
+            foreach ($contexts as $i => $childContext) {
+                foreach ((array) ($block['children'] ?? []) as $child) {
+                    if (is_array($child)) {
+                        $children .= $this->renderBlock($child, $i === 0 ? $childContext : $childContext->framing(), $theme, $collector, $deferDynamic);
+                    }
                 }
             }
         }
@@ -269,8 +279,16 @@ final class DocumentRenderer
     public static function isDynamicNode(array $block, BlockDefinitionInterface $definition, BlockRendererInterface $renderer): bool
     {
         return $renderer->isDynamic()
+            || !empty($block['visibility']['when_field'])
             || $definition->requiredEntitlement() !== null
             || (is_array($block['bindings'] ?? null) && $block['bindings'] !== []);
+    }
+
+    private static function fieldHasValue(RenderContext $context, string $key): bool
+    {
+        $meta = $context->attribute('page_meta');
+        $value = is_array($meta) && is_array($meta['values'] ?? null) ? ($meta['values'][$key] ?? null) : null;
+        return !($value === null || $value === '' || $value === [] || $value === false);
     }
 
     /** Non-executable fallback: nothing in public output, a labelled notice when authoring. */

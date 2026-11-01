@@ -13,7 +13,7 @@ unit('page meta: text is trimmed and cut to max_length, and a required empty one
     assert_eq('abc', PageMeta::clean($field('text', ['options' => ['max_length' => 3]]), '  abcdef ')['value']);
     assert_true(PageMeta::clean($field('text', ['required' => true]), '   ')['error'] !== null, 'required and empty');
     assert_eq('', PageMeta::clean($field('text'), '')['value']);
-    assert_eq('xhi', PageMeta::clean($field('richtext'), '<b onclick=1>x</b>hi')['value'], 'tags stripped');
+    assert_eq('<b>x</b>yhi', PageMeta::clean($field('richtext'), '<b onclick=1>x</b><script>y</script>hi')['value'], 'formatting kept, anything unsafe gone');
 });
 
 unit('page meta: email, url, colour and date are validated', function () use ($field): void {

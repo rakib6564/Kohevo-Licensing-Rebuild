@@ -7,6 +7,7 @@ import { BREAKPOINTS, VIEWPORTS } from '../../core/viewport.mjs';
 import { useEditor } from '../EditorContext.jsx';
 import { Icon, choiceIcon } from './InspectorIcons.jsx';
 import { IconMonitor, IconTablet, IconSmartphone } from '../Icons.jsx';
+import { getMetaFields } from '../../core/metaFields.mjs';
 import { t } from '../../core/messages.mjs';
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { Field, Check } from '../ui/index.js';
@@ -194,7 +195,7 @@ export function VisibilityControls({ value, onChange, manifest }) {
   const authStates = asList(manifest.vocabulary && manifest.vocabulary.auth_states);
   const toggle = (bp, on) => {
     const next = on ? BREAKPOINTS.filter((b) => b === bp || devices.includes(b)) : devices.filter((b) => b !== bp);
-    if (next.length) onChange({ auth_state: vis.auth_state || 'any', devices: next });
+    if (next.length) onChange({ ...vis, auth_state: vis.auth_state || 'any', devices: next });
   };
   return (
     <>
@@ -205,10 +206,18 @@ export function VisibilityControls({ value, onChange, manifest }) {
         ))}
       </fieldset>
       <Field label={t('audience')} htmlFor={id}>
-        <select id={id} value={vis.auth_state || 'any'} onChange={(e) => onChange({ auth_state: e.target.value, devices })}>
+        <select id={id} value={vis.auth_state || 'any'} onChange={(e) => onChange({ ...vis, auth_state: e.target.value, devices })}>
           {authStates.map((s) => <option key={s} value={s}>{optionLabel(s)}</option>)}
         </select>
       </Field>
+      {getMetaFields().length > 0 && (
+        <Field label={t('when_field')} htmlFor={`${id}-field`}>
+          <select id={`${id}-field`} value={vis.when_field || ''} onChange={(e) => onChange({ ...vis, auth_state: vis.auth_state || 'any', devices, when_field: e.target.value })}>
+            <option value="">{t('when_field_always')}</option>
+            {getMetaFields().map((f) => <option key={`${f.postType}-${f.key}`} value={f.key}>{f.postTypeLabel} · {f.label}</option>)}
+          </select>
+        </Field>
+      )}
     </>
   );
 }

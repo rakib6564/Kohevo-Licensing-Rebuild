@@ -200,6 +200,13 @@ final class BlockParts
             'meta' => ['label' => 'Meta line', 'selectors' => ['.sb-post-meta']],
             'item' => ['label' => 'Items', 'selectors' => ['.sb-post-meta > span']],
         ],
+        'theme.repeater' => [
+            'row'     => ['label' => 'Row', 'selectors' => ['.sb-repeater__list li']],
+            'item'    => ['label' => 'Accordion item', 'selectors' => ['.sb-accordion__item']],
+            'title'   => ['label' => 'Accordion title', 'selectors' => ['.sb-accordion__button']],
+            'icon'    => ['label' => 'Accordion icon', 'selectors' => ['.sb-accordion__icon']],
+            'content' => ['label' => 'Accordion content', 'selectors' => ['.sb-accordion__panel']],
+        ],
         'theme.field_value' => [
             'value'     => ['label' => 'Value', 'selectors' => ['.sb-field-value']],
             'label'     => ['label' => 'Label', 'selectors' => ['.sb-field-value__label']],

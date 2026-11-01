@@ -284,10 +284,14 @@ final class DocumentNormalizer
             }
         }
 
-        return [
+        $out = [
             'auth_state' => (string) ($merged['auth_state'] ?? 'any'),
             'devices'    => $orderedDevices,
         ];
+        if (is_string($merged['when_field'] ?? null) && $merged['when_field'] !== '') {
+            $out['when_field'] = $merged['when_field'];
+        }
+        return $out;
     }
 
     private static function stripTransientNode(mixed $value): mixed

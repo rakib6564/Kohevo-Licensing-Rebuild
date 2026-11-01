@@ -526,8 +526,29 @@ final class BlockRegistry
                 ['key' => 'show_label', 'type' => 'boolean', 'label' => 'Show the field name', 'required' => false, 'default' => false],
                 ['key' => 'fallback', 'type' => 'string', 'label' => 'Text when empty', 'required' => false, 'default' => '', 'max_length' => 255],
                 ['key' => 'tag', 'type' => 'enum', 'label' => 'HTML tag', 'required' => false, 'allowed_values' => ['div', 'p', 'span', 'h2', 'h3', 'h4'], 'default' => 'div'],
+                ['key' => 'fit', 'type' => 'enum', 'label' => 'Image fit', 'required' => false, 'allowed_values' => ['auto', 'cover', 'contain'], 'default' => 'auto'],
             ]),
             allowsChildren: false,
+            allowedBindingProviders: [],
+        ));
+
+        // theme.repeater — the rows of one repeater field; children repeat once per row
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.repeater',
+            version: 1,
+            label: 'Repeater',
+            title: 'Repeater',
+            description: 'The rows of a repeater field',
+            category: 'theme',
+            icon: 'list-check',
+            schema: FieldSchema::define([
+                ['key' => 'field', 'type' => 'string', 'label' => 'Field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
+                ['key' => 'display', 'type' => 'enum', 'label' => 'Show as', 'required' => false, 'allowed_values' => ['list', 'accordion'], 'default' => 'list'],
+                ['key' => 'title_field', 'type' => 'string', 'label' => 'Title sub-field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
+                ['key' => 'body_field', 'type' => 'string', 'label' => 'Text sub-field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
+                ['key' => 'allow_multiple', 'type' => 'boolean', 'label' => 'Allow several open', 'required' => false, 'default' => false],
+            ]),
+            allowsChildren: true,
             allowedBindingProviders: [],
         ));
 

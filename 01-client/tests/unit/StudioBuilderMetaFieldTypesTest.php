@@ -20,7 +20,7 @@ unit('meta field types: a rich catalogue, grouped, and every type names a known 
         assert_true(isset(MetaFieldTypes::GROUPS[$def['group']]), "{$key} has a known group");
         assert_true($def['label'] !== '' && $def['hint'] !== '', "{$key} has a label and a hint");
         foreach ($def['options'] as $opt) {
-            assert_true(in_array($opt, ['choices', 'min', 'max', 'step', 'max_length', 'target', 'extensions'], true), "{$key}: known option {$opt}");
+            assert_true(in_array($opt, ['choices', 'min', 'max', 'step', 'max_length', 'target', 'extensions', 'subfields'], true), "{$key}: known option {$opt}");
         }
     }
 });

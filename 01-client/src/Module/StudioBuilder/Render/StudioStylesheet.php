@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '60';
+    public const VERSION = '61';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -269,6 +269,11 @@ final class StudioStylesheet
             // Embedded in a Studio page there is no such ancestor, so the submit button lost its background; map them to the site tokens.
             . '.sb-block--forms-embed{--f-accent:var(--sb-color-accent);--f-accent-d:color-mix(in srgb,var(--sb-color-accent) 85%,#000);--f-ink:var(--sb-text-primary);--f-muted:var(--sb-text-muted);--f-line:#e4e7ec;--f-line-2:#eef1f5;--f-surface:#fff;--f-soft:#f7f8fa;--f-radius:14px;--f-radius-s:11px;--f-ring:rgba(17,17,17,.14)}'
             . '.sb-empty{color:var(--sb-text-muted)}'
+            . '.sb-field-value--cover,.sb-field-value--contain{height:100%}'
+            . '.sb-field-value--cover img,.sb-field-value--contain img{display:block;width:100%;height:100%;object-fit:cover}'
+            . '.sb-field-value--contain img{object-fit:contain}'
+            . '.sb-repeater{display:contents}'
+            . '.sb-repeater__list{margin:0;padding:0;list-style:none}'
             . '.sb-unavailable{padding:.75rem 1rem;border:1px dashed #b45309;color:#92400e;background:#fffbeb;border-radius:6px;font-size:.875rem}'
             . '.sb-preview-banner{position:sticky;top:0;z-index:10;padding:.5rem 1rem;background:#1e293b;color:#fff;font:600 .8rem/1.4 system-ui,sans-serif;text-align:center}'
             . '.sb-platform-signature{padding:.75rem 1rem;text-align:center;font-size:.75rem;color:#6b7280}'

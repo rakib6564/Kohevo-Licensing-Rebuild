@@ -17,6 +17,7 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Meta;
 
+use Slate\Module\StudioBuilder\Render\RichTextSanitizer;
 use Slate\Data\Database;
 
 final class PageMeta
@@ -210,6 +211,59 @@ final class PageMeta
         return ['errors' => $errors];
     }
 
+    /**
+     * The content type a Single template lays out, from its conditions, or ''.
+     *
+     * @param array<string, mixed> $document
+     */
+    public static function singleTemplateType(array $document): string
+    {
+        $settings = is_array($document['settings'] ?? null) ? $document['settings'] : [];
+        if (($settings['template_type'] ?? '') !== 'single') {
+            return '';
+        }
+        foreach (is_array($settings['conditions']['rules'] ?? null) ? $settings['conditions']['rules'] : [] as $rule) {
+            if (is_array($rule) && ($rule['action'] ?? '') === 'include' && ($rule['condition'] ?? '') === 'singular' && is_string($rule['value'] ?? null)) {
+                return $rule['value'];
+            }
+        }
+        return '';
+    }
+
+    /** @param array<string, mixed> $editorState what `loadEditorDocument` answers */
+    public static function singleTemplateTypeOf(array $editorState): string
+    {
+        return self::singleTemplateType(is_array($editorState['document'] ?? null) ? $editorState['document'] : []);
+    }
+
+    /**
+     * The item a template is previewed with: the one asked for when it is of that type, else the newest published one.
+     *
+     * @return ?array{id: int, title: string}
+     */
+    public static function previewItem(int $tenantId, string $postType, int $wanted = 0): ?array
+    {
+        $items = self::previewItems($tenantId, $postType);
+        foreach ($items as $item) {
+            if ($item['id'] === $wanted) {
+                return $item;
+            }
+        }
+        return $items[0] ?? null;
+    }
+
+    /** @return list<array{id: int, title: string}> a type's items, newest first */
+    public static function previewItems(int $tenantId, string $postType): array
+    {
+        $ids = self::pageIdsOfType($tenantId, $postType);
+        if ($ids === []) {
+            return [];
+        }
+        $marks = implode(',', array_fill(0, count($ids), '?'));
+        $rows = Database::all("SELECT id, title FROM studiobuilder_pages WHERE tenant_id = ? AND status <> 'archived' AND id IN ({$marks}) ORDER BY published_at IS NULL, published_at DESC, id DESC LIMIT 100", array_merge([$tenantId], $ids));
+        return array_map(static fn(array $r): array => ['id' => (int) $r['id'], 'title' => (string) $r['title']], $rows);
+    }
+
     /** A duplicated page starts with the same content type and values. */
     public static function copy(int $tenantId, int $fromPageId, int $toPageId): void
     {
@@ -295,15 +349,38 @@ final class PageMeta
             default => $raw === null || $raw === '' || $raw === [],
         };
         if ($empty && $type !== 'boolean') {
-            return !empty($field['required']) ? $bad("{$label} is required.") : $ok(in_array($type, ['multiselect', 'checkboxes', 'gallery', 'list', 'relations'], true) ? [] : ($type === 'keyvalue' ? new \stdClass() : ''));
+            return !empty($field['required']) ? $bad("{$label} is required.") : $ok(in_array($type, ['multiselect', 'checkboxes', 'gallery', 'list', 'relations', 'repeater'], true) ? [] : ($type === 'keyvalue' ? new \stdClass() : ''));
         }
 
         switch ($type) {
+            case 'richtext':
+                $v = trim(RichTextSanitizer::sanitize(is_scalar($raw) ? (string) $raw : '', true));
+                if (mb_strlen($v) > 500000) {
+                    return $bad("{$label} is too long.");
+                }
+                return trim(strip_tags($v)) === '' && !empty($field['required']) ? $bad("{$label} is required.") : $ok($v);
+            case 'repeater':
+                $rows = [];
+                foreach (array_slice(is_array($raw) ? array_values($raw) : [], 0, 100) as $i => $posted) {
+                    $row = [];
+                    $filled = false;
+                    foreach (MetaFieldTypes::subfields($field) as $sub) {
+                        $r = self::clean($sub, is_array($posted) ? ($posted[$sub['key']] ?? null) : null);
+                        if ($r['error'] !== null) {
+                            return $bad('Row ' . ($i + 1) . ': ' . $r['error']);
+                        }
+                        $row[$sub['key']] = $r['value'];
+                        $filled = $filled || ($r['value'] !== '' && trim(strip_tags((string) $r['value'])) !== '');
+                    }
+                    if ($filled) {
+                        $rows[] = $row;
+                    }
+                }
+                return $rows === [] && !empty($field['required']) ? $bad("{$label} is required.") : $ok($rows);
             case 'text':
             case 'textarea':
-            case 'richtext':
             case 'location':
-                $v = $str($type === 'richtext' ? strip_tags((string) (is_scalar($raw) ? $raw : '')) : $raw, (int) ($opt['max_length'] ?? ($type === 'text' || $type === 'location' ? 255 : 20000)));
+                $v = $str($raw, (int) ($opt['max_length'] ?? ($type === 'text' || $type === 'location' ? 255 : 20000)));
                 return $v === '' && !empty($field['required']) ? $bad("{$label} is required.") : $ok($v);
             case 'email':
                 $v = $str($raw, 254);

@@ -520,6 +520,10 @@ final class DocumentValidator
             }
         }
 
+        if (isset($visibility['when_field']) && (!is_string($visibility['when_field']) || preg_match('/^[a-z0-9_]{0,64}$/', $visibility['when_field']) !== 1)) {
+            $errors[] = ValidationResult::issue("{$path}.when_field", 'invalid_when_field', 'visibility.when_field must be a field key.');
+        }
+
         if (isset($visibility['auth_state'])) {
             if (!is_string($visibility['auth_state']) || !in_array($visibility['auth_state'], CanonicalDocumentSchema::ALLOWED_AUTH_STATES, true)) {
                 $errors[] = ValidationResult::issue("{$path}.auth_state", 'invalid_auth_state', 'visibility.auth_state must be any, authenticated, or guest.');

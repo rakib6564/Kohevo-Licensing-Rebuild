@@ -138,6 +138,7 @@ final class CanonicalDocumentSchema
     public const ALLOWED_VISIBILITY_KEYS = [
         'devices',
         'auth_state',
+        'when_field',
     ];
 
     public const ALLOWED_BREAKPOINTS = ['base', 'sm', 'md', 'lg'];

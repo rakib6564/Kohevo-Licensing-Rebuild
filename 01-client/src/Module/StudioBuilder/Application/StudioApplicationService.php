@@ -1578,12 +1578,20 @@ final class StudioApplicationService
      * Render the working draft for the (Phase 5) builder canvas: editor node
      * metadata included, never cached or indexed. Requires studio-builder.edit.
      */
-    public function renderForEditor(StudioActor $actor, int $pageId): RenderResult
+    public function renderForEditor(StudioActor $actor, int $pageId, int $previewItem = 0): RenderResult
     {
         $tenantId = $this->authorize($actor, StudioPermissions::EDIT);
         $renderer = $this->requireRenderer();
         [$page, $revision] = $this->loadPageRevision($pageId, null);
-        return $renderer->renderRevision($page, $revision, RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor));
+        return $renderer->renderRevision($page, $revision, $this->withPreviewItem(RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor), $revision, $previewItem));
+    }
+
+    /** A Single template on the canvas shows a real item of its content type, not empty fields. */
+    private function withPreviewItem(RenderContext $context, array $revision, int $previewItem): RenderContext
+    {
+        $type = PageMeta::singleTemplateType(CanonicalJson::decode((string) $revision['document_json']));
+        $item = $type === '' ? null : PageMeta::previewItem($context->tenantId, $type, $previewItem);
+        return $item === null ? $context : $context->withAttributes(['meta_page_id' => $item['id'], 'post_title' => $item['title'], 'title' => $item['title']]);
     }
 
     /**
@@ -1615,8 +1623,9 @@ final class StudioApplicationService
         [$page, $revision] = $this->loadPageRevision($pageId, null);
         $document = DocumentUpgrader::structure(CanonicalJson::decode((string) $revision['document_json']));
         $document['containers'] = $containers;
+        $context = $this->withPreviewItem(RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor), $revision, 0);
         $revision['document_json'] = CanonicalJson::encode($document);
-        return $renderer->renderRevision($page, $revision, RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor));
+        return $renderer->renderRevision($page, $revision, $context);
     }
 
     /**

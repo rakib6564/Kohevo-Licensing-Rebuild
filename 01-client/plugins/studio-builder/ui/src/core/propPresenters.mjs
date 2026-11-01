@@ -95,6 +95,11 @@ export const PROP_PRESENTERS = Object.freeze({
     redirect_url: { showIf: (p) => p.expire_action === 'redirect' },
   },
   // The Gallery: a setting shows only where it does something.
+  'theme.repeater': {
+    title_field: { showIf: (p) => p.display === 'accordion' },
+    body_field: { showIf: (p) => p.display === 'accordion' },
+    allow_multiple: { showIf: (p) => p.display === 'accordion' },
+  },
   'core.gallery': {
     gap: { showIf: (p) => !(p.spacing > 0) },
     aspect_ratio: { showIf: (p) => !p.layout || p.layout === 'grid' || p.layout === 'slider' },

@@ -36,6 +36,7 @@ if ($sbPageId === false || $sbPageId === null) {
     try {
         $sbState = StudioRuntimeFactory::build()->app->loadEditorDocument(StudioActor::fromCurrentSession(), $sbPageId);
         $sbTitle = (string) $sbState['page']['title'];
+        $sbTemplateType = \Slate\Module\StudioBuilder\Meta\PageMeta::singleTemplateTypeOf($sbState);
         unset($sbState);
     } catch (StudioException $e) {
         $sbStatus = $e->httpStatus();
@@ -125,6 +126,15 @@ try {
                 'postType' => $pt,
                 'postTypeLabel' => (string) ($sbMetaTypes[$pt]['singular'] ?? $pt),
             ];
+            foreach (\Slate\Module\StudioBuilder\Meta\MetaFieldTypes::subfields($f) as $sub) {
+                $sbMetaFields[] = [
+                    'key' => (string) $sub['key'],
+                    'label' => (string) ($f['label'] ?? $f['key']) . ' › ' . (string) ($sub['label'] ?? $sub['key']),
+                    'type' => (string) ($sub['type'] ?? 'text'),
+                    'postType' => $pt,
+                    'postTypeLabel' => (string) ($sbMetaTypes[$pt]['singular'] ?? $pt),
+                ];
+            }
         }
     }
 } catch (\Throwable $e) {
@@ -147,8 +157,19 @@ try {
     // The dialog keeps its built-in types.
 }
 
+// A Single template's canvas shows one of its items; these are the ones it can be switched to.
+$sbPreviewItems = [];
+try {
+    if (($sbTemplateType ?? '') !== '') {
+        $sbPreviewItems = \Slate\Module\StudioBuilder\Meta\PageMeta::previewItems(current_tenant_id(), $sbTemplateType);
+    }
+} catch (\Throwable $e) {
+    // The canvas shows the newest item.
+}
+
 $sbBoot = [
     'pageId'     => $sbPageId,
+    'previewItems' => $sbPreviewItems,
     'allPages'   => $sbAllPages,
     'apiUrl'     => plugin_url('studio-builder', 'admin/api.php'),
     'canvasUrl'  => plugin_url('studio-builder', 'admin/canvas.php'),
@@ -757,6 +778,9 @@ $sbBoot = [
         'theme_source_branding' => __('studio_ui_theme_source_branding', 'from branding'),
         'theme_source_studio' => __('studio_ui_theme_source_studio', 'Studio override'),
         'theme_reset' => __('studio_ui_theme_reset', 'Use inherited'),
+        'preview_item' => __('studio_ui_preview_item', 'Preview with'),
+        'when_field' => __('studio_ui_when_field', 'Show only if this field has a value'),
+        'when_field_always' => __('studio_ui_when_field_always', 'Always show'),
         'meta_field_none' => __('studio_ui_meta_field_none', 'Choose a field…'),
         'post_type_all' => __('studio_ui_post_type_all', 'All posts'),
         'post_type_missing' => __('studio_ui_post_type_missing', 'Deleted type ({key})'),

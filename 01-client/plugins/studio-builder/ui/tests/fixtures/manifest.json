@@ -296,7 +296,7 @@
                         "heading": "How do I get started?"
                     },
                     {
-                        "body": "Yes — freeze for up to three months, in one go or in slices.",
+                        "body": "Yes \u2014 freeze for up to three months, in one go or in slices.",
                         "heading": "Can I freeze my membership?"
                     },
                     {
@@ -319,7 +319,7 @@
                         },
                         {
                             "heading": "Can I freeze my membership?",
-                            "body": "Yes — freeze for up to three months, in one go or in slices."
+                            "body": "Yes \u2014 freeze for up to three months, in one go or in slices."
                         },
                         {
                             "heading": "What should I bring?",
@@ -8070,6 +8070,7 @@
             "default_props": {
                 "fallback": "",
                 "field": "",
+                "fit": "auto",
                 "show_label": false,
                 "tag": "div"
             },
@@ -8112,6 +8113,18 @@
                         "h2",
                         "h3",
                         "h4"
+                    ]
+                },
+                {
+                    "key": "fit",
+                    "type": "enum",
+                    "label": "Image fit",
+                    "required": false,
+                    "default": "auto",
+                    "allowed_values": [
+                        "auto",
+                        "cover",
+                        "contain"
                     ]
                 }
             ],
@@ -8234,7 +8247,7 @@
             "binding_slots": [],
             "category": "theme",
             "default_props": {
-                "separator": " • ",
+                "separator": " \u2022 ",
                 "show_author": true,
                 "show_category": true,
                 "show_date": true
@@ -8267,7 +8280,7 @@
                     "type": "string",
                     "label": "Separator",
                     "required": false,
-                    "default": " • ",
+                    "default": " \u2022 ",
                     "max_length": 10
                 }
             ],
@@ -8399,6 +8412,123 @@
             "style_parts": [],
             "title": "Post title",
             "type": "theme.post_title",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": {
+                "allow_multiple": false,
+                "body_field": "",
+                "display": "list",
+                "field": "",
+                "title_field": ""
+            },
+            "description": "The rows of a repeater field",
+            "field_schema": [
+                {
+                    "key": "field",
+                    "type": "string",
+                    "label": "Field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
+                },
+                {
+                    "key": "display",
+                    "type": "enum",
+                    "label": "Show as",
+                    "required": false,
+                    "default": "list",
+                    "allowed_values": [
+                        "list",
+                        "accordion"
+                    ]
+                },
+                {
+                    "key": "title_field",
+                    "type": "string",
+                    "label": "Title sub-field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
+                },
+                {
+                    "key": "body_field",
+                    "type": "string",
+                    "label": "Text sub-field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
+                },
+                {
+                    "key": "allow_multiple",
+                    "type": "boolean",
+                    "label": "Allow several open",
+                    "required": false,
+                    "default": false
+                }
+            ],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Repeater",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "row",
+                    "label": "Row"
+                },
+                {
+                    "key": "item",
+                    "label": "Accordion item"
+                },
+                {
+                    "key": "title",
+                    "label": "Accordion title"
+                },
+                {
+                    "key": "icon",
+                    "label": "Accordion icon"
+                },
+                {
+                    "key": "content",
+                    "label": "Accordion content"
+                }
+            ],
+            "title": "Repeater",
+            "type": "theme.repeater",
             "version": 1
         },
         {
