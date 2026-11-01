@@ -962,6 +962,21 @@ final class StudioApplicationService
         ];
     }
 
+    /**
+     * The Single template to open for an item with no blocks of its own, whose content is all in its fields, or 0. There
+     * is nothing to edit on the item's own canvas, so the builder opens the template, showing that item.
+     */
+    public function fieldsOnlyTemplateId(StudioActor $actor, int $pageId): int
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::VIEW);
+        $template = $this->layoutTemplate($actor, $pageId);
+        if ($template === null) {
+            return 0;
+        }
+        [, $document] = $this->currentDocument($pageId);
+        return ($document['containers'] ?? []) === [] && PageMeta::read($tenantId, $pageId)['type'] !== '' ? $template['id'] : 0;
+    }
+
     // ── Design tokens ───────────────────────────────────────────────────────
 
     /**

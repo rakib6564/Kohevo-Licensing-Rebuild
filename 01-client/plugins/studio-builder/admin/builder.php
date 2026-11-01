@@ -37,6 +37,11 @@ if ($sbPageId === false || $sbPageId === null) {
         $sbState = StudioRuntimeFactory::build()->app->loadEditorDocument(StudioActor::fromCurrentSession(), $sbPageId);
         $sbTitle = (string) $sbState['page']['title'];
         $sbTemplateType = \Slate\Module\StudioBuilder\Meta\PageMeta::singleTemplateTypeOf($sbState);
+        $sbItemTemplate = StudioRuntimeFactory::build()->app->fieldsOnlyTemplateId(StudioActor::fromCurrentSession(), $sbPageId);
+        if ($sbItemTemplate > 0) {
+            header('Location: ' . plugin_url('studio-builder', 'admin/builder.php') . '?page=' . $sbItemTemplate . '&item=' . $sbPageId);
+            exit;
+        }
         unset($sbState);
     } catch (StudioException $e) {
         $sbStatus = $e->httpStatus();
@@ -170,6 +175,7 @@ try {
 $sbBoot = [
     'pageId'     => $sbPageId,
     'previewItems' => $sbPreviewItems,
+    'previewItem'  => (int) ($_GET['item'] ?? 0),
     'allPages'   => $sbAllPages,
     'apiUrl'     => plugin_url('studio-builder', 'admin/api.php'),
     'canvasUrl'  => plugin_url('studio-builder', 'admin/canvas.php'),
@@ -779,6 +785,8 @@ $sbBoot = [
         'theme_source_studio' => __('studio_ui_theme_source_studio', 'Studio override'),
         'theme_reset' => __('studio_ui_theme_reset', 'Use inherited'),
         'preview_item' => __('studio_ui_preview_item', 'Preview with'),
+        'preview_item_note' => __('studio_ui_preview_item_note', 'Design changes here apply to every item.'),
+        'preview_item_fields' => __('studio_ui_preview_item_fields', 'Edit this item’s content'),
         'when_field' => __('studio_ui_when_field', 'Show only if this field has a value'),
         'when_field_always' => __('studio_ui_when_field_always', 'Always show'),
         'meta_field_none' => __('studio_ui_meta_field_none', 'Choose a field…'),

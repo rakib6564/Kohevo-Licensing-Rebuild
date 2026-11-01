@@ -9,6 +9,8 @@ const EN = {
   back_to_pages: 'Studio pages',
   meta_field_none: 'Choose a field…',
   preview_item: 'Preview with',
+  preview_item_note: 'Design changes here apply to every item.',
+  preview_item_fields: 'Edit this item’s content',
   when_field: 'Show only if this field has a value',
   when_field_always: 'Always show',
   post_type_all: 'All posts',

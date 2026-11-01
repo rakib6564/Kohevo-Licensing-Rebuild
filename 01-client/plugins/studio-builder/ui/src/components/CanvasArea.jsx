@@ -62,7 +62,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   const path = useMemo(() => ancestorPath(working, selection, manifest), [working, selection, manifest]);
   const revisionId = useEngineState((s) => (s.revision ? s.revision.id : 0));
   const status = useEngineState((s) => s.status);
-  const [previewItem, setPreviewItem] = useState(0);
+  const [previewItem, setPreviewItem] = useState(() => (asList(boot.previewItems).some((item) => item.id === boot.previewItem) ? boot.previewItem : 0));
   const itemParam = previewItem ? `&item=${previewItem}` : '';
   const canvasSrc = `${boot.canvasUrl}?page=${boot.pageId}${itemParam}&v=${revisionId}${canvasVersion ? `-${canvasVersion}` : ''}`;
   const [src, setSrc] = useState(() => canvasSrc);
@@ -634,10 +634,11 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       </div>
       )}
 
-      {asList(boot.previewItems).length > 1 && (
-        <label className="sbx-canvas__preview-item">
-          <span>{t('preview_item')}</span>
+      {asList(boot.previewItems).length > 0 && (
+        <div className="sbx-canvas__preview-item">
+          <label htmlFor="sbx-preview-item">{t('preview_item')}</label>
           <select
+            id="sbx-preview-item"
             value={previewItem || asList(boot.previewItems)[0].id}
             onChange={(e) => {
               const id = Number(e.target.value);
@@ -648,7 +649,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
           >
             {asList(boot.previewItems).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
           </select>
-        </label>
+          <span>{t('preview_item_note')}</span>
+          <a href={`${String(boot.builderUrl || '').replace(/builder\.php$/, 'page-edit.php')}?id=${previewItem || asList(boot.previewItems)[0].id}`}>{t('preview_item_fields')}</a>
+        </div>
       )}
 
       <div className="sbx-canvas__stage-wrap">

@@ -2330,6 +2330,7 @@ html, body.sbx-body {
 /* ── Canvas overlay: selection box, name chip and toolbar (drawn in the parent, never in the frame) ── */
 .sbx-canvas__preview-item { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 12px; font-size: var(--sbx-fs-sm); color: var(--sbx-muted); }
 .sbx-canvas__preview-item select { max-width: 280px; }
+.sbx-canvas__preview-item a { color: var(--sbx-text-bright); }
 .sbx-canvas__stage-wrap {
   flex: 1 1 0%;
   min-height: 0;

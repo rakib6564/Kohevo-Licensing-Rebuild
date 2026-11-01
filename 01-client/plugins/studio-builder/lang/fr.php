@@ -817,6 +817,8 @@ return [
     'studio_ui_theme_reset' => 'Utiliser la valeur héritée',
     'studio_ui_meta_field_none' => 'Choisir un champ…',
     'studio_ui_preview_item' => 'Aperçu avec',
+    'studio_ui_preview_item_note' => 'Les changements de mise en page s’appliquent à tous les éléments.',
+    'studio_ui_preview_item_fields' => 'Modifier le contenu de cet élément',
     'studio_ui_when_field' => 'Afficher seulement si ce champ a une valeur',
     'studio_ui_when_field_always' => 'Toujours afficher',
     'studio_ui_meta_field_missing' => '{key} (n’existe plus)',
