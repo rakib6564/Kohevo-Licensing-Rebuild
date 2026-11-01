@@ -15,6 +15,7 @@ use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Exception\StudioException;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Meta\PageMeta;
+use Slate\Module\StudioBuilder\Meta\PostTypeSettings;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
 
@@ -27,6 +28,8 @@ $postTypes   = PageMeta::postTypes($tenantId);
 $flash       = null;
 // `?type=` (from a content type's list) starts the form as a new item of that type.
 $formValues  = ['title' => '', 'slug' => '', 'page_type' => 'page', 'route_mode' => 'standalone', 'template_key' => '', 'content_type' => (string) ($_GET['type'] ?? '')];
+// A type with Show in admin off takes no new items.
+$postTypes = array_filter($postTypes, PostTypeSettings::hasAdmin(...));
 if (!isset($postTypes[$formValues['content_type']])) {
     $formValues['content_type'] = '';
 }
@@ -60,6 +63,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     sb_flash_redirect('page-edit.php?id=' . $newId, ['type' => 'warning', 'msg' => __('studio_page_created_template_failed', 'The page was created, but the template could not be applied, so it starts blank. Open it in the builder to add content.')]);
                 }
             }
+            // A type with no builder content is filled in on the item's own screen.
+            $createdType = $postTypes[$formValues['content_type']] ?? null;
+            if ($createdType !== null && !PostTypeSettings::supports($createdType, 'editor')) {
+                header('Location: page-edit.php?id=' . $newId, true, 303);
+                exit;
+            }
             header('Location: ' . plugin_url('studio-builder', 'admin/builder.php') . '?page=' . $newId, true, 303);
             exit;
         } catch (StudioValidationException $e) {
@@ -85,7 +94,7 @@ $canEdit = $studioActor->can(StudioPermissions::EDIT) && $listError === null;
 $newType  = $postTypes[$formValues['content_type']] ?? null;
 $listHref = 'pages.php' . ($newType !== null ? '?type=' . rawurlencode($formValues['content_type']) : '');
 $listName = $newType !== null ? (string) ($newType['plural'] ?? $newType['singular']) : __('studio_pages', 'Studio Pages');
-$newName  = $newType !== null ? sprintf(__('studio_new_item_button', 'New %s'), (string) $newType['singular']) : __('studio_new_page', 'New page');
+$newName  = $newType !== null ? PostTypeSettings::label($newType, 'add_new_item') : __('studio_new_page', 'New page');
 $pageTitle  = $newName;
 $currentNav = $newType !== null ? 'studio-type-' . $formValues['content_type'] : 'studio-pages';
 

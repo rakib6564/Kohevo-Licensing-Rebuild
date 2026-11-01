@@ -16,11 +16,13 @@ test('a post type is created, deleting it asks first, and no built-in types can 
     await expect(page.locator(`[data-post-type="${builtIn}"]`)).toHaveCount(0);
   }
 
-  await page.evaluate(() => { document.getElementById('sb-cpt-drawer').style.display = 'block'; });
-  const d = page.locator('#sb-cpt-drawer');
-  await d.locator('input[name="key"]').fill(key);
-  await d.locator('input[name="singular"]').fill('Event');
-  await d.getByRole('button', { name: /Save Post Type/ }).click();
+  await page.getByTestId('new-post-type').click();
+  await page.locator('#sb-type-name').fill('Events');
+  await page.locator('#sb-type-singular').fill('Event');
+  await page.locator('#sb-type-key').fill(key);
+  await page.getByTestId('type-update').click();
+  await expect(page.locator('.alert-success')).toContainText('saved');
+  await page.goto(TYPES);
   const card = page.locator(`[data-post-type="${key}"]`);
   await expect(card).toHaveCount(1);
 

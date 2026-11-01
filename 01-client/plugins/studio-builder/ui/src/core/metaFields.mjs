@@ -20,6 +20,15 @@ export function setMetaFields(list) {
 
 export const getMetaFields = () => fields;
 
+let postTypes = [];
+
+/** `list` is boot.postTypes: the site's content types [{key, label}], for the Query Loop's Content Type. */
+export function setPostTypes(list) {
+  postTypes = (Array.isArray(list) ? list : []).filter((t) => t && typeof t.key === 'string' && t.key !== '' && typeof t.label === 'string');
+}
+
+export const getPostTypes = () => postTypes;
+
 /** The options grouped by content type, in the order the types first appear: [{label, fields: [...]}]. */
 export function metaFieldGroups(list = fields) {
   const groups = new Map();

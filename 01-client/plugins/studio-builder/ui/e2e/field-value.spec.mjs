@@ -1,9 +1,8 @@
 // The Field value block: set a custom field on the page's settings screen, then add the block in the builder, name the
 // field from the dropdown, and the canvas shows the page's value for it.
 import { test, expect } from '@playwright/test';
-import { openBuilder, settled, sandboxPageId, showEdit, frameEval, restoreLayers, layerCount, ensurePostType } from './helpers.mjs';
+import { openBuilder, settled, sandboxPageId, showEdit, frameEval, restoreLayers, layerCount, ensurePostType, addMetaField, removeMetaField } from './helpers.mjs';
 
-const TYPES = '/plugins/studio-builder/admin/types-fields.php';
 const EDIT = (id) => `/plugins/studio-builder/admin/page-edit.php?id=${id}`;
 
 test.beforeEach(async ({}, info) => {
@@ -16,14 +15,7 @@ test('a custom field value of the page shows in the Field value block on the can
   const pageId = sandboxPageId();
 
   await ensurePostType(page, 'services', 'Service');
-  await page.goto(TYPES);
-  await page.evaluate(() => { document.getElementById('sb-field-drawer').style.display = 'block'; });
-  const d = page.locator('#sb-field-drawer');
-  await d.locator('select[name="post_type"]').selectOption('services');
-  await d.locator('input[name="label"]').fill('Field value test');
-  await d.locator('input[name="key"]').fill(key);
-  await d.getByRole('button', { name: /Save Field/ }).click();
-  await expect(page.locator('.alert-success')).toContainText('Field value test');
+  await addMetaField(page, 'services', { label: 'Field value test', key });
 
   await page.goto(EDIT(pageId));
   const card = page.locator('[data-testid="page-meta-form"]');
@@ -54,13 +46,7 @@ test('a custom field value of the page shows in the Field value block on the can
     await restoreLayers(page, before);
     await page.goto(EDIT(pageId));
     await page.locator('#sb-ctype').selectOption('');
-    await page.locator('[data-testid="page-meta-form"]').getByRole('button', { name: /Save custom fields/ }).click();
-    await page.goto(TYPES);
-    const row = page.locator('.data-row', { hasText: key }).first();
-    if (await row.count()) {
-      await row.locator('.data-row-summary').click();
-      page.once('dialog', (dlg) => void dlg.accept());
-      await row.getByRole('button', { name: /Delete/ }).click();
-    }
+    await page.getByTestId('item-update').click();
+    await removeMetaField(page, 'services', key);
   }
 });

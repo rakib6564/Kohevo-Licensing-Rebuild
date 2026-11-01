@@ -1,9 +1,9 @@
-// Reviews, Redirects and Meta fields use the platform's expandable data rows, not a raw table.
+// Reviews and Redirects use the platform's expandable data rows, not a raw table.
 import { test, expect } from '@playwright/test';
 
 const ADMIN = '/plugins/studio-builder/admin';
 
-for (const [file, empty] of [['reviews.php', /No revisions recorded/], ['redirects.php', /No redirect rules/], ['types-fields.php', /No custom fields|Configured Meta Fields/]]) {
+for (const [file, empty] of [['reviews.php', /No revisions recorded/], ['redirects.php', /No redirect rules/]]) {
   test(`${file}: no raw table, fits the screen, rows expand`, async ({ page }) => {
     await page.goto(`${ADMIN}/${file}`);
     await expect(page.locator('table')).toHaveCount(0);

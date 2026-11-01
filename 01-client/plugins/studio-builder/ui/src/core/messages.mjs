@@ -8,6 +8,8 @@ const EN = {
   app_name: 'Kohevo Studio',
   back_to_pages: 'Studio pages',
   meta_field_none: 'Choose a field…',
+  post_type_all: 'All posts',
+  post_type_missing: 'Deleted type ({key})',
   meta_field_missing: '{key} (no longer defined)',
   meta_field_empty: 'No custom fields yet. Add them under Types & fields.',
   loading: 'Loading the builder…',

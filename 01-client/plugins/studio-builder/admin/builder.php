@@ -134,10 +134,12 @@ try {
 // Content types the display-conditions dialog offers besides the built-in ones: the site's own (Types & fields) and
 // the ones a plugin keeps in its own tables (Shop's products).
 $sbContentTypes = [];
+$sbPostTypes = [];
 try {
     foreach (\Slate\Module\StudioBuilder\Meta\PageMeta::postTypes(current_tenant_id()) as $key => $type) {
         $sbContentTypes[] = ['key' => (string) $key, 'label' => (string) ($type['plural'] ?? $type['singular'] ?? $key)];
     }
+    $sbPostTypes = $sbContentTypes;
     foreach (\Slate\Module\StudioBuilder\Registry\PluginWidgetCatalog::singles() as $single) {
         $sbContentTypes[] = ['key' => $single->contentType(), 'label' => __('studio_content_type_' . $single->contentType(), $single->label())];
     }
@@ -158,6 +160,7 @@ $sbBoot = [
     'mediaPicker'   => $sbMediaPicker,
     'metaFields'    => $sbMetaFields,
     'contentTypes'  => $sbContentTypes,
+    'postTypes'     => $sbPostTypes,
     'mediaApiUrl'   => plugin_url('studio-builder', 'admin/media-api.php'),
     'builderUrl'    => plugin_url('studio-builder', 'admin/builder.php'),
     'brandingUrl'   => rtrim((string) SLATE_URL, '/') . '/admin/settings.php?tab=branding',
@@ -755,6 +758,8 @@ $sbBoot = [
         'theme_source_studio' => __('studio_ui_theme_source_studio', 'Studio override'),
         'theme_reset' => __('studio_ui_theme_reset', 'Use inherited'),
         'meta_field_none' => __('studio_ui_meta_field_none', 'Choose a field…'),
+        'post_type_all' => __('studio_ui_post_type_all', 'All posts'),
+        'post_type_missing' => __('studio_ui_post_type_missing', 'Deleted type ({key})'),
         'meta_field_missing' => __('studio_ui_meta_field_missing', '{key} (no longer defined)'),
         'meta_field_empty' => __('studio_ui_meta_field_empty', 'No custom fields yet. Add them under Types & fields.'),
         'theme_save' => __('studio_ui_theme_save', 'Save tokens'),

@@ -17,6 +17,7 @@ namespace Slate\Module\StudioBuilder\Menu;
 
 use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Meta\PageRoutes;
+use Slate\Module\StudioBuilder\Meta\PostTypeSettings;
 use Slate\Module\StudioBuilder\Registry\PluginSingleInterface;
 use Slate\Module\StudioBuilder\Registry\PluginWidgetCatalog;
 
@@ -37,9 +38,11 @@ final class MenuSources
     public static function groups(array $pages, array $typesByPage, array $postTypes, array $pluginGroups = []): array
     {
         $groups = ['page' => ['key' => 'page', 'label' => self::t('studio_menu_source_pages', 'Pages'), 'singular' => self::t('studio_menu_type_page', 'Page'), 'items' => []]];
+        $hidden = [];
         foreach ($postTypes as $key => $type) {
             $key = (string) $key;
-            if ($key === '' || $key === 'page') {
+            if ($key === '' || $key === 'page' || !PostTypeSettings::inNavMenus($type)) {
+                $hidden[$key] = true;
                 continue;
             }
             $singular = trim((string) ($type['singular'] ?? '')) !== '' ? (string) $type['singular'] : $key;
@@ -55,6 +58,9 @@ final class MenuSources
                 continue;
             }
             $type = $typesByPage[(int) ($page['id'] ?? 0)] ?? '';
+            if (isset($hidden[$type])) {
+                continue;
+            }
             $group = isset($groups['type:' . $type]) ? 'type:' . $type : 'page';
             $groups[$group]['items'][] = ['title' => $title, 'url' => $url, 'updated' => (string) ($page['updated_at'] ?? $page['published_at'] ?? '')];
         }

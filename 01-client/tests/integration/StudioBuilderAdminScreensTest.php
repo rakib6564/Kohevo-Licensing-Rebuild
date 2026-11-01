@@ -52,12 +52,11 @@ unit('types & fields: a new site starts with no post types and no fields, and it
             [, $out] = sbasi_post('types-fields.php', ['_action' => 'noop']);
             assert_false(str_contains($out, 'restore_post_types') || str_contains($out, 'built-in type'), 'nothing to restore');
 
-            [$status] = sbasi_post('types-fields.php', ['_action' => 'create_post_type', 'singular' => 'Project', 'plural' => 'Projects', 'key' => 'project']);
+            $settings = ['_action' => 'save', 'name' => 'Projects', 'singular' => 'Project', 'key' => 'project', 'public' => '1', 'publicly_queryable' => '1', 'show_ui' => '1', 'show_in_menu' => '1', 'show_in_nav_menus' => '1'];
+            [$status] = sbasi_post('post-type-edit.php', $settings);
             assert_eq(303, $status, 'back to the screen after the change');
             assert_eq(['project'], array_keys(PageMeta::postTypes($tid)));
-            [$status] = sbasi_post('types-fields.php', [
-                '_action' => 'create_meta_field', 'post_type' => 'project', 'label' => 'Budget', 'key' => 'budget', 'type' => 'text',
-            ]);
+            [$status] = sbasi_post('post-type-edit.php', ['_action' => 'save', 'type_key' => 'project', 'name' => 'Projects', 'singular' => 'Project', 'fields' => [['label' => 'Budget', 'key' => 'budget', 'type' => 'text']]] + $settings, 'key=project');
             assert_eq(303, $status);
             assert_eq(['budget'], array_column(PageMeta::fieldsFor($tid, 'project'), 'key'), 'the pages read the same list');
         });

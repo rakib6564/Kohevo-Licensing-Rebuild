@@ -2,9 +2,10 @@
 /**
  * Kohevo Studio — the "Content type & custom fields" card of the page settings screen.
  *
- * `card()` returns the whole form card: a content type select and, for each type, the inputs of that type's meta fields
- * (one input kind per `MetaFieldTypes` key). Only the chosen type's group is shown and posted; the other groups are
- * disabled by the small script at the end, so their inputs never reach the server.
+ * `card()` returns the whole form card of a plain page: a content type select and, for each type, the inputs of that
+ * type's meta fields (one input kind per `MetaFieldTypes` key). Only the chosen type's group is shown and posted; the
+ * other groups are disabled by the small script at the end, so their inputs never reach the server. An item of a type
+ * uses `typeSelect()` and `groups()` inside its own screen.
  */
 
 declare(strict_types=1);
@@ -34,15 +35,47 @@ final class PageMetaForm
         if (isset($errors['_type'])) {
             $out .= '<div class="sb-alert sb-alert--error">' . $h($errors['_type']) . '</div>';
         }
-        $out .= '<div class="sb-form-grid"><div class="sb-field"><label class="sb-field__label" for="sb-ctype">' . $h(\__('studio_page_content_type_label', 'Content type')) . '</label>'
-            . '<select id="sb-ctype" name="post_type"' . $dis . '><option value="">' . $h(\__('studio_page_no_type', 'None (a plain page)')) . '</option>';
+        $out .= '<div class="sb-form-grid">' . self::typeSelect($current, $types, $canEdit) . '</div>';
+        $out .= self::groups($current, $types, $fields, $values, $errors, $relationPages, $canEdit, $typesUrl);
+        if ($canEdit) {
+            $out .= '<div class="sb-form-actions"><button type="submit" class="btn btn-primary"><span>' . $h(\__('studio_page_save_meta', 'Save custom fields')) . '</span></button></div>';
+        }
+        return $out . '</form>' . self::script('sb-meta-form', $canEdit);
+    }
+
+    /**
+     * The content type select.
+     *
+     * @param array<string, array<string, mixed>> $types key => post type
+     */
+    public static function typeSelect(string $current, array $types, bool $canEdit): string
+    {
+        $h = static fn(string $s): string => \e($s);
+        $out = '<div class="sb-field"><label class="sb-field__label" for="sb-ctype">' . $h(\__('studio_page_content_type_label', 'Content type')) . '</label>'
+            . '<select id="sb-ctype" name="post_type"' . ($canEdit ? '' : ' disabled') . '><option value="">' . $h(\__('studio_page_no_type', 'None (a plain page)')) . '</option>';
         foreach ($types as $key => $t) {
             $out .= '<option value="' . $h((string) $key) . '"' . ($key === $current ? ' selected' : '') . '>' . $h((string) ($t['singular'] ?? $key)) . '</option>';
         }
-        $out .= '</select></div></div>';
+        return $out . '</select></div>';
+    }
 
+    /**
+     * Each type's fields as a group of inputs; only the chosen type's group is shown and posted (see `script()`). A type
+     * with Hide field names off shows each field's key under its label.
+     *
+     * @param array<string, array<string, mixed>> $types
+     * @param array<string, list<array<string, mixed>>> $fields
+     * @param array<string, mixed> $values
+     * @param array<string, string> $errors
+     * @param array<string, array<int, string>> $relationPages
+     */
+    public static function groups(string $current, array $types, array $fields, array $values, array $errors, array $relationPages, bool $canEdit, string $typesUrl): string
+    {
+        $h = static fn(string $s): string => \e($s);
+        $out = '';
         foreach ($types as $key => $t) {
             $list = $fields[$key] ?? [];
+            $showKeys = ($t['hide_field_names'] ?? true) === false;
             $out .= '<div class="sb-meta-group" data-type="' . $h((string) $key) . '"' . ($key === $current ? '' : ' hidden') . '>';
             if ($list === []) {
                 $out .= '<p class="sb-field__hint">' . $h(\__('studio_page_no_fields', 'This type has no custom fields yet.')) . ' <a href="' . $h($typesUrl) . '">' . $h(\__('studio_types_fields', 'Types & fields')) . '</a></p>';
@@ -55,6 +88,9 @@ final class PageMetaForm
                     $out .= '<div class="sb-field' . ($wide ? ' sb-field--wide' : '') . '"><label class="sb-field__label" for="' . $h($id) . '">' . $h((string) ($f['label'] ?? $fk))
                         . (!empty($f['required']) ? ' <span style="color:#ef4444;">*</span>' : '') . '</label>'
                         . self::input($f, $key === $current ? ($values[$fk] ?? null) : null, $id, $relationPages[(string) ($f['options']['target'] ?? '')] ?? [], $canEdit);
+                    if ($showKeys) {
+                        $out .= '<p class="sb-field__hint"><code>' . $h($fk) . '</code></p>';
+                    }
                     if (!empty($f['help'])) {
                         $out .= '<p class="sb-field__hint">' . $h((string) $f['help']) . '</p>';
                     }
@@ -67,14 +103,16 @@ final class PageMetaForm
             }
             $out .= '</div>';
         }
-        if ($canEdit) {
-            $out .= '<div class="sb-form-actions"><button type="submit" class="btn btn-primary"><span>' . $h(\__('studio_page_save_meta', 'Save custom fields')) . '</span></button></div>';
-        }
-        $out .= '</form><script>(function(){var f=document.getElementById("sb-meta-form");if(!f)return;var s=f.querySelector("#sb-ctype");'
+        return $out;
+    }
+
+    /** Shows the chosen type's group and turns the others off, so their inputs never reach the server. */
+    public static function script(string $formId, bool $canEdit): string
+    {
+        return '<script>(function(){var f=document.getElementById(' . json_encode($formId) . ');if(!f)return;var s=f.querySelector("#sb-ctype");'
             . 'function sync(){f.querySelectorAll(".sb-meta-group").forEach(function(g){var on=g.getAttribute("data-type")===s.value;g.hidden=!on;'
             . 'g.querySelectorAll("input,select,textarea").forEach(function(i){i.disabled=!on||' . ($canEdit ? 'false' : 'true') . ';});});}'
             . 's.addEventListener("change",sync);sync();})();</script>';
-        return $out;
     }
 
     /**

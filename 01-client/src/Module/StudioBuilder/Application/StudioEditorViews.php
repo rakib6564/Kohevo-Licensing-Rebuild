@@ -39,6 +39,7 @@ final class StudioEditorViews
             'published_at'             => $page->publishedAt,
             'published_revision_id'    => $page->publishedRevisionId,
             'route_mode'               => $page->routeMode,
+            'scheduled_for'            => $page->scheduledFor,
             'slug'                     => $page->slug,
             'status'                   => $page->status,
             'title'                    => $page->title,
