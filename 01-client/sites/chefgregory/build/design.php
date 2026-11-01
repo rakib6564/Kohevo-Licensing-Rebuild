@@ -32,7 +32,9 @@ $runtime->app->saveDesignTokens($actor, 'default', [
 ]);
 // The pages not redesigned yet still name the old families.
 $fonts = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Libre+Caslon+Text:ital@0;1&family=Hanken+Grotesk:wght@400;500;600;700&family=Cormorant:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Italianno&family=Rajdhani:wght@400;500;600;700&family=Heebo:wght@300;400;500;700&family=Lora:wght@400;500;600&family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;500;700&family=Open+Sans:wght@400;600&family=Jost:wght@400;500;600&display=swap">';
-Database::setSetting(StudioCodePolicy::SETTING_HEAD_SNIPPET, StudioCodePolicy::prepareSnippet($fonts, 'head'), $tid);
+// Google, Ahrefs and the business details, only on the real domain so a copy of the site never reports to them.
+$live = str_contains((string) (defined('APP_URL') ? APP_URL : ($_ENV['APP_URL'] ?? getenv('APP_URL'))), 'chefgregory.com') || getenv('CHEF_LIVE_TAGS') === '1';
+Database::setSetting(StudioCodePolicy::SETTING_HEAD_SNIPPET, StudioCodePolicy::prepareSnippet($fonts . ($live ? (string) file_get_contents(__DIR__ . '/live-head.html') : ''), 'head'), $tid);
 $css = StudioCodePolicy::prepareCustomCss((string) file_get_contents(__DIR__ . '/gap.css') . "\n" . (string) file_get_contents(__DIR__ . '/design.css'));
 Database::setSetting(StudioCodePolicy::SETTING_CUSTOM_CSS, $css['css'], $tid);
 
