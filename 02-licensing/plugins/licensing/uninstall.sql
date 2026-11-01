@@ -17,3 +17,4 @@ DROP TABLE IF EXISTS `licensing_installs`;
 DROP TABLE IF EXISTS `licensing_plans`;
 DROP TABLE IF EXISTS `licensing_clients`;
 DROP TABLE IF EXISTS `licensing_products`;
+DROP TABLE IF EXISTS `licensing_google_handoffs`;

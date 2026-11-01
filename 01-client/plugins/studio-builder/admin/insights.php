@@ -58,8 +58,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     sb_flash_redirect($settingsUrl, ['type' => 'success', 'msg' => __('studio_insights_client_saved', 'Saved. The secret and key are encrypted.')]);
                     // no break: the redirect ends the request
                 case 'connect':
+                    $attempt = GoogleConnection::newAttempt() + ['mode' => GoogleConnection::MODE_CENTRAL];
+                    $address = $connection->centralAuthUrl($attempt['state']);
+                    $_SESSION['sb_google_attempt'] = $attempt;
+                    header('Location: ' . $address, true, 303);
+                    exit;
+                case 'connect_own':
                     if ($connection->isConfigured()) {
-                        $attempt = GoogleConnection::newAttempt();
+                        $attempt = GoogleConnection::newAttempt() + ['mode' => GoogleConnection::MODE_OWN];
                         $_SESSION['sb_google_attempt'] = $attempt;
                         header('Location: ' . $connection->authUrl($attempt), true, 303);
                         exit;
@@ -75,11 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $flash = ['type' => 'error', 'msg' => __('studio_insights_bad_choice', 'This Google account cannot read that property.')];
                         break;
                     }
-                    $store->set(GoogleConnection::SEARCH_SITE, $site);
-                    $store->set(GoogleConnection::ANALYTICS_PROPERTY, $property);
-                    $store->set(GoogleConnection::ANALYTICS_NAME, (string) ($properties[$property] ?? ''));
-                    $store->set(GoogleConnection::MEASUREMENT_ID, $property === '' ? '' : $client->measurementId($property));
-                    $cache->clear();
+                    sb_insights_choose($tenantId, $site, $property, (string) ($properties[$property] ?? ''));
                     AuditLog::record('studio.google_properties_saved', (string) $tenantId, ['search' => $site, 'analytics' => $property]);
                     sb_flash_redirect('insights.php', ['type' => 'success', 'msg' => __('studio_insights_choices_saved', 'Saved. Your Google data is below.')]);
                     // no break: the redirect ends the request

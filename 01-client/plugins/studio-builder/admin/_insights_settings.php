@@ -27,74 +27,32 @@ $siteTag = (string) Database::setting(StudioCodePolicy::SETTING_GA4, $tenantId);
     <div class="alert alert-error sb-alert" role="alert"><?= e(__('studio_insights_no_secret', 'APP_SECRET is not set on this site, so Google credentials cannot be stored safely.')) ?></div>
 <?php endif; ?>
 
-<section class="sb-card sb-form-card" data-testid="insights-client">
+<section class="sb-card sb-form-card" data-testid="insights-account">
     <div class="sb-card__head">
         <div>
-            <div class="sb-card__title"><?= e(__('studio_insights_client', 'Your Google Cloud client')) ?></div>
-            <p class="sb-card__sub"><?= e(__('studio_insights_client_sub', 'Kohevo reads your data with an OAuth client from your own Google Cloud project.')) ?></p>
+            <div class="sb-card__title"><?= e(__('studio_insights_account', 'Google account')) ?></div>
+            <p class="sb-card__sub"><?= e($connection->isConnected() ? sprintf(__('studio_insights_connected_as', 'Connected as %s'), $connection->email()) : __('studio_insights_account_sub', 'Sign in with the account that has access to your Search Console and Analytics.')) ?></p>
         </div>
     </div>
-    <?php if (!$connection->isConfigured()): ?>
-        <ol class="sb-backup-list sb-insights-steps">
-            <li><?= e(__('studio_insights_step_project', 'In Google Cloud Console, create a project.')) ?> <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener"><?= e(__('studio_insights_open', 'Open')) ?></a></li>
-            <li><?= e(__('studio_insights_step_apis', 'Enable these APIs: Google Search Console API, Google Analytics Data API, Google Analytics Admin API, PageSpeed Insights API.')) ?> <a href="https://console.cloud.google.com/apis/library" target="_blank" rel="noopener"><?= e(__('studio_insights_open', 'Open')) ?></a></li>
-            <li><?= e(__('studio_insights_step_consent', 'Set up the OAuth consent screen as External, add your Google account as a test user, then publish it when it works.')) ?> <a href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noopener"><?= e(__('studio_insights_open', 'Open')) ?></a></li>
-            <li><?= e(__('studio_insights_step_client', 'Create an OAuth client ID of type Web application, with the redirect address below.')) ?> <a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener"><?= e(__('studio_insights_open', 'Open')) ?></a></li>
-        </ol>
-    <?php endif; ?>
-    <form method="post" autocomplete="off">
-        <?= csrf_field() ?>
-        <input type="hidden" name="_action" value="save_client">
-        <div class="sb-field">
-            <label class="sb-field__label" for="sb-redirect-uri"><?= e(__('studio_field_google_redirect', 'Redirect address')) ?></label>
-            <input id="sb-redirect-uri" type="text" readonly value="<?= e($connection->redirectUri()) ?>" data-testid="redirect-uri">
-            <p class="sb-field__hint"><?= e(__('studio_insights_redirect_hint', 'Paste this into Authorized redirect URIs on the OAuth client. It must match exactly.')) ?></p>
-        </div>
-        <div class="sb-form-grid">
-            <div class="sb-field">
-                <label class="sb-field__label" for="sb-client-id"><?= e(__('studio_field_google_client_id', 'Client ID')) ?></label>
-                <input id="sb-client-id" type="text" name="client_id" value="<?= e($store->get(GoogleConnection::CLIENT_ID)) ?>" required<?= $secure ? '' : ' disabled' ?>>
-            </div>
-            <div class="sb-field">
-                <label class="sb-field__label" for="sb-client-secret"><?= e(__('studio_field_google_client_secret', 'Client secret')) ?></label>
-                <input id="sb-client-secret" type="password" name="client_secret" autocomplete="new-password" placeholder="<?= e($connection->isConfigured() ? __('studio_insights_secret_kept', 'Stored. Leave blank to keep it.') : '') ?>"<?= $secure ? '' : ' disabled' ?>>
-            </div>
-            <div class="sb-field">
-                <label class="sb-field__label" for="sb-api-key"><?= e(__('studio_field_google_api_key', 'PageSpeed API key')) ?> <small><?= e(__('studio_insights_optional', '(optional)')) ?></small></label>
-                <input id="sb-api-key" type="password" name="api_key" autocomplete="new-password" placeholder="<?= e($connection->hasApiKey() ? __('studio_insights_secret_kept', 'Stored. Leave blank to keep it.') : '') ?>"<?= $secure ? '' : ' disabled' ?>>
-                <p class="sb-field__hint"><?= e(__('studio_insights_api_key_hint', 'Speed works without it, but Google limits shared use heavily.')) ?></p>
-            </div>
-        </div>
-        <div class="sb-card-actions">
-            <button type="submit" class="btn btn-primary"<?= $secure ? '' : ' disabled' ?>><?= e(__('save_changes', 'Save changes')) ?></button>
-        </div>
-    </form>
-</section>
-
-<?php if ($connection->isConfigured()): ?>
-    <section class="sb-card sb-form-card" data-testid="insights-account">
-        <div class="sb-card__head">
-            <div>
-                <div class="sb-card__title"><?= e(__('studio_insights_account', 'Google account')) ?></div>
-                <p class="sb-card__sub"><?= e($connection->isConnected() ? sprintf(__('studio_insights_connected_as', 'Connected as %s'), $connection->email()) : __('studio_insights_account_sub', 'Sign in with the account that has access to your Search Console and Analytics.')) ?></p>
-            </div>
-        </div>
-        <div class="sb-form-actions">
+    <div class="sb-form-actions sb-insights-signin">
+        <?php if ($connection->canUseCentral() && !($connection->isConnected() && !$connection->usesCentral())): ?>
             <form method="post">
                 <?= csrf_field() ?>
                 <input type="hidden" name="_action" value="connect">
-                <button type="submit" class="btn btn-primary" data-testid="connect-google"><?= e($connection->isConnected() ? __('studio_insights_reconnect', 'Connect again') : __('studio_insights_connect', 'Connect with Google')) ?></button>
+                <button type="submit" class="btn btn-primary" data-testid="connect-google"<?= $secure ? '' : ' disabled' ?>><?= e($connection->isConnected() ? __('studio_insights_reconnect', 'Connect again') : __('studio_insights_connect', 'Sign in with Google')) ?></button>
             </form>
-            <?php if ($connection->isConnected()): ?>
-                <form method="post" onsubmit="return confirm(<?= e((string) json_encode(__('studio_insights_disconnect_confirm', 'Disconnect this site from Google?'))) ?>)">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="_action" value="disconnect">
-                    <button type="submit" class="btn btn-outline"><?= e(__('studio_insights_disconnect', 'Disconnect')) ?></button>
-                </form>
-            <?php endif; ?>
-        </div>
-    </section>
-<?php endif; ?>
+        <?php elseif (!$connection->isConnected()): ?>
+            <p class="sb-field__hint"><?= e(__('studio_insights_no_licence', 'One-click sign-in needs a Kohevo licence on this site. Use your own Google client below.')) ?></p>
+        <?php endif; ?>
+        <?php if ($connection->isConnected()): ?>
+            <form method="post" onsubmit="return confirm(<?= e((string) json_encode(__('studio_insights_disconnect_confirm', 'Disconnect this site from Google?'))) ?>)">
+                <?= csrf_field() ?>
+                <input type="hidden" name="_action" value="disconnect">
+                <button type="submit" class="btn btn-outline"><?= e(__('studio_insights_disconnect', 'Disconnect')) ?></button>
+            </form>
+        <?php endif; ?>
+    </div>
+</section>
 
 <?php if ($connection->isConnected()): ?>
     <section class="sb-card sb-form-card" data-testid="insights-properties">
@@ -159,3 +117,50 @@ $siteTag = (string) Database::setting(StudioCodePolicy::SETTING_GA4, $tenantId);
         </section>
     <?php endif; ?>
 <?php endif; ?>
+
+<details class="sb-card sb-form-card sb-insights-advanced" data-testid="insights-client"<?= $connection->canUseCentral() ? '' : ' open' ?>>
+    <summary class="sb-card__title"><?= e(__('studio_insights_advanced', 'Advanced: use your own Google client')) ?></summary>
+    <p class="sb-card__sub"><?= e(__('studio_insights_client_sub', 'For self-hosted sites. Kohevo reads your data with an OAuth client from your own Google Cloud project.')) ?></p>
+    <?php if (!$connection->isConfigured()): ?>
+        <ol class="sb-backup-list sb-insights-steps">
+            <li><?= e(__('studio_insights_step_project', 'In Google Cloud Console, create a project.')) ?> <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener"><?= e(__('studio_insights_open', 'Open')) ?></a></li>
+            <li><?= e(__('studio_insights_step_apis', 'Enable these APIs: Google Search Console API, Google Analytics Data API, Google Analytics Admin API, PageSpeed Insights API.')) ?> <a href="https://console.cloud.google.com/apis/library" target="_blank" rel="noopener"><?= e(__('studio_insights_open', 'Open')) ?></a></li>
+            <li><?= e(__('studio_insights_step_consent', 'Set up the OAuth consent screen as External, add your Google account as a test user, then publish it when it works.')) ?> <a href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noopener"><?= e(__('studio_insights_open', 'Open')) ?></a></li>
+            <li><?= e(__('studio_insights_step_client', 'Create an OAuth client ID of type Web application, with the redirect address below.')) ?> <a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener"><?= e(__('studio_insights_open', 'Open')) ?></a></li>
+        </ol>
+    <?php endif; ?>
+    <form method="post" autocomplete="off">
+        <?= csrf_field() ?>
+        <input type="hidden" name="_action" value="save_client">
+        <div class="sb-field">
+            <label class="sb-field__label" for="sb-redirect-uri"><?= e(__('studio_field_google_redirect', 'Redirect address')) ?></label>
+            <input id="sb-redirect-uri" type="text" readonly value="<?= e($connection->redirectUri()) ?>" data-testid="redirect-uri">
+            <p class="sb-field__hint"><?= e(__('studio_insights_redirect_hint', 'Paste this into Authorized redirect URIs on the OAuth client. It must match exactly.')) ?></p>
+        </div>
+        <div class="sb-form-grid">
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-client-id"><?= e(__('studio_field_google_client_id', 'Client ID')) ?></label>
+                <input id="sb-client-id" type="text" name="client_id" value="<?= e($store->get(GoogleConnection::CLIENT_ID)) ?>" required<?= $secure ? '' : ' disabled' ?>>
+            </div>
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-client-secret"><?= e(__('studio_field_google_client_secret', 'Client secret')) ?></label>
+                <input id="sb-client-secret" type="password" name="client_secret" autocomplete="new-password" placeholder="<?= e($connection->isConfigured() ? __('studio_insights_secret_kept', 'Stored. Leave blank to keep it.') : '') ?>"<?= $secure ? '' : ' disabled' ?>>
+            </div>
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-api-key"><?= e(__('studio_field_google_api_key', 'PageSpeed API key')) ?> <small><?= e(__('studio_insights_optional', '(optional)')) ?></small></label>
+                <input id="sb-api-key" type="password" name="api_key" autocomplete="new-password" placeholder="<?= e($connection->hasApiKey() ? __('studio_insights_secret_kept', 'Stored. Leave blank to keep it.') : '') ?>"<?= $secure ? '' : ' disabled' ?>>
+                <p class="sb-field__hint"><?= e(__('studio_insights_api_key_hint', 'Speed works without it, but Google limits shared use heavily.')) ?></p>
+            </div>
+        </div>
+        <div class="sb-card-actions">
+            <button type="submit" class="btn btn-primary"<?= $secure ? '' : ' disabled' ?>><?= e(__('save_changes', 'Save changes')) ?></button>
+        </div>
+    </form>
+    <?php if ($connection->isConfigured()): ?>
+        <form method="post" class="sb-insights-own-connect">
+            <?= csrf_field() ?>
+            <input type="hidden" name="_action" value="connect_own">
+            <button type="submit" class="btn btn-outline" data-testid="connect-own"><?= e(__('studio_insights_connect_own', 'Connect with my own client')) ?></button>
+        </form>
+    <?php endif; ?>
+</details>

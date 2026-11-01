@@ -58,6 +58,10 @@ class Licensing extends Plugin {
             'handler' => $this->dir('public/check.php'),
             'methods' => ['POST'],
         ];
+        $routes['licensing/google'] = [
+            'handler' => $this->dir('public/google.php'),
+            'methods' => ['GET', 'POST'],
+        ];
         return $routes;
     }
 

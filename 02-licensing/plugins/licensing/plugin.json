@@ -1,7 +1,7 @@
 {
     "slug": "licensing",
     "name": "Licensing",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Central license server for standalone product installs sold to clients — tracks products, clients, plans, and per-install activation/status, and answers each install's periodic phone-home check.",
     "author": "Kohevo",
     "requires_core": ">=1.0.0",

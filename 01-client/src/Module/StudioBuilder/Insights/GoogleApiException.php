@@ -16,6 +16,7 @@ final class GoogleApiException extends \RuntimeException
     public const QUOTA = 'quota';              // Google's limit for now
     public const NOT_FOUND = 'not_found';
     public const UNAVAILABLE = 'unavailable';  // network, or Google answered with a server error
+    public const CENTRAL = 'central';          // Kohevo Central refused this site, or has no Google client yet
     public const NOT_SECURE = 'not_secure';    // APP_SECRET is missing, so nothing can be stored
 
     public function __construct(public readonly string $reason, string $message = '')

@@ -3259,7 +3259,7 @@ return [
     'studio_field_allow_several_open' => 'Autoriser plusieurs ouverts',
     'studio_insights_no_secret' => 'APP_SECRET n\'est pas défini sur ce site : les identifiants Google ne peuvent pas être stockés en sécurité.',
     'studio_insights_client' => 'Votre client Google Cloud',
-    'studio_insights_client_sub' => 'Kohevo lit vos données avec un client OAuth de votre propre projet Google Cloud.',
+    'studio_insights_client_sub' => 'Pour les sites auto-hébergés. Kohevo lit vos données avec un client OAuth de votre propre projet Google Cloud.',
     'studio_insights_step_project' => 'Dans la console Google Cloud, créez un projet.',
     'studio_insights_open' => 'Ouvrir',
     'studio_insights_step_apis' => 'Activez ces API : Google Search Console API, Google Analytics Data API, Google Analytics Admin API, PageSpeed Insights API.',
@@ -3380,4 +3380,9 @@ return [
     'studio_insights_partial' => 'Connecté, mais Google n\'a pas accordé toutes les autorisations. Reconnectez-vous et cochez Search Console et Analytics.',
     'studio_insights_connected' => 'Connecté à Google. Choisissez maintenant vos propriétés.',
     'studio_nav_insights' => 'Statistiques du site',
+    'studio_insights_err_central' => 'Kohevo n\'a pas pu connecter ce site. Vérifiez que sa licence est active, ou utilisez votre propre client Google dans Avancé.',
+    'studio_insights_auto_chosen' => 'Connecté à Google. Vos propriétés ont été associées à ce site ; vous pouvez les modifier dans Réglages.',
+    'studio_insights_connect_own' => 'Se connecter avec mon propre client',
+    'studio_insights_no_licence' => 'La connexion en un clic nécessite une licence Kohevo sur ce site. Utilisez votre propre client Google ci-dessous.',
+    'studio_insights_advanced' => 'Avancé : utiliser votre propre client Google',
 ];

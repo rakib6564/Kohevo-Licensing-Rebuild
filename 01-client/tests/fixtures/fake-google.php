@@ -39,6 +39,12 @@ if (str_ends_with($path, '/o/oauth2/v2/auth')) {
     exit;
 }
 if (str_ends_with($path, '/token')) {
+    if (($_POST['client_secret'] ?? '') === '') {
+        $json(['error' => 'invalid_client'], 401); // only a holder of the secret gets tokens
+    }
+    if (($_POST['grant_type'] ?? '') === 'authorization_code' && ($_POST['code_verifier'] ?? '') === '') {
+        $json(['error' => 'invalid_grant'], 400);
+    }
     $json(['access_token' => 'fake-access-' . bin2hex(random_bytes(4)), 'refresh_token' => 'fake-refresh', 'expires_in' => 3600, 'scope' => 'openid email https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/analytics.readonly']);
 }
 if (str_ends_with($path, '/revoke')) {

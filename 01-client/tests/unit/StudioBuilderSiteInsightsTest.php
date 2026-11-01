@@ -7,7 +7,9 @@ declare(strict_types=1);
 
 use Slate\Module\StudioBuilder\Backup\StudioBackupFormat;
 use Slate\Module\StudioBuilder\Infrastructure\StudioSchemaManager;
+use Slate\Module\StudioBuilder\Insights\CentralGoogleBroker;
 use Slate\Module\StudioBuilder\Insights\GoogleApiException;
+use Slate\Module\StudioBuilder\Insights\GoogleChoices;
 use Slate\Module\StudioBuilder\Insights\GoogleClient;
 use Slate\Module\StudioBuilder\Insights\GoogleConnection;
 use Slate\Module\StudioBuilder\Insights\GoogleEndpoints;
@@ -324,4 +326,90 @@ unit('site insights: the callback checks the sign-in before it trades the code',
     foreach (glob(SLATE_ROOT . '/plugins/studio-builder/admin/*insights*.php') ?: [] as $path) {
         assert_true(!preg_match('/error_log\([^;]*(token|secret|\$url)/i', (string) file_get_contents($path)), basename($path) . ' logs no secret');
     }
+});
+
+$siBroker = static fn(SiTransport $transport): CentralGoogleBroker => new CentralGoogleBroker(['server_url' => 'https://central.test/', 'product' => 'kohevo', 'license_key' => 'lk', 'install_id' => 'ii', 'domain' => 'site.test'], $transport);
+
+unit('site insights central: a sign-in shows the licence to Central and never needs a client secret', function () use ($siBroker): void {
+    $transport = new SiTransport([[200, ['auth_url' => 'https://accounts.test/consent']], [200, ['access_token' => 'at', 'refresh_token' => 'rt', 'expires_in' => 3600, 'scope' => 'openid']], [200, ['email' => 'a@b.test']]]);
+    $store = new SiArrayStore();
+    $connection = new GoogleConnection($store, $transport, 'https://site.test/cb', $siBroker($transport));
+    assert_true($connection->canUseCentral());
+    assert_eq('https://accounts.test/consent', $connection->centralAuthUrl('state1'));
+    $sent = json_decode((string) $transport->sent[0]['body'], true);
+    assert_eq('https://central.test/licensing/google/start', $transport->sent[0]['url']);
+    assert_eq('lk', $sent['license_key']);
+    assert_eq('https://site.test/cb', $sent['return_url']);
+    $connection->connectWithHandoff('h1');
+    assert_true($connection->isConnected() && $connection->usesCentral());
+    assert_true(!$connection->isConfigured(), 'no client on the site');
+    assert_true(str_starts_with($store->data[GoogleConnection::REFRESH_TOKEN], 'enc:v1:'), 'the tokens are sealed here too');
+    assert_true(!isset($store->data[GoogleConnection::CLIENT_SECRET]));
+});
+
+unit('site insights central: refreshing goes through Central; a dead grant asks to connect again', function () use ($siBroker): void {
+    $transport = new SiTransport([[200, ['access_token' => 'fresh', 'expires_in' => 3600]], [400, ['error' => 'invalid_grant']]]);
+    $store = new SiArrayStore();
+    $connection = new GoogleConnection($store, $transport, 'https://site.test/cb', $siBroker($transport));
+    $store->set(GoogleConnection::MODE, GoogleConnection::MODE_CENTRAL);
+    $store->set(GoogleConnection::REFRESH_TOKEN, slate_encrypt_secret('the-refresh'));
+    assert_eq('fresh', $connection->accessToken(time()));
+    assert_eq('https://central.test/licensing/google/refresh', $transport->sent[0]['url']);
+    $store->set(GoogleConnection::EXPIRES_AT, '1');
+    try {
+        $connection->accessToken(time());
+        throw new Exception('should fail');
+    } catch (GoogleApiException $e) {
+        assert_eq(GoogleApiException::RECONNECT, $e->reason);
+    }
+    assert_true($connection->needsReconnect());
+});
+
+unit('site insights central: a licence Central refuses is its own message, and the own client still works', function () use ($siBroker, $siConnected): void {
+    $transport = new SiTransport([[403, ['error' => 'invalid_request']]]);
+    try {
+        (new GoogleConnection(new SiArrayStore(), $transport, 'https://site.test/cb', $siBroker($transport)))->centralAuthUrl('s');
+        throw new Exception('should fail');
+    } catch (GoogleApiException $e) {
+        assert_eq(GoogleApiException::CENTRAL, $e->reason);
+    }
+    $own = new SiTransport([[200, ['access_token' => 'fresh', 'expires_in' => 3600]]]);
+    $store = new SiArrayStore();
+    $connection = $siConnected($own, $store);
+    $store->set(GoogleConnection::EXPIRES_AT, '1');
+    assert_eq('fresh', $connection->accessToken(time()));
+    assert_true(str_contains($own->sent[0]['url'], 'oauth2.googleapis.com/token'), 'straight to Google');
+    assert_true(!(new GoogleConnection(new SiArrayStore(), new SiTransport([]), 'u'))->canUseCentral(), 'no licence, no Central');
+});
+
+unit('site insights central: PageSpeed without a key identifies itself with the sign-in', function () use ($siBroker): void {
+    $transport = new SiTransport([[200, []]]);
+    $store = new SiArrayStore();
+    $connection = new GoogleConnection($store, $transport, 'https://site.test/cb', $siBroker($transport));
+    $store->set(GoogleConnection::MODE, GoogleConnection::MODE_CENTRAL);
+    $store->set(GoogleConnection::REFRESH_TOKEN, slate_encrypt_secret('r'));
+    $store->set(GoogleConnection::ACCESS_TOKEN, slate_encrypt_secret('the-access'));
+    $store->set(GoogleConnection::EXPIRES_AT, (string) (time() + 3000));
+    (new GoogleClient($connection, $transport))->pageSpeed('https://a.test/', 'mobile', '');
+    assert_eq(['Authorization: Bearer the-access'], $transport->sent[0]['headers']);
+});
+
+unit('site insights: the properties of this site are matched, and a doubtful case is left to the person', function (): void {
+    $sites = [['url' => 'https://other.test/', 'level' => 'siteOwner'], ['url' => 'sc-domain:chefgregory.com', 'level' => 'siteOwner']];
+    assert_eq('sc-domain:chefgregory.com', GoogleChoices::matchSite($sites, 'www.chefgregory.com'));
+    assert_eq('', GoogleChoices::matchSite($sites, 'rakibhasaan.com'), 'two others: no guess');
+    assert_eq('https://a.test/', GoogleChoices::matchSite([['url' => 'https://a.test/', 'level' => 'siteOwner']], 'b.test'), 'the only one');
+    $properties = [['property' => 'properties/1', 'name' => 'Old site', 'account' => 'x'], ['property' => 'properties/2', 'name' => 'chefgregory.com - GA4', 'account' => 'x']];
+    $none = static fn(string $id): array => [];
+    assert_eq('properties/2', GoogleChoices::matchProperty($properties, 'chefgregory.com', $none), 'by name');
+    assert_eq('properties/1', GoogleChoices::matchProperty($properties, 'old.test', static fn(string $id): array => $id === 'properties/1' ? ['https://www.old.test'] : []), 'by web stream');
+    assert_eq('', GoogleChoices::matchProperty($properties, 'x.test', $none), 'no guess');
+});
+
+unit('site insights: a Central sign-in needs its handoff, and the secret field is not the main path', function (): void {
+    $src = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/admin/insights-callback.php');
+    assert_true(str_contains($src, "\$_GET[\$central ? 'handoff' : 'code']"), 'a code cannot stand in for a handoff');
+    $settings = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/admin/_insights_settings.php');
+    assert_true(strpos($settings, 'connect-google') < strpos($settings, 'name="client_secret"'), 'the button comes first');
+    assert_true(str_contains($settings, '<details class="sb-card sb-form-card sb-insights-advanced"'), 'the client form is Advanced');
 });

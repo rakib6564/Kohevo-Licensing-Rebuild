@@ -532,3 +532,21 @@ unit('phase 2: explicit admin reset releases the binding and permits one intenti
         assert_eq(1, (int) Database::value('SELECT COUNT(*) FROM licensing_installation_bindings WHERE install_id = ?', [$ids['installId']]));
     } finally { licchk_teardown(); }
 });
+
+unit('verifiedInstallation(): a live, bound installation passes; a wrong domain, key or install id gets nothing, and nothing is bound', function () {
+    licchk_setup();
+    try {
+        $id = licchk_id('e');
+        $input = ['product' => 'kohevo', 'license_key' => 'correct-key', 'install_id' => $id, 'domain' => 'test.example'];
+        assert_eq(null, LicensingAPI::verifiedInstallation($input), 'not bound yet: this check binds nothing');
+        LicensingAPI::handleCheckIn($input + ['app_version' => '1'], '127.0.0.1');
+        assert_eq(['installation_id' => $id, 'domain' => 'test.example'], LicensingAPI::verifiedInstallation($input));
+        assert_eq(null, LicensingAPI::verifiedInstallation(['domain' => 'evil.example'] + $input), 'wrong domain');
+        assert_eq(null, LicensingAPI::verifiedInstallation(['license_key' => 'nope'] + $input), 'wrong key');
+        assert_eq(null, LicensingAPI::verifiedInstallation(['install_id' => licchk_id('f')] + $input), 'another installation');
+        Database::query("UPDATE licensing_installs SET status = 'suspended' WHERE license_key_hash = ?", [hash('sha256', 'correct-key')]);
+        assert_eq(null, LicensingAPI::verifiedInstallation($input), 'a suspended licence');
+    } finally {
+        licchk_teardown();
+    }
+});

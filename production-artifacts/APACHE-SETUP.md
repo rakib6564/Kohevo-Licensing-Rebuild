@@ -84,6 +84,7 @@ RedirectMatch 403 ^/(data|db_backups|includes|src|bin|db|tests|audit|docs|Claude
 
     # Route /licensing/check directly to public.php
     RewriteRule ^licensing/check$ public.php?_path=licensing/check [QSA,L]
+    RewriteRule ^licensing/google/(start|callback|claim|refresh)$ public.php?_path=licensing/google/$1 [QSA,L]
 
     # Serve existing files and directories directly
     RewriteCond %{REQUEST_FILENAME} -f [OR]

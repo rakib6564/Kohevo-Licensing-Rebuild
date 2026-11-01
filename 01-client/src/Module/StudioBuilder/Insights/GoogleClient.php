@@ -49,13 +49,22 @@ final class GoogleClient
     /** The G- id of the property's web stream, or '' when it has none. */
     public function measurementId(string $property): string
     {
-        foreach ($this->call('GET', GoogleEndpoints::ANALYTICS_ADMIN . '/' . $property . '/dataStreams')['dataStreams'] ?? [] as $stream) {
-            $id = (string) ($stream['webStreamData']['measurementId'] ?? '');
-            if ($id !== '') {
-                return $id;
+        foreach ($this->webStreams($property) as $stream) {
+            if ($stream['id'] !== '') {
+                return $stream['id'];
             }
         }
         return '';
+    }
+
+    /** @return list<array{id: string, uri: string}> */
+    public function webStreams(string $property): array
+    {
+        $streams = [];
+        foreach ($this->call('GET', GoogleEndpoints::ANALYTICS_ADMIN . '/' . $property . '/dataStreams')['dataStreams'] ?? [] as $stream) {
+            $streams[] = ['id' => (string) ($stream['webStreamData']['measurementId'] ?? ''), 'uri' => (string) ($stream['webStreamData']['defaultUri'] ?? '')];
+        }
+        return $streams;
     }
 
     /**
@@ -77,14 +86,17 @@ final class GoogleClient
     }
 
     /**
-     * PageSpeed takes the API key, not the sign-in. It runs a real page load, so it gets a long timeout.
+     * PageSpeed runs a real page load, so it gets a long timeout. It takes a site's own API key; a site signed in through
+     * Kohevo Central has none, so the sign-in identifies it, which spends the Central project's PageSpeed quota.
      *
      * @return array<string, mixed>
      */
     public function pageSpeed(string $url, string $strategy, string $apiKey): array
     {
         $query = ['url' => $url, 'strategy' => $strategy, 'category' => 'performance'] + ($apiKey !== '' ? ['key' => $apiKey] : []);
-        return $this->decode($this->transport->send('GET', GoogleEndpoints::url(GoogleEndpoints::PAGESPEED) . '?' . http_build_query($query), [], null, 70), 'pagespeed');
+        $signIn = $apiKey === '' && $this->connection->usesCentral();
+        $headers = $signIn ? ['Authorization: Bearer ' . $this->connection->accessToken($this->clock !== null ? (int) ($this->clock)() : time())] : [];
+        return $this->decode($this->transport->send('GET', GoogleEndpoints::url(GoogleEndpoints::PAGESPEED) . '?' . http_build_query($query), $headers, null, 70), 'pagespeed');
     }
 
     /**

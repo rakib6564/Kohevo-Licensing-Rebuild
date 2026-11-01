@@ -10,23 +10,65 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_nav.php';
 
+use Slate\Module\StudioBuilder\Insights\CentralGoogleBroker;
 use Slate\Module\StudioBuilder\Insights\CurlGoogleTransport;
 use Slate\Module\StudioBuilder\Insights\DbInsightsCache;
 use Slate\Module\StudioBuilder\Insights\GoogleApiException;
+use Slate\Module\StudioBuilder\Insights\GoogleChoices;
 use Slate\Module\StudioBuilder\Insights\GoogleClient;
 use Slate\Module\StudioBuilder\Insights\GoogleConnection;
 use Slate\Module\StudioBuilder\Insights\InsightsRange;
 use Slate\Module\StudioBuilder\Insights\InsightsReports;
 use Slate\Module\StudioBuilder\Insights\SettingsInsightsStore;
 
+/** The way to Kohevo Central, for a site with a licence to show; a self-hosted site has none and uses its own client. */
+function sb_insights_broker(): ?CentralGoogleBroker
+{
+    require_once SLATE_ROOT . '/includes/installer_flow.php';
+    $server = (string) (env('STUDIO_GOOGLE_BROKER_URL', '') ?: env('LICENSE_SERVER_URL', ''));
+    $key = (string) env('LICENSE_KEY', '');
+    $product = (string) env('LICENSE_PRODUCT', '');
+    $install = \Slate\Services\Installation\InstallationService::currentInstallationId();
+    if ($server === '' || $key === '' || $product === '' || $install === null) {
+        return null;
+    }
+    return new CentralGoogleBroker(['server_url' => $server, 'product' => $product, 'license_key' => $key, 'install_id' => $install, 'domain' => installer_domain_from_url(SLATE_URL)], new CurlGoogleTransport());
+}
+
 function sb_insights_connection(int $tenantId): GoogleConnection
 {
-    return new GoogleConnection(new SettingsInsightsStore($tenantId), new CurlGoogleTransport(), rtrim(SLATE_URL, '/') . '/plugins/studio-builder/admin/insights-callback.php');
+    return new GoogleConnection(new SettingsInsightsStore($tenantId), new CurlGoogleTransport(), rtrim(SLATE_URL, '/') . '/plugins/studio-builder/admin/insights-callback.php', sb_insights_broker());
 }
 
 function sb_insights_client(int $tenantId): GoogleClient
 {
     return new GoogleClient(sb_insights_connection($tenantId), new CurlGoogleTransport());
+}
+
+/** Store the chosen properties and find the Analytics tag. The saved figures belong to the old choice. */
+function sb_insights_choose(int $tenantId, string $site, string $property, string $propertyName): void
+{
+    $store = new SettingsInsightsStore($tenantId);
+    $store->set(GoogleConnection::SEARCH_SITE, $site);
+    $store->set(GoogleConnection::ANALYTICS_PROPERTY, $property);
+    $store->set(GoogleConnection::ANALYTICS_NAME, $propertyName);
+    $store->set(GoogleConnection::MEASUREMENT_ID, $property === '' ? '' : sb_insights_client($tenantId)->measurementId($property));
+    (new DbInsightsCache($tenantId))->clear();
+}
+
+/** After a sign-in: pick the properties of this site when the answer is clear. True when at least one was found. */
+function sb_insights_auto_choose(int $tenantId): bool
+{
+    $client = sb_insights_client($tenantId);
+    $host = (string) parse_url((string) SLATE_URL, PHP_URL_HOST);
+    $site = GoogleChoices::matchSite($client->searchSites(), $host);
+    $properties = $client->analyticsProperties();
+    $property = GoogleChoices::matchProperty($properties, $host, static fn(string $id): array => array_column($client->webStreams($id), 'uri'));
+    if ($site === '' && $property === '') {
+        return false;
+    }
+    sb_insights_choose($tenantId, $site, $property, (string) (array_column($properties, 'name', 'property')[$property] ?? ''));
+    return true;
 }
 
 /** The address this site's reports are about: the Search Console property's, else the site's own. */
@@ -174,6 +216,7 @@ function sb_insights_card(string $title, string $body, string $sub = ''): string
 function sb_insights_problem(GoogleApiException $e): string
 {
     return match ($e->reason) {
+        GoogleApiException::CENTRAL => __('studio_insights_err_central', 'Kohevo could not sign this site in. Check that its licence is active, or use your own Google client under Advanced.'),
         GoogleApiException::RECONNECT => __('studio_insights_err_reconnect', 'Google no longer accepts this connection. Connect again from Settings.'),
         GoogleApiException::NOT_ENABLED => __('studio_insights_err_not_enabled', 'This API is not enabled in your Google Cloud project. Enable it there, wait a minute and refresh.'),
         GoogleApiException::FORBIDDEN => __('studio_insights_err_forbidden', 'This Google account has no access to the property chosen in Settings.'),

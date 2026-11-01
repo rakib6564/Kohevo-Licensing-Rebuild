@@ -2,8 +2,8 @@
 /**
  * Kohevo Studio — one site's connection to Google: its own OAuth client, the grant, and the access token.
  *
- * Site Kit signs in through a proxy that only Google may run, so every Kohevo site uses an OAuth client from a Google Cloud
- * project (docs/STUDIO-SITE-INSIGHTS.md). Several sites can share one client by listing each site's redirect address on it.
+ * Normally a site signs in through Kohevo Central, which holds one OAuth client for every licensed site, so nobody sets up
+ * Google Cloud (CentralGoogleBroker, docs/STUDIO-SITE-INSIGHTS.md). A self-hosted site can use its own client instead.
  * The client secret, the PageSpeed key and both tokens are encrypted at rest with APP_SECRET, and they are never rendered:
  * the screen only says whether one is stored.
  */
@@ -22,6 +22,7 @@ final class GoogleConnection
     public const EXPIRES_AT = 'studio_google_expires_at';
     public const EMAIL = 'studio_google_email';
     public const SCOPES = 'studio_google_scopes';
+    public const MODE = 'studio_google_mode';
     public const NEEDS_RECONNECT = 'studio_google_needs_reconnect';
     public const SEARCH_SITE = 'studio_google_search_site';
     public const ANALYTICS_PROPERTY = 'studio_google_analytics_property';
@@ -29,8 +30,11 @@ final class GoogleConnection
     public const MEASUREMENT_ID = 'studio_google_measurement_id';
 
     /** Every setting that belongs to the connection. */
-    public const GRANT_KEYS = [self::REFRESH_TOKEN, self::ACCESS_TOKEN, self::EXPIRES_AT, self::EMAIL, self::SCOPES, self::NEEDS_RECONNECT];
+    public const GRANT_KEYS = [self::REFRESH_TOKEN, self::ACCESS_TOKEN, self::EXPIRES_AT, self::EMAIL, self::SCOPES, self::NEEDS_RECONNECT, self::MODE];
     public const CHOICE_KEYS = [self::SEARCH_SITE, self::ANALYTICS_PROPERTY, self::ANALYTICS_NAME, self::MEASUREMENT_ID];
+
+    public const MODE_CENTRAL = 'central';
+    public const MODE_OWN = 'own';
 
     public const SCOPE_SEARCH = 'https://www.googleapis.com/auth/webmasters.readonly';
     public const SCOPE_ANALYTICS = 'https://www.googleapis.com/auth/analytics.readonly';
@@ -40,6 +44,7 @@ final class GoogleConnection
         private readonly InsightsStore $store,
         private readonly GoogleTransport $transport,
         private readonly string $redirectUri,
+        private readonly ?CentralGoogleBroker $broker = null,
     ) {
     }
 
@@ -48,6 +53,18 @@ final class GoogleConnection
         return $this->redirectUri;
     }
 
+    /** Whether this site can sign in through Kohevo Central: it has a licence to show. */
+    public function canUseCentral(): bool
+    {
+        return $this->broker !== null;
+    }
+
+    public function usesCentral(): bool
+    {
+        return $this->store->get(self::MODE) === self::MODE_CENTRAL;
+    }
+
+    /** Whether this site has its own OAuth client (Advanced). */
     public function isConfigured(): bool
     {
         return $this->store->get(self::CLIENT_ID) !== '' && $this->store->get(self::CLIENT_SECRET) !== '';
@@ -117,6 +134,15 @@ final class GoogleConnection
         ]);
     }
 
+    /** Google's consent address, by way of Kohevo Central. */
+    public function centralAuthUrl(string $state): string
+    {
+        if ($this->broker === null) {
+            throw new GoogleApiException(GoogleApiException::CENTRAL, 'no licence to sign in with');
+        }
+        return $this->broker->start($this->redirectUri, $state);
+    }
+
     /** The answer to a sign-in: right `state`, not stale, and each attempt used once by the caller. */
     public static function attemptMatches(mixed $attempt, string $state, int $now): bool
     {
@@ -133,14 +159,30 @@ final class GoogleConnection
             'redirect_uri' => $this->redirectUri,
             'code_verifier' => $verifier,
         ]);
+        $this->finishConnecting($tokens, self::MODE_OWN);
+    }
+
+    /** Collect the tokens Kohevo Central holds for a moment after a sign-in, and store them, sealed. */
+    public function connectWithHandoff(string $handoff): void
+    {
+        if ($this->broker === null) {
+            throw new GoogleApiException(GoogleApiException::CENTRAL, 'no licence to sign in with');
+        }
+        $this->finishConnecting($this->broker->claim($handoff), self::MODE_CENTRAL);
+    }
+
+    /** @param array<string, mixed> $tokens */
+    private function finishConnecting(array $tokens, string $mode): void
+    {
         $refresh = (string) ($tokens['refresh_token'] ?? '');
-        if ($refresh === '') {
+        if ($refresh === '' || !is_string($tokens['access_token'] ?? null)) {
             throw new GoogleApiException(GoogleApiException::RECONNECT, 'no refresh token in the answer');
         }
         $this->storeAccess($tokens);
         $this->store->set(self::REFRESH_TOKEN, $this->seal($refresh));
         $this->store->set(self::SCOPES, (string) ($tokens['scope'] ?? ''));
         $this->store->set(self::NEEDS_RECONNECT, '');
+        $this->store->set(self::MODE, $mode);
         $who = $this->transport->send('GET', GoogleEndpoints::url(GoogleEndpoints::USERINFO), ['Authorization: Bearer ' . (string) $tokens['access_token']]);
         $this->store->set(self::EMAIL, (string) (json_decode($who['body'], true)['email'] ?? ''));
     }
@@ -158,7 +200,7 @@ final class GoogleConnection
             }
         }
         try {
-            $tokens = $this->tokenRequest([
+            $tokens = $this->usesCentral() ? $this->centralRefresh() : $this->tokenRequest([
                 'grant_type' => 'refresh_token',
                 'refresh_token' => $this->open(self::REFRESH_TOKEN),
             ]);
@@ -171,6 +213,15 @@ final class GoogleConnection
         $this->storeAccess($tokens, $now);
         $this->store->set(self::NEEDS_RECONNECT, '');
         return (string) $tokens['access_token'];
+    }
+
+    /** @return array<string, mixed> */
+    private function centralRefresh(): array
+    {
+        if ($this->broker === null) {
+            throw new GoogleApiException(GoogleApiException::RECONNECT, 'signed in through Central, but no licence now');
+        }
+        return $this->broker->refresh($this->open(self::REFRESH_TOKEN));
     }
 
     /** Forget the grant here and, as far as Google answers, there. The client stays, so connecting again takes one click. */
