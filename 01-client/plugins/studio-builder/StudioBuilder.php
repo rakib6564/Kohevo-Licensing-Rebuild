@@ -274,6 +274,7 @@ class StudioBuilder extends Plugin
             // Colours, fonts, widths and custom CSS are edited in the builder (Settings › Site); this opens it there.
             ['slug' => 'studio-design', 'label' => $t('studio_nav_design', 'Design'), 'file' => 'admin/themes.php', 'icon' => 'palette', 'section' => $site],
             ['slug' => 'studio-seo', 'label' => $t('studio_nav_seo', 'SEO'), 'file' => 'admin/seo.php', 'icon' => 'globe', 'section' => $search],
+            ['slug' => 'studio-permalinks', 'label' => $t('studio_nav_permalinks', 'Permalinks'), 'file' => 'admin/permalinks.php', 'icon' => 'link', 'section' => $search],
             ['slug' => 'studio-redirects', 'label' => $t('studio_nav_redirects', 'Redirects'), 'file' => 'admin/redirects.php', 'icon' => 'link', 'section' => $search],
             // Scripts run on every public page: Studio administrators only, as on the screen itself.
             ['slug' => 'studio-code-tracking', 'label' => $t('studio_nav_tracking', 'Tracking & code'), 'file' => 'admin/code-tracking.php', 'icon' => 'edit-3', 'section' => $search, 'perm' => 'studio-builder.admin'],

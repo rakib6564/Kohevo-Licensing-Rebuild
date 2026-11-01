@@ -111,15 +111,6 @@ $coreNav = [
         'mobile_tab' => true,
     ],
     [
-        'slug'  => 'settings-permalinks',
-        'label' => __('permalinks', 'Permalinks'),
-        'href'  => SLATE_URL . '/admin/settings.php?tab=permalinks',
-        'icon'  => 'link',
-        'perm'  => 'settings.view',
-        'order' => 810,
-        'group' => 'settings',
-    ],
-    [
         'slug'  => 'settings-datetime',
         'label' => __('date_and_time', 'Date & Time'),
         'href'  => SLATE_URL . '/admin/settings.php?tab=datetime',
