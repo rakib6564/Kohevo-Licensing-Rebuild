@@ -18,10 +18,8 @@ foreach (array_values(array_filter(array_keys($CAP), static fn($u) => preg_match
     $body = (string) preg_replace('~href="/(?:catering-in-)?([a-z-]+)/?"~', 'href="/catering/$1/"', clean_html((string) $texts[array_key_last($texts)]['html']));
     $body = str_replace(['/catering/contact/', '/catering/services/'], ['/contact/', '/services/'], $body);
     $hero = $AREAIMG[$slug] ?? '2026-03-hills.webp';
-    $rows = array_map(static fn(array $i): array => ['heading' => $i['title'], 'body' => plain($i['html'])], $accs[0]['items'] ?? []);
-    build_page($slug, $title, 'page', 'standalone', [
-        CTOP('Area details', array_filter([H($h2, 'h2', '44px', '34px'), PROSE($body), $rows ? VBOX([ACC($rows)], '0px', ['margin' => ['top' => '20px']]) : null]), ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '20px']]),
-    ], ['type' => 'area', 'fields' => ['hero_image' => MEDIA_DIR . $hero, 'eyebrow' => $eyebrow], 'seo_title' => $CAP[$u]['d']['title'], 'seo_desc' => $meta($u), 'image' => $hero, 'settings' => ['excerpt' => SENTENCES(plain($body), 170)]]);
+    $rows = array_map(static fn(array $i): array => ['question' => $i['title'], 'answer' => clean_html((string) $i['html'])], $accs[0]['items'] ?? []);
+    build_page($slug, $title, 'page', 'standalone', [], ['type' => 'area', 'fields' => ['hero_image' => MEDIA_DIR . $hero, 'eyebrow' => $eyebrow, 'area_heading' => $h2, 'area_description' => $body, 'faq' => $rows], 'seo_title' => $CAP[$u]['d']['title'], 'seo_desc' => $meta($u), 'image' => $hero, 'settings' => ['excerpt' => SENTENCES(plain($body), 170)]]);
 }
 
 $chips = [];
@@ -35,11 +33,11 @@ SINGLE('template-area', 'Single: Catering Area', 'area', [
             B('theme.post_title', ['level' => 'h1'], [], ['color' => CREAM, 'typography' => ['size' => '64px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.1']], ['responsive' => ['mobile' => ['style' => ['typography' => ['size' => '42px']]]]]),
             ROW([BTN('Book Your Tasting', '/contact/'), BTN('Call ' . PHONE, 'tel:' . PHONE, 'light')], '12px', ['margin' => ['top' => '10px']], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']], ['wrap' => 'wrap']),
         ], '18px'), '46%'),
-        W(FVB('hero_image', ['dimensions' => ['height' => '440px', 'width' => '100%', 'overflow' => 'hidden']], ['classNames' => ['cg-hero-img'], 'responsive' => ['mobile' => ['style' => ['dimensions' => ['height' => '250px']]]]]), '50%'),
+        W(FVB('hero_image', ['dimensions' => ['height' => '440px', 'width' => '100%', 'overflow' => 'hidden']], ['responsive' => ['mobile' => ['style' => ['dimensions' => ['height' => '250px']]]]]), '50%'),
     ], '48px', [], ['layout' => ['direction' => 'column', 'gap' => '32px']], ['justify' => 'between', 'align' => 'center'])], INK, ['padding' => ['top' => '52px', 'right' => '24px', 'bottom' => '60px', 'left' => '24px']], WRAP(), '40px'),
     CTOP('Check band', [CHECK()], []),
     SEC('Details', [ROW([
-        W(VBOX([B('theme.post_content', [])]), '60%'),
+        W(VBOX([HEADF('area_heading'), BODYF('area_description'), FAQF()], '20px'), '60%'),
         W(VBOX([
             CHECK(),
             VBOX([

@@ -9,43 +9,42 @@ function TT(string $t): string
     $t = ucwords(strtolower($t), " -");
     return str_replace('Bbq', 'BBQ', $t);
 }
-/** A captured article as clean blocks in the site's own type. */
-function ARTICLE(array $leaves): array
+/** A captured article as the rich text a Body field holds. */
+function ARTICLEHTML(array $leaves): string
 {
-    $out = [];
+    $out = '';
     foreach ($leaves as $i => $n) {
         $text = plain((string) ($n['text'] ?? $n['html'] ?? ''));
+        $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES);
         switch ($n['t']) {
             case 'heading':
-                // A heading with nothing under it, as the live recipe's instructions are, says nothing.
-                if ($text !== '' && ($leaves[$i + 1]['t'] ?? '') !== 'heading') { $out[] = VBOX([H($text, 'h2', '34px', '28px')], '0px', ['margin' => ['top' => '20px']]); }
+                if ($text !== '' && ($leaves[$i + 1]['t'] ?? '') !== 'heading') { $out .= '<h2>' . $e($text) . '</h2>'; }
                 break;
             case 'text-editor':
                 if ($text === '' || str_starts_with($text, '— ')) { break; }
                 if (str_starts_with($text, '“') && mb_strlen($text) < 320) {
                     $who = plain((string) ($leaves[$i + 1]['html'] ?? ''));
-                    $out[] = VBOX([P($text, INK, '26px', 'left', DISPLAY), str_starts_with($who, '— ') ? P($who, COCOA, '15px') : null], '6px', ['border' => ['left' => ['width' => '3px', 'style' => 'solid', 'color' => EMBER]], 'padding' => ['left' => '22px'], 'margin' => ['top' => '10px', 'bottom' => '10px']]);
+                    $out .= '<blockquote><p>' . $e($text) . '</p>' . (str_starts_with($who, '— ') ? '<p>' . $e($who) . '</p>' : '') . '</blockquote>';
                     break;
                 }
-                if (($leaves[$i - 1]['t'] ?? '') === 'image') { $out[] = P($text, COCOA, '15px', 'left', ROMAN, 'italic'); break; }
-                $out[] = PROSE(clean_html((string) $n['html']));
+                $out .= ($leaves[$i - 1]['t'] ?? '') === 'image' ? '<p><em>' . $e($text) . '</em></p>' : clean_html((string) $n['html']);
                 break;
             case 'image':
-                if (MID((string) ($n['file'] ?? '')) > 0 && !str_contains((string) $n['file'], 'logo')) { $out[] = PIC((string) $n['file'], 'A plated dinner', '380px', '220px'); }
+                if (MID((string) ($n['file'] ?? '')) > 0 && !str_contains((string) $n['file'], 'logo')) { $out .= '<p><img src="' . $e(MEDIA_DIR . $n['file']) . '" alt="A plated dinner"></p>'; }
                 break;
             case 'icon-list':
                 $items = array_values(array_filter(array_map(static fn(array $x): string => trim($x['text']), is_array($n['items'] ?? null) ? $n['items'] : [])));
-                if ($items) { $out[] = B('core.list', ['style' => 'check', 'items' => array_map(static fn(string $x): array => ['text' => mb_substr($x, 0, 300)], $items)], [], ['color' => COCOA, 'typography' => ['size' => '17px', 'font_family' => BODY, 'weight' => '400', 'line_height' => '1.55']], ['style_parts' => ['marker' => ['color' => EMBER]]]); }
+                if ($items) { $out .= '<ul>' . implode('', array_map(static fn(string $x): string => '<li>' . $e($x) . '</li>', $items)) . '</ul>'; }
                 break;
         }
     }
-    return [CTOP('Article', $out, ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '16px']])];
+    return $out;
 }
 function ITEMHERO(string $backLabel, string $back, array $texts): array
 {
     return SEC('Hero', [ROW([
         W(VBOX([B('core.link', ['link' => L($backLabel, $back), 'style' => 'plain'], [], ['color' => '#d9cdbd', 'typography' => ['size' => '14px', 'font_family' => BODY, 'weight' => '500']], ['classNames' => ['cg-link']]), ...$texts], '16px'), '50%'),
-        W(FVB('hero_image', ['dimensions' => ['height' => '420px', 'width' => '100%', 'overflow' => 'hidden']], ['classNames' => ['cg-hero-img'], 'responsive' => ['mobile' => ['style' => ['dimensions' => ['height' => '240px']]]]]), '44%'),
+        W(FVB('hero_image', ['dimensions' => ['height' => '420px', 'width' => '100%', 'overflow' => 'hidden']], ['responsive' => ['mobile' => ['style' => ['dimensions' => ['height' => '240px']]]]]), '44%'),
     ], '48px', [], ['layout' => ['direction' => 'column', 'gap' => '28px']], ['justify' => 'between', 'align' => 'center'])], INK, ['padding' => ['top' => '52px', 'right' => '24px', 'bottom' => '60px', 'left' => '24px']], WRAP(), '40px');
 }
 function ITEMTITLE(): array { return B('theme.post_title', ['level' => 'h1'], [], ['color' => CREAM, 'typography' => ['size' => '56px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.12']], ['responsive' => ['mobile' => ['style' => ['typography' => ['size' => '38px']]]]]); }
@@ -72,8 +71,8 @@ foreach (array_values(array_filter(array_keys($CAP), static fn($u) => preg_match
     $lede = plain((string) ($eds[0]['html'] ?? ''));
     $image = $BLOGIMG[basename($u)];
     $leaves = []; LEAVES($x['d'][1]['kids'][0], $leaves);
-    build_page(basename($u), TT(trim(html_entity_decode((string) ($heads[1]['text'] ?? $WP[$u]['title']['rendered'])))), 'page', 'standalone', ARTICLE($leaves), [
-        'type' => 'blog_post', 'fields' => ['hero_image' => MEDIA_DIR . $image, 'date_label' => trim((string) ($heads[0]['text'] ?? '')), 'lede' => $lede, 'toc' => implode("\n", $toc)],
+    build_page(basename($u), TT(trim(html_entity_decode((string) ($heads[1]['text'] ?? $WP[$u]['title']['rendered'])))), 'page', 'standalone', [], [
+        'type' => 'blog_post', 'fields' => ['hero_image' => MEDIA_DIR . $image, 'date_label' => trim((string) ($heads[0]['text'] ?? '')), 'lede' => $lede, 'body' => ARTICLEHTML($leaves), 'toc' => implode("\n", $toc)],
         'seo_title' => $CAP[$u]['d']['title'], 'seo_desc' => $meta($u), 'image' => $image, 'date' => $WP[$u]['date'], 'settings' => ['excerpt' => mb_substr($lede, 0, 200)],
     ]);
 }
@@ -81,7 +80,7 @@ SINGLE('template-blog-post', 'Single: Blog Post', 'blog_post', [
     ITEMHERO('← All posts', '/blog-post/', [FVB('date_label', EYESTYLE(EMBERLT)), ITEMTITLE(), FVB('lede', ['color' => '#d9cdbd', 'typography' => ['size' => '18px', 'font_family' => BODY, 'line_height' => '1.6']])]),
     CTOP('Check band', [CHECK()], []),
     SEC('Article', [ROW([
-        W(VBOX([B('theme.post_content', [])]), '62%'),
+        W(VBOX([BODYF('body')]), '62%'),
         W(VBOX([
             VBOX([EYE('In This Article'), FVB('toc', ['color' => INK, 'typography' => ['size' => '16px', 'font_family' => BODY, 'line_height' => '1.45']], ['classNames' => ['cg-toc']])], '8px', ['margin' => ['bottom' => '24px']]),
             VBOX([CHECK(), VBOX([H('Planning an Event?', 'h2', '30px', '28px', CREAM), P('Every event begins with a complimentary consultation and tasting.', '#d9cdbd', '16px'), ROW([BTN('Book Your Tasting', '/contact/')], '0px', ['margin' => ['top' => '8px']], [])], '10px', ['padding' => ['top' => '24px', 'right' => '24px', 'bottom' => '26px', 'left' => '24px']])], '0px', ['background' => ['color' => INK]]),
@@ -107,8 +106,8 @@ $bar = array_map(static fn($k) => plain((string) (array_values(array_filter($k['
 $heads = []; collect($x['d'][0], 'heading', $heads);
 $leaves = []; LEAVES($x['d'][2]['kids'][0], $leaves);
 $recImg = '2026-04-brisket.webp';
-build_page(basename($rec), TT(trim(html_entity_decode((string) $heads[1]['text']))), 'page', 'standalone', ARTICLE($leaves), [
-    'type' => 'recipe', 'fields' => ['hero_image' => MEDIA_DIR . $recImg, 'eyebrow' => (string) $heads[0]['text'], 'prep_time' => $bar[0] ?? '', 'cook_time' => $bar[1] ?? '', 'serves' => $bar[2] ?? '', 'temperature' => $bar[3] ?? '', 'difficulty' => $bar[4] ?? 'Advanced', 'ingredients' => implode("\n", $itemMeta($rec))],
+build_page(basename($rec), TT(trim(html_entity_decode((string) $heads[1]['text']))), 'page', 'standalone', [], [
+    'type' => 'recipe', 'fields' => ['hero_image' => MEDIA_DIR . $recImg, 'eyebrow' => (string) $heads[0]['text'], 'prep_time' => $bar[0] ?? '', 'cook_time' => $bar[1] ?? '', 'serves' => $bar[2] ?? '', 'temperature' => $bar[3] ?? '', 'difficulty' => $bar[4] ?? 'Advanced', 'ingredients' => array_map(static fn(string $i): array => ['ingredient' => $i], $itemMeta($rec)), 'body' => ARTICLEHTML($leaves)],
     'seo_title' => $CAP[$rec]['d']['title'], 'seo_desc' => $meta($rec), 'image' => $recImg, 'date' => $WP[$rec]['date'], 'settings' => ['excerpt' => mb_substr(plain($WP[$rec]['content']['rendered']), 0, 200)],
 ]);
 $stat = static fn(string $label, string $key): array => VBOX([EYE($label, EMBER, 'center'), FVB($key, ['color' => INK, 'align' => ['base' => 'center'], 'typography' => ['size' => '24px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.25']])], '4px');
@@ -117,8 +116,8 @@ SINGLE('template-recipe', 'Single: Recipe', 'recipe', [
     CTOP('Check band', [CHECK()], []),
     SEC('Recipe facts', [B('layout.flex', ['direction' => 'row', 'gap' => 'none'], [$stat('Prep', 'prep_time'), $stat('Cook', 'cook_time'), $stat('Serves', 'serves'), $stat('Temp', 'temperature'), $stat('Level', 'difficulty')], ['layout' => ['display' => 'grid', 'columns' => 5, 'gap' => '20px']], ['responsive' => ['mobile' => ['style' => ['layout' => ['columns' => 2]]]]])], SAND, ['padding' => ['top' => '32px', 'right' => '24px', 'bottom' => '32px', 'left' => '24px']], WRAP(), '28px'),
     SEC('Recipe', [ROW([
-        W(VBOX([B('theme.post_content', [])]), '60%'),
-        W(VBOX([CHECK(), VBOX([H('Ingredients', 'h2', '32px', '28px', CREAM), FVB('ingredients', ['color' => CREAM, 'typography' => ['size' => '16px', 'font_family' => BODY, 'line_height' => '1.5']], ['classNames' => ['cg-included']]), ROW([BTN('Book Chef Gregory', '/contact/')], '0px', ['margin' => ['top' => '12px']], [])], '10px', ['padding' => ['top' => '26px', 'right' => '26px', 'bottom' => '28px', 'left' => '26px']])], '0px', ['background' => ['color' => INK]], ['classNames' => ['cg-sticky']]), '35%'),
+        W(VBOX([BODYF('body')]), '60%'),
+        W(VBOX([CHECK(), VBOX([H('Ingredients', 'h2', '32px', '28px', CREAM), B('theme.repeater', ['field' => 'ingredients', 'title_field' => 'ingredient'], [], ['color' => CREAM, 'typography' => ['size' => '16px', 'font_family' => BODY, 'line_height' => '1.5']], ['classNames' => ['cg-included']]), ROW([BTN('Book Chef Gregory', '/contact/')], '0px', ['margin' => ['top' => '12px']], [])], '10px', ['padding' => ['top' => '26px', 'right' => '26px', 'bottom' => '28px', 'left' => '26px']])], '0px', ['background' => ['color' => INK]], ['classNames' => ['cg-sticky']]), '35%'),
     ], '48px', [], ['layout' => ['direction' => 'column', 'gap' => '40px']], ['justify' => 'between', 'align' => 'start'])], CREAM, GUT('88px', '96px'), WRAP(), '48px'),
     BOOK(),
 ]);

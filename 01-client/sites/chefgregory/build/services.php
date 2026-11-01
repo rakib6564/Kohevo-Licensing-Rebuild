@@ -2,7 +2,20 @@
 // Chef Gregory's redesign: the Services pages, the seven service items and their Single template.
 declare(strict_types=1);
 
-function FVB(string $key, array $style = [], array $opt = []): array { return B('theme.field_value', ['field' => $key, 'tag' => 'div'], [], $style, $opt); }
+function FVB(string $key, array $style = [], array $opt = [], string $tag = 'div'): array { return B('theme.field_value', ['field' => $key, 'tag' => $tag, 'fit' => $key === 'hero_image' ? 'cover' : 'auto'], [], $style, $opt); }
+/** A rich text field in the article's type. */
+function BODYF(string $key): array { return FVB($key, ['color' => COCOA, 'typography' => ['size' => '18px', 'font_family' => BODY, 'weight' => '400', 'line_height' => '1.65']], ['classNames' => ['cg-prose']]); }
+/** A text field set as a heading. */
+function HEADF(string $key): array { $h = H('x', 'h2', '44px', '34px'); return FVB($key, $h['style'], array_intersect_key($h, ['responsive' => 1]), 'h2'); }
+/** Questions and answers from a repeater field; the whole block goes when an item has none. */
+function FAQF(string $key = 'faq'): array
+{
+    $acc = ACC([]);
+    $rep = B('theme.repeater', ['field' => $key, 'display' => 'accordion', 'title_field' => 'question', 'body_field' => 'answer'], [], [], ['classNames' => ['cg-acc'], 'style_parts' => $acc['style_parts']]);
+    $box = VBOX([$rep], '0px', ['margin' => ['top' => '20px']]);
+    $box['visibility']['when_field'] = $key;
+    return $box;
+}
 function EYESTYLE(string $color): array { return ['color' => $color, 'typography' => ['size' => '13px', 'font_family' => BODY, 'weight' => '600', 'transform' => 'uppercase', 'letter_spacing' => '2.4px', 'line_height' => '1.4']]; }
 function PROSE(string $html): array { return B('core.rich_text', ['content' => $html], [], ['color' => COCOA, 'typography' => ['size' => '18px', 'font_family' => BODY, 'weight' => '400', 'line_height' => '1.65']], ['classNames' => ['cg-prose']]); }
 function SVCGRID(): array
@@ -46,10 +59,8 @@ foreach (array_values(array_filter(array_keys($CAP), static fn($u) => preg_match
     $included = array_map(static fn(string $l): string => str_replace(': YES', ': Yes', (string) preg_replace('/^(.+?)\s*[-–]\s+/u', '$1: ', $l)), $itemMeta($u));
     $hero = $SVCIMG[$slug] ?? $heroFile($x['d'][0]);
     $text = plain($WP[$u]['content']['rendered']);
-    build_page($slug, trim(html_entity_decode($WP[$u]['title']['rendered'])), 'page', 'standalone', [
-        CTOP('Service details', [H(trim((string) $h[0]['text']), 'h2', '44px', '34px'), PROSE(clean_html((string) $t[0]['html']))], ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '20px']]),
-    ], [
-        'type' => 'service', 'fields' => ['hero_image' => MEDIA_DIR . $hero, 'eyebrow' => 'Service · Central Coast California', 'included' => implode("\n", $included)],
+    build_page($slug, trim(html_entity_decode($WP[$u]['title']['rendered'])), 'page', 'standalone', [], [
+        'type' => 'service', 'fields' => ['hero_image' => MEDIA_DIR . $hero, 'service_heading' => trim((string) $h[0]['text']), 'service_description' => clean_html((string) $t[0]['html']), 'includes' => array_map(static fn(string $i): array => ['include_item' => $i], $included), 'faq' => [], 'areas_served' => 'Central Coast California'],
         'seo_title' => $CAP[$u]['d']['title'], 'seo_desc' => $meta($u), 'image' => $hero, 'date' => $WP[$u]['date'], 'settings' => ['excerpt' => SENTENCES($text)],
     ]);
 }
@@ -67,18 +78,18 @@ SINGLE('template-service', 'Single: Service', 'service', [
     SEC('Hero', [ROW([
         W(VBOX([
             B('core.link', ['link' => L('← All services', '/services/'), 'style' => 'plain'], [], ['color' => '#d9cdbd', 'typography' => ['size' => '14px', 'font_family' => BODY, 'weight' => '500']], ['classNames' => ['cg-link']]),
-            FVB('eyebrow', EYESTYLE(EMBERLT)),
+            ROW([B('core.text', ['content' => 'Service ·', 'size' => 'inherit'], [], EYESTYLE(EMBERLT)), FVB('areas_served', EYESTYLE(EMBERLT))], '6px', [], ['layout' => ['direction' => 'row']], ['align' => 'center']),
             B('theme.post_title', ['level' => 'h1'], [], ['color' => CREAM, 'typography' => ['size' => '64px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.1']], ['responsive' => ['mobile' => ['style' => ['typography' => ['size' => '42px']]]]]),
             ROW([BTN('Book Your Tasting', '/contact/'), BTN('Call ' . PHONE, 'tel:' . PHONE, 'light')], '12px', ['margin' => ['top' => '10px']], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']], ['wrap' => 'wrap']),
         ], '18px'), '46%'),
-        W(FVB('hero_image', ['dimensions' => ['height' => '440px', 'width' => '100%', 'overflow' => 'hidden']], ['classNames' => ['cg-hero-img'], 'responsive' => ['mobile' => ['style' => ['dimensions' => ['height' => '250px']]]]]), '50%'),
+        W(FVB('hero_image', ['dimensions' => ['height' => '440px', 'width' => '100%', 'overflow' => 'hidden']], ['responsive' => ['mobile' => ['style' => ['dimensions' => ['height' => '250px']]]]]), '50%'),
     ], '48px', [], ['layout' => ['direction' => 'column', 'gap' => '32px']], ['justify' => 'between', 'align' => 'center'])], INK, ['padding' => ['top' => '52px', 'right' => '24px', 'bottom' => '60px', 'left' => '24px']], WRAP(), '40px'),
     CTOP('Check band', [CHECK()], []),
     SEC('Details', [ROW([
-        W(VBOX([B('theme.post_content', []), ROW([BTN('Request a Consultation', '/contact/', 'dark')], '0px', ['margin' => ['top' => '24px']], [])]), '56%'),
+        W(VBOX([HEADF('service_heading'), BODYF('service_description'), FAQF(), ROW([BTN('Request a Consultation', '/contact/', 'dark')], '0px', ['margin' => ['top' => '24px']], [])], '20px'), '56%'),
         W(VBOX([
             CHECK(),
-            VBOX([H('What’s Included', 'h2', '34px', '30px', CREAM), FVB('included', ['color' => CREAM, 'typography' => ['size' => '16px', 'font_family' => BODY, 'line_height' => '1.5']], ['classNames' => ['cg-included']])], '10px', ['padding' => ['top' => '28px', 'right' => '28px', 'bottom' => '20px', 'left' => '28px']]),
+            VBOX([H('What’s Included', 'h2', '34px', '30px', CREAM), B('theme.repeater', ['field' => 'includes', 'title_field' => 'include_item'], [], ['color' => CREAM, 'typography' => ['size' => '16px', 'font_family' => BODY, 'line_height' => '1.5']], ['classNames' => ['cg-included']])], '10px', ['padding' => ['top' => '28px', 'right' => '28px', 'bottom' => '20px', 'left' => '28px']]),
         ], '0px', ['background' => ['color' => INK]], ['classNames' => ['cg-sticky']]), '38%'),
     ], '48px', [], ['layout' => ['direction' => 'column', 'gap' => '40px']], ['justify' => 'between', 'align' => 'start'])], CREAM, GUT('96px', '96px'), WRAP(), '60px'),
     SEC('Packages', [ROW([

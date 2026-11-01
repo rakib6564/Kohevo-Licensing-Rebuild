@@ -1,5 +1,4 @@
-/* What native style cannot say yet: a Field value image as a cover layer. */
-.cg-hero-img .sb-field-value, .cg-hero-img img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* What native style cannot say yet. */
 /* The dish cards: the caption shows when a card is pointed at, as on the live site. */
 .cg-hover { position: relative; overflow: hidden; }
 .cg-hover .sb-block--core-rich-text { opacity: 0; transition: opacity .3s; }

@@ -53,12 +53,14 @@ PageMeta::savePostTypes($tid, [
     'area'      => $type('area', 'Catering Areas', 'Catering Area', '/catering', 'map-pin', 4, [['label' => 'Address', 'source' => '_slug', 'prefix' => '', 'suffix' => '', 'sortable' => true]]),
 ]);
 $field = static fn(string $type, string $key, string $label, string $kind = 'text', array $options = []): array => ['id' => 'f_' . substr(md5($type . $key), 0, 8), 'post_type' => $type, 'label' => $label, 'key' => $key, 'type' => $kind, 'required' => false, 'placeholder' => '', 'help' => '', 'options' => $options];
+$rep = static fn(string ...$subs): array => ['subfields' => array_map(static function (string $s): array { [$key, $label, $type] = explode(':', $s); return ['key' => $key, 'label' => $label, 'type' => $type]; }, $subs)];
+$faq = $rep('question:Question:text', 'answer:Answer:richtext');
 PageMeta::saveFields($tid, [
-    $field('service', 'hero_image', 'Hero image', 'image'), $field('service', 'eyebrow', 'Eyebrow'), $field('service', 'included', "What's included", 'list'),
-    $field('blog_post', 'hero_image', 'Hero image', 'image'), $field('blog_post', 'date_label', 'Date label'), $field('blog_post', 'lede', 'Lede', 'textarea'), $field('blog_post', 'toc', 'In this article', 'list'),
+    $field('service', 'service_heading', 'Service heading'), $field('service', 'service_description', 'Service description', 'richtext'), $field('service', 'includes', 'Includes', 'repeater', $rep('include_item:Include item:text')), $field('service', 'faq', 'FAQ', 'repeater', $faq), $field('service', 'areas_served', 'Areas served'), $field('service', 'hero_image', 'Hero image', 'image'),
+    $field('blog_post', 'hero_image', 'Hero image', 'image'), $field('blog_post', 'date_label', 'Date label'), $field('blog_post', 'lede', 'Lede', 'textarea'), $field('blog_post', 'body', 'Body', 'richtext'), $field('blog_post', 'toc', 'In this article', 'list'),
     $field('recipe', 'hero_image', 'Hero image', 'image'), $field('recipe', 'eyebrow', 'Eyebrow'), $field('recipe', 'prep_time', 'Prep time'), $field('recipe', 'cook_time', 'Cook time'), $field('recipe', 'serves', 'Serves'), $field('recipe', 'temperature', 'Temperature'),
-    $field('recipe', 'difficulty', 'Difficulty', 'select', ['choices' => [['value' => 'Easy', 'label' => 'Easy'], ['value' => 'Intermediate', 'label' => 'Intermediate'], ['value' => 'Advanced', 'label' => 'Advanced']]]), $field('recipe', 'ingredients', 'Ingredients', 'list'),
-    $field('area', 'hero_image', 'Hero image', 'image'), $field('area', 'eyebrow', 'Eyebrow'),
+    $field('recipe', 'difficulty', 'Difficulty', 'select', ['choices' => [['value' => 'Easy', 'label' => 'Easy'], ['value' => 'Intermediate', 'label' => 'Intermediate'], ['value' => 'Advanced', 'label' => 'Advanced']]]), $field('recipe', 'ingredients', 'Ingredients', 'repeater', $rep('ingredient:Ingredient:text')), $field('recipe', 'body', 'Instructions', 'richtext'),
+    $field('area', 'hero_image', 'Hero image', 'image'), $field('area', 'eyebrow', 'Eyebrow'), $field('area', 'area_heading', 'Heading'), $field('area', 'area_description', 'Description', 'richtext'), $field('area', 'faq', 'FAQ', 'repeater', $faq),
 ]);
 PageRoutes::forget($tid);
 say('  + content types');
