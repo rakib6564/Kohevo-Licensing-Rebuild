@@ -40,8 +40,8 @@
 @media (min-width: 768px) {
   .cg-sticky { position: sticky; top: 96px; }
   /* Seven services: the first runs the full width, six sit below it in pairs of three. */
-  .cg-svc-grid article:first-child, .cg-svc-grid .sb-post-card:first-child { grid-column: 1 / -1; }
-  .cg-svc-grid article:first-child img, .cg-svc-grid .sb-post-card:first-child img { height: 400px; object-fit: cover; aspect-ratio: auto; }
+  .cg-svc-grid .sb-query-loop__item:first-child { grid-column: 1 / -1; }
+  .cg-svc-grid .sb-query-loop__item:first-child .cg-card-img { height: 400px !important; }
 }
 /* The inquiry form. */
 .cg-form .sb-form { row-gap: 18px; }

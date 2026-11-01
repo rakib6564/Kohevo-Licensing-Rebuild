@@ -54,5 +54,18 @@ function SINGLE(string $slug, string $title, string $type, array $containers): i
 {
     return build_page($slug, $title, 'system', 'standalone', $containers, ['settings' => ['template_type' => 'single', 'conditions' => ['rules' => [['action' => 'include', 'condition' => 'singular', 'value' => $type]]]]]);
 }
+/** A Loop Item: the card every Query Loop of this content type draws, listed under Templates. */
+function LOOPITEM(string $slug, string $title, string $type, string $more): int
+{
+    global $runtime, $actor;
+    $card = CTOP('Card', [
+        B('theme.post_image', [], [], ['dimensions' => ['height' => '260px', 'width' => '100%', 'overflow' => 'hidden']], ['classNames' => ['cg-card-img']]),
+        B('theme.post_title', ['level' => 'h3', 'link_to_post' => true], [], ['color' => INK, 'margin' => ['top' => '6px'], 'typography' => ['size' => '30px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.2']]),
+        B('theme.post_excerpt', [], [], ['color' => COCOA, 'typography' => ['size' => '16px', 'font_family' => BODY, 'line_height' => '1.55']]),
+        B('theme.post_link', ['text' => $more], [], ['color' => EMBER, 'typography' => ['size' => '15px', 'font_family' => BODY, 'weight' => '600']]),
+    ], ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '10px', 'content_width' => 'full', 'padding_y' => 'none']]);
+    $id = build_page($slug, $title, 'system', 'standalone', [$card], ['settings' => ['template_type' => 'loop', 'conditions' => ['rules' => [['action' => 'include', 'condition' => 'singular', 'value' => $type]]]]]);
+    return $id;
+}
 function POSTCONTENT(): array { return CTOP('Item content', [B('theme.post_content', [])], ['layout' => ['display' => 'flex', 'direction' => 'column']]); }
 function FV(string $key, array $style = []): array { return B('theme.field_value', ['field' => $key, 'tag' => 'div'], [], $style); }

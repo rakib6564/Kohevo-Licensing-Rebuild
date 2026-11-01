@@ -4,6 +4,8 @@
 //   cd <site> && php <bundle>/build/design.php
 declare(strict_types=1);
 
+use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+
 use Slate\Module\StudioBuilder\Http\StudioCodePolicy;
 use Slate\Module\StudioBuilder\Menu\StudioMenus;
 
@@ -276,4 +278,12 @@ require __DIR__ . '/areas.php';
 require __DIR__ . '/food.php';
 require __DIR__ . '/blog.php';
 require __DIR__ . '/more.php';
+LOOPITEM('template-loop-service', 'Loop Item: Service', 'service', 'View service →');
+LOOPITEM('template-loop-blog-post', 'Loop Item: Blog Post', 'blog_post', 'Read more →');
+LOOPITEM('template-loop-recipe', 'Loop Item: Recipe', 'recipe', 'View recipe →');
+LOOPITEM('template-loop-area', 'Loop Item: Catering Area', 'area', 'View area →');
+// The Templates screen lists what is in its own table, so the site's templates show up there.
+foreach ([['loop-service', 'Loop Item: Service', 'loop'], ['loop-blog-post', 'Loop Item: Blog Post', 'loop'], ['loop-recipe', 'Loop Item: Recipe', 'loop'], ['loop-area', 'Loop Item: Catering Area', 'loop'], ['service', 'Single: Service', 'single'], ['blog-post', 'Single: Blog Post', 'single'], ['recipe', 'Single: Recipe', 'single'], ['area', 'Single: Catering Area', 'single']] as [$key, $name, $category]) {
+    $runtime->app->saveTemplate($actor, $key, 'page_template', $category, $name, null, CanonicalDocumentSchema::emptyDocument('system', 'default', $name), null, true);
+}
 say('design done');
