@@ -19,9 +19,28 @@ final class SessionRepository extends Repository
         self::ensureSchema();
     }
 
+    /** Connections on which the table is known to exist (keyed by PDO, so a swapped connection is checked again). */
+    private static ?\WeakMap $schemaReady = null;
+
+    /**
+     * Auth::check() builds a repository on every call, many times a request,
+     * so this sits on the hot path. MySQL commits any open transaction on
+     * DDL — even CREATE TABLE IF NOT EXISTS on a table that exists — which
+     * silently ended plugin transactions that audit or read the user
+     * (AuditLog::record() -> Auth::userId()). So: check once per connection,
+     * with a plain SHOW TABLES that does not commit, and run the DDL only
+     * when the table is really missing.
+     */
     public static function ensureSchema(): void
     {
-        \Database::get()->exec("CREATE TABLE IF NOT EXISTS `admin_sessions` (
+        $pdo = \Database::get();
+        self::$schemaReady ??= new \WeakMap();
+        if (isset(self::$schemaReady[$pdo])) return;
+        if ($pdo->query("SHOW TABLES LIKE 'admin_sessions'")->fetchColumn() !== false) {
+            self::$schemaReady[$pdo] = true;
+            return;
+        }
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `admin_sessions` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
             `tenant_id` INT UNSIGNED NOT NULL,
             `user_id` INT UNSIGNED NOT NULL,
@@ -36,6 +55,13 @@ final class SessionRepository extends Repository
             PRIMARY KEY (`id`), UNIQUE KEY `tenant_session` (`tenant_id`, `session_hash`),
             KEY `tenant_user_active` (`tenant_id`, `user_id`, `revoked_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        self::$schemaReady[$pdo] = true;
+    }
+
+    /** For tests that drop the table mid-process: the next use checks (and creates) it again. */
+    public static function forgetSchemaCheck(): void
+    {
+        self::$schemaReady = null;
     }
 
     public function register(int $userId, string $sessionId, string $deviceLabel, string $ip, string $userAgent): int

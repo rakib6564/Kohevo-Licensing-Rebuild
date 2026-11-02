@@ -775,7 +775,7 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 // 1) Prove the hazard is real in this environment: an audit write inside an owned transaction kills the
                 //    transaction. The session repository creates `admin_sessions` lazily on first use (DDL = implicit commit),
                 //    exactly what a fresh install's first admin request does — so the table is dropped to reproduce that state.
-                Database::query('DROP TABLE IF EXISTS admin_sessions');
+                Database::query('DROP TABLE IF EXISTS admin_sessions'); \Slate\Services\Auth\SessionRepository::forgetSchemaCheck();
                 $_SESSION = ['slate_user' => ['id' => $S->editorA, 'tenant_id' => SBP7_A]];
                 $rt->tenants->runAs(SBP7_A, static function () use ($pdo): void {
                     $pdo->beginTransaction();
@@ -805,12 +805,12 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                     }
                 }
                 assert_true($localSection !== null);
-                Database::query('DROP TABLE IF EXISTS admin_sessions'); // the lazy DDL fires again inside the audited command
+                Database::query('DROP TABLE IF EXISTS admin_sessions'); \Slate\Services\Auth\SessionRepository::forgetSchemaCheck(); // the lazy DDL fires again inside the audited command
                 $_SESSION = ['slate_user' => ['id' => $S->editorA, 'tenant_id' => SBP7_A]];
                 $r = sbp7_ok(sbp7_assistant($rt, SBP7_A, $withEdit, 'studio_create_global_component', ['title' => 'Assistant component', 'slug' => 'assistant-component', 'page_id' => $S->home['id'], 'container_id' => $localSection, 'expected_revision_id' => (int) $status['active_draft_revision_id']]), 'assistant creates a component inside an owned transaction with a live session');
                 assert_eq('ai_operation', $r['revision']['revision_kind']);
                 assert_eq('container_preset', $r['component']['page_type']);
-                Database::query('DROP TABLE IF EXISTS admin_sessions');
+                Database::query('DROP TABLE IF EXISTS admin_sessions'); \Slate\Services\Auth\SessionRepository::forgetSchemaCheck();
                 $_SESSION = ['slate_user' => ['id' => $S->editorA, 'tenant_id' => SBP7_A]];
                 $r2 = sbp7_ok(sbp7_assistant($rt, SBP7_A, $withEdit, 'studio_apply_operations', ['page_id' => $S->home['id'], 'expected_revision_id' => (int) $r['revision']['id'], 'operations' => [['op' => 'update_seo', 'payload' => ['seo' => ['title' => 'After the hazard']]]]]), 'assistant mutation with a live session');
                 assert_eq('ai_operation', $r2['revision']['revision_kind']);
