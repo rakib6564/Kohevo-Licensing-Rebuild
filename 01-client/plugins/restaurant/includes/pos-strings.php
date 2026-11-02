@@ -30,6 +30,7 @@ return __js([
     'restaurant_pos_check_n'                 => 'Check %s',
     'restaurant_pos_choose'                  => 'choose %1$s–%2$s',
     'restaurant_pos_choose_n'                => 'choose %s',
+    'restaurant_pos_picked'                  => '%1$s of %2$s',
     'restaurant_pos_pick_min'                => 'Choose at least %1$s for: %2$s',
     'restaurant_pos_pick_max'                => 'Choose at most %1$s for: %2$s',
     'restaurant_pos_close'                   => 'Close',

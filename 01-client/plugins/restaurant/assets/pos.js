@@ -73,11 +73,33 @@
     }
 
     // ── Toast + modal sheet ──────────────────────────────────
-    /** msg is HTML built with T() (arguments already escaped); server text goes through err(). */
+    /**
+     * The register's one notification: top-centre under the bar, above any
+     * open sheet, so it never covers the button you just pressed. Tap to
+     * dismiss; errors stay a little longer and are announced. Problems
+     * inside a sheet are shown next to what caused them (fieldError), not
+     * here. msg is HTML built with T() (arguments already escaped); server
+     * text goes through err().
+     */
+    const TOAST_ICON = { error: svg('<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.5"/>'), ok: svg('<path d="M20 6L9 17l-5-5"/>') };
     function toast(msg, kind) {
         const t = $('#posToast');
-        t.innerHTML = msg; t.className = 'pos-toast' + (kind ? ' is-' + kind : ''); t.hidden = false;
-        clearTimeout(t._tmo); t._tmo = setTimeout(() => { t.hidden = true; }, kind === 'error' ? 4200 : 2400);
+        t.innerHTML = '<span class="pos-toast-ico">' + (kind === 'error' ? TOAST_ICON.error : TOAST_ICON.ok) + '</span><span class="pos-toast-msg">' + msg + '</span>';
+        t.className = 'pos-toast' + (kind ? ' is-' + kind : '');
+        t.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+        t.hidden = false;
+        t.classList.remove('is-in'); void t.offsetWidth; t.classList.add('is-in');
+        clearTimeout(t._tmo); t._tmo = setTimeout(() => { t.hidden = true; }, kind === 'error' ? 4500 : 2400);
+    }
+    $('#posToast').addEventListener('click', (e) => { e.currentTarget.hidden = true; });
+    /** Mark a fieldset in a sheet as wrong, say why under its legend, and bring it into view. */
+    function fieldError(fs, msg) {
+        const box = fs.closest('.pos-sheet-b') || fs.parentNode;
+        $$('.pos-fs-err', box).forEach((x) => x.remove());
+        $$('.is-invalid', box).forEach((x) => x.classList.remove('is-invalid'));
+        fs.classList.add('is-invalid');
+        fs.insertAdjacentHTML('beforeend', '<p class="pos-fs-err" role="alert">' + msg + '</p>');
+        fs.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
     const err = (m) => toast(esc(m || B.t.restaurant_pos_failed), 'error');
     let sheetClose = null;
@@ -269,13 +291,26 @@
             + '<button type="button" class="pos-btn pos-btn-primary" id="posModAdd">' + T('restaurant_pos_add') + ' · <span id="posModTotal">' + money(base) + '</span></button></div>', (s) => {
             const total = () => { const unit = base + $$('input:checked', s).reduce((a, i) => a + (Number(i.dataset.delta) || 0), 0); $('#posModTotal', s).textContent = money(unit * qty); };
             $$('[data-q]', s).forEach((b) => b.onclick = () => { qty = Math.max(1, qty + Number(b.dataset.q)); $('#posModQty', s).textContent = qty; total(); });
-            s.addEventListener('change', total);
+            // A group that is full stops offering more picks (its other boxes grey out), and says how many are picked.
+            const limit = (fs) => {
+                const max = Number(fs.dataset.max) || 0, boxes = $$('input[type="checkbox"]', fs);
+                const n = $$('input:checked', fs).length;
+                if (max > 1 && boxes.length) boxes.forEach((b) => { if (!b.checked && !b.dataset.off) b.disabled = n >= max; b.closest('.pos-mod').classList.toggle('is-full', !b.checked && n >= max); });
+                const c = $('.pos-fs-count', fs); if (c && max > 1) c.textContent = T('restaurant_pos_picked', n, max);
+                if (n >= (Number(fs.dataset.min) || 0) && (!max || n <= max)) { fs.classList.remove('is-invalid'); $$('.pos-fs-err', fs).forEach((x) => x.remove()); }
+            };
+            $$('fieldset.pos-mods', s).forEach((fs) => {
+                $$('input:disabled', fs).forEach((b) => { b.dataset.off = '1'; });
+                if ((Number(fs.dataset.max) || 0) > 1) $('legend', fs).insertAdjacentHTML('beforeend', ' <span class="pos-fs-count"></span>');
+                limit(fs);
+            });
+            s.addEventListener('change', (e) => { const fs = e.target.closest('fieldset.pos-mods'); if (fs) limit(fs); total(); });
             $('#posModAdd', s).onclick = async () => {
                 // Check every slot and group here too, so the server's refusal is the rare case.
                 for (const fs of $$('fieldset.pos-mods', s)) {
                     const n = $$('input:checked', fs).length, min = Number(fs.dataset.min) || 0, max = Number(fs.dataset.max) || 0;
-                    if (n < min) return toast(T('restaurant_pos_pick_min', min, fs.dataset.name), 'error');
-                    if (max > 0 && n > max) return toast(T('restaurant_pos_pick_max', max, fs.dataset.name), 'error');
+                    if (n < min) return fieldError(fs, T('restaurant_pos_pick_min', min, fs.dataset.name));
+                    if (max > 0 && n > max) return fieldError(fs, T('restaurant_pos_pick_max', max, fs.dataset.name));
                 }
                 const mods = $$('input[data-kind="mod"]:checked', s).map((i) => i.value);
                 const combo = $$('input[data-kind="combo"]:checked', s).map((i) => i.value);

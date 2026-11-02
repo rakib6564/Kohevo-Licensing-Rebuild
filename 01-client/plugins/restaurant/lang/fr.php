@@ -786,4 +786,5 @@ return [
     'restaurant_help_ch_5'                   => 'Le flux du menu donne à un canal tout le menu en JSON (GET /menu-feed avec le jeton de la page Canaux). « Connecté » n\'apparaît qu\'après une commande correctement signée. Le format de commande est dans la procédure (section 10).',
     'restaurant_help_perm_channels'          => 'Configurer les canaux de commande, relier leurs SKU, réessayer les commandes non acceptées et gérer le jeton du flux du menu.',
     'restaurant_rep_src_channel'             => 'Canaux',
+    'restaurant_pos_picked'                  => '%1$s sur %2$s',
 ];

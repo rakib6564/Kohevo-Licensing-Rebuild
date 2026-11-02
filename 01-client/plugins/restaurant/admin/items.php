@@ -457,7 +457,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
     .rm-switch input[data-flag="is_active"]:checked + span { background: var(--success-soft); border-color: transparent; color: var(--success); }
     .rm-flags { flex: none; display: inline-flex; gap: 6px; }
     .rm-empty { padding: 14px; border-top: 1px solid var(--border); }
-    .rm-toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); padding: 10px 16px; border-radius: var(--radius); background: #111; color: #fff; font-weight: 600; z-index: 60; }
+    /* Same spot as the register's notifications: top-centre, clear of the floating bulk bar and the bottom menu. */
+    .rm-toast { position: fixed; left: 50%; top: calc(72px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); max-width: min(460px, calc(100% - 24px)); padding: 10px 16px; border-radius: 12px; background: #16181d; color: #fff; font-size: 14px; font-weight: 600; box-shadow: 0 12px 32px rgba(0,0,0,.28); z-index: 80; }
     .rm-toast.is-error { background: var(--danger); }
     @media (max-width: 760px) {
         .rm-hint, .rm-drag, .rm-edit { display: none; }

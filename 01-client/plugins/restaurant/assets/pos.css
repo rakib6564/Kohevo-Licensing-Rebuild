@@ -262,9 +262,20 @@ a.pos-btn:hover, a.pos-btn:focus-visible { color: var(--text); text-decoration: 
 .pos-keys dt kbd { margin: 0; font-size: 12px; padding: 4px 8px; }
 .pos-keys dd { margin: 0; }
 
-.pos-toast { position: fixed; left: 50%; bottom: 24px; z-index: 60; transform: translateX(-50%); max-width: min(560px, calc(100% - 32px)); padding: 12px 18px; border-radius: var(--radius); background: #111; color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+/* One notification spot: top-centre under the bar, above sheets (z 50), never over the controls at the bottom. */
+.pos-toast { position: fixed; top: calc(64px + env(safe-area-inset-top, 0px)); left: 50%; z-index: 70; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; width: max-content; max-width: min(460px, calc(100% - 24px)); padding: 10px 16px 10px 12px; border-radius: 12px; background: #16181d; color: #fff; font-size: 14px; font-weight: 600; line-height: 1.35; box-shadow: 0 12px 32px rgba(0,0,0,.28); cursor: pointer; }
+.pos-toast.is-in { animation: posToastIn .18s ease-out; }
+.pos-toast-ico { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,.14); }
+.pos-toast-ico svg { width: 15px; height: 15px; }
 .pos-toast.is-error { background: var(--danger); }
 .pos-toast[hidden] { display: none; }
+@keyframes posToastIn { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .pos-toast.is-in { animation: none; } }
+/* Errors inside a sheet sit by the group that caused them. */
+.pos-mods.is-invalid { border-color: var(--danger); box-shadow: 0 0 0 3px var(--danger-soft); }
+.pos-fs-err { margin: 6px 0 0; color: var(--danger); font-size: 13px; font-weight: 600; }
+.pos-fs-count { margin-left: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.pos-mod.is-full { opacity: .45; cursor: not-allowed; }
 
 /* The multilang switcher floats over the register; these screens follow the admin language. */
 .pos-body .mlt-switcher { display: none !important; }
@@ -296,6 +307,7 @@ a.pos-btn:hover, a.pos-btn:focus-visible { color: var(--text); text-decoration: 
 /* Phones: a denser check so the lines, totals and Pay fit without scrolling past chrome */
 @media (max-width: 860px) {
     .pos { grid-template-rows: 52px minmax(0, 1fr) 54px; }
+    .pos-toast { top: calc(58px + env(safe-area-inset-top, 0px)); }
     .pos-check-h { align-items: center; padding: 10px 14px 4px; }
     .pos-check-h h2 { font-size: 19px; letter-spacing: -.01em; }
     .pos-check-h p { font-size: 12.5px; }

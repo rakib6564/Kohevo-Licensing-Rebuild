@@ -787,4 +787,5 @@ return [
     'restaurant_help_ch_5'                   => 'The menu feed gives a channel the whole menu as JSON (GET /menu-feed with the token from the Channels page). "Connected" shows only after a channel has sent an order with a correct signature. The order format is in the SOP (section 10).',
     'restaurant_help_perm_channels'          => 'Set up order channels, map their SKUs, retry orders that were not accepted, and manage the menu feed token.',
     'restaurant_rep_src_channel'             => 'Channels',
+    'restaurant_pos_picked'                  => '%1$s of %2$s',
 ];
