@@ -11,6 +11,7 @@
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/RestaurantAPI.php';
+require_once dirname(__DIR__) . '/includes/receipt.php';
 
 Auth::require();
 Auth::requirePerm('restaurant.view');
@@ -173,66 +174,76 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
 
         <div class="card">
-            <div class="card-header"><h2>Payments</h2></div>
+            <div class="card-header"><h2><?= e(__('restaurant_payments', 'Payments')) ?></h2></div>
             <?php if (!$order['payments']): ?>
-                <div class="empty"><div class="empty-title">No payments recorded</div></div>
+                <div class="empty"><div class="empty-title"><?= e(__('restaurant_pay_none', 'No payments recorded')) ?></div></div>
             <?php else: ?>
-                <div class="table-wrap">
-                <table class="table" style="min-width:520px;">
-                    <thead><tr><th>Method</th><th>Status</th><th style="text-align:right;">Tip</th><th style="text-align:right;">Amount</th><th style="text-align:right;">When</th><?= $canRefund ? '<th></th>' : '' ?></tr></thead>
-                    <tbody>
-                    <?php foreach ($order['payments'] as $p):
-                        $pColors = ['paid' => 'success', 'pending' => 'info', 'failed' => 'danger', 'refunded' => 'muted'];
-                        $method  = ['cash' => 'Cash', 'terminal' => 'Card (terminal)', 'other' => 'Other'][$p['method']] ?? ucfirst((string)$p['method']);
-                        $partial = $p['status'] === 'paid' && (int)$p['refunded_cents'] > 0;
-                        $label   = $partial ? __('restaurant_pay_partially_refunded', 'Partially refunded')
-                                 : ($p['status'] === 'refunded' ? __('restaurant_refunded', 'Refunded') : ucfirst((string)$p['status']));
-                        $left    = RestaurantAPI::refundableCents($p); ?>
-                        <tr>
-                            <td><?= e($method) ?></td>
-                            <td><span class="badge badge-<?= e($partial ? 'warning' : ($pColors[$p['status']] ?? 'muted')) ?>"><?= e($label) ?></span>
-                                <?php if ((int)$p['refunded_cents'] > 0): ?><br><span class="text-xs text-muted"><?= e(sprintf(__('restaurant_pay_refunded_of', '%s refunded'), RestaurantAPI::money((int)$p['refunded_cents']))) ?></span><?php endif; ?></td>
-                            <td style="text-align:right;"><?= (int)$p['tip_cents'] > 0 ? e(RestaurantAPI::money((int)$p['tip_cents'])) : '—' ?></td>
-                            <td style="text-align:right;white-space:nowrap;"><?= e(RestaurantAPI::money((int)$p['amount_cents'] + (int)$p['tip_cents'])) ?></td>
-                            <td style="text-align:right;white-space:nowrap;" class="text-sm text-muted"><?= $p['created_at'] ? e(date('M j, g:ia', strtotime((string)$p['created_at']))) : '—' ?></td>
-                            <?php if ($canRefund): ?>
-                                <td style="text-align:right;">
-                                    <?php if ($left > 0): ?>
-                                        <button type="button" class="btn btn-sm" data-refund-toggle="<?= (int)$p['id'] ?>"><?= e(__('restaurant_refund', 'Refund')) ?></button>
-                                    <?php endif; ?>
-                                </td>
-                            <?php endif; ?>
-                        </tr>
-                        <?php if ($canRefund && $left > 0): ?>
-                            <tr id="refund-<?= (int)$p['id'] ?>" hidden>
-                                <td colspan="6">
-                                    <form method="post" class="rrefund" data-max="<?= $left ?>"
-                                          data-confirm="<?= e(__('restaurant_refund_confirm', 'Refund this amount? This cannot be undone.')) ?>">
-                                        <?= csrf_field() ?>
-                                        <input type="hidden" name="action" value="refund">
-                                        <input type="hidden" name="payment_id" value="<?= (int)$p['id'] ?>">
-                                        <div class="field">
-                                            <label class="field-label" for="ramt-<?= (int)$p['id'] ?>"><?= e(__('restaurant_refund_amount', 'Amount')) ?></label>
-                                            <input type="number" id="ramt-<?= (int)$p['id'] ?>" name="amount" step="0.01" min="0.01"
-                                                   max="<?= e(number_format($left / 100, 2, '.', '')) ?>" value="<?= e(number_format($left / 100, 2, '.', '')) ?>" required>
-                                            <div class="field-hint"><?= e(sprintf(__('restaurant_refund_hint',
-                                                'Up to %s. %s'), RestaurantAPI::money($left),
-                                                !empty($p['stripe_pi_id'])
-                                                    ? __('restaurant_refund_hint_card', 'Goes back to the card through Stripe.')
-                                                    : __('restaurant_refund_hint_cash', 'Recorded only: hand the cash back from the drawer.'))) ?></div>
-                                        </div>
-                                        <div class="field">
-                                            <label class="field-label" for="rrsn-<?= (int)$p['id'] ?>"><?= e(__('restaurant_refund_reason', 'Reason')) ?></label>
-                                            <input type="text" id="rrsn-<?= (int)$p['id'] ?>" name="reason" maxlength="255">
-                                        </div>
-                                        <button type="submit" class="btn btn-danger btn-sm"><?= e(__('restaurant_refund_submit', 'Issue refund')) ?></button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
+                <div class="data-list" data-single-open>
+                <?php foreach ($order['payments'] as $p):
+                    $pColors = ['paid' => 'success', 'pending' => 'info', 'failed' => 'danger', 'refunded' => 'muted'];
+                    $pLabels = ['paid'     => __('restaurant_pay_paid', 'Paid'),
+                                'pending'  => __('restaurant_pay_pending', 'Pending'),
+                                'failed'   => __('restaurant_pay_failed', 'Failed'),
+                                'refunded' => __('restaurant_refunded', 'Refunded')];
+                    $partial  = $p['status'] === 'paid' && (int)$p['refunded_cents'] > 0;
+                    $charged  = (int)$p['amount_cents'] + (int)$p['tip_cents'];
+                    $left     = RestaurantAPI::refundableCents($p);
+                    $isCard   = !empty($p['stripe_pi_id']) || !empty($p['stripe_session_id']) || $p['method'] === 'terminal';
+
+                    $detail = [
+                        ['label' => __('restaurant_refund_amount', 'Amount'), 'value' => RestaurantAPI::money((int)$p['amount_cents'])],
+                        ['label' => __('restaurant_rcpt_tip', 'Tip'), 'value' => (int)$p['tip_cents'] > 0 ? RestaurantAPI::money((int)$p['tip_cents']) : '—',
+                         'muted' => (int)$p['tip_cents'] === 0],
+                        ['label' => __('restaurant_pay_charged', 'Charged'), 'value' => RestaurantAPI::money($charged)],
+                        ['label' => __('restaurant_refunded', 'Refunded'), 'value' => (int)$p['refunded_cents'] > 0 ? RestaurantAPI::money((int)$p['refunded_cents']) : '—',
+                         'muted' => (int)$p['refunded_cents'] === 0],
+                    ];
+                    if (in_array($p['status'], ['paid', 'refunded'], true)) {
+                        $detail[] = ['label' => __('restaurant_pay_refundable', 'Left to refund'), 'value' => RestaurantAPI::money($left)];
+                    }
+                    if (!empty($p['stripe_pi_id'])) {
+                        $detail[] = ['label' => __('restaurant_pay_stripe', 'Stripe payment'),
+                                     'html'  => '<code style="font-size:11.5px;">' . e((string)$p['stripe_pi_id']) . '</code>'];
+                    }
+
+                    $actions = '';
+                    if ($canRefund && $left > 0) {
+                        $max = number_format($left / 100, 2, '.', '');
+                        $actions = '<form method="post" class="rrefund" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0;width:100%;"'
+                                 . ' data-confirm="' . e(__('restaurant_refund_confirm', 'Refund this amount? This cannot be undone.')) . '">'
+                                 . csrf_field()
+                                 . '<input type="hidden" name="action" value="refund">'
+                                 . '<input type="hidden" name="payment_id" value="' . (int)$p['id'] . '">'
+                                 . '<input type="number" class="input" name="amount" step="0.01" min="0.01" max="' . e($max) . '" value="' . e($max) . '"'
+                                 . ' style="width:110px;" aria-label="' . e(__('restaurant_refund_amount', 'Amount')) . '" required>'
+                                 . '<input type="text" class="input" name="reason" maxlength="255" style="flex:1;min-width:140px;"'
+                                 . ' placeholder="' . e(__('restaurant_refund_reason', 'Reason')) . '" aria-label="' . e(__('restaurant_refund_reason', 'Reason')) . '">'
+                                 . '<button type="submit" class="btn btn-sm btn-danger">' . e(__('restaurant_refund_submit', 'Issue refund')) . '</button>'
+                                 . '<span class="text-xs text-muted" style="flex-basis:100%;">' . e(sprintf(__('restaurant_refund_hint', 'Up to %s. %s'),
+                                       RestaurantAPI::money($left), $isCard
+                                           ? __('restaurant_refund_hint_card', 'Goes back to the card through Stripe.')
+                                           : __('restaurant_refund_hint_cash', 'Recorded only: hand the cash back from the drawer.'))) . '</span>'
+                                 . '</form>';
+                    } elseif ($canRefund && in_array($p['status'], ['paid', 'refunded'], true)) {
+                        $actions = '<span class="text-sm text-muted">' . e(__('restaurant_pay_no_refund', 'Nothing left to refund')) . '</span>';
+                    }
+
+                    slate_data_row([
+                        'avatar_html'  => $isCard ? slate_admin_nav_icon('credit-card') : null,
+                        'avatar'       => $isCard ? '' : mb_substr(restaurant_receipt_method($p), 0, 1),
+                        'avatar_color' => $partial ? 'warning' : ($pColors[$p['status']] ?? 'muted'),
+                        'title'        => restaurant_receipt_method($p) . ' · ' . RestaurantAPI::money($charged),
+                        'meta'         => ($p['created_at'] ? date('M j, g:ia', strtotime((string)$p['created_at'])) : '')
+                                          . ((int)$p['refunded_cents'] > 0
+                                              ? ' · ' . sprintf(__('restaurant_pay_refunded_of', '%s refunded'), RestaurantAPI::money((int)$p['refunded_cents']))
+                                              : ''),
+                        'badge'        => [$partial ? __('restaurant_pay_partially_refunded', 'Partially refunded')
+                                                    : ($pLabels[$p['status']] ?? ucfirst((string)$p['status'])),
+                                           $partial ? 'warning' : ($pColors[$p['status']] ?? 'muted')],
+                        'detail'       => $detail,
+                        'actions'      => $actions !== '' ? $actions : null,
+                    ]);
+                endforeach; ?>
                 </div>
             <?php endif; ?>
         </div>
@@ -240,28 +251,42 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <?php if (!empty($order['refunds'])): ?>
         <div class="card">
             <div class="card-header"><h2><?= e(__('restaurant_refunds', 'Refunds')) ?></h2></div>
-            <div class="table-wrap">
-            <table class="table" style="min-width:520px;">
-                <thead><tr><th><?= e(__('restaurant_refund_when', 'When')) ?></th><th><?= e(__('restaurant_refund_status', 'Status')) ?></th><th><?= e(__('restaurant_refund_reason', 'Reason')) ?></th><th style="text-align:right;"><?= e(__('restaurant_refund_amount', 'Amount')) ?></th></tr></thead>
-                <tbody>
-                <?php foreach ($order['refunds'] as $r):
-                    $rLabels = ['succeeded' => [__('restaurant_refund_succeeded', 'Refunded'), 'success'],
-                                'failed'    => [__('restaurant_refund_failed', 'Refused'), 'danger'],
-                                'pending'   => [__('restaurant_refund_unknown', 'No answer from Stripe'), 'warning']];
-                    [$rl, $rc] = $rLabels[$r['status']] ?? [(string)$r['status'], 'muted']; ?>
-                    <tr>
-                        <td class="text-sm"><?= e(date('M j, g:ia', strtotime((string)$r['created_at']))) ?></td>
-                        <td><span class="badge badge-<?= e($rc) ?>"><?= e($rl) ?></span>
-                            <?php if (trim((string)($r['error'] ?? '')) !== ''): ?><br><span class="text-xs text-muted"><?= e($r['error']) ?></span><?php endif; ?></td>
-                        <td class="text-sm"><?= e((string)($r['reason'] ?? '')) ?></td>
-                        <td style="text-align:right;white-space:nowrap;"><?= e(RestaurantAPI::money((int)$r['amount_cents'])) ?></td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
+            <div class="data-list" data-single-open>
+            <?php foreach ($order['refunds'] as $r):
+                $rLabels = ['succeeded' => [__('restaurant_refund_succeeded', 'Refunded'), 'success'],
+                            'failed'    => [__('restaurant_refund_failed', 'Refused'), 'danger'],
+                            'pending'   => [__('restaurant_refund_unknown', 'No answer from Stripe'), 'warning']];
+                $rb = $rLabels[$r['status']] ?? [(string)$r['status'], 'muted'];
+                $by = !empty($r['user_id'])
+                    ? (string) Database::value("SELECT name FROM users WHERE id = ? AND tenant_id = ?", [(int)$r['user_id'], current_tenant_id()])
+                    : '';
+                $detail = [
+                    ['label' => __('restaurant_refund_amount', 'Amount'), 'value' => RestaurantAPI::money((int)$r['amount_cents'])],
+                    ['label' => __('restaurant_refund_reason', 'Reason'), 'value' => trim((string)($r['reason'] ?? '')) !== '' ? (string)$r['reason'] : '—',
+                     'muted' => trim((string)($r['reason'] ?? '')) === ''],
+                    ['label' => __('restaurant_refund_by', 'Issued by'), 'value' => $by !== '' ? $by : '—', 'muted' => $by === ''],
+                ];
+                if (!empty($r['stripe_refund_id'])) {
+                    $detail[] = ['label' => __('restaurant_refund_stripe_id', 'Stripe refund'),
+                                 'html'  => '<code style="font-size:11.5px;">' . e((string)$r['stripe_refund_id']) . '</code>'];
+                }
+                if (trim((string)($r['error'] ?? '')) !== '') {
+                    $detail[] = ['label' => __('restaurant_refund_error', 'Stripe said'), 'value' => (string)$r['error']];
+                }
+                slate_data_row([
+                    'avatar'       => mb_substr(__('restaurant_rcpt_refund', 'Refund'), 0, 1),
+                    'avatar_color' => $rb[1],
+                    'title'        => RestaurantAPI::money((int)$r['amount_cents']),
+                    'meta'         => date('M j, g:ia', strtotime((string)$r['created_at']))
+                                      . (trim((string)($r['reason'] ?? '')) !== '' ? ' · ' . $r['reason'] : ''),
+                    'badge'        => $rb,
+                    'detail'       => $detail,
+                ]);
+            endforeach; ?>
             </div>
         </div>
         <?php endif; ?>
+        <?php slate_data_list_script(); ?>
     </div>
 
     <aside class="page-aside">
@@ -298,12 +323,6 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
 <?php if ($canRefund): ?>
 <script>
-document.querySelectorAll('[data-refund-toggle]').forEach(function (b) {
-    b.addEventListener('click', function () {
-        var row = document.getElementById('refund-' + b.getAttribute('data-refund-toggle'));
-        if (row) row.hidden = !row.hidden;
-    });
-});
 document.querySelectorAll('form.rrefund').forEach(function (f) {
     f.addEventListener('submit', function (ev) {
         if (!window.confirm(f.getAttribute('data-confirm'))) { ev.preventDefault(); return; }
