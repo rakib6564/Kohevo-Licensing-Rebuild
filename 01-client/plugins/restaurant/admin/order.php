@@ -173,7 +173,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             </ul>
         </div>
 
-        <div class="card">
+        <div class="card" id="payments">
             <div class="card-header"><h2><?= e(__('restaurant_payments', 'Payments')) ?></h2></div>
             <?php if (!$order['payments']): ?>
                 <div class="empty"><div class="empty-title"><?= e(__('restaurant_pay_none', 'No payments recorded')) ?></div></div>

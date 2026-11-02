@@ -8,14 +8,19 @@ take cash, and charge cards in person through **Stripe Terminal** — and a
 public **online-ordering storefront** at `/order` that drops orders into the
 POS. Single-location, self-contained.
 
-**Version 0.3.0** — **refunds** (full and partial, card through Stripe, cash
-recorded), **Idempotency-Keys** on every PaymentIntent and Checkout session the
-module creates, and a **printable receipt**.
+**Version 0.4.0** — a **full-screen POS** (table map, seats, split and merged
+checks, line and percentage discounts with reasons, comps and reopening, cash
+keypad with change, guest lookup, 86 from the register), a **kitchen display**,
+and reworked admin screens (orders list with filters and totals, menu board
+with inline editing and bulk actions, live online-order board, tabbed settings
+with a receipt preview, floor overview).
+0.3.0 added **refunds**, **Idempotency-Keys** on every Stripe object the module
+creates, and a **printable receipt**.
 
-Not built yet (do not sell these): combos, split/merge checks in the POS,
-a kitchen display, percentage or per-line discounts and comps, reports,
-loyalty, gift cards. Items carry a daypart field that is stored but does not
-yet hide anything.
+Not built yet (do not sell these): combos, reports and payments
+reconciliation, customer history and CSV import, ordering hours and online
+tips, loyalty, gift cards. Items carry a daypart field that is stored but does
+not yet hide anything.
 
 ---
 
@@ -31,19 +36,21 @@ yet hide anything.
 - **Sections** — named areas (Patio, Bar, Main) with sort order
 - **Tables** — label, seat count, section, and live status (`open → seated → dirty`); a table is auto-seated when a dine-in check opens on it and freed (dirty) once it settles
 
-### POS register (`admin/pos.php`)
-The centerpiece. A three-pane register that runs entirely in the browser:
+### POS register (`admin/pos.php`, `assets/pos.js`, `assets/pos.css`)
+A full-screen touch register outside the admin chrome, on the shared Kohevo design tokens (brand colour carries through). No build step.
 
-- **Open checks** rail — every live check (`open`/`sent`) with its table/type and running total; click to switch
-- **Menu grid** — category tabs, tap-to-add; 86'd items are visibly disabled
-- **Live check** — line items with qty steppers, modifier and note display, void/remove, and a full totals breakdown (subtotal · discount · service charge · tax · tip · total · paid · balance)
-- **New check** — dine-in (with table picker), takeout, or delivery; guest count
-- **Modifiers modal** — enforces each group's required/min/max rules before a line is added
-- **Send to kitchen** — fires all `new` lines (`kitchen_status` new → sent; `ready`/`served` exist in the schema for a future kitchen display and are not written yet)
-- **Discount & tip** — order-level discount; tip presets (% of pre-tip total) or a custom amount
-- **Payment** — **cash** (with change calculation) or **card on a Stripe Terminal reader**, with a live "present card / approved / declined" poll loop and cancel
-- **Print check / Print receipt** — opens `admin/receipt.php` for the check
-- The engine has `check_no` per line and `moveLineToCheck()`, but nothing in the POS uses them: there is no split or merge yet
+- **Rail** — open checks (filter all / dine in / to go) with age, plus recently closed checks (print, details, reopen)
+- **Menu** — category chips, search (`/`, Enter adds the first match), photo tiles, long-press or right-click to 86
+- **Table map** — sections, status colours, open-check totals and age; free tables start a check, dirty ones are marked clean
+- **Check** — seats, check tabs when split, line sheet (qty, seat, move, split by quantity, discount, comp, served, remove/void), guest and note chips, totals per check or for the order
+- **Split / merge** — one check per seat, or line by line; `checkTotals()` shares the order discount and service charge so checks add up exactly; a check with a payment is locked; merge brings another open check on the same table in
+- **Discounts** — % or amount, on the check or a line, with a reason; comp an item or the balance (manager); reopen a paid/closed check (manager); close refuses a balance due
+- **Pay** — per check: tip presets, cash keypad with quick bills, tendered and change stored; or the Stripe Terminal reader with poll and cancel
+- **Shortcuts** — `/` `N` `R` `T` `S` `P` `?` `Esc`, digits on the keypad
+
+### Kitchen display (`admin/kds.php`, permission `restaurant.kitchen`)
+- Tickets for every check with a line `sent` or `ready`, oldest first; age colours at 10 and 20 minutes against the server clock
+- Tap a line: sent → ready → served (`ready_at` / `served_at` stored); whole-ticket Ready, Served and Recall; filters; 5-second refresh and a chime on new tickets
 
 The page is self-contained: a `GET` renders the register, a `POST` with
 `_ajax=1` is a JSON endpoint that drives `RestaurantAPI`. No separate API
@@ -65,6 +72,12 @@ route or build step.
 ### Receipts (`admin/receipt.php`)
 - A bare print page (80 mm wide, also fine on A4/Letter) rendered by `includes/receipt.php`: business name and address, **receipt header/footer** settings, lines with modifiers, subtotal · discount · service charge · tax · tip · total, payments and refunds, timestamps
 - Requires the **stripe-payment** plugin to be configured; without it, the POS still takes cash and the card button is disabled with a hint
+
+### Admin screens
+- **Orders** (`admin/orders.php`) — search, date range, status, type and source filters, totals for the filter (sales, orders and average, collected, tips, discounts and comps, refunds), paging, quick actions
+- **Menu items** (`admin/items.php`) — grouped by category, drag to reorder, inline price, 86 and visible switches, thumbnails, search, bulk 86 / show / hide / move / delete
+- **Online orders** (`admin/online.php`) — live board by fulfilment state with one-click advance (accepting fires the kitchen), chime, last 24 hours of finished orders
+- **Settings** — tabs with a live receipt preview; **Floor** — section cards with table status and open checks
 
 ### Customers
 - Light standalone CRUD (`admin/customers.php`): name, phone, email, notes
@@ -124,7 +137,8 @@ payments, and a refund takes the tip back only once it exceeds the amount.
 ```
 line_total      = (unit_price + Σ modifier_deltas) × qty
 subtotal        = Σ non-void line_totals
-discount        ≤ subtotal
+line_discount   = fixed (≤ line) or line × pct     (line_total is after it)
+discount        = subtotal × pct, or fixed ≤ subtotal
 service_charge  = round((subtotal − discount) × service_pct / 100)
 tax             = Σ round(line_total × line_tax_rate / 100)
 total           = subtotal − discount + service_charge + tax + tip
@@ -147,7 +161,8 @@ preserves data; uninstall runs `uninstall.sql` to drop every
 | `restaurant.pos` | operate the POS / take orders |
 | `restaurant.manage_menu` | create/edit menu, categories, modifiers |
 | `restaurant.manage_floor` | manage sections and tables |
-| `restaurant.manage_orders` | void checks, refund payments |
+| `restaurant.kitchen` | use the kitchen display |
+| `restaurant.manage_orders` | void, comp and reopen checks; comp items; refund payments |
 | `restaurant.manage_customers` | manage customer records |
 | `restaurant.manage_settings` | configure tax, service charge, tips, receipts, readers |
 | `restaurant.reports` | reserved for the reports screen (not built; grants nothing today) |
@@ -160,7 +175,10 @@ preserves data; uninstall runs `uninstall.sql` to drop every
 and other plugins all call its static methods. Highlights:
 
 - **Reads** — `getPosMenu()`, `getOpenOrders()`, `getOrder($id)`, `getItemModifierGroups($itemId)`
-- **Lifecycle** — `openOrder($args)`, `addLine($orderId, $line)`, `setLineQty`, `removeLine`, `voidLine`, `moveLineToCheck`, `sendToKitchen`, `setDiscount`, `setTip`, `closeOrder`, `voidOrder`
+- **Lifecycle** — `openOrder($args)`, `addLine($orderId, $line)`, `setLineQty`, `removeLine`, `voidLine`, `setLineSeat`, `sendToKitchen`, `setDiscount`, `setDiscountPct`, `setLineDiscount`, `compLine`, `setTip`, `closeOrder`, `compOrder`, `reopenOrder`, `voidOrder`
+- **Checks** — `checkTotals`, `nextCheckNo`, `moveLineToCheck`, `splitLine`, `mergeOrders`
+- **Kitchen** — `setKitchenStatus`, `bumpOrder`, `kitchenTickets`
+- **Floor & guests** — `floorMap`, `setTableStatus`, `searchCustomers`, `set86`
 - **Tender** — `recordCashPayment`, `beginTerminalPayment`, `pollTerminalPayment`, `cancelTerminalPayment`
 - **Refunds** — `refundPayment`, `refundableCents`, `orderMoney` (net paid, tips, refunded)
 - **Stripe bridge** — `handleStripeEvent`, `markPaymentPaid`, `syncOrderPayment`, `idempotencyKey`
@@ -174,14 +192,16 @@ min / max) and throws a human-readable error on a bad pick or an 86'd item.
 ## Tests
 
 `tests/integration/RestaurantMoneyTest.php` runs the refund, idempotency,
-Terminal (poll, capture, webhook, decline, cancel) and receipt paths against
-`tests/fixtures/fake-stripe.php`, a loopback stand-in for the Stripe API that
-honours Idempotency-Keys.
+Terminal (poll, capture, webhook, decline, cancel) and receipt paths, and
+`tests/integration/RestaurantPosEngineTest.php` the discounts, per-check
+totals, split/merge, comp/reopen, cash tendered, kitchen lifecycle, seats,
+guests and 86, against `tests/fixtures/fake-stripe.php` (a loopback stand-in
+for the Stripe API that honours Idempotency-Keys; see
+`tests/support/fake_stripe.php`).
 
 ## Roadmap
 
-Combos · split/merge checks · kitchen display · percentage/per-line
-discounts, comp and reopen · reports and payments reconciliation · customer
+Combos · reports and payments reconciliation · customer
 history and CSV import/export · ordering hours, scheduling and online tips ·
 dayparts applied · loyalty and gift cards. Each is additive: new tables via
 version-gated migrations in `Restaurant.php`, new nav items via the

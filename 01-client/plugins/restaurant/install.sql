@@ -1,4 +1,4 @@
--- Restaurant plugin — install schema (as of 0.3.0).
+-- Restaurant plugin — install schema (as of 0.4.0).
 -- Fresh installs get every table here. Existing installs are brought up to
 -- date by version-gated migrations in Restaurant.php (mirrors Booking/Shop).
 -- All money is stored as integer cents. Every table is tenant-scoped.
@@ -141,6 +141,11 @@ CREATE TABLE IF NOT EXISTS `restaurant_orders` (
     `guest_count`         INT UNSIGNED NOT NULL DEFAULT 1,
     `subtotal_cents`      INT UNSIGNED NOT NULL DEFAULT 0,
     `discount_cents`      INT UNSIGNED NOT NULL DEFAULT 0,
+    `discount_fixed_cents` INT UNSIGNED NOT NULL DEFAULT 0,
+    `discount_pct`        DECIMAL(6,3) NOT NULL DEFAULT 0,
+    `discount_reason`     VARCHAR(160) NULL,
+    `comp_cents`          INT UNSIGNED NOT NULL DEFAULT 0,
+    `comp_reason`         VARCHAR(160) NULL,
     `service_charge_pct`  DECIMAL(6,3) NOT NULL DEFAULT 0,
     `service_charge_cents` INT UNSIGNED NOT NULL DEFAULT 0,
     `tax_cents`           INT UNSIGNED NOT NULL DEFAULT 0,
@@ -176,10 +181,17 @@ CREATE TABLE IF NOT EXISTS `restaurant_order_items` (
     `unit_price_cents`    INT UNSIGNED NOT NULL DEFAULT 0,
     `modifiers_total_cents` INT NOT NULL DEFAULT 0,
     `line_total_cents`    INT NOT NULL DEFAULT 0,
+    `discount_cents`      INT UNSIGNED NOT NULL DEFAULT 0,
+    `discount_fixed_cents` INT UNSIGNED NOT NULL DEFAULT 0,
+    `discount_pct`        DECIMAL(6,3) NOT NULL DEFAULT 0,
+    `discount_reason`     VARCHAR(160) NULL,
     `tax_rate`            DECIMAL(6,3) NOT NULL DEFAULT 0,
     `seat`                INT UNSIGNED NULL,
     `notes`               VARCHAR(255) NULL,
     `kitchen_status`      ENUM('new','sent','ready','served','void') NOT NULL DEFAULT 'new',
+    `sent_at`             DATETIME NULL,
+    `ready_at`            DATETIME NULL,
+    `served_at`           DATETIME NULL,
     `created_at`          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     KEY `tenant_order` (`tenant_id`, `order_id`),
@@ -207,6 +219,8 @@ CREATE TABLE IF NOT EXISTS `restaurant_payments` (
     `tip_cents`       INT UNSIGNED NOT NULL DEFAULT 0,
     `status`          ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'paid',
     `refunded_cents`  INT UNSIGNED NOT NULL DEFAULT 0,
+    `tendered_cents`  INT UNSIGNED NULL,
+    `change_cents`    INT UNSIGNED NOT NULL DEFAULT 0,
     `stripe_pi_id`    VARCHAR(120) NULL,
     `stripe_charge_id` VARCHAR(120) NULL,
     `stripe_session_id` VARCHAR(120) NULL,

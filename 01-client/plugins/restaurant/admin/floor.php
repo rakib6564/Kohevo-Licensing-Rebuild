@@ -70,6 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 else         Database::insert('restaurant_tables', $row);
                 header('Location: ' . plugin_url('restaurant', 'admin/floor.php')); exit;
             }
+        } elseif ($action === 'table_status') {
+            RestaurantAPI::setTableStatus((int)($_POST['id'] ?? 0), (string)($_POST['status'] ?? ''));
+            header('Location: ' . plugin_url('restaurant', 'admin/floor.php')); exit;
         } elseif ($action === 'delete_table') {
             $id = (int)($_POST['id'] ?? 0);
             if ($id > 0) Database::delete('restaurant_tables', 'id = ? AND tenant_id = ?', [$id, $tid]);
@@ -96,7 +99,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 <?php if ($flash): ?><div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div><?php endif; ?>
 
 <?php if ($isNewTbl || $editingTable):
-    $t = $editingTable ?: ['id'=>0,'section_id'=>null,'label'=>'','seats'=>2,'pos_x'=>0,'pos_y'=>0,'is_active'=>1];
+    $t = $editingTable ?: ['id'=>0,'section_id'=>((int)($_GET['section'] ?? 0) ?: null),'label'=>'','seats'=>2,'pos_x'=>0,'pos_y'=>0,'is_active'=>1];
 ?>
 <?php slate_editor_css(); ?>
 <?php slate_edit_open(['title_fallback' => 'New table']); ?>
@@ -153,79 +156,115 @@ require SLATE_ROOT . '/admin/partials/header.php';
 <?php slate_edit_close(); ?>
 <?php slate_editor_js(); ?>
 
-<?php else: ?>
+<?php else:
+    $open = Database::rows(
+        "SELECT table_id, COUNT(*) AS n, SUM(total_cents) AS total, MIN(opened_at) AS since
+           FROM restaurant_orders WHERE tenant_id = ? AND status IN ('open','sent') AND table_id IS NOT NULL
+       GROUP BY table_id", [$tid]);
+    $openBy = [];
+    foreach ($open as $o) $openBy[(int)$o['table_id']] = $o;
+    $counts = ['open' => 0, 'seated' => 0, 'dirty' => 0];
+    $seats  = 0;
+    foreach ($tables as $t) { if ($t['is_active']) { $counts[$t['status']]++; $seats += (int)$t['seats']; } }
+    $groups = [];
+    foreach ($sections as $sec) $groups[(int)$sec['id']] = ['sec' => $sec, 'tables' => []];
+    foreach ($tables as $t) {
+        $k = (int)($t['section_id'] ?? 0);
+        $groups[$k] ??= ['sec' => ['id' => 0, 'name' => __('restaurant_pos_no_section', 'No section'), 'sort_order' => 999], 'tables' => []];
+        $groups[$k]['tables'][] = $t;
+    }
+    $ST = ['open' => __('restaurant_pos_t_open', 'Free'), 'seated' => __('restaurant_pos_t_seated', 'Seated'), 'dirty' => __('restaurant_pos_t_dirty', 'To clear')];
+    $canPos = Auth::can('restaurant.pos') || Auth::isSuperAdmin();
+?>
     <div class="page-header">
-        <div><h1>Floor &amp; tables</h1><p class="page-header-sub">Sections and tables for dine-in service.</p></div>
-        <a href="?new_table=1" class="btn btn-primary">New table</a>
-    </div>
-
-    <div class="card">
-        <div class="card-header"><h2>Sections</h2></div>
-        <div class="card-body">
-            <form method="post" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;">
-                <?= csrf_field() ?>
-                <input type="hidden" name="_action" value="save_section">
-                <div class="field" style="margin:0;flex:1;min-width:180px;">
-                    <label class="field-label">Add a section</label>
-                    <input type="text" name="name" maxlength="120" placeholder="Patio, Bar, Main…">
-                </div>
-                <div class="field" style="margin:0;width:120px;">
-                    <label class="field-label">Sort</label>
-                    <input type="number" name="sort_order" step="1" value="0">
-                </div>
-                <button class="btn btn-primary">Add</button>
-            </form>
-            <?php if (!$sections): ?>
-                <p class="text-sm text-muted" style="margin:0;">No sections yet — tables can still exist without one.</p>
-            <?php else: ?>
-                <ul class="kv-list">
-                    <?php foreach ($sections as $s):
-                        $cnt = (int) Database::value("SELECT COUNT(*) FROM restaurant_tables WHERE section_id = ? AND tenant_id = ?", [(int)$s['id'], $tid]); ?>
-                        <li class="kv-row">
-                            <span class="kv-label"><strong style="color:var(--text);"><?= e($s['name']) ?></strong>
-                                <span class="text-xs text-muted"><?= $cnt ?> table(s)</span></span>
-                            <span class="kv-value">
-                                <form method="post" style="display:inline;margin:0;" onsubmit="return confirm('Delete section? Its tables stay but lose the section.')">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="_action" value="delete_section"><input type="hidden" name="id" value="<?= (int)$s['id'] ?>">
-                                    <button class="btn btn-sm btn-danger">Delete</button>
-                                </form>
-                            </span>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php endif; ?>
+        <div><h1><?= e(__('restaurant_floor', 'Floor & tables')) ?></h1>
+            <p class="page-header-sub"><?= e(sprintf(__('restaurant_floor_sub', '%1$s tables · %2$s seats in service'), count($tables), $seats)) ?></p></div>
+        <div class="toolbar">
+            <?php if ($canPos): ?><a href="<?= e(plugin_url('restaurant', 'admin/pos.php')) ?>" class="btn"><?= e(__('restaurant_floor_live', 'Live table map')) ?> →</a><?php endif; ?>
+            <a href="?new_table=1" class="btn btn-primary"><?= e(__('restaurant_floor_new_table', 'New table')) ?></a>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header"><h2>Tables (<?= count($tables) ?>)</h2><a href="?new_table=1" class="btn btn-sm">New table</a></div>
-        <?php if (!$tables): ?>
-            <div class="empty"><div class="empty-title">No tables yet</div><p class="text-sm">Add tables so servers can open dine-in checks.</p></div>
-        <?php else: ?>
-        <div class="data-list" data-single-open>
-            <?php foreach ($tables as $t):
-                $statusBadge = ['open' => ['Open','active'], 'seated' => ['Seated','info'], 'dirty' => ['Needs bussing','warning']][$t['status']] ?? ['—','muted'];
-                $actions = '<a href="?edit_table=' . (int)$t['id'] . '" class="btn btn-sm">Edit</a> '
-                         . '<form method="post" style="display:inline;margin:0;" onsubmit="return confirm(\'Delete this table?\')">'
-                         . csrf_field()
-                         . '<input type="hidden" name="_action" value="delete_table"><input type="hidden" name="id" value="' . (int)$t['id'] . '">'
-                         . '<button class="btn btn-sm btn-danger">Delete</button></form>';
-                slate_data_row([
-                    'avatar'       => mb_substr($t['label'], 0, 2),
-                    'avatar_color' => $t['is_active'] ? 'info' : 'muted',
-                    'title'        => 'Table ' . $t['label'],
-                    'meta'         => ($t['section_name'] ?: 'No section') . ' · ' . (int)$t['seats'] . ' seats',
-                    'badge'        => $statusBadge,
-                    'detail'       => ['Section' => $t['section_name'] ?: '—', 'Seats' => (int)$t['seats'],
-                                       'Status' => ucfirst($t['status']), 'Map' => '(' . (int)$t['pos_x'] . ', ' . (int)$t['pos_y'] . ')'],
-                    'actions'      => $actions,
-                ]);
-            endforeach; ?>
-        </div>
-        <?php slate_data_list_script(); ?>
-        <?php endif; ?>
+    <div class="rf-stats">
+        <?php foreach ($ST as $k => $label): ?>
+            <div class="rf-stat is-<?= e($k) ?>"><span><?= e($label) ?></span><b><?= (int)$counts[$k] ?></b></div>
+        <?php endforeach; ?>
+        <form method="post" class="rf-addsec card">
+            <?= csrf_field() ?><input type="hidden" name="_action" value="save_section">
+            <input type="text" name="name" maxlength="120" required placeholder="<?= e(__('restaurant_floor_section_ph', 'New section: Patio, Bar…')) ?>" aria-label="<?= e(__('restaurant_floor_add_section', 'Add a section')) ?>">
+            <input type="hidden" name="sort_order" value="<?= count($sections) + 1 ?>">
+            <button class="btn btn-sm"><?= e(__('restaurant_floor_add_section', 'Add a section')) ?></button>
+        </form>
     </div>
+
+    <?php if (!$tables && !$sections): ?>
+        <div class="card"><div class="empty"><div class="empty-title"><?= e(__('restaurant_floor_empty', 'No tables yet')) ?></div>
+            <p class="text-sm"><?= e(__('restaurant_floor_empty_hint', 'Add a section, then the tables in it, so servers can open dine-in checks.')) ?></p></div></div>
+    <?php endif; ?>
+
+    <?php foreach ($groups as $g): $sec = $g['sec']; ?>
+    <section class="card rf-sec">
+        <div class="card-header">
+            <h2><?= e($sec['name']) ?> <span class="text-sm text-muted"><?= e(sprintf(__('restaurant_floor_n_tables', '%1$s tables · %2$s seats'), count($g['tables']), array_sum(array_map(fn($t) => (int)$t['seats'], $g['tables'])))) ?></span></h2>
+            <div class="toolbar">
+                <a href="?new_table=1&amp;section=<?= (int)$sec['id'] ?>" class="btn btn-sm"><?= e(__('restaurant_floor_add_table', '+ Table')) ?></a>
+                <?php if ((int)$sec['id'] > 0): ?>
+                <form method="post" style="display:inline;margin:0;" onsubmit="return confirm(<?= e(json_encode(__('restaurant_floor_del_section_q', 'Delete this section? Its tables stay, without a section.'))) ?>)">
+                    <?= csrf_field() ?><input type="hidden" name="_action" value="delete_section"><input type="hidden" name="id" value="<?= (int)$sec['id'] ?>">
+                    <button class="btn btn-sm btn-ghost"><?= e(__('restaurant_floor_del_section', 'Delete section')) ?></button>
+                </form>
+                <?php endif; ?>
+            </div>
+        </div>
+        <div class="rf-grid">
+            <?php if (!$g['tables']): ?><p class="text-sm text-muted" style="margin:0;"><?= e(__('restaurant_floor_sec_empty', 'No tables in this section yet.')) ?></p><?php endif; ?>
+            <?php foreach ($g['tables'] as $t): $o = $openBy[(int)$t['id']] ?? null; ?>
+                <div class="rf-table is-<?= e($t['status']) ?><?= $t['is_active'] ? '' : ' is-off' ?>">
+                    <a class="rf-main" href="?edit_table=<?= (int)$t['id'] ?>" title="<?= e(__('restaurant_floor_edit', 'Edit table')) ?>">
+                        <b><?= e($t['label']) ?></b>
+                        <span><?= e(sprintf(__('restaurant_pos_seats_n', '%s seats'), (int)$t['seats'])) ?></span>
+                        <em><?= e($t['is_active'] ? $ST[$t['status']] : __('restaurant_floor_off', 'Out of service')) ?></em>
+                    </a>
+                    <?php if ($o): ?>
+                        <div class="rf-open"><?= e(RestaurantAPI::money((int)$o['total'])) ?> · <?= e(date('g:ia', strtotime((string)$o['since']))) ?><?= (int)$o['n'] > 1 ? ' · ×' . (int)$o['n'] : '' ?></div>
+                    <?php endif; ?>
+                    <div class="rf-acts">
+                        <?php if ($t['status'] === 'dirty' || ($t['status'] === 'seated' && !$o)): ?>
+                            <form method="post"><?= csrf_field() ?><input type="hidden" name="_action" value="table_status"><input type="hidden" name="id" value="<?= (int)$t['id'] ?>"><input type="hidden" name="status" value="open">
+                                <button class="btn btn-sm"><?= e(__('restaurant_floor_mark_free', 'Mark free')) ?></button></form>
+                        <?php endif; ?>
+                        <form method="post" onsubmit="return confirm(<?= e(json_encode(__('restaurant_floor_del_table_q', 'Delete this table?'))) ?>)"><?= csrf_field() ?><input type="hidden" name="_action" value="delete_table"><input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
+                            <button class="btn btn-sm btn-ghost" aria-label="<?= e(__('restaurant_floor_del_table', 'Delete table')) ?>">×</button></form>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endforeach; ?>
+
+    <style>
+    .rf-stats { display: grid; grid-template-columns: repeat(3, minmax(110px, 160px)) 1fr; gap: 12px; margin-bottom: 14px; align-items: stretch; }
+    .rf-stat { display: flex; flex-direction: column; padding: 12px 16px; border-radius: var(--radius-lg); background: var(--surface); border: 1px solid var(--border); border-left-width: 4px; }
+    .rf-stat span { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+    .rf-stat b { font-size: 26px; }
+    .rf-stat.is-open { border-left-color: var(--success); } .rf-stat.is-seated { border-left-color: var(--info); } .rf-stat.is-dirty { border-left-color: var(--warning); }
+    .rf-addsec { display: flex; gap: 8px; align-items: center; padding: 10px 12px; margin: 0; }
+    .rf-addsec input { flex: 1; min-width: 0; }
+    .rf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 4px 16px 16px; }
+    .rf-table { display: flex; flex-direction: column; border: 2px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); overflow: hidden; }
+    .rf-table.is-open { border-color: color-mix(in srgb, var(--success) 45%, var(--border)); }
+    .rf-table.is-seated { border-color: var(--info); background: var(--info-soft); }
+    .rf-table.is-dirty { border-color: var(--warning); background: var(--warning-soft); }
+    .rf-table.is-off { opacity: .55; border-style: dashed; }
+    .rf-main { display: flex; flex-direction: column; align-items: center; padding: 14px 8px 6px; color: inherit; text-decoration: none; }
+    .rf-main b { font-size: 24px; }
+    .rf-main span { font-size: 12.5px; color: var(--muted); }
+    .rf-main em { font-style: normal; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+    .rf-open { text-align: center; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .rf-acts { display: flex; justify-content: center; gap: 4px; padding: 6px 8px 10px; }
+    .rf-acts form { margin: 0; }
+    @media (max-width: 760px) { .rf-stats { grid-template-columns: repeat(3, 1fr); } .rf-addsec { grid-column: 1 / -1; } }
+    </style>
 <?php endif; ?>
 
 <?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>
