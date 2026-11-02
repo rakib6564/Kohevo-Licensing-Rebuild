@@ -22,7 +22,8 @@ $tid = current_tenant_id();
 $channelNames = array_column(Database::rows("SELECT slug, name FROM restaurant_channels WHERE tenant_id = ?", [$tid]), 'name', 'slug');
 $board = function () use ($tid, $channelNames): array {
     $rows = Database::rows(
-        "SELECT o.id FROM restaurant_orders o
+        "SELECT o.id, co.channel_paid FROM restaurant_orders o
+          LEFT JOIN restaurant_channel_orders co ON co.tenant_id = o.tenant_id AND co.order_id = o.id
           WHERE o.tenant_id = ? AND o.source IN ('online','channel')
             AND (o.fulfillment_status NOT IN ('completed','cancelled') OR o.updated_at >= NOW() - INTERVAL 1 DAY)
        ORDER BY o.id DESC LIMIT 150", [$tid]);
@@ -37,6 +38,7 @@ $board = function () use ($tid, $channelNames): array {
             'channel' => $o['source'] === 'channel' ? (string)($channelNames[$o['channel']] ?? $o['channel']) : '', 'flag' => (string)($o['flag_reason'] ?? ''),
             'total' => RestaurantAPI::money((int)$o['total_cents']),
             'paid'  => (int)$o['total_cents'] > 0 && (int)$o['paid_cents'] >= (int)$o['total_cents'],
+            'channel_paid' => !empty($r['channel_paid']),   // the channel collected payment; nothing is due here
             'has_new' => (bool) array_filter($o['items'], fn($i) => $i['kitchen_status'] === 'new'),
             'items' => array_values(array_map(fn($i) => [
                 'qty' => (int)$i['qty'], 'name' => $i['name_snapshot'], 'k' => $i['kitchen_status'],
@@ -163,6 +165,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         'restaurant_online_for'           => 'for %s',
         'restaurant_online_paid'          => 'Paid',
         'restaurant_online_due'           => 'Due at pickup',
+        'restaurant_online_paid_via'      => 'Paid via %s',
         'restaurant_online_completed'     => 'Picked up',
         'restaurant_online_cancelled'     => 'Cancelled',
         'restaurant_pos_details'          => 'Order details',
@@ -185,7 +188,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             + '<header><b>#' + esc(o.order_no) + (o.channel ? ' <span class="ron-ch">' + esc(o.channel) + '</span>' : '') + '</b><span class="ron-age' + (!done && m >= 20 ? ' is-late' : '') + '">' + m + '′</span></header>'
             + '<div class="ron-who"><strong>' + esc(o.customer || '—') + '</strong>' + (o.phone ? ' · <a href="tel:' + esc(o.phone) + '">' + esc(o.phone) + '</a>' : '')
             + '<br>' + esc(T['restaurant_rcpt_' + o.type] || o.type) + (o.requested ? ' · ' + fmt('restaurant_online_for', o.requested) : '') + ' · ' + esc(o.total)
-            + ' <span class="ron-pill ' + (o.paid ? 'is-paid">' + fmt('restaurant_online_paid') : 'is-due">' + fmt('restaurant_online_due')) + '</span></div>'
+            + ' <span class="ron-pill ' + (o.paid ? 'is-paid">' + fmt('restaurant_online_paid') : o.channel_paid ? 'is-paid">' + fmt('restaurant_online_paid_via', o.channel) : 'is-due">' + fmt('restaurant_online_due')) + '</span></div>'
             + (done ? '' : '<ul class="ron-items">' + o.items.map((i) => '<li><b>' + i.qty + '×</b> ' + esc(i.name) + (i.mods.length ? '<small>' + i.mods.map(esc).join(', ') + '</small>' : '') + (i.notes ? '<small>' + esc(i.notes) + '</small>' : '') + '</li>').join('') + '</ul>')
             + (o.flag && !done ? '<div class="ron-flag">' + esc(o.flag) + '</div>' : '')
             + (o.notes && !done ? '<div class="ron-note">' + esc(o.notes) + '</div>' : '')

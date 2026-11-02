@@ -1,0 +1,32 @@
+{
+  "_id": "65f0c0ffee0000000000d001",
+  "_created": "2026-11-02T18:30:00Z",
+  "account": "acct-synthetic-01",
+  "location": "loc-synthetic-01",
+  "channelLink": "chl-synthetic-01",
+  "channel": 7,
+  "channelOrderId": "SYN-UE-778812",
+  "channelOrderDisplayId": "UE812",
+  "status": 1,
+  "orderType": 2,
+  "decimalDigits": 2,
+  "pickupTime": "2026-11-02T18:50:00Z",
+  "deliveryTime": "2026-11-02T19:10:00Z",
+  "deliveryIsAsap": true,
+  "courier": {"deliveryBy": "Uber Eats"},
+  "customer": {"name": "Sam Testwell", "phoneNumber": "+15550100123", "email": "sam.testwell@example.test", "note": "Ring twice"},
+  "deliveryAddress": {"street": "42 Fixture Lane", "extraAddressInfo": "Apt 3", "postalCode": "00042", "city": "Testville", "country": "US"},
+  "orderIsAlreadyPaid": true,
+  "payment": {"amount": 4849, "type": 0, "due": 0},
+  "deliveryCost": 299,
+  "serviceCharge": 150,
+  "tip": 200,
+  "driverTip": 300,
+  "discountTotal": -500,
+  "note": "No cutlery",
+  "items": [
+    {"plu": "BRISKET-PL", "name": "Brisket plate", "price": 1800, "quantity": 2, "remark": "extra bark",
+     "subItems": [{"plu": "SAUCE-HOT", "name": "Hot sauce", "price": 50, "quantity": 1, "subItems": []}]},
+    {"plu": "TEA-SW", "name": "Sweet tea", "price": 300, "quantity": 1, "subItems": []}
+  ]
+}

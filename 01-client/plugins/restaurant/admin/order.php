@@ -76,8 +76,12 @@ $statusColor  = $statusColors[$order['status']] ?? 'muted';
 $total    = (int)$order['total_cents'];
 $paid     = (int)$order['paid_cents'];
 $balance  = $total - $paid;
-$isOnline = ($order['source'] ?? 'pos') === 'online';
+$isChannel = ($order['source'] ?? 'pos') === 'channel';
+$isOnline = in_array($order['source'] ?? 'pos', ['online', 'channel'], true);   // both run through the online-orders board
 $isOpen   = in_array($order['status'], ['open', 'sent'], true);
+// A channel order the channel already collected payment for: nothing is due here.
+$chanName = $isChannel ? (string)(Database::value("SELECT name FROM restaurant_channels WHERE tenant_id = ? AND slug = ?", [current_tenant_id(), (string)$order['channel']]) ?: $order['channel']) : '';
+$chanPaid = $isChannel && (int) Database::value("SELECT COALESCE(MAX(channel_paid), 0) FROM restaurant_channel_orders WHERE tenant_id = ? AND order_id = ?", [current_tenant_id(), (int)$order['id']]) === 1;
 
 $pageTitle  = 'Order #' . $order['order_no'];
 $currentNav = $isOnline ? 'restaurant-online' : 'restaurant';
@@ -112,6 +116,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
 </div>
 
 <?php if ($flash): ?><div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div><?php endif; ?>
+<?php if ($chanPaid && $paid < $total): ?><div class="alert alert-info" role="status"><?= e(sprintf(__('restaurant_order_paid_via', 'Paid via %s: the marketplace collected payment, so there is nothing to take here.'), $chanName)) ?></div><?php endif; ?>
+<?php if ($isChannel && trim((string)($order['flag_reason'] ?? '')) !== ''): ?><div class="alert alert-warning" role="status"><?= e((string)$order['flag_reason']) ?></div><?php endif; ?>
 
 <?php slate_page_layout('with-aside'); ?>
     <div class="page-main">
@@ -167,7 +173,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <li class="kv-row"><span class="kv-label"><?= e(__('restaurant_refunded', 'Refunded')) ?></span><span class="kv-value">−<?= e(RestaurantAPI::money((int)$order['refunded_cents'])) ?></span></li>
                 <?php endif; ?>
                 <li class="kv-row"><span class="kv-label">Paid</span><span class="kv-value"><?= e(RestaurantAPI::money($paid)) ?></span></li>
-                <?php if ($balance > 0 && (int)($order['refunded_cents'] ?? 0) === 0): ?>
+                <?php if ($balance > 0 && (int)($order['refunded_cents'] ?? 0) === 0 && !$chanPaid): ?>
                     <li class="kv-row" style="font-weight:700;"><span class="kv-label" style="color:var(--danger);">Balance due</span><span class="kv-value" style="color:var(--danger);"><?= e(RestaurantAPI::money($balance)) ?></span></li>
                 <?php endif; ?>
             </ul>
@@ -295,7 +301,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <ul class="kv-list">
                 <li class="kv-row"><span class="kv-label">Status</span><span class="kv-value"><span class="badge badge-<?= e($statusColor) ?>"><?= e(ucfirst((string)$order['status'])) ?></span></span></li>
                 <li class="kv-row"><span class="kv-label">Type</span><span class="kv-value"><?= e(ucfirst(str_replace('_', ' ', (string)$order['type']))) ?></span></li>
-                <li class="kv-row"><span class="kv-label">Source</span><span class="kv-value"><?= $isOnline ? 'Online' : 'POS' ?></span></li>
+                <li class="kv-row"><span class="kv-label">Source</span><span class="kv-value"><?= $isChannel ? e($chanName) : ($isOnline ? 'Online' : 'POS') ?></span></li>
+                <?php if ($isChannel && trim((string)($order['external_ref'] ?? '')) !== ''): ?>
+                    <li class="kv-row"><span class="kv-label"><?= e(__('restaurant_ch_external', 'Channel order ID')) ?></span><span class="kv-value"><?= e((string)$order['external_ref']) ?></span></li>
+                <?php endif; ?>
                 <?php if (trim((string)($order['table_label'] ?? '')) !== ''): ?>
                     <li class="kv-row"><span class="kv-label">Table</span><span class="kv-value"><?= e($order['table_label']) ?></span></li>
                 <?php endif; ?>

@@ -315,6 +315,13 @@ class Restaurant extends Plugin {
         $this->ensureColumn('restaurant_orders', 'channel', "VARCHAR(40) NULL");
         $this->ensureColumn('restaurant_orders', 'external_ref', "VARCHAR(80) NULL");
         $this->ensureColumn('restaurant_orders', 'flag_reason', "VARCHAR(255) NULL");
+
+        // 0.5.2 — channel types (the Deliverect adapter), their settings,
+        // cancellations sent by a channel, and whether it collected payment.
+        $this->ensureColumn('restaurant_channels', 'kind', "VARCHAR(40) NULL");
+        $this->ensureColumn('restaurant_channels', 'config', "TEXT NULL");
+        $this->ensureColumn('restaurant_channel_orders', 'cancelled_at', "DATETIME NULL");
+        $this->ensureColumn('restaurant_channel_orders', 'channel_paid', "TINYINT(1) NULL");
     }
 
     private function hasColumn(string $table, string $column): bool {
@@ -344,8 +351,10 @@ class Restaurant extends Plugin {
                     AND ((TABLE_NAME = 'restaurant_payments' AND COLUMN_NAME IN ('central_charge_id','tendered_cents'))
                       OR (TABLE_NAME = 'restaurant_customers' AND COLUMN_NAME IN ('member_ref','is_active'))
                       OR (TABLE_NAME = 'restaurant_order_item_modifiers' AND COLUMN_NAME = 'kind')
-                      OR (TABLE_NAME = 'restaurant_orders' AND COLUMN_NAME = 'channel'))");
-            return $tbl >= 10 && $col === 6;
+                      OR (TABLE_NAME = 'restaurant_orders' AND COLUMN_NAME = 'channel')
+                      OR (TABLE_NAME = 'restaurant_channels' AND COLUMN_NAME = 'config')
+                      OR (TABLE_NAME = 'restaurant_channel_orders' AND COLUMN_NAME IN ('cancelled_at','channel_paid')))");
+            return $tbl >= 10 && $col === 9;
         } catch (\Throwable $e) {
             return false;
         }

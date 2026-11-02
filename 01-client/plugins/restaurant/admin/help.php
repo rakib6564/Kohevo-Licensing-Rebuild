@@ -181,6 +181,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <li><?= e(__('restaurant_help_ch_4', 'Channel orders appear on Online orders with the channel\'s name. Each step (accepted, preparing, ready, completed, cancelled) is sent back to the channel, signed with the same secret. A card warns when the channel charged a different total from ours.')) ?></li>
         </ol>
         <p class="text-sm"><?= e(__('restaurant_help_ch_5', 'The menu feed gives a channel the whole menu as JSON (GET /menu-feed with the token from the Channels page). "Connected" shows only after a channel has sent an order with a correct signature. The order format is in the SOP (section 10).')) ?></p>
+
+        <h3 id="deliverect"><?= e(__('restaurant_help_dl_h', 'Marketplace orders through Deliverect')) ?></h3>
+        <p class="text-sm"><?= e(__('restaurant_help_dl_1', 'What you need: your own Deliverect contract for this location, with your marketplaces (Uber Eats, DoorDash and others) connected in Deliverect. Deliverect sends orders only to POS integrations it has registered. Until Kohevo\'s integration is certified by Deliverect, only Deliverect\'s staging (testing) environment works; ask Kohevo support whether production is available before you rely on it.')) ?></p>
+        <ol>
+            <li><?= e(__('restaurant_help_dl_2', 'Channels → Add channel, type Deliverect. In Deliverect, set the integration\'s order webhook to the Order URL shown on the channel\'s page.')) ?></li>
+            <li><?= e(__('restaurant_help_dl_3', 'Paste the secret Deliverect signs orders with: in staging it is your channelLink ID; in production it is the HMAC secret from Deliverect\'s integration settings. Then switch the channel on.')) ?></li>
+            <li><?= e(__('restaurant_help_dl_4', 'Under Status updates to Deliverect, choose the environment and enter the API client ID and secret Deliverect issued. Without them orders still arrive, but Deliverect does not hear that they were accepted, ready or completed.')) ?></li>
+            <li><?= e(__('restaurant_help_dl_5', 'Kohevo does not send your menu to Deliverect: build it there and give every product and modifier a PLU. Send a test order from Deliverect; its PLUs appear in the SKU map. Map each one, then Retry now.')) ?></li>
+        </ol>
+        <p class="text-sm"><?= e(__('restaurant_help_dl_6', 'Each step goes back to Deliverect (accepted, preparing, ready, completed, cancelled). An order we cannot take is reported as Failed with the reason, so the marketplace hears of it. A marketplace cancellation voids the order here unless it is already completed. Delivery fees, service fees, tips and marketplace discounts stay with the marketplace: our total is the food and tax, and a card warns when it differs from what the marketplace charged. A modifier ordered twice is taken once and written on the line for the kitchen.')) ?></p>
     </div>
 
     <div class="card" id="online">
