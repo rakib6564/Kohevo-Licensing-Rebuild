@@ -1,4 +1,4 @@
--- Restaurant plugin — install schema (as of 0.4.0).
+-- Restaurant plugin — install schema (as of 0.5.0).
 -- Fresh installs get every table here. Existing installs are brought up to
 -- date by version-gated migrations in Restaurant.php (mirrors Booking/Shop).
 -- All money is stored as integer cents. Every table is tenant-scoped.
@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS `restaurant_items` (
     `photo_path`   VARCHAR(255) NULL,
     `daypart`      ENUM('all','breakfast','lunch','dinner','late') NOT NULL DEFAULT 'all',
     `is_86`        TINYINT(1) NOT NULL DEFAULT 0,
+    `is_combo`     TINYINT(1) NOT NULL DEFAULT 0,
     `is_active`    TINYINT(1) NOT NULL DEFAULT 1,
     `sort_order`   INT NOT NULL DEFAULT 0,
     `created_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -82,6 +83,34 @@ CREATE TABLE IF NOT EXISTS `restaurant_item_modifier_groups` (
     KEY `tenant_item` (`tenant_id`, `item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- A combo is a menu item (is_combo = 1) priced at its own price_cents, plus
+-- slots ("2 sides", "a drink"), each offering a choice of other menu items
+-- with an optional price delta. Picks are stored on the order line as
+-- restaurant_order_item_modifiers rows with kind = 'component'.
+CREATE TABLE IF NOT EXISTS `restaurant_combo_slots` (
+    `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`     INT UNSIGNED NOT NULL DEFAULT 1,
+    `combo_item_id` INT UNSIGNED NOT NULL,
+    `label`         VARCHAR(120) NOT NULL,
+    `min_pick`      INT UNSIGNED NOT NULL DEFAULT 1,
+    `max_pick`      INT UNSIGNED NOT NULL DEFAULT 1,
+    `sort_order`    INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    KEY `tenant_combo` (`tenant_id`, `combo_item_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `restaurant_combo_choices` (
+    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         INT UNSIGNED NOT NULL DEFAULT 1,
+    `slot_id`           INT UNSIGNED NOT NULL,
+    `item_id`           INT UNSIGNED NOT NULL,
+    `price_delta_cents` INT NOT NULL DEFAULT 0,
+    `sort_order`        INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `slot_item` (`slot_id`, `item_id`),
+    KEY `tenant_slot` (`tenant_id`, `slot_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── Floor ─────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS `restaurant_sections` (
@@ -119,12 +148,20 @@ CREATE TABLE IF NOT EXISTS `restaurant_customers` (
     `name`       VARCHAR(160) NOT NULL,
     `phone`      VARCHAR(40) NULL,
     `email`      VARCHAR(200) NULL,
+    `member_ref` VARCHAR(80) NULL,
     `notes`      TEXT NULL,
+    `hist_spend_cents` INT UNSIGNED NOT NULL DEFAULT 0,
+    `hist_orders`      INT UNSIGNED NOT NULL DEFAULT 0,
+    `hist_first_seen`  DATE NULL,
+    `hist_last_visit`  DATE NULL,
+    `is_active`  TINYINT(1) NOT NULL DEFAULT 1,
+    `archived_at` DATETIME NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     KEY `tenant` (`tenant_id`),
-    KEY `tenant_phone` (`tenant_id`, `phone`)
+    KEY `tenant_phone` (`tenant_id`, `phone`),
+    KEY `tenant_member` (`tenant_id`, `member_ref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Orders ────────────────────────────────────────────────────────────────
@@ -167,6 +204,7 @@ CREATE TABLE IF NOT EXISTS `restaurant_orders` (
     KEY `tenant_status` (`tenant_id`, `status`),
     KEY `tenant_table` (`tenant_id`, `table_id`),
     KEY `tenant_opened` (`tenant_id`, `opened_at`),
+    KEY `tenant_customer` (`tenant_id`, `customer_id`, `status`),
     KEY `public_token` (`public_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -203,6 +241,9 @@ CREATE TABLE IF NOT EXISTS `restaurant_order_item_modifiers` (
     `tenant_id`      INT UNSIGNED NOT NULL DEFAULT 1,
     `order_item_id`  INT UNSIGNED NOT NULL,
     `modifier_id`    INT UNSIGNED NULL,
+    `kind`           ENUM('modifier','component') NOT NULL DEFAULT 'modifier',
+    `slot_id`        INT UNSIGNED NULL,
+    `component_item_id` INT UNSIGNED NULL,
     `name_snapshot`  VARCHAR(160) NOT NULL,
     `price_delta_cents` INT NOT NULL DEFAULT 0,
     PRIMARY KEY (`id`),
@@ -229,6 +270,7 @@ CREATE TABLE IF NOT EXISTS `restaurant_payments` (
     `created_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     KEY `tenant_order` (`tenant_id`, `order_id`),
+    KEY `tenant_created` (`tenant_id`, `created_at`),
     KEY `pi` (`stripe_pi_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

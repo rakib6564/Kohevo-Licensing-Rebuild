@@ -8,6 +8,8 @@ DROP TABLE IF EXISTS `restaurant_order_items`;
 DROP TABLE IF EXISTS `restaurant_refunds`;
 DROP TABLE IF EXISTS `restaurant_payments`;
 DROP TABLE IF EXISTS `restaurant_orders`;
+DROP TABLE IF EXISTS `restaurant_combo_choices`;
+DROP TABLE IF EXISTS `restaurant_combo_slots`;
 DROP TABLE IF EXISTS `restaurant_item_modifier_groups`;
 DROP TABLE IF EXISTS `restaurant_modifiers`;
 DROP TABLE IF EXISTS `restaurant_modifier_groups`;

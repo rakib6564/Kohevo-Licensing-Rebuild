@@ -65,11 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_ajax'])) {
             }
             $out(['ok' => true]);
         case 'delete':
-            foreach ($ids as $id) {
-                Database::delete('restaurant_item_modifier_groups', 'item_id = ? AND tenant_id = ?', [$id, $tid]);
-                Database::delete('restaurant_items', 'id = ? AND tenant_id = ?', [$id, $tid]);
-                AuditLog::record('restaurant.item_deleted', (string)$id);
-            }
+            foreach ($ids as $id) RestaurantAPI::deleteItem($id);
             $out(['ok' => true]);
     }
     $out(['ok' => false, 'error' => __('restaurant_err_action', 'Unknown action.')]);
@@ -127,9 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'delete') {
             $id = (int)($_POST['id'] ?? 0);
             if ($id > 0) {
-                Database::delete('restaurant_item_modifier_groups', 'item_id = ? AND tenant_id = ?', [$id, $tid]);
-                Database::delete('restaurant_items', 'id = ? AND tenant_id = ?', [$id, $tid]);
-                AuditLog::record('restaurant.item_deleted', (string)$id);
+                RestaurantAPI::deleteItem($id);
                 header('Location: ' . plugin_url('restaurant', 'admin/items.php'));
                 exit;
             }

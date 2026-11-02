@@ -1,7 +1,7 @@
 {
     "slug": "restaurant",
     "name": "Restaurant",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "Restaurant management: a menu with categories, modifier groups and 86-ing; floor sections and tables; a full-screen POS register with a table map, seats, split and merged checks, line and percentage discounts with reasons, comps and reopening; a kitchen display; card-present payments through Stripe Terminal plus cash with change, full and partial refunds and printable receipts; standalone customer records; and a public online-ordering storefront (menu, cart, checkout with Stripe payment or pay at pickup) that drops orders into the POS.",
     "author": "Kohevo",
     "requires_core": ">=1.0.0",

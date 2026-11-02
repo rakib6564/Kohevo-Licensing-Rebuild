@@ -253,6 +253,25 @@ class Restaurant extends Plugin {
         $this->ensureColumn('restaurant_order_items', 'served_at', "DATETIME NULL");
         $this->ensureColumn('restaurant_payments', 'tendered_cents', "INT UNSIGNED NULL");
         $this->ensureColumn('restaurant_payments', 'change_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+
+        // 0.5.0 — combos, customer history and import. The combo tables come
+        // from install.sql through ensureSchema() above. Existing customers
+        // start active with no imported history; customers deleted before
+        // 0.5.0 already had their orders unlinked, which cannot be undone.
+        $this->ensureColumn('restaurant_items', 'is_combo', "TINYINT(1) NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_order_item_modifiers', 'kind', "ENUM('modifier','component') NOT NULL DEFAULT 'modifier'");
+        $this->ensureColumn('restaurant_order_item_modifiers', 'slot_id', "INT UNSIGNED NULL");
+        $this->ensureColumn('restaurant_order_item_modifiers', 'component_item_id', "INT UNSIGNED NULL");
+        $this->ensureColumn('restaurant_customers', 'member_ref', "VARCHAR(80) NULL");
+        $this->ensureColumn('restaurant_customers', 'hist_spend_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_customers', 'hist_orders', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_customers', 'hist_first_seen', "DATE NULL");
+        $this->ensureColumn('restaurant_customers', 'hist_last_visit', "DATE NULL");
+        $this->ensureColumn('restaurant_customers', 'is_active', "TINYINT(1) NOT NULL DEFAULT 1");
+        $this->ensureColumn('restaurant_customers', 'archived_at', "DATETIME NULL");
+        $this->ensureIndex('restaurant_customers', 'tenant_member', '(`tenant_id`, `member_ref`)');
+        $this->ensureIndex('restaurant_orders', 'tenant_customer', '(`tenant_id`, `customer_id`, `status`)');
+        $this->ensureIndex('restaurant_payments', 'tenant_created', '(`tenant_id`, `created_at`)');
     }
 
     private function hasColumn(string $table, string $column): bool {
@@ -273,12 +292,15 @@ class Restaurant extends Plugin {
                   WHERE TABLE_SCHEMA = DATABASE()
                     AND TABLE_NAME IN ('restaurant_items','restaurant_orders',
                                        'restaurant_order_items','restaurant_payments',
-                                       'restaurant_refunds')");
+                                       'restaurant_refunds','restaurant_combo_slots',
+                                       'restaurant_combo_choices')");
             $col = (int) Database::value(
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurant_payments'
-                    AND COLUMN_NAME IN ('central_charge_id','tendered_cents')");
-            return $tbl >= 5 && $col === 2;
+                  WHERE TABLE_SCHEMA = DATABASE()
+                    AND ((TABLE_NAME = 'restaurant_payments' AND COLUMN_NAME IN ('central_charge_id','tendered_cents'))
+                      OR (TABLE_NAME = 'restaurant_customers' AND COLUMN_NAME IN ('member_ref','is_active'))
+                      OR (TABLE_NAME = 'restaurant_order_item_modifiers' AND COLUMN_NAME = 'kind'))");
+            return $tbl >= 7 && $col === 5;
         } catch (\Throwable $e) {
             return false;
         }
