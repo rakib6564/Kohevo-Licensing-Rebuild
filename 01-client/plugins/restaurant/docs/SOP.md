@@ -244,3 +244,20 @@ Answers: **200** `{"ok":true,"order_no":…}`; **401** wrong signature (nothing 
 3. Delivery cards on Online orders now also show **Request Uber courier**. Uber's quote lasts about fifteen minutes. **Cancel courier** works until a courier is on the way; after that, cancel in the Uber Direct dashboard.
 4. Uber wants the address in parts (street, city, state, ZIP). Kohevo splits the one-line delivery address; write it as "street, city, ST 12345" so it splits cleanly.
 
+
+## 12. Channels & delivery (the whole picture)
+
+**Two different things.** *Marketplace orders* are placed by customers in apps such as DoorDash or Uber Eats; they reach you through a channel (section 10). *Courier delivery* is for orders you took yourself (website or register): a DoorDash or Uber courier carries them instead of your own driver (section 11). Use either, both or neither.
+
+**How channel orders come in.** The channel (usually an aggregator such as Deliverect) sends each order to your Order URL, signed with a secret only it and Kohevo know. Kohevo checks the signature, turns the channel's product codes (SKUs or PLUs) into your menu items and options, and puts the order on **Online orders** with the channel's name. Every step you take (accepted, preparing, ready, completed, cancelled) goes back to the channel. An order the marketplace already charged for is marked **paid via the channel**: never take payment for it, and refund it in the marketplace.
+
+**How mapping works.** Every product and option code the channel sends must point at one of your menu items, or one of that item's options (Channels → the channel → SKU map). An order with an unmapped code is held, never half-made: staff are notified, and once the code is mapped, **Retry now** creates it.
+
+**What you sign up for.**
+- Marketplace orders: a contract with an aggregator for this location (for example Deliverect), with your marketplaces connected there. The aggregator and the marketplaces bill you under those contracts.
+- Couriers: your own DoorDash Drive developer account, your own Uber Direct account, or both. Each bills you per delivery.
+- Kohevo holds none of these contracts and does not connect to the DoorDash or Uber Eats marketplaces directly.
+
+**DoorDash today, in plain words.** DoorDash currently limits who may use its Drive API and restricts real (production) deliveries, with no published timeline. Until DoorDash approves your account, DoorDash couriers only make test deliveries. Uber approves each Uber Direct business before real deliveries too. Kohevo's DoorDash, Uber and Deliverect connections have been tested against stand-ins of those services, not the services themselves: confirm with Kohevo support before relying on them for real orders.
+
+**Judging them in Reports.** **Sales by channel** shows each channel's orders, sales, average order and cancellations beside the period before. **Courier deliveries** shows deliveries and fees per courier service, and a **Courier fees** card appears once you have used a courier. Courier fees are a cost: they are shown on their own and not taken out of net sales. Every table has a CSV button.

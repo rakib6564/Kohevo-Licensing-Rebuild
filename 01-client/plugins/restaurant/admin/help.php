@@ -66,6 +66,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <a href="#combos"><?= e(__('restaurant_combos', 'Combos')) ?></a>
             <a href="#reports"><?= e(__('restaurant_help_reports_toc', 'Reports & payments')) ?></a>
             <a href="#customers"><?= e(__('restaurant_customers', 'Customers')) ?></a>
+            <a href="#channels-delivery"><?= e(__('restaurant_help_cd_toc', 'Channels & delivery')) ?></a>
             <a href="#channels"><?= e(__('restaurant_channels', 'Channels')) ?></a>
             <a href="#couriers"><?= e(__('restaurant_couriers', 'Couriers')) ?></a>
             <a href="#online">Online ordering</a>
@@ -171,6 +172,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <li><?= e(__('restaurant_help_cust_import_3', 'A row updates the customer with the same phone (however it is written), else the same Member ID; otherwise it creates one. Email is not used to match, because exports give many walk-in customers the same placeholder address. Rows that share a phone become one customer with their history added together. Importing the same file again updates instead of duplicating.')) ?></li>
         </ol>
         <p class="text-sm"><?= e(__('restaurant_help_cust_import_4', 'Imported spend and visits are history: they add to what Kohevo records, and the later last visit wins. Visits are Total Spend ÷ Avg. Spend. First Seen is kept as the channel the customer first came through (ORD Web, Counter, POS…), or as a date if the file has one. "-" and "N/A" count as empty; a blank name stays blank and the list shows the email, phone or member ID instead. Export CSV writes the same columns with everything known, ready for another system.')) ?></p>
+    </div>
+
+    <div class="card" id="channels-delivery">
+        <h2><?= e(__('restaurant_help_cd_toc', 'Channels & delivery')) ?></h2>
+        <p class="text-sm"><?= e(__('restaurant_help_cd_1', 'Two different things share the word "delivery". Marketplace orders are orders customers place in apps such as DoorDash or Uber Eats; they reach you through a channel. Courier delivery is for orders you took yourself (your website or the register): a DoorDash or Uber courier carries them instead of your own driver. You can use either, both or neither.')) ?></p>
+        <p class="text-sm"><?= e(__('restaurant_help_cd_2', 'How channel orders come in: the channel (usually an aggregator such as Deliverect) sends each order to your Order URL, signed with a secret only it and Kohevo know. Kohevo checks the signature, turns the channel\'s product codes (SKUs or PLUs) into your menu items and options, and puts the order on Online orders with the channel\'s name. Each step you take (accepted, preparing, ready, completed, cancelled) goes back to the channel. An order the marketplace already charged the customer for is marked paid via the channel.')) ?></p>
+        <p class="text-sm"><?= e(__('restaurant_help_cd_3', 'How mapping works: every product and option code the channel sends must point at one of your menu items or one of that item\'s options (Channels → the channel → SKU map). An order with a code that is not mapped is held, not half-made: staff are notified, and once the code is mapped, Retry now creates the order.')) ?></p>
+        <p class="text-sm"><?= e(__('restaurant_help_cd_4', 'What you sign up for. For marketplace orders: a contract with an aggregator for this location (for example Deliverect), with your marketplaces connected there; the marketplaces and the aggregator bill you under those contracts. For couriers: your own DoorDash Drive developer account, your own Uber Direct account, or both; each bills you per delivery. Kohevo holds none of these contracts and never connects to DoorDash or Uber Eats marketplaces directly.')) ?></p>
+        <p class="text-sm"><?= e(__('restaurant_help_cd_5', 'DoorDash today: DoorDash currently limits who can use its Drive API and restricts real (production) deliveries, with no published timeline, so for now a DoorDash account may only make test deliveries. Uber approves each Uber Direct business before real deliveries. Kohevo\'s DoorDash, Uber and Deliverect connections have been tested against stand-ins of those services, not the services themselves; check with Kohevo support before relying on them.')) ?></p>
+        <p class="text-sm"><?= e(__('restaurant_help_cd_6', 'In Reports, Sales by channel shows each channel\'s orders, sales, average order and cancellations beside the period before, and Courier deliveries shows deliveries and fees per courier service. Courier fees are a cost: they are shown on their own and not taken out of net sales.')) ?></p>
     </div>
 
     <div class="card" id="channels">

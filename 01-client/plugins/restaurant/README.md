@@ -9,7 +9,9 @@ take cash, and charge cards in person through **Stripe Terminal** — and a
 public **online-ordering storefront** at `/order` that drops orders into the
 POS. Single-location, self-contained.
 
-**Version 0.5.4** — **Uber Direct couriers** next to DoorDash Drive on the same courier seam: OAuth client credentials (token cached sealed for its 30 days, renewed once on a 401), quotes and deliveries on the Direct API, and status webhooks checked against Uber's HMAC signature before the delivery is re-read. Built to Uber's published docs and tested against a local stand-in only.
+**Version 0.6.0** — finishes the channels and delivery work: **Reports** gain *Sales by channel* (orders, sales, average order and cancellations per channel, against the period before) and *Courier deliveries* (delivered, under way and fees per courier service, plus a Courier fees card), and Help and the SOP gain a **Channels & delivery** chapter (how intake and mapping work, what a restaurant signs up for per channel, and DoorDash's current production-access limit in plain words). No schema change.
+
+0.5.4 added **Uber Direct couriers** next to DoorDash Drive on the same courier seam: OAuth client credentials (token cached sealed for its 30 days, renewed once on a 401), quotes and deliveries on the Direct API, and status webhooks checked against Uber's HMAC signature before the delivery is re-read. Built to Uber's published docs and tested against a local stand-in only.
 
 0.5.3 added **couriers for your own delivery orders through DoorDash Drive**: staff request a courier from the online-orders board (quote with fee and times, then confirm), the job follows DoorDash's status through webhooks that are re-checked against the API, and the customer's order page shows the courier and the tracking link. Built to the Drive API v2 docs and tested against a local stand-in only: DoorDash currently limits Drive API access and restricts production.
 0.5.2 added a **Deliverect channel adapter**: Deliverect's POS order webhook (its own HMAC header) read into the canonical intake, status updates through Deliverect's order status API, Failed reported for orders we refuse, and marketplace cancellations. Built to Deliverect's published format and tested against synthetic fixtures; not yet run against a live Deliverect account.
@@ -94,6 +96,7 @@ route or build step.
 ### Reports and payments (`admin/reports.php`, `admin/payments.php`, permission `restaurant.reports`)
 - **Reports** — today / yesterday / this week / last week / this month / custom, every figure against the equivalent previous period with the change: gross sales, discounts (line + order), refunds (count and amount, from the refunds ledger), comps, net sales, orders, average order, covers, tax, service charges, tips (cash vs card), payment-method mix net of refunds, top 10 items by quantity and by revenue, categories, POS vs online, online orders by fulfilment state
 - Rules (all in `includes/reports.php`, class `RestaurantReports`): an order is a sale when paid or closed, by `opened_at`; voided never counts; net sales = order totals − comps − refunds; refunds count by refund date; payment mix by payment date
+- **Channels and couriers** (0.6.0) — *Sales by channel* splits `source = 'channel'` sales by `orders.channel` (every configured channel listed, plus any slug left by a deleted channel): orders, sales (totals − comps), average order, cancelled (voided channel orders opened in the range), previous sales and change. *Courier deliveries* groups `restaurant_delivery_jobs` booked in the range (by `created_at`) that were delivered or are still under way: delivered, under way, Σ `fee_cents`, previous and change; `courier_fees` is also a Summary row and a card (shown once any courier job exists in either period). Courier fees are a cost and are not taken out of net sales; quotes, cancelled and failed jobs never count.
 - **CSV**: one file per table (`?export=<table>`), written from the same cells the screen shows
 - **Payments** — every payment with order, check, method, amount, tip, refunded, net, status (paid / partly refunded / refunded / pending / failed), PaymentIntent id, central charge id and reader; filters for date range, method, status, source and a search on order number or Stripe id; a totals strip over the whole filter (settled payments only) and a CSV with a totals row
 
@@ -252,6 +255,6 @@ for the Stripe API that honours Idempotency-Keys; see
 
 Uber Direct courier fulfilment · ordering hours, scheduling, online tips and order notifications · dayparts
 applied · loyalty and gift cards · floor-map editor. Shipped: combos, reports
-and payments reconciliation, customer history and CSV import/export (0.5.0), order channels and the menu feed (0.5.1), the Deliverect adapter (0.5.2), DoorDash Drive couriers (0.5.3), Uber Direct couriers (0.5.4). Each is additive: new tables via
+and payments reconciliation, customer history and CSV import/export (0.5.0), order channels and the menu feed (0.5.1), the Deliverect adapter (0.5.2), DoorDash Drive couriers (0.5.3), Uber Direct couriers (0.5.4), sales by channel and courier fees in reports with the Channels & delivery chapter (0.6.0). Each is additive: new tables via
 version-gated migrations in `Restaurant.php`, new nav items via the
 `admin_nav_items` filter.

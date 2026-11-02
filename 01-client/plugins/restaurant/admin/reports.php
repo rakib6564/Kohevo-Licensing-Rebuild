@@ -6,11 +6,14 @@
  * custom range), each figure beside the same figure for the period before
  * with the change. Every table has its own CSV download (one file per
  * table, ?export=<table>), built from the very cells shown on screen. All
- * figures come from RestaurantReports, which documents the rules.
+ * figures come from RestaurantReports, which documents the rules. Channel
+ * orders are split by channel, and courier fees (DoorDash Drive, Uber
+ * Direct) get their own card and table, so owners can judge both.
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/RestaurantAPI.php';
 require_once dirname(__DIR__) . '/includes/reports.php';
+require_once dirname(__DIR__) . '/includes/delivery.php';   // courier service names
 
 Auth::require();
 Auth::requirePerm('restaurant.reports');
@@ -86,7 +89,7 @@ slate_breadcrumbs([
 </div>
 
 <div class="rr-cards">
-    <?php foreach ([
+    <?php foreach (array_merge([
         ['net_sales', __('restaurant_rep_net', 'Net sales'), 'money', false, __('restaurant_rep_net_hint', 'Order totals less comps and refunds')],
         ['orders', __('restaurant_rep_orders', 'Orders'), 'int', false, ''],
         ['avg_order', __('restaurant_rep_aov', 'Average order'), 'money', false, ''],
@@ -97,7 +100,9 @@ slate_breadcrumbs([
         ['tips', __('restaurant_rep_tips', 'Tips'), 'money', false, sprintf(__('restaurant_rep_tips_split', 'Cash %1$s · card %2$s'), $money($cur['tips_cash']), $money($cur['tips_card']))],
         ['tax', __('restaurant_rep_tax', 'Tax collected'), 'money', false, ''],
         ['service', __('restaurant_rep_service', 'Service charges'), 'money', false, ''],
-    ] as [$k, $label, $type, $inv, $hint]): ?>
+    ], $cur['courier_jobs'] + $prev['courier_jobs'] > 0
+        ? [['courier_fees', __('restaurant_rep_courier_fees', 'Courier fees'), 'money', true, sprintf(__('restaurant_rep_courier_n', '%d courier deliveries'), $cur['courier_jobs'])]]
+        : []) as [$k, $label, $type, $inv, $hint]): ?>
         <div class="rr-card">
             <div class="rr-card-k"><?= e($label) ?></div>
             <div class="rr-card-v"><?= $cell($cur[$k], $type) ?></div>
@@ -117,8 +122,8 @@ slate_breadcrumbs([
 // Each table is a list of the shared collapsible rows: the headline cell on
 // the right, the other columns in the line under the title, every column in
 // the expanded detail. The CSV keeps the plain table shape.
-$invert   = ['discounts' => true, 'comps' => true, 'refunds' => true, 'refund_count' => true, 'voided' => true];
-$valueCol = ['summary' => 1, 'payments' => 4, 'items_qty' => 1, 'items_revenue' => 2, 'categories' => 2, 'sources' => 2, 'fulfilment' => 1];
+$invert   = ['discounts' => true, 'comps' => true, 'refunds' => true, 'refund_count' => true, 'voided' => true, 'courier_fees' => true];
+$valueCol = ['summary' => 1, 'payments' => 4, 'items_qty' => 1, 'items_revenue' => 2, 'categories' => 2, 'sources' => 2, 'channels' => 2, 'couriers' => 3, 'fulfilment' => 1];
 $ranked   = ['items_qty' => true, 'items_revenue' => true, 'categories' => true];
 foreach ($tables as $tkey => $t):
     $wide = in_array($tkey, ['summary', 'payments'], true);
@@ -131,7 +136,7 @@ foreach ($tables as $tkey => $t):
         <?php else: ?>
         <div class="data-list" data-single-open>
         <?php foreach ($t['rows'] as $i => $row):
-            $inv  = $tkey === 'summary' && isset($invert[$t['keys'][$i]]);
+            $inv  = ($tkey === 'summary' && isset($invert[$t['keys'][$i]])) || $tkey === 'couriers';
             $type = fn(int $j) => $t['columns'][$j][1] === 'mixed' ? $t['types'][$i] : $t['columns'][$j][1];
             $text = fn(int $j) => strip_tags($cell($row[$j], $type($j)));
             $meta = []; $badge = ''; $detail = [];
@@ -159,7 +164,8 @@ foreach ($tables as $tkey => $t):
 </div>
 <?php slate_data_list_script(); ?>
 
-<p class="rr-note"><?= e(__('restaurant_rep_rules', 'How these are counted: an order is a sale once it is paid or closed, on the day it was opened; voided orders never count. Gross sales are items before discounts. Order totals add service charges, tax and tips. Net sales are order totals less comps and refunds; refunds count on the day they were made. Payment methods go by the day each payment was taken.')) ?></p>
+<p class="rr-note"><?= e(__('restaurant_rep_rules', 'How these are counted: an order is a sale once it is paid or closed, on the day it was opened; voided orders never count. Gross sales are items before discounts. Order totals add service charges, tax and tips. Net sales are order totals less comps and refunds; refunds count on the day they were made. Payment methods go by the day each payment was taken.')) ?>
+    <?= e(__('restaurant_rep_rules_channels', 'Sales by channel split channel orders by the channel they came through; cancelled counts the channel orders voided in the period. Courier fees are what DoorDash or Uber charge for couriers booked in the period that delivered or are still under way; they are a cost and are not taken out of net sales.')) ?></p>
 
 <style>
 .rr-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: var(--space-4, 16px); }
