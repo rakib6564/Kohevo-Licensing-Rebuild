@@ -66,6 +66,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <a href="#combos"><?= e(__('restaurant_combos', 'Combos')) ?></a>
             <a href="#reports"><?= e(__('restaurant_help_reports_toc', 'Reports & payments')) ?></a>
             <a href="#customers"><?= e(__('restaurant_customers', 'Customers')) ?></a>
+            <a href="#channels"><?= e(__('restaurant_channels', 'Channels')) ?></a>
             <a href="#online">Online ordering</a>
             <a href="#settings">Settings</a>
             <a href="#perms">Roles &amp; permissions</a>
@@ -171,6 +172,17 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <p class="text-sm"><?= e(__('restaurant_help_cust_import_4', 'Imported spend and visits are history: they add to what Kohevo records, and the later last visit wins. Visits are Total Spend ÷ Avg. Spend. First Seen is kept as the channel the customer first came through (ORD Web, Counter, POS…), or as a date if the file has one. "-" and "N/A" count as empty; a blank name stays blank and the list shows the email, phone or member ID instead. Export CSV writes the same columns with everything known, ready for another system.')) ?></p>
     </div>
 
+    <div class="card" id="channels">
+        <h2><?= e(__('restaurant_channels', 'Channels')) ?></h2>
+        <p class="text-sm"><?= e(__('restaurant_help_ch_1', 'A channel is an outside system that sends you orders, usually an aggregator such as Deliverect that collects them from marketplaces like DoorDash or Uber Eats under a contract you hold with it. Kohevo does not connect to the marketplaces directly: their order APIs are open only to approved partners.')) ?></p>
+        <ol>
+            <li><?= e(__('restaurant_help_ch_2', 'Channels → Add channel, then Make the signing secret. Give the channel its Order URL and the secret, then switch it on.')) ?></li>
+            <li><?= e(__('restaurant_help_ch_3', 'Map every SKU the channel sends to a menu item, and each modifier SKU to one of that item\'s options. An order with an unmapped SKU is not accepted at all; staff are notified, and once the SKUs are mapped, Retry now creates it.')) ?></li>
+            <li><?= e(__('restaurant_help_ch_4', 'Channel orders appear on Online orders with the channel\'s name. Each step (accepted, preparing, ready, completed, cancelled) is sent back to the channel, signed with the same secret. A card warns when the channel charged a different total from ours.')) ?></li>
+        </ol>
+        <p class="text-sm"><?= e(__('restaurant_help_ch_5', 'The menu feed gives a channel the whole menu as JSON (GET /menu-feed with the token from the Channels page). "Connected" shows only after a channel has sent an order with a correct signature. The order format is in the SOP (section 10).')) ?></p>
+    </div>
+
     <div class="card" id="online">
         <h2>Online ordering (public storefront)</h2>
         <p class="text-sm">Customers order from your own site at <code><?= e(rtrim(SLATE_URL, '/')) ?>/order</code> — no SpotOn needed.</p>
@@ -214,6 +226,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <tr><td>restaurant.kitchen</td><td><?= e(__('restaurant_help_perm_kitchen', 'Use the kitchen display: mark lines ready and served.')) ?></td></tr>
             <tr><td>restaurant.manage_customers</td><td><?= e(__('restaurant_help_perm_customers', 'Manage customer records, archive and restore them, and import or export the customer list.')) ?></td></tr>
             <tr><td>restaurant.manage_settings</td><td>Configure tax, service charge, tips, receipts, and card readers.</td></tr>
+            <tr><td>restaurant.channels</td><td><?= e(__('restaurant_help_perm_channels', 'Set up order channels, map their SKUs, retry orders that were not accepted, and manage the menu feed token.')) ?></td></tr>
             <tr><td>restaurant.reports</td><td><?= e(__('restaurant_help_perm_reports2', 'See Reports and Payments, and download their CSV files.')) ?></td></tr>
         </table>
     </div>

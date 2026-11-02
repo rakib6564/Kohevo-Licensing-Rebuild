@@ -9,7 +9,8 @@ take cash, and charge cards in person through **Stripe Terminal** — and a
 public **online-ordering storefront** at `/order` that drops orders into the
 POS. Single-location, self-contained.
 
-**Version 0.5.0** — **combos** (a priced bundle with slots to pick from, in
+**Version 0.5.1** — **order channels**: a signed canonical intake for aggregators with SKU mapping, retry and status callbacks, and a token-protected menu feed.
+0.5.0 added **combos** (a priced bundle with slots to pick from, in
 the POS and online), a **reports** screen (period comparison, CSV per table),
 a **payments** list for reconciling Stripe payouts, and **customer history**
 (spend, visits, archiving instead of deleting, CSV import and export in the
@@ -91,6 +92,12 @@ route or build step.
 - Rules (all in `includes/reports.php`, class `RestaurantReports`): an order is a sale when paid or closed, by `opened_at`; voided never counts; net sales = order totals − comps − refunds; refunds count by refund date; payment mix by payment date
 - **CSV**: one file per table (`?export=<table>`), written from the same cells the screen shows
 - **Payments** — every payment with order, check, method, amount, tip, refunded, net, status (paid / partly refunded / refunded / pending / failed), PaymentIntent id, central charge id and reader; filters for date range, method, status, source and a search on order number or Stripe id; a totals strip over the whole filter (settled payments only) and a CSV with a totals row
+
+### Order channels and menu feed (`admin/channels.php`, `includes/channels.php`, permission `restaurant.channels`)
+- **Intake** — `POST /order-channel/{slug}` (public route, `channels/intake.php`) takes the canonical order JSON documented in `includes/channels.php` and `docs/SOP.md` §10, authenticated by `X-Channel-Signature: sha256=<HMAC-SHA256 of the raw body>` with the channel's secret (stored encrypted like Stripe's secret key; compared in constant time). Verify first: a bad signature records nothing. Each `(channel, external_order_id)` gets one `restaurant_channel_orders` row — the idempotency record — so a replay returns the first answer. Items and modifiers resolve through `restaurant_item_mappings`; one unmapped SKU rejects the whole order (422, staff notification, audit) and Retry works once mapped. Orders are built in one transaction through `openOrder()`/`addLine()` (`source = 'channel'`, fulfilment `new`); a channel total more than 1 cent from ours is accepted and flagged (`flag_reason`, audit).
+- **Status pushback** — `setFulfillment()` fires `restaurant_fulfillment_changed`; the channel's `RestaurantChannelAdapter` (registered per slug on the `restaurant_channel_adapters` filter; the base adapter otherwise) POSTs a signed canonical update to the order's `callback_url` or the channel's. Calls go to https only (plain http only to this machine, for tests) and are logged in `restaurant_channel_events`.
+- **Menu feed** — `GET /menu-feed` with `Authorization: Bearer <token>` (per install, rotatable): categories, active items (price, tax, daypart, 86, photo URL, modifier group ids, combo slots), modifier groups; `version` (latest menu update) and an `ETag` (304 on match). Every menu save fires `restaurant_menu_changed`.
+- **Not built here**: no marketplace (DoorDash / Uber Eats) API clients — marketplace orders come through an aggregator the restaurant contracts with. The Deliverect-shaped adapter and courier fulfilment (DoorDash Drive, Uber Direct) are later parts.
 
 ### Customers (`admin/customers.php`, `includes/customers.php`)
 - Records with name, phone, email, member ID and notes; the POS finds-or-creates by exact phone when attaching a guest (unchanged)
@@ -183,6 +190,7 @@ preserves data; uninstall runs `uninstall.sql` to drop every
 | `restaurant.manage_customers` | manage customers; archive/restore; import and export |
 | `restaurant.manage_settings` | configure tax, service charge, tips, receipts, readers |
 | `restaurant.reports` | Reports and Payments, with their CSV exports |
+| `restaurant.channels` | order channels, SKU mapping, retries, the menu feed token |
 
 ---
 
@@ -226,7 +234,7 @@ for the Stripe API that honours Idempotency-Keys; see
 
 ## Roadmap
 
-Ordering hours, scheduling, online tips and order notifications · dayparts
+Deliverect-shaped channel adapter · DoorDash Drive and Uber Direct courier fulfilment · ordering hours, scheduling, online tips and order notifications · dayparts
 applied · loyalty and gift cards · floor-map editor. Shipped: combos, reports
 and payments reconciliation, customer history and CSV import/export (0.5.0). Each is additive: new tables via
 version-gated migrations in `Restaurant.php`, new nav items via the

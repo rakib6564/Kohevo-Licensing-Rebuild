@@ -19,10 +19,11 @@ RestaurantAPI::ensureSchema();
 $tid = current_tenant_id();
 
 /** The board's orders: everything not finished, plus finished in the last 24 hours. */
-$board = function () use ($tid): array {
+$channelNames = array_column(Database::rows("SELECT slug, name FROM restaurant_channels WHERE tenant_id = ?", [$tid]), 'name', 'slug');
+$board = function () use ($tid, $channelNames): array {
     $rows = Database::rows(
         "SELECT o.id FROM restaurant_orders o
-          WHERE o.tenant_id = ? AND o.source = 'online'
+          WHERE o.tenant_id = ? AND o.source IN ('online','channel')
             AND (o.fulfillment_status NOT IN ('completed','cancelled') OR o.updated_at >= NOW() - INTERVAL 1 DAY)
        ORDER BY o.id DESC LIMIT 150", [$tid]);
     $out = [];
@@ -33,6 +34,7 @@ $board = function () use ($tid): array {
             'id' => (int)$o['id'], 'order_no' => $o['order_no'], 'type' => $o['type'], 'status' => $o['fulfillment_status'],
             'order_status' => $o['status'], 'customer' => (string)($o['customer_name'] ?? ''), 'phone' => (string)($o['customer_phone'] ?? ''),
             'requested' => (string)($o['requested_time'] ?? ''), 'notes' => (string)($o['notes'] ?? ''), 'opened_at' => $o['opened_at'],
+            'channel' => $o['source'] === 'channel' ? (string)($channelNames[$o['channel']] ?? $o['channel']) : '', 'flag' => (string)($o['flag_reason'] ?? ''),
             'total' => RestaurantAPI::money((int)$o['total_cents']),
             'paid'  => (int)$o['total_cents'] > 0 && (int)$o['paid_cents'] >= (int)$o['total_cents'],
             'has_new' => (bool) array_filter($o['items'], fn($i) => $i['kitchen_status'] === 'new'),
@@ -52,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_ajax'])) {
         $orderId = (int)($_POST['order_id'] ?? 0);
         $action  = (string)($_POST['action'] ?? 'list');
         if ($action !== 'list') {
-            if (!Database::value("SELECT 1 FROM restaurant_orders WHERE id = ? AND tenant_id = ? AND source = 'online'", [$orderId, $tid])) {
+            if (!Database::value("SELECT 1 FROM restaurant_orders WHERE id = ? AND tenant_id = ? AND source IN ('online','channel')", [$orderId, $tid])) {
                 throw new \RuntimeException(__('restaurant_err_check', 'Check not found.'));
             }
             if ($action === 'move') {
@@ -118,6 +120,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
 @media (prefers-reduced-motion: reduce) { .ron-card.is-fresh { animation: none; } }
 .ron-card header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 12px 4px; }
 .ron-card header b { font-size: 16px; }
+.ron-ch { display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: var(--info-soft); color: var(--info); font-size: 11px; font-weight: 700; vertical-align: 2px; }
+.ron-flag { margin: 0 12px 8px; padding: 6px 9px; border-radius: 8px; background: var(--warning-soft); color: var(--text); font-size: 12.5px; font-weight: 600; }
 .ron-age { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .ron-age.is-late { color: var(--danger); font-weight: 700; }
 .ron-who { padding: 0 12px; font-size: 13px; color: var(--text-2); }
@@ -178,11 +182,12 @@ require SLATE_ROOT . '/admin/partials/header.php';
     function card(o, done) {
         const m = age(o.opened_at);
         return '<article class="ron-card' + (fresh.has(o.id) ? ' is-fresh' : '') + '">'
-            + '<header><b>#' + esc(o.order_no) + '</b><span class="ron-age' + (!done && m >= 20 ? ' is-late' : '') + '">' + m + '′</span></header>'
+            + '<header><b>#' + esc(o.order_no) + (o.channel ? ' <span class="ron-ch">' + esc(o.channel) + '</span>' : '') + '</b><span class="ron-age' + (!done && m >= 20 ? ' is-late' : '') + '">' + m + '′</span></header>'
             + '<div class="ron-who"><strong>' + esc(o.customer || '—') + '</strong>' + (o.phone ? ' · <a href="tel:' + esc(o.phone) + '">' + esc(o.phone) + '</a>' : '')
             + '<br>' + esc(T['restaurant_rcpt_' + o.type] || o.type) + (o.requested ? ' · ' + fmt('restaurant_online_for', o.requested) : '') + ' · ' + esc(o.total)
             + ' <span class="ron-pill ' + (o.paid ? 'is-paid">' + fmt('restaurant_online_paid') : 'is-due">' + fmt('restaurant_online_due')) + '</span></div>'
             + (done ? '' : '<ul class="ron-items">' + o.items.map((i) => '<li><b>' + i.qty + '×</b> ' + esc(i.name) + (i.mods.length ? '<small>' + i.mods.map(esc).join(', ') + '</small>' : '') + (i.notes ? '<small>' + esc(i.notes) + '</small>' : '') + '</li>').join('') + '</ul>')
+            + (o.flag && !done ? '<div class="ron-flag">' + esc(o.flag) + '</div>' : '')
             + (o.notes && !done ? '<div class="ron-note">' + esc(o.notes) + '</div>' : '')
             + '<div class="ron-foot">'
             + (done ? '<span class="ron-pill">' + fmt('restaurant_online_' + o.status) + '</span>'

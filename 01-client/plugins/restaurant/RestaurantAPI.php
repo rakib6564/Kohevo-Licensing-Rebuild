@@ -405,6 +405,7 @@ class RestaurantAPI {
         Database::delete('restaurant_combo_choices', 'item_id = ? AND tenant_id = ?', [$itemId, $tid]);
         Database::delete('restaurant_items', 'id = ? AND tenant_id = ?', [$itemId, $tid]);
         AuditLog::record('restaurant.item_deleted', (string)$itemId);
+        self::menuChanged('item_deleted', $itemId);
     }
 
     /**
@@ -489,6 +490,7 @@ class RestaurantAPI {
             throw $e;
         }
         AuditLog::record('restaurant.combo_saved', (string)$itemId, ['slots' => count($clean)]);
+        self::menuChanged('combo', $itemId);
     }
 
     // ── Stripe Terminal bridge ────────────────────────────────
@@ -631,7 +633,7 @@ class RestaurantAPI {
         $tid  = current_tenant_id();
         $type = in_array(($args['type'] ?? 'dine_in'), ['dine_in', 'takeout', 'delivery'], true)
             ? ($args['type'] ?? 'dine_in') : 'dine_in';
-        $source = in_array(($args['source'] ?? 'pos'), ['pos', 'online'], true)
+        $source = in_array(($args['source'] ?? 'pos'), ['pos', 'online', 'channel'], true)
             ? ($args['source'] ?? 'pos') : 'pos';
         $svcPct = self::serviceChargeAuto() ? self::serviceChargePct() : 0;
 
@@ -641,7 +643,9 @@ class RestaurantAPI {
             'type'               => $type,
             'table_id'           => !empty($args['table_id']) ? (int)$args['table_id'] : null,
             'customer_id'        => !empty($args['customer_id']) ? (int)$args['customer_id'] : null,
-            'server_id'          => !empty($args['server_id']) ? (int)$args['server_id'] : (Auth::userId() ?: null),
+            // An explicit null (a channel order) means no server; otherwise the signed-in user.
+            'server_id'          => array_key_exists('server_id', $args) && $args['server_id'] === null
+                                    ? null : (!empty($args['server_id']) ? (int)$args['server_id'] : (Auth::userId() ?: null)),
             'status'             => 'open',
             'guest_count'        => max(1, (int)($args['guest_count'] ?? 1)),
             'service_charge_pct' => $svcPct,
@@ -1309,7 +1313,7 @@ class RestaurantAPI {
     public static function set86(int $itemId, bool $on): void {
         $tid = current_tenant_id();
         $n = Database::update('restaurant_items', ['is_86' => $on ? 1 : 0], 'id = ? AND tenant_id = ?', [$itemId, $tid]);
-        if ($n) AuditLog::record('restaurant.item_86', (string)$itemId, ['on' => $on]);
+        if ($n) { AuditLog::record('restaurant.item_86', (string)$itemId, ['on' => $on]); self::menuChanged('item_86', $itemId); }
     }
 
     /** Set a table's status by hand (e.g. mark a dirty table clean). */
@@ -1841,17 +1845,34 @@ class RestaurantAPI {
             "SELECT o.*, c.name AS customer_name, c.phone AS customer_phone
                FROM restaurant_orders o
                LEFT JOIN restaurant_customers c ON c.id = o.customer_id
-              WHERE o.tenant_id = ? AND o.source = 'online'
+              WHERE o.tenant_id = ? AND o.source IN ('online','channel')
               ORDER BY o.id DESC LIMIT ?", [$tid, max(1, $limit)]);
     }
 
-    /** Advance an online order's fulfilment state (kitchen/expo workflow). */
+    /**
+     * Advance an online or channel order's fulfilment state (kitchen/expo
+     * workflow). A real change fires restaurant_fulfillment_changed (order
+     * id, new status, old status); a channel order's adapter answers it by
+     * telling the channel.
+     */
     public static function setFulfillment(int $orderId, string $status): void {
         $allowed = ['new', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'];
         if (!in_array($status, $allowed, true)) return;
         $tid = current_tenant_id();
+        $was = (string) Database::value("SELECT fulfillment_status FROM restaurant_orders WHERE id = ? AND tenant_id = ? AND source IN ('online','channel')", [$orderId, $tid]);
+        if ($was === '' || $was === $status) return;
         Database::update('restaurant_orders', ['fulfillment_status' => $status],
-            'id = ? AND tenant_id = ? AND source = ?', [$orderId, $tid, 'online']);
+            "id = ? AND tenant_id = ? AND source IN ('online','channel')", [$orderId, $tid]);
         AuditLog::record('restaurant.online_fulfillment', (string)$orderId, ['status' => $status]);
+        Hook::doAction('restaurant_fulfillment_changed', $orderId, $status, $was);
+    }
+
+    /**
+     * Something on the menu changed (an item, category, modifier group or
+     * combo was saved or deleted, a price or 86 flag moved). Fires
+     * restaurant_menu_changed so feed and push adapters can react.
+     */
+    public static function menuChanged(string $what, $ref = null): void {
+        Hook::doAction('restaurant_menu_changed', $what, $ref);
     }
 }

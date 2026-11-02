@@ -14,6 +14,7 @@
  */
 
 require_once __DIR__ . '/RestaurantAPI.php';
+require_once __DIR__ . '/includes/channels.php';
 
 class Restaurant extends Plugin {
 
@@ -42,6 +43,14 @@ class Restaurant extends Plugin {
         // the core PublicRouter — no .htaccess change needed.
         Hook::addFilter('public_routes', [$this, 'addPublicRoutes']);
 
+        // Order channels: tell a channel when its order's fulfilment moves.
+        // Once per process: Hook keeps every registration, and a second boot would call the channel twice.
+        static $channelsWired = false;
+        if (!$channelsWired) {
+            $channelsWired = true;
+            Hook::addAction('restaurant_fulfillment_changed', [RestaurantChannels::class, 'fulfillmentChanged'], 10, 3);
+        }
+
         // Settle Terminal/card payments routed through the stripe-payment plugin.
         Hook::addAction('stripe_webhook_event', [$this, 'onStripeEvent']);
     }
@@ -59,6 +68,9 @@ class Restaurant extends Plugin {
             'handler' => __DIR__ . '/storefront/router.php',
             'methods' => ['GET', 'POST'],
         ];
+        // Channel order intake (signed POST) and the token-protected menu feed.
+        $routes['order-channel'] = ['handler' => __DIR__ . '/channels/intake.php', 'methods' => ['POST']];
+        $routes['menu-feed']     = ['handler' => __DIR__ . '/channels/feed.php', 'methods' => ['GET']];
         return $routes;
     }
 
@@ -112,6 +124,9 @@ class Restaurant extends Plugin {
         $items[] = ['slug' => 'restaurant-floor',      'label' => __('restaurant_floor', 'Floor & tables'),
                     'href' => $this->url('admin/floor.php'),
                     'icon' => 'box', 'perm' => 'restaurant.manage_floor', 'order' => 705, 'group' => 'restaurant'];
+        $items[] = ['slug' => 'restaurant-channels',   'label' => __('restaurant_channels', 'Channels'),
+                    'href' => $this->url('admin/channels.php'),
+                    'icon' => 'link', 'perm' => 'restaurant.channels', 'order' => 706, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-customers',  'label' => __('restaurant_customers', 'Customers'),
                     'href' => $this->url('admin/customers.php'),
                     'icon' => 'user', 'perm' => 'restaurant.manage_customers', 'order' => 706, 'group' => 'restaurant'];
@@ -283,6 +298,23 @@ class Restaurant extends Plugin {
         $this->ensureIndex('restaurant_customers', 'tenant_member', '(`tenant_id`, `member_ref`)');
         $this->ensureIndex('restaurant_orders', 'tenant_customer', '(`tenant_id`, `customer_id`, `status`)');
         $this->ensureIndex('restaurant_payments', 'tenant_created', '(`tenant_id`, `created_at`)');
+
+        // 0.5.1 — channel intake: the channel tables come from install.sql
+        // through ensureSchema(); orders learn the 'channel' source. Widening
+        // the ENUM keeps every existing value.
+        try {
+            $type = (string) Database::value(
+                "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurant_orders' AND COLUMN_NAME = 'source'");
+            if ($type !== '' && !str_contains($type, "'channel'")) {
+                Database::query("ALTER TABLE `restaurant_orders` MODIFY `source` ENUM('pos','online','channel') NOT NULL DEFAULT 'pos'");
+            }
+        } catch (\Throwable $e) {
+            slate_log('Restaurant 0.5.1 source widen failed: ' . $e->getMessage(), 'error');
+        }
+        $this->ensureColumn('restaurant_orders', 'channel', "VARCHAR(40) NULL");
+        $this->ensureColumn('restaurant_orders', 'external_ref', "VARCHAR(80) NULL");
+        $this->ensureColumn('restaurant_orders', 'flag_reason', "VARCHAR(255) NULL");
     }
 
     private function hasColumn(string $table, string $column): bool {
@@ -304,14 +336,16 @@ class Restaurant extends Plugin {
                     AND TABLE_NAME IN ('restaurant_items','restaurant_orders',
                                        'restaurant_order_items','restaurant_payments',
                                        'restaurant_refunds','restaurant_combo_slots',
-                                       'restaurant_combo_choices')");
+                                       'restaurant_combo_choices','restaurant_channels',
+                                       'restaurant_channel_orders','restaurant_item_mappings')");
             $col = (int) Database::value(
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
                   WHERE TABLE_SCHEMA = DATABASE()
                     AND ((TABLE_NAME = 'restaurant_payments' AND COLUMN_NAME IN ('central_charge_id','tendered_cents'))
                       OR (TABLE_NAME = 'restaurant_customers' AND COLUMN_NAME IN ('member_ref','is_active'))
-                      OR (TABLE_NAME = 'restaurant_order_item_modifiers' AND COLUMN_NAME = 'kind'))");
-            return $tbl >= 7 && $col === 5;
+                      OR (TABLE_NAME = 'restaurant_order_item_modifiers' AND COLUMN_NAME = 'kind')
+                      OR (TABLE_NAME = 'restaurant_orders' AND COLUMN_NAME = 'channel'))");
+            return $tbl >= 10 && $col === 6;
         } catch (\Throwable $e) {
             return false;
         }

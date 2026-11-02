@@ -1,6 +1,6 @@
 # Restaurant — Standard Operating Procedure (SOP)
 
-**System:** Kohevo Restaurant plugin v0.5.0 (full-screen POS with split checks and a table map, combos, kitchen display, card + cash payments with refunds and receipts, reports and payments reconciliation, customer history with import/export, online ordering)
+**System:** Kohevo Restaurant plugin v0.5.1 (order channels and a menu feed, full-screen POS with split checks and a table map, combos, kitchen display, card + cash payments with refunds and receipts, reports and payments reconciliation, customer history with import/export, online ordering)
 **Audience:** owners, managers, cashiers/servers
 **Before you hand this to staff:** replace `https://your-site.example` below with your own site address.
 
@@ -176,3 +176,39 @@ Grant these per role under **Settings → Roles**. Cashiers typically get `resta
 ## 9. Online ordering settings
 
 Online ordering is built in (see section 0). Switch it on or off, and choose card online, pay at pickup and delivery, under **Restaurant settings → Online ordering**. Card orders arrive already paid and can be refunded from the order page like any other card payment.
+
+---
+
+## 10. Order channels (aggregators) and the menu feed
+
+**What a channel is.** An outside system that sends you orders: usually an aggregator such as Deliverect, which in turn receives orders from marketplaces like DoorDash or Uber Eats under the contract **you** hold with it. Kohevo does not connect to DoorDash or Uber Eats marketplaces directly; those are open only to approved partners.
+
+**Set one up (Restaurant → Channels, permission `restaurant.channels`):**
+1. **Add channel** with a name and an ID (e.g. `deliverect`).
+2. **Make the signing secret** and give it, with the **Order URL** (`https://your-site.example/order-channel/<id>`), to the channel. Then tick **Take orders from this channel**.
+3. Optionally set the **Status URL** where the channel wants accepted / preparing / ready / completed / cancelled updates.
+4. When the first orders arrive, **map every SKU** on the channel page to a menu item (and each modifier SKU to one of that item's options). An order with an unmapped SKU is **not accepted at all** (nothing is half-made), staff get a notification, and it waits under **Orders not accepted**; map the SKUs and press **Retry now**.
+
+"Connected" only appears once the channel has sent an order with a correct signature.
+
+**Running channel orders.** They arrive on **Online orders** with the channel's name on the card, and work like web orders: **Accept** sends them to the kitchen, then Preparing → Ready → Completed. Each step is sent back to the channel. If the channel's total differs from ours by more than a cent, the card shows a warning: check it before handing over the food.
+
+**The canonical order** (what the channel, or an adapter in front of it, sends): `POST /order-channel/<id>`, JSON, header `X-Channel-Signature: sha256=<hex HMAC-SHA256 of the body with the secret>`:
+
+```json
+{
+  "external_order_id": "AGG-1001",
+  "placed_at": "2026-11-02T18:30:00Z",
+  "type": "delivery",
+  "customer": {"name": "Sam", "phone": "555-0100", "email": "sam@example.com"},
+  "delivery_address": {"line1": "12 Main St", "city": "Springfield", "postal_code": "90000"},
+  "items": [{"external_sku": "BRISKET", "qty": 2, "modifiers": [{"external_sku": "SAUCE-HOT"}], "notes": "extra bark"}],
+  "totals": {"total_cents": 4070},
+  "callback_url": "https://channel.example/orders/AGG-1001"
+}
+```
+
+Answers: **200** `{"ok":true,"order_no":…}`; **401** wrong signature (nothing is recorded); **404** unknown or switched-off channel; **409** still processing; **422** `{"ok":false,"error":…,"unmapped":[…]}`. Sending the same `external_order_id` again returns the first answer and never makes a second order. Status updates go out as `{"external_order_id","order_no","status","updated_at"}`, signed the same way.
+
+**Menu feed.** On the Channels page, **Turn on the feed** to get a token. A channel reads the whole menu (categories, items with price, tax, photo and sold-out state, modifier groups, combos) from `GET /menu-feed` with the header `Authorization: Bearer <token>`. Making a new token stops the old one at once.
+
