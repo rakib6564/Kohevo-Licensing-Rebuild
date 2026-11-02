@@ -22,8 +22,16 @@
  *                "modifiers": [{"external_sku": "SIDE-MAC"}], "notes": ""}],
  *     "totals": {"total_cents": 4406},              what the channel charged, for the cross-check
  *     "callback_url": "https://…",                  optional; where status updates go
+ *     "ready_at": "2026-11-02T18:45:00Z",           optional; when the channel wants it ready
+ *     "paid": true,                                 optional; the channel collected payment: recorded as a
+ *                                                   'channel' payment of our total, so nothing is due here
+ *     "totals": {"tip_cents": 200}                  optional; a tip the channel passes on to the restaurant
  *     "notes": ""                                   optional
  *   }
+ *
+ * To cancel an order it sent, a channel repeats the external_order_id with
+ * "action": "cancel" (and an optional "reason"): the order is voided and
+ * marked cancelled unless it was already completed; repeating it is harmless.
  *
  * Answers: 200 {"ok":true,"order_no","order_id"} once created; 401 bad
  * signature; 404 unknown or disabled channel; 409 still being processed;
@@ -39,25 +47,44 @@
  * ready, completed, cancelled) the channel's adapter is told. The base
  * adapter POSTs {"external_order_id","order_no","status","updated_at"} to
  * the order's callback_url (else the channel's), signed the same way.
+ *
+ * ADAPTERS — a channel has a type (restaurant_channels.kind): empty for the
+ * canonical shape above, or the key of an adapter that reads another
+ * system's shape and signature and answers in its terms. 'deliverect' ships
+ * here (includes/channel-deliverect.php); more register on the
+ * restaurant_channel_adapters filter as [key => RestaurantChannelAdapter].
  */
 
 require_once __DIR__ . '/../RestaurantAPI.php';
 
-/** What a channel needs to provide: read its orders in, and hear about fulfilment. */
+/** What a channel needs to provide: check and read its orders, and hear about fulfilment. */
 interface RestaurantChannelAdapter {
+    /** Is this delivery really from the channel? $headers has lower-case names. Constant-time compare. */
+    public function verify(string $raw, array $headers, string $secret): bool;
+
     /** Turn the channel's order payload into the canonical shape above. */
     public function toCanonical(array $payload): array;
 
     /** The order's fulfilment changed; tell the channel. $order is getOrder(), $intake the channel-order row. */
     public function onFulfillmentChanged(array $order, array $intake, string $status): void;
+
+    /** We did not accept the order ($reason says why); tell the channel if it wants to know. */
+    public function onRejected(array $intake, string $reason): void;
 }
 
-/** Canonical in, signed canonical status callbacks out. Used for any slug without its own adapter. */
+/** Canonical in, signed canonical status callbacks out. Used for any channel without its own adapter. */
 class RestaurantChannelBaseAdapter implements RestaurantChannelAdapter {
+
+    public function verify(string $raw, array $headers, string $secret): bool {
+        return hash_equals(RestaurantChannels::sign($raw, $secret), trim((string)($headers['x-channel-signature'] ?? '')));
+    }
 
     public function toCanonical(array $payload): array {
         return $payload;
     }
+
+    /** The 422 answer already tells a canonical channel; nothing more to send. */
+    public function onRejected(array $intake, string $reason): void {}
 
     public function onFulfillmentChanged(array $order, array $intake, string $status): void {
         $channel = RestaurantChannels::channel((string)$intake['channel']);
@@ -76,6 +103,8 @@ class RestaurantChannelBaseAdapter implements RestaurantChannelAdapter {
         RestaurantChannels::logEvent((int)$intake['id'], $status, $code, $err);
     }
 }
+
+require_once __DIR__ . '/channel-deliverect.php';
 
 class RestaurantChannels {
 
@@ -108,6 +137,11 @@ class RestaurantChannels {
         $url = trim((string)($data['callback_url'] ?? ''));
         if ($url !== '' && !self::allowedUrl($url)) throw new \RuntimeException(__('restaurant_ch_err_url', 'The status URL must start with https://.'));
         $row = ['name' => mb_substr($name, 0, 120), 'is_enabled' => !empty($data['is_enabled']) ? 1 : 0, 'callback_url' => $url ?: null];
+        if (array_key_exists('kind', $data)) {
+            $kind = trim((string)$data['kind']);
+            if ($kind !== '' && !isset(self::adapters()[$kind])) throw new \RuntimeException(__('restaurant_ch_err_kind', 'Unknown channel type.'));
+            $row['kind'] = $kind !== '' ? $kind : null;
+        }
         if (self::channel($slug)) {
             Database::update('restaurant_channels', $row, 'tenant_id = ? AND slug = ?', [current_tenant_id(), $slug]);
         } else {
@@ -120,19 +154,52 @@ class RestaurantChannels {
     public static function rotateSecret(string $slug): string {
         if (!self::channel($slug)) throw new \RuntimeException(__('restaurant_ch_err_missing', 'Channel not found.'));
         $secret = 'chs_' . bin2hex(random_bytes(24));
-        $stored = (function_exists('slate_encrypt_secret') && slate_has_app_secret()) ? slate_encrypt_secret($secret) : null;
-        if ($stored === null) throw new \RuntimeException(__('restaurant_ch_err_encrypt', 'Secrets cannot be stored: the app secret is not configured.'));
-        Database::update('restaurant_channels', ['secret' => $stored], 'tenant_id = ? AND slug = ?', [current_tenant_id(), $slug]);
+        Database::update('restaurant_channels', ['secret' => self::seal($secret)], 'tenant_id = ? AND slug = ?', [current_tenant_id(), $slug]);
         AuditLog::record('restaurant.channel_secret_rotated', $slug);
         return $secret;
+    }
+
+    /**
+     * Store a secret the channel issued (an aggregator that signs with its
+     * own key, rather than one we make). Encrypted like rotateSecret().
+     */
+    public static function setSecret(string $slug, string $secret): void {
+        if (!self::channel($slug)) throw new \RuntimeException(__('restaurant_ch_err_missing', 'Channel not found.'));
+        $secret = trim($secret);
+        if (mb_strlen($secret) < 8 || mb_strlen($secret) > 500) throw new \RuntimeException(__('restaurant_ch_err_secret_len', 'The secret must be 8 to 500 characters.'));
+        Database::update('restaurant_channels', ['secret' => self::seal($secret)], 'tenant_id = ? AND slug = ?', [current_tenant_id(), $slug]);
+        AuditLog::record('restaurant.channel_secret_set', $slug);
     }
 
     /** The channel's signing secret in clear, '' when none is set. Never logged or shown again. */
     public static function secret(string $slug): string {
         $c = self::channel($slug);
-        $v = (string)($c['secret'] ?? '');
+        return self::unseal((string)($c['secret'] ?? ''));
+    }
+
+    /** Encrypt a value for storage; throws when the app secret is missing (never stores it in clear). */
+    public static function seal(string $value): string {
+        $stored = (function_exists('slate_encrypt_secret') && slate_has_app_secret()) ? slate_encrypt_secret($value) : null;
+        if ($stored === null) throw new \RuntimeException(__('restaurant_ch_err_encrypt', 'Secrets cannot be stored: the app secret is not configured.'));
+        return $stored;
+    }
+
+    public static function unseal(string $v): string {
         if ($v === '') return '';
         return str_starts_with($v, 'enc:v1:') ? (string)(slate_decrypt_secret($v) ?? '') : $v;
+    }
+
+    /** The adapter's settings for a channel (restaurant_channels.config, JSON). Secret values stay sealed. */
+    public static function config(string $slug): array {
+        return json_decode((string)(self::channel($slug)['config'] ?? ''), true) ?: [];
+    }
+
+    /** Merge keys into the channel's config; a null value removes the key. */
+    public static function saveConfig(string $slug, array $changes): void {
+        $cfg = self::config($slug);
+        foreach ($changes as $k => $v) { if ($v === null) unset($cfg[$k]); else $cfg[$k] = $v; }
+        Database::update('restaurant_channels', ['config' => $cfg ? json_encode($cfg, JSON_UNESCAPED_SLASHES) : null],
+            'tenant_id = ? AND slug = ?', [current_tenant_id(), $slug]);
     }
 
     public static function sign(string $body, string $secret): string {
@@ -147,11 +214,17 @@ class RestaurantChannels {
         return $p['scheme'] === 'http' && in_array($p['host'], ['127.0.0.1', 'localhost', '::1', '[::1]'], true);
     }
 
-    /** The adapter for a slug: one registered on restaurant_channel_adapters, else the base adapter. */
+    /** Adapters by type key: the built-in ones plus any registered on restaurant_channel_adapters. */
+    public static function adapters(): array {
+        $map = Hook::applyFilters('restaurant_channel_adapters', ['deliverect' => new RestaurantDeliverectAdapter()]);
+        return array_filter(is_array($map) ? $map : [], fn($a) => $a instanceof RestaurantChannelAdapter);
+    }
+
+    /** The adapter for a channel: its type's, else one registered under its slug, else the base adapter. */
     public static function adapter(string $slug): RestaurantChannelAdapter {
-        $map = Hook::applyFilters('restaurant_channel_adapters', []);
-        $a = is_array($map) ? ($map[$slug] ?? null) : null;
-        return $a instanceof RestaurantChannelAdapter ? $a : new RestaurantChannelBaseAdapter();
+        $map = self::adapters();
+        $kind = (string)(self::channel($slug)['kind'] ?? '');
+        return $map[$kind !== '' ? $kind : $slug] ?? new RestaurantChannelBaseAdapter();
     }
 
     // ── Intake ────────────────────────────────────────────
@@ -159,13 +232,16 @@ class RestaurantChannels {
     /**
      * Take one delivery from a channel. Verify first (an unverifiable
      * delivery changes nothing), then record it or return the recorded
-     * answer, then process. Returns [http status, body array].
+     * answer, then process. $headers are the request headers (any case), or
+     * just the X-Channel-Signature value. Returns [http status, body array].
      */
-    public static function intake(string $slug, string $raw, string $signature): array {
+    public static function intake(string $slug, string $raw, $headers): array {
         $c = self::channel($slug);
         if (!$c || empty($c['is_enabled'])) return [404, ['ok' => false, 'error' => 'Unknown channel.']];
+        $headers = is_array($headers) ? array_change_key_case(array_map('strval', $headers), CASE_LOWER) : ['x-channel-signature' => (string)$headers];
         $secret = self::secret($slug);
-        if ($secret === '' || !hash_equals(self::sign($raw, $secret), trim($signature))) {
+        $adapter = self::adapter($slug);
+        if ($secret === '' || !$adapter->verify($raw, $headers, $secret)) {
             return [401, ['ok' => false, 'error' => 'Signature does not match.']];
         }
         $tid = current_tenant_id();
@@ -173,9 +249,10 @@ class RestaurantChannels {
 
         $payload = json_decode($raw, true);
         if (!is_array($payload)) return [400, ['ok' => false, 'error' => 'Body is not JSON.']];
-        $payload = self::adapter($slug)->toCanonical($payload);
+        $payload = $adapter->toCanonical($payload);
         $ext = trim((string)($payload['external_order_id'] ?? ''));
         if ($ext === '' || mb_strlen($ext) > 120) return [400, ['ok' => false, 'error' => 'external_order_id is required (up to 120 characters).']];
+        if (($payload['action'] ?? '') === 'cancel') return self::cancel($slug, $ext, (string)($payload['reason'] ?? ''), $raw);
 
         $seen = Database::row("SELECT * FROM restaurant_channel_orders WHERE tenant_id = ? AND channel = ? AND external_order_id = ?", [$tid, $slug, $ext]);
         if ($seen) return self::recorded($seen);
@@ -184,6 +261,7 @@ class RestaurantChannels {
                 'tenant_id' => $tid, 'channel' => $slug, 'external_order_id' => $ext, 'intake_status' => 'received',
                 'callback_url' => self::cleanUrl($payload['callback_url'] ?? null),
                 'claimed_total_cents' => isset($payload['totals']['total_cents']) ? (int)$payload['totals']['total_cents'] : null,
+                'channel_paid' => isset($payload['paid']) ? (int)(bool)$payload['paid'] : null,
                 'raw_payload' => $raw,
             ]);
         } catch (\Throwable $e) {
@@ -263,6 +341,9 @@ class RestaurantChannels {
         $addr = $payload['delivery_address'] ?? null;
         if (is_array($addr)) $addr = implode(', ', array_filter(array_map('trim', array_map('strval', [$addr['line1'] ?? '', $addr['line2'] ?? '', $addr['city'] ?? '', $addr['state'] ?? '', $addr['postal_code'] ?? '']))));
         $notes = trim(($type === 'delivery' && $addr ? 'Deliver to: ' . $addr . ' · ' : '') . (string)($payload['notes'] ?? ''), ' ·');
+        $when = (string)($payload['ready_at'] ?? ($payload['placed_at'] ?? ''));
+        $ts = $when !== '' ? strtotime($when) : false;
+        $when = $ts ? date('M j, g:ia', $ts) : $when;
 
         // All or nothing, by cleanup rather than a database transaction: in a
         // signed-in request the core session check issues CREATE TABLE on
@@ -276,7 +357,7 @@ class RestaurantChannels {
             $orderId = RestaurantAPI::openOrder(['type' => $type, 'customer_id' => $custId, 'source' => 'channel', 'notes' => $notes, 'server_id' => null]);
             foreach ($lines as $l) RestaurantAPI::addLine($orderId, $l);
             Database::update('restaurant_orders', ['channel' => $slug, 'external_ref' => mb_substr((string)$row['external_order_id'], 0, 80),
-                'fulfillment_status' => 'new', 'requested_time' => mb_substr((string)($payload['placed_at'] ?? ''), 0, 40) ?: null],
+                'fulfillment_status' => 'new', 'requested_time' => mb_substr($when, 0, 40) ?: null],
                 'id = ? AND tenant_id = ?', [$orderId, $tid]);
         } catch (\Throwable $e) {
             if ($orderId) self::discardOrder($orderId);
@@ -292,6 +373,7 @@ class RestaurantChannels {
             Database::update('restaurant_orders', ['flag_reason' => mb_substr($flag, 0, 255)], 'id = ?', [$orderId]);
             AuditLog::record('restaurant.channel_total_mismatch', (string)$orderId, ['channel' => $slug, 'claimed' => (int)$claimed, 'ours' => (int)$order['total_cents']]);
         }
+        if (!empty($payload['paid'])) RestaurantAPI::recordChannelPayment($orderId, max(0, (int)($payload['totals']['tip_cents'] ?? 0)));
         $body = ['ok' => true, 'order_no' => (string)$order['order_no'], 'order_id' => $orderId];
         Database::update('restaurant_channel_orders', ['intake_status' => 'created', 'order_id' => $orderId, 'reject_reason' => null,
             'unmapped' => null, 'http_status' => 200, 'response' => json_encode($body)], 'id = ?', [$intakeId]);
@@ -318,13 +400,62 @@ class RestaurantChannels {
         AuditLog::record('restaurant.channel_order_rejected', (string)$row['external_order_id'], ['channel' => $row['channel'], 'reason' => $reason]);
         self::notify(sprintf(__('restaurant_ch_note_rejected', '%1$s order %2$s was not accepted'), self::channelName((string)$row['channel']), $row['external_order_id']),
             $reason, plugin_url('restaurant', 'admin/channels.php') . '?channel=' . rawurlencode((string)$row['channel']));
+        try {
+            self::adapter((string)$row['channel'])->onRejected(Database::row("SELECT * FROM restaurant_channel_orders WHERE id = ?", [(int)$row['id']]) ?: $row, $reason);
+        } catch (\Throwable $e) {
+            self::logEvent((int)$row['id'], 'failed', null, mb_substr($e->getMessage(), 0, 250));
+        }
         return [422, $body];
+    }
+
+    /**
+     * The channel cancelled its order. Void it and mark it cancelled (the
+     * adapter then confirms through the usual status callback), unless it is
+     * already completed. A cancel for an order not seen yet is recorded, so
+     * the order arriving late is refused. Repeats are harmless.
+     */
+    private static function cancel(string $slug, string $ext, string $reason, string $raw): array {
+        $tid = current_tenant_id();
+        $reason = mb_substr(trim($reason) !== '' ? trim($reason) : __('restaurant_ch_cancelled_by', 'Cancelled by the channel'), 0, 200);
+        $row = Database::row("SELECT * FROM restaurant_channel_orders WHERE tenant_id = ? AND channel = ? AND external_order_id = ?", [$tid, $slug, $ext]);
+        if (!$row) {
+            $body = ['ok' => false, 'error' => $reason];
+            try {
+                Database::insert('restaurant_channel_orders', ['tenant_id' => $tid, 'channel' => $slug, 'external_order_id' => $ext,
+                    'intake_status' => 'rejected', 'reject_reason' => $reason, 'http_status' => 422, 'response' => json_encode($body),
+                    'raw_payload' => $raw, 'cancelled_at' => slate_db_now()]);
+            } catch (\Throwable $e) { /* raced with the order itself: fall through to the normal path */
+                $row = Database::row("SELECT * FROM restaurant_channel_orders WHERE tenant_id = ? AND channel = ? AND external_order_id = ?", [$tid, $slug, $ext]);
+            }
+            if (!$row) {
+                AuditLog::record('restaurant.channel_order_cancelled', $ext, ['channel' => $slug, 'before_order' => true]);
+                return [200, ['ok' => true, 'cancelled' => true]];
+            }
+        }
+        if (!empty($row['cancelled_at'])) return [200, ['ok' => true, 'cancelled' => true, 'replay' => true]];
+        $order = $row['order_id'] ? Database::row("SELECT * FROM restaurant_orders WHERE id = ? AND tenant_id = ?", [(int)$row['order_id'], $tid]) : null;
+        if ($order && $order['fulfillment_status'] === 'completed') {
+            AuditLog::record('restaurant.channel_cancel_refused', (string)$order['id'], ['channel' => $slug, 'external' => $ext]);
+            return [409, ['ok' => false, 'error' => 'The order is already completed.']];
+        }
+        Database::update('restaurant_channel_orders', ['cancelled_at' => slate_db_now()], 'id = ?', [(int)$row['id']]);
+        if ($order) {
+            // The marketplace refunds its customer and will not pay this order out: its payment no longer counts.
+            Database::query("UPDATE restaurant_payments SET status = 'failed' WHERE tenant_id = ? AND order_id = ? AND method = 'channel' AND status = 'paid'", [$tid, (int)$order['id']]);
+            RestaurantAPI::voidOrder((int)$order['id'], $reason);
+            RestaurantAPI::syncOrderPayment((int)$order['id']);
+            RestaurantAPI::setFulfillment((int)$order['id'], 'cancelled');
+            self::notify(sprintf(__('restaurant_ch_note_cancelled', '%1$s cancelled order %2$s'), self::channelName($slug), $order['order_no']),
+                $reason, plugin_url('restaurant', 'admin/order.php') . '?id=' . (int)$order['id']);
+        }
+        AuditLog::record('restaurant.channel_order_cancelled', $ext, ['channel' => $slug, 'order' => $order ? (int)$order['id'] : null]);
+        return [200, ['ok' => true, 'cancelled' => true] + ($order ? ['order_no' => (string)$order['order_no']] : [])];
     }
 
     /** Try a rejected (or stuck) intake again, e.g. after mapping its SKUs. */
     public static function retry(int $intakeId): array {
         $row = Database::row("SELECT * FROM restaurant_channel_orders WHERE id = ? AND tenant_id = ?", [$intakeId, current_tenant_id()]);
-        if (!$row || $row['intake_status'] === 'created') return [409, ['ok' => false, 'error' => 'Nothing to retry.']];
+        if (!$row || $row['intake_status'] === 'created' || !empty($row['cancelled_at'])) return [409, ['ok' => false, 'error' => 'Nothing to retry.']];
         AuditLog::record('restaurant.channel_order_retry', (string)$row['external_order_id'], ['channel' => $row['channel']]);
         return self::process($intakeId);
     }
@@ -441,19 +572,29 @@ class RestaurantChannels {
 
     /** POST a JSON body signed with the secret; returns [http status|null, error|null]. Never throws. */
     public static function postSigned(string $url, string $body, string $secret): array {
-        if (!self::allowedUrl($url)) return [null, 'callback URL not allowed'];
-        if (!function_exists('curl_init')) return [null, 'cURL missing'];
+        [$code, , $err] = self::postJson($url, $body, ['X-Channel-Signature: ' . self::sign($body, $secret)]);
+        return [$code, $err];
+    }
+
+    /**
+     * POST a JSON body; returns [http status|null, decoded answer|null,
+     * error|null]. Only to allowed URLs, no redirects. Never throws.
+     */
+    public static function postJson(string $url, string $body, array $headers = []): array {
+        if (!self::allowedUrl($url)) return [null, null, 'URL not allowed'];
+        if (!function_exists('curl_init')) return [null, null, 'cURL missing'];
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 6, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'X-Channel-Signature: ' . self::sign($body, $secret)],
+            CURLOPT_HTTPHEADER => array_merge(['Content-Type: application/json', 'Accept: application/json'], $headers),
             CURLOPT_USERAGENT => 'Kohevo-Restaurant-Channel/1',
         ]);
         $out = curl_exec($ch);
         $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err = $out === false ? curl_error($ch) : null;
-        return [$code ?: null, $err ?: ($code >= 400 ? 'HTTP ' . $code : null)];
+        $json = is_string($out) ? json_decode($out, true) : null;
+        return [$code ?: null, is_array($json) ? $json : null, $err ?: ($code >= 400 ? 'HTTP ' . $code : null)];
     }
 
     public static function logEvent(int $intakeId, string $status, ?int $http, ?string $error): void {

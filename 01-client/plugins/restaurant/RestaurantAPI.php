@@ -1363,9 +1363,29 @@ class RestaurantAPI {
         ]);
     }
 
+    /**
+     * Record that a channel (an aggregator such as Deliverect) collected
+     * payment for its order: one 'channel' payment for our total, plus the
+     * restaurant's tip if the channel passes one on. The money sits with the
+     * marketplace, so it is never refunded from here; a channel cancel marks
+     * it failed. Marks the order paid like any other settled payment.
+     */
+    public static function recordChannelPayment(int $orderId, int $tipCents = 0): int {
+        $tid   = current_tenant_id();
+        $order = Database::row("SELECT total_cents FROM restaurant_orders WHERE id = ? AND tenant_id = ?", [$orderId, $tid]);
+        if (!$order) throw new \RuntimeException('Order not found.');
+        $pid = Database::insert('restaurant_payments', [
+            'tenant_id' => $tid, 'order_id' => $orderId, 'method' => 'channel',
+            'amount_cents' => (int)$order['total_cents'], 'tip_cents' => max(0, $tipCents), 'status' => 'paid',
+        ]);
+        AuditLog::record('restaurant.channel_payment', (string)$orderId, ['cents' => (int)$order['total_cents'], 'tip' => max(0, $tipCents)]);
+        self::syncOrderPayment($orderId);
+        return $pid;
+    }
+
     /** Amount of a payment that can still be refunded (amount + tip − refunded). */
     public static function refundableCents(array $payment): int {
-        if ($payment['status'] !== 'paid') return 0;
+        if ($payment['status'] !== 'paid' || ($payment['method'] ?? '') === 'channel') return 0;   // the channel refunds its own payments
         return max(0, (int)$payment['amount_cents'] + (int)$payment['tip_cents'] - (int)$payment['refunded_cents']);
     }
 
@@ -1387,6 +1407,9 @@ class RestaurantAPI {
         }
         if ($pay['status'] !== 'paid') {
             return ['ok' => false, 'error' => __('restaurant_refund_err_not_paid', 'Only a settled payment can be refunded.')];
+        }
+        if ($pay['method'] === 'channel') {
+            return ['ok' => false, 'error' => __('restaurant_refund_err_channel', 'This was paid through an ordering channel: refund it there.')];
         }
 
         $before    = (int)$pay['refunded_cents'];

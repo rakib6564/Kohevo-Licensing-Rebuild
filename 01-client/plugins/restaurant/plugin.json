@@ -1,8 +1,8 @@
 {
     "slug": "restaurant",
     "name": "Restaurant",
-    "version": "0.5.1",
-    "description": "Restaurant management: a menu with categories, modifier groups, combos (a priced bundle with slots to pick from) and 86-ing; floor sections and tables; a full-screen POS register with a table map, seats, split and merged checks, line and percentage discounts with reasons, comps and reopening; a kitchen display; card-present payments through Stripe Terminal plus cash with change, full and partial refunds and printable receipts; sales reports with period comparison and CSV export, and a payments list for reconciling Stripe payouts; customer records with spend and visit history, archiving, and CSV import and export; a public online-ordering storefront (menu, cart, checkout with Stripe payment or pay at pickup) that drops orders into the POS; and channel order intake for aggregators (signed canonical orders with SKU mapping and status updates) plus a menu feed. It does not connect to DoorDash or Uber Eats marketplaces directly.",
+    "version": "0.5.2",
+    "description": "Restaurant management: a menu with categories, modifier groups, combos (a priced bundle with slots to pick from) and 86-ing; floor sections and tables; a full-screen POS register with a table map, seats, split and merged checks, line and percentage discounts with reasons, comps and reopening; a kitchen display; card-present payments through Stripe Terminal plus cash with change, full and partial refunds and printable receipts; sales reports with period comparison and CSV export, and a payments list for reconciling Stripe payouts; customer records with spend and visit history, archiving, and CSV import and export; a public online-ordering storefront (menu, cart, checkout with Stripe payment or pay at pickup) that drops orders into the POS; and channel order intake for aggregators (signed canonical orders with SKU mapping and status updates, and a Deliverect adapter built to its published order format) plus a menu feed. It does not connect to DoorDash or Uber Eats marketplaces directly.",
     "author": "Kohevo",
     "requires_core": ">=1.0.0",
     "commercial_module": {

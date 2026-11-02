@@ -191,6 +191,14 @@ Online ordering is built in (see section 0). Switch it on or off, and choose car
 
 "Connected" only appears once the channel has sent an order with a correct signature.
 
+**Deliverect (marketplace orders).** You need your own Deliverect contract for this location, with your marketplaces connected in Deliverect. Deliverect sends orders only to POS integrations it has registered: until Kohevo's integration is certified, only Deliverect's staging (testing) environment works, so check with Kohevo support before relying on production.
+1. **Add channel** and choose the type **Deliverect**. In Deliverect, set the integration's order webhook to the **Order URL** on the channel page.
+2. **Paste the secret** Deliverect signs with (staging: your channelLink ID; production: the HMAC secret from Deliverect's integration settings) and tick **Take orders from this channel**.
+3. Under **Status updates to Deliverect**, pick staging or production and enter the API **client ID** and **client secret** Deliverect issued. Without them orders still arrive, but Deliverect never hears they were accepted or ready.
+4. Kohevo does not send the menu to Deliverect: build it there with a **PLU** on every product and modifier. Send a test order from Deliverect, map the PLUs it shows, then **Retry now**.
+
+Deliverect hears each step (accepted 20, preparing 50, ready 70, completed 90, cancelled 110). An order we cannot take (an unmapped PLU, a sold-out item) is reported as **Failed** with the reason, so the marketplace can tell the customer. When the marketplace cancels, the order is voided here and the kitchen tickets drop, unless it was already completed. Delivery and service fees, tips and marketplace discounts stay with the marketplace: our total is the food and tax, and the card warns if it differs from what the marketplace charged. Orders the marketplace has collected payment for are recorded as **paid via the channel** (with the marketplace's restaurant tip, if any) and say **Paid via Deliverect** on the card and the order page: take no payment for them. They count in reports like any paid order. Refunds for them happen in the marketplace, not here; a marketplace cancellation removes the payment from the numbers. Unpaid orders say **Due at pickup** and **Not paid: collect $…** in the notes; test orders from Deliverect say **TEST ORDER**. A modifier ordered twice (e.g. 2× sauce cup) is taken once and written on the line, and the card warns about the total.
+
 **Running channel orders.** They arrive on **Online orders** with the channel's name on the card, and work like web orders: **Accept** sends them to the kitchen, then Preparing → Ready → Completed. Each step is sent back to the channel. If the channel's total differs from ours by more than a cent, the card shows a warning: check it before handing over the food.
 
 **The canonical order** (what the channel, or an adapter in front of it, sends): `POST /order-channel/<id>`, JSON, header `X-Channel-Signature: sha256=<hex HMAC-SHA256 of the body with the secret>`:
@@ -207,6 +215,8 @@ Online ordering is built in (see section 0). Switch it on or off, and choose car
   "callback_url": "https://channel.example/orders/AGG-1001"
 }
 ```
+
+Optional: `"ready_at"` (when the channel wants it ready), `"paid"` (`true` when the channel collected payment: the card and the order page then say **Paid via …** instead of a balance due) and `"notes"`. To cancel, send the same `external_order_id` with `"action": "cancel"` (and an optional `"reason"`): the order is voided unless it is already completed (409).
 
 Answers: **200** `{"ok":true,"order_no":…}`; **401** wrong signature (nothing is recorded); **404** unknown or switched-off channel; **409** still processing; **422** `{"ok":false,"error":…,"unmapped":[…]}`. Sending the same `external_order_id` again returns the first answer and never makes a second order. Status updates go out as `{"external_order_id","order_no","status","updated_at"}`, signed the same way.
 

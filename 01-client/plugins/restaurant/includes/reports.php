@@ -143,7 +143,7 @@ class RestaurantReports {
     private static function methodMix(string $lo, string $hi): array {
         $tid = current_tenant_id();
         $out = [];
-        foreach (['cash', 'terminal', 'online', 'other'] as $m) $out[$m] = ['count' => 0, 'collected' => 0, 'refunds' => 0, 'net' => 0];
+        foreach (['cash', 'terminal', 'online', 'other', 'channel'] as $m) $out[$m] = ['count' => 0, 'collected' => 0, 'refunds' => 0, 'net' => 0];
         foreach (Database::rows(
             "SELECT " . self::METHOD_SQL . " AS m, COUNT(*) AS n, COALESCE(SUM(p.amount_cents + p.tip_cents),0) AS c
                FROM restaurant_payments p
@@ -255,7 +255,8 @@ class RestaurantReports {
             $head[] = [$label, $cur[$k], $prev[$k], self::change((int)$cur[$k], (int)$prev[$k]), $k, $type];
         }
         $METHODS = ['cash' => __('restaurant_rep_m_cash', 'Cash'), 'terminal' => __('restaurant_rep_m_terminal', 'Card reader'),
-                    'online' => __('restaurant_rep_m_online', 'Online card'), 'other' => __('restaurant_rep_m_other', 'Other')];
+                    'online' => __('restaurant_rep_m_online', 'Online card'), 'other' => __('restaurant_rep_m_other', 'Other'),
+                    'channel' => __('restaurant_rep_m_channel', 'Paid via channel')];
         $FULFIL  = ['new' => __('restaurant_online_new', 'New'), 'accepted' => __('restaurant_online_accepted', 'Accepted'),
                     'preparing' => __('restaurant_online_preparing', 'Preparing'), 'ready' => __('restaurant_online_ready', 'Ready'),
                     'completed' => __('restaurant_online_completed', 'Completed'), 'cancelled' => __('restaurant_online_cancelled', 'Cancelled'),
@@ -351,7 +352,7 @@ class RestaurantReports {
     // ── Payments reconciliation ────────────────────────────
 
     public const PAY_STATUSES = ['paid', 'partial', 'refunded', 'pending', 'failed'];
-    public const PAY_METHODS  = ['cash', 'terminal', 'online', 'other'];
+    public const PAY_METHODS  = ['cash', 'terminal', 'online', 'other', 'channel'];
 
     /**
      * Payments for the reconciliation list. $f: from, to (Y-m-d, by the
@@ -374,7 +375,7 @@ class RestaurantReports {
             case 'refunded': case 'pending': case 'failed':
                 $where[] = 'p.status = ?'; $args[] = $f['status']; break;
         }
-        if (in_array($f['source'] ?? '', ['pos', 'online'], true)) { $where[] = 'o.source = ?'; $args[] = $f['source']; }
+        if (in_array($f['source'] ?? '', ['pos', 'online', 'channel'], true)) { $where[] = 'o.source = ?'; $args[] = $f['source']; }
         $q = trim((string)($f['q'] ?? ''));
         if ($q !== '') {
             $where[] = '(o.order_no LIKE ? OR p.stripe_pi_id = ? OR p.stripe_charge_id = ?)';
