@@ -139,7 +139,8 @@ class StripeTerminalAPI {
         $id = trim($readerId);
         if ($id === '') return ['ok' => false, 'error' => __('sp_err_missing_reader_id', 'Missing reader id.')];
         try {
-            StripePaymentAPI::httpRequest('DELETE', '/v1/terminal/readers/' . urlencode($id), []);
+            $resp = StripePaymentAPI::httpRequest('DELETE', '/v1/terminal/readers/' . urlencode($id), []);
+            if (empty($resp['deleted'])) return ['ok' => false, 'error' => 'Stripe did not delete the reader.'];
             return ['ok' => true];
         } catch (\Throwable $e) {
             return ['ok' => false, 'error' => $e->getMessage()];
