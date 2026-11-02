@@ -1,8 +1,8 @@
 {
     "slug": "restaurant",
     "name": "Restaurant",
-    "version": "0.2.0",
-    "description": "Restaurant management suite — menu with categories, modifier groups and combos, 86-ing and dayparts; a browser POS register with table/floor management, split/merge checks, discounts and tips; card-present payments via Stripe Terminal plus cash; standalone customer records; and a public online-ordering storefront (menu, cart, checkout with hosted Stripe payment or pay-at-pickup) that drops orders into the POS. Part of a SpotOn-style suite (KDS, reservations, loyalty, labor and reporting to follow).",
+    "version": "0.3.0",
+    "description": "Restaurant management: a menu with categories, modifier groups and 86-ing; floor sections and tables; a browser POS register with open checks, send-to-kitchen, order discounts and tips; card-present payments through Stripe Terminal plus cash, with full and partial refunds and printable receipts; standalone customer records; and a public online-ordering storefront (menu, cart, checkout with Stripe payment or pay at pickup) that drops orders into the POS.",
     "author": "Kohevo",
     "requires_core": ">=1.0.0",
     "commercial_module": {
@@ -16,9 +16,9 @@
         {"key": "restaurant.pos",                  "label": "Operate the POS / take orders"},
         {"key": "restaurant.manage_menu",          "label": "Create / edit menu, categories, modifiers"},
         {"key": "restaurant.manage_floor",         "label": "Manage sections and tables"},
-        {"key": "restaurant.manage_orders",        "label": "Void / comp / reopen checks and refunds"},
+        {"key": "restaurant.manage_orders",        "label": "Void checks and refund payments"},
         {"key": "restaurant.manage_customers",     "label": "Manage customer records"},
         {"key": "restaurant.manage_settings",      "label": "Configure tax, service charge, tips and receipts"},
-        {"key": "restaurant.reports",              "label": "View reports"}
+        {"key": "restaurant.reports",              "label": "View reports (reserved: no reports screen yet)"}
     ]
 }

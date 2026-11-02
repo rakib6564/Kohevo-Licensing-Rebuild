@@ -1,4 +1,4 @@
--- Restaurant plugin — install schema (Phase 1, as of 0.1.0).
+-- Restaurant plugin — install schema (as of 0.3.0).
 -- Fresh installs get every table here. Existing installs are brought up to
 -- date by version-gated migrations in Restaurant.php (mirrors Booking/Shop).
 -- All money is stored as integer cents. Every table is tenant-scoped.
@@ -147,7 +147,11 @@ CREATE TABLE IF NOT EXISTS `restaurant_orders` (
     `tip_cents`           INT UNSIGNED NOT NULL DEFAULT 0,
     `total_cents`         INT UNSIGNED NOT NULL DEFAULT 0,
     `paid_cents`          INT UNSIGNED NOT NULL DEFAULT 0,
+    `refunded_cents`      INT UNSIGNED NOT NULL DEFAULT 0,
     `source`              ENUM('pos','online') NOT NULL DEFAULT 'pos',
+    `public_token`        VARCHAR(40) NULL,
+    `fulfillment_status`  ENUM('new','accepted','preparing','ready','completed','cancelled') NOT NULL DEFAULT 'new',
+    `requested_time`      VARCHAR(40) NULL,
     `notes`               VARCHAR(255) NULL,
     `opened_at`           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `closed_at`           DATETIME NULL,
@@ -157,7 +161,8 @@ CREATE TABLE IF NOT EXISTS `restaurant_orders` (
     UNIQUE KEY `tenant_orderno` (`tenant_id`, `order_no`),
     KEY `tenant_status` (`tenant_id`, `status`),
     KEY `tenant_table` (`tenant_id`, `table_id`),
-    KEY `tenant_opened` (`tenant_id`, `opened_at`)
+    KEY `tenant_opened` (`tenant_id`, `opened_at`),
+    KEY `public_token` (`public_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `restaurant_order_items` (
@@ -201,13 +206,38 @@ CREATE TABLE IF NOT EXISTS `restaurant_payments` (
     `amount_cents`    INT UNSIGNED NOT NULL DEFAULT 0,
     `tip_cents`       INT UNSIGNED NOT NULL DEFAULT 0,
     `status`          ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'paid',
+    `refunded_cents`  INT UNSIGNED NOT NULL DEFAULT 0,
     `stripe_pi_id`    VARCHAR(120) NULL,
     `stripe_charge_id` VARCHAR(120) NULL,
+    `stripe_session_id` VARCHAR(120) NULL,
+    `central_charge_id` INT UNSIGNED NULL,
     `reader_id`       INT UNSIGNED NULL,
     `created_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     KEY `tenant_order` (`tenant_id`, `order_id`),
     KEY `pi` (`stripe_pi_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- One row per refund against a payment. A payment's refunded_cents is the sum
+-- of its succeeded rows here; status 'pending' is a refund sent to Stripe whose
+-- answer has not come back yet, 'failed' is one Stripe (or the operator) rejected.
+CREATE TABLE IF NOT EXISTS `restaurant_refunds` (
+    `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`        INT UNSIGNED NOT NULL DEFAULT 1,
+    `payment_id`       INT UNSIGNED NOT NULL,
+    `order_id`         INT UNSIGNED NOT NULL,
+    `method`           ENUM('cash','terminal','other') NOT NULL DEFAULT 'cash',
+    `amount_cents`     INT UNSIGNED NOT NULL DEFAULT 0,
+    `status`           ENUM('pending','succeeded','failed') NOT NULL DEFAULT 'pending',
+    `stripe_refund_id` VARCHAR(120) NULL,
+    `reason`           VARCHAR(255) NULL,
+    `error`            VARCHAR(255) NULL,
+    `user_id`          INT UNSIGNED NULL,
+    `created_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `tenant_payment` (`tenant_id`, `payment_id`),
+    KEY `tenant_order` (`tenant_id`, `order_id`),
+    KEY `tenant_created` (`tenant_id`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `restaurant_readers` (

@@ -2,14 +2,14 @@
 /**
  * Restaurant plugin — bootstrap.
  *
- * Phase 1: menu (categories, items, modifier groups), floor (sections,
- * tables), standalone customers, a browser POS register, and card-present
- * (Stripe Terminal) + cash tender. Registers admin nav, a dashboard widget,
+ * Menu (categories, items, modifier groups), floor (sections, tables),
+ * standalone customers, a browser POS register, card-present (Stripe
+ * Terminal) + cash tender with refunds and printable receipts, and the
+ * public /order storefront. Registers admin nav, a dashboard widget,
  * versioned schema migrations, and the Stripe webhook bridge so Terminal
  * PaymentIntent events settle local payments.
  *
- * Later phases (KDS, online ordering, reservations, loyalty, labor,
- * reporting) hang additive migrations + nav items off this same class.
+ * Later features hang additive migrations + nav items off this same class.
  */
 
 require_once __DIR__ . '/RestaurantAPI.php';
@@ -217,6 +217,12 @@ class Restaurant extends Plugin {
         $this->ensureColumn('restaurant_orders', 'requested_time', "VARCHAR(40) NULL");
         $this->ensureColumn('restaurant_payments', 'stripe_session_id', "VARCHAR(120) NULL");
         $this->ensureIndex('restaurant_orders', 'public_token', '(`public_token`)');
+
+        // 0.3.0 — refunds. The restaurant_refunds table comes from install.sql
+        // through ensureSchema() above; these are the columns it leans on.
+        $this->ensureColumn('restaurant_payments', 'refunded_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_payments', 'central_charge_id', "INT UNSIGNED NULL");
+        $this->ensureColumn('restaurant_orders', 'refunded_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
     }
 
     private function schemaIsCurrent(): bool {
@@ -225,8 +231,13 @@ class Restaurant extends Plugin {
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES
                   WHERE TABLE_SCHEMA = DATABASE()
                     AND TABLE_NAME IN ('restaurant_items','restaurant_orders',
-                                       'restaurant_order_items','restaurant_payments')");
-            return $tbl >= 4;
+                                       'restaurant_order_items','restaurant_payments',
+                                       'restaurant_refunds')");
+            $col = (int) Database::value(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurant_payments'
+                    AND COLUMN_NAME = 'central_charge_id'");
+            return $tbl >= 5 && $col === 1;
         } catch (\Throwable $e) {
             return false;
         }

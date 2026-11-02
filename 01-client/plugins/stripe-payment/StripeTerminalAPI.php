@@ -150,7 +150,8 @@ class StripeTerminalAPI {
 
     /**
      * Create a card_present PaymentIntent with manual capture (the Terminal
-     * server-driven default). $opts: currency, metadata[], receipt_email.
+     * server-driven default). $opts: currency, metadata[], receipt_email,
+     * idempotency_key (a retried call returns the same PaymentIntent).
      * Returns the raw PaymentIntent (id, status, …).
      */
     public static function createCardPresentIntent(int $amountCents, array $opts = []): array {
@@ -166,20 +167,24 @@ class StripeTerminalAPI {
         if (!empty($opts['metadata']) && is_array($opts['metadata'])) {
             foreach ($opts['metadata'] as $k => $v) $params["metadata[$k]"] = (string)$v;
         }
-        $resp = StripePaymentAPI::httpRequest('POST', '/v1/payment_intents', $params);
+        $resp = StripePaymentAPI::httpRequest('POST', '/v1/payment_intents', $params, (string)($opts['idempotency_key'] ?? ''));
         if (empty($resp['id'])) throw new \RuntimeException('Stripe PaymentIntent response missing id.');
         return $resp;
     }
 
-    /** Push a PaymentIntent to a reader for card collection (server-driven). */
-    public static function processOnReader(string $readerId, string $piId): array {
+    /**
+     * Push a PaymentIntent to a reader for card collection (server-driven).
+     * $idempotencyKey makes a retried push replay instead of re-prompting the reader.
+     */
+    public static function processOnReader(string $readerId, string $piId, string $idempotencyKey = ''): array {
         $rid = trim($readerId); $pi = trim($piId);
         if ($rid === '' || $pi === '') return ['ok' => false, 'error' => __('sp_err_missing_reader_or_paymentintent', 'Missing reader or PaymentIntent.')];
         try {
             $resp = StripePaymentAPI::httpRequest(
                 'POST',
                 '/v1/terminal/readers/' . urlencode($rid) . '/process_payment_intent',
-                ['payment_intent' => $pi]
+                ['payment_intent' => $pi],
+                $idempotencyKey
             );
             return ['ok' => true, 'reader' => $resp];
         } catch (\Throwable $e) {
