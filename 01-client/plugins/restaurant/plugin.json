@@ -14,6 +14,7 @@
     "permissions": [
         {"key": "restaurant.view",                 "label": "View orders, menu and the floor"},
         {"key": "restaurant.pos",                  "label": "Operate the POS / take orders"},
+        {"key": "restaurant.kitchen",              "label": "Use the kitchen display (bump and serve)"},
         {"key": "restaurant.manage_menu",          "label": "Create / edit menu, categories, modifiers"},
         {"key": "restaurant.manage_floor",         "label": "Manage sections and tables"},
         {"key": "restaurant.manage_orders",        "label": "Void checks and refund payments"},

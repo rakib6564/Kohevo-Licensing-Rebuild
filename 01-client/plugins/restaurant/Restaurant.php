@@ -81,6 +81,9 @@ class Restaurant extends Plugin {
         $items[] = ['slug' => 'restaurant-pos',        'label' => __('restaurant_pos', 'POS register'),
                     'href' => $this->url('admin/pos.php'),
                     'icon' => 'clipboard', 'perm' => 'restaurant.pos', 'order' => 700, 'group' => 'restaurant'];
+        $items[] = ['slug' => 'restaurant-kds',        'label' => __('restaurant_kds_title', 'Kitchen display'),
+                    'href' => $this->url('admin/kds.php'),
+                    'icon' => 'clock', 'perm' => 'restaurant.kitchen', 'order' => 700, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-orders',     'label' => __('restaurant_orders', 'Orders'),
                     'href' => $this->url('admin/index.php'),
                     'icon' => 'list', 'perm' => 'restaurant.view', 'order' => 701, 'group' => 'restaurant'];
