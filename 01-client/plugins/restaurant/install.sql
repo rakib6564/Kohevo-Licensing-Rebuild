@@ -1,4 +1,4 @@
--- Restaurant plugin — install schema (as of 0.5.0).
+-- Restaurant plugin — install schema (as of 0.5.1).
 -- Fresh installs get every table here. Existing installs are brought up to
 -- date by version-gated migrations in Restaurant.php (mirrors Booking/Shop).
 -- All money is stored as integer cents. Every table is tenant-scoped.
@@ -191,7 +191,10 @@ CREATE TABLE IF NOT EXISTS `restaurant_orders` (
     `total_cents`         INT UNSIGNED NOT NULL DEFAULT 0,
     `paid_cents`          INT UNSIGNED NOT NULL DEFAULT 0,
     `refunded_cents`      INT UNSIGNED NOT NULL DEFAULT 0,
-    `source`              ENUM('pos','online') NOT NULL DEFAULT 'pos',
+    `source`              ENUM('pos','online','channel') NOT NULL DEFAULT 'pos',
+    `channel`             VARCHAR(40) NULL,
+    `external_ref`        VARCHAR(80) NULL,
+    `flag_reason`         VARCHAR(255) NULL,
     `public_token`        VARCHAR(40) NULL,
     `fulfillment_status`  ENUM('new','accepted','preparing','ready','completed','cancelled') NOT NULL DEFAULT 'new',
     `requested_time`      VARCHAR(40) NULL,
@@ -295,6 +298,77 @@ CREATE TABLE IF NOT EXISTS `restaurant_refunds` (
     KEY `tenant_payment` (`tenant_id`, `payment_id`),
     KEY `tenant_order` (`tenant_id`, `order_id`),
     KEY `tenant_created` (`tenant_id`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Channels (aggregators and other order sources) ───────────────────────
+-- A channel is an outside system that sends orders in our canonical JSON to
+-- /order-channel/{slug}, signed with the channel's secret. Every order it
+-- sends gets one restaurant_channel_orders row, unique per external id: that
+-- row is the idempotency record, so a replayed delivery returns the first
+-- outcome. Items arrive as the channel's SKUs and resolve through
+-- restaurant_item_mappings; one unmapped SKU rejects the whole order.
+CREATE TABLE IF NOT EXISTS `restaurant_channels` (
+    `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`        INT UNSIGNED NOT NULL DEFAULT 1,
+    `slug`             VARCHAR(40) NOT NULL,
+    `name`             VARCHAR(120) NOT NULL,
+    `is_enabled`       TINYINT(1) NOT NULL DEFAULT 0,
+    `secret`           TEXT NULL,
+    `callback_url`     VARCHAR(500) NULL,
+    `last_verified_at` DATETIME NULL,
+    `created_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `tenant_slug` (`tenant_id`, `slug`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `restaurant_item_mappings` (
+    `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`    INT UNSIGNED NOT NULL DEFAULT 1,
+    `channel`      VARCHAR(40) NOT NULL,
+    `external_sku` VARCHAR(120) NOT NULL,
+    `item_id`      INT UNSIGNED NULL,
+    `modifier_map` TEXT NULL,
+    `is_active`    TINYINT(1) NOT NULL DEFAULT 1,
+    `created_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `tenant_channel_sku` (`tenant_id`, `channel`, `external_sku`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `restaurant_channel_orders` (
+    `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`           INT UNSIGNED NOT NULL DEFAULT 1,
+    `channel`             VARCHAR(40) NOT NULL,
+    `external_order_id`   VARCHAR(120) NOT NULL,
+    `order_id`            INT UNSIGNED NULL,
+    `intake_status`       ENUM('received','created','rejected') NOT NULL DEFAULT 'received',
+    `reject_reason`       VARCHAR(500) NULL,
+    `unmapped`            TEXT NULL,
+    `http_status`         SMALLINT UNSIGNED NULL,
+    `response`            TEXT NULL,
+    `callback_url`        VARCHAR(500) NULL,
+    `claimed_total_cents` INT NULL,
+    `raw_payload`         MEDIUMTEXT NULL,
+    `created_at`          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `tenant_channel_ext` (`tenant_id`, `channel`, `external_order_id`),
+    KEY `tenant_order` (`tenant_id`, `order_id`),
+    KEY `tenant_status` (`tenant_id`, `intake_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Each status callback we sent back to a channel, for support and retries.
+CREATE TABLE IF NOT EXISTS `restaurant_channel_events` (
+    `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`        INT UNSIGNED NOT NULL DEFAULT 1,
+    `channel_order_id` INT UNSIGNED NOT NULL,
+    `status`           VARCHAR(20) NOT NULL,
+    `http_status`      SMALLINT UNSIGNED NULL,
+    `error`            VARCHAR(255) NULL,
+    `created_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `tenant_co` (`tenant_id`, `channel_order_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `restaurant_readers` (

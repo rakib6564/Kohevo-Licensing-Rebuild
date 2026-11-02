@@ -156,7 +156,7 @@ try {
         assert_eq([['RR Brisket', 3, 5400], ['RR Slaw', 2, 855], ['RR Tea', 2, 600], ['RR Ribs', 1, 2400]], $pairs($s['items']['by_qty']));
         assert_eq([['RR Brisket', 3, 5400], ['RR Ribs', 1, 2400], ['RR Slaw', 2, 855], ['RR Tea', 2, 600]], $pairs($s['items']['by_revenue']));
         assert_eq([['RR Mains', 4, 7800], ['RR Sides', 2, 855], ['No category', 2, 600]], $pairs($s['categories']));
-        assert_eq(['pos' => ['orders' => 4, 'sales' => 7926], 'online' => ['orders' => 1, 'sales' => 2520]], $s['sources']);
+        assert_eq(['pos' => ['orders' => 4, 'sales' => 7926], 'online' => ['orders' => 1, 'sales' => 2520], 'channel' => ['orders' => 0, 'sales' => 0]], $s['sources']);
         assert_eq(1, $s['fulfilment']['completed']);
         assert_eq(1, $s['fulfilment']['new'], 'the unpaid online order');
     });

@@ -47,9 +47,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($id > 0) {
                     Database::update('restaurant_menu_categories', $row, 'id = ? AND tenant_id = ?', [$id, $tid]);
                     AuditLog::record('restaurant.category_updated', (string)$id);
+                    RestaurantAPI::menuChanged('category', $id);
                 } else {
                     $id = Database::insert('restaurant_menu_categories', $row);
                     AuditLog::record('restaurant.category_created', (string)$id);
+                    RestaurantAPI::menuChanged('category', $id);
                 }
                 header('Location: ' . plugin_url('restaurant', 'admin/categories.php'));
                 exit;
@@ -60,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 Database::query("UPDATE restaurant_items SET category_id = NULL WHERE category_id = ? AND tenant_id = ?", [$id, $tid]);
                 Database::delete('restaurant_menu_categories', 'id = ? AND tenant_id = ?', [$id, $tid]);
                 AuditLog::record('restaurant.category_deleted', (string)$id);
+                RestaurantAPI::menuChanged('category', $id);
                 header('Location: ' . plugin_url('restaurant', 'admin/categories.php'));
                 exit;
             }

@@ -42,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_ajax'])) {
             $cents = max(0, (int) round((float) str_replace(',', '.', (string)($_POST['value'] ?? '0')) * 100));
             Database::update('restaurant_items', ['price_cents' => $cents], 'id = ? AND tenant_id = ?', [$ids[0], $tid]);
             AuditLog::record('restaurant.item_price', (string)$ids[0], ['cents' => $cents]);
+            RestaurantAPI::menuChanged('item', $ids[0]);
             $out(['ok' => true, 'price' => RestaurantAPI::money($cents), 'value' => number_format($cents / 100, 2, '.', '')]);
         case 'flag':
             $field = ($_POST['field'] ?? '') === 'is_active' ? 'is_active' : 'is_86';
@@ -49,11 +50,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_ajax'])) {
                 Database::update('restaurant_items', [$field => !empty($_POST['on']) ? 1 : 0], 'id = ? AND tenant_id = ?', [$id, $tid]);
             }
             AuditLog::record('restaurant.item_' . ($field === 'is_86' ? '86' : 'visible'), implode(',', $ids), ['on' => !empty($_POST['on'])]);
+            RestaurantAPI::menuChanged('item', $ids);
             $out(['ok' => true]);
         case 'reorder':
             foreach ($ids as $i => $id) {
                 Database::update('restaurant_items', ['sort_order' => ($i + 1) * 10], 'id = ? AND tenant_id = ?', [$id, $tid]);
             }
+            RestaurantAPI::menuChanged('item_order', $ids);
             $out(['ok' => true]);
         case 'move':
             $cat = (int)($_POST['category_id'] ?? 0);
@@ -63,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_ajax'])) {
             foreach ($ids as $id) {
                 Database::update('restaurant_items', ['category_id' => $cat ?: null], 'id = ? AND tenant_id = ?', [$id, $tid]);
             }
+            RestaurantAPI::menuChanged('item', $ids);
             $out(['ok' => true]);
         case 'delete':
             foreach ($ids as $id) RestaurantAPI::deleteItem($id);
@@ -117,6 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                 }
                 AuditLog::record('restaurant.item_saved', (string)$id);
+                RestaurantAPI::menuChanged('item', $id);
                 header('Location: ' . plugin_url('restaurant', 'admin/items.php'));
                 exit;
             }
@@ -133,6 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $cur = (int) Database::value("SELECT is_86 FROM restaurant_items WHERE id = ? AND tenant_id = ?", [$id, $tid]);
                 Database::update('restaurant_items', ['is_86' => $cur ? 0 : 1], 'id = ? AND tenant_id = ?', [$id, $tid]);
                 AuditLog::record('restaurant.item_86', (string)$id, ['is_86' => $cur ? 0 : 1]);
+                RestaurantAPI::menuChanged('item', $id);
                 header('Location: ' . plugin_url('restaurant', 'admin/items.php'));
                 exit;
             }

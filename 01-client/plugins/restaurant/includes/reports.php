@@ -195,9 +195,9 @@ class RestaurantReports {
             'qty' => (int)$r['qty'], 'revenue' => (int)$r['revenue']], $rows);
     }
 
-    /** Sales by source: POS vs online, as orders and order totals less comps. */
+    /** Sales by source: POS, online storefront, outside channels; as orders and order totals less comps. */
     private static function sources(string $sale, array $args): array {
-        $out = ['pos' => ['orders' => 0, 'sales' => 0], 'online' => ['orders' => 0, 'sales' => 0]];
+        $out = ['pos' => ['orders' => 0, 'sales' => 0], 'online' => ['orders' => 0, 'sales' => 0], 'channel' => ['orders' => 0, 'sales' => 0]];
         foreach (Database::rows(
             "SELECT o.source, COUNT(*) AS n, COALESCE(SUM(CAST(o.total_cents AS SIGNED) - CAST(o.comp_cents AS SIGNED)),0) AS s
                FROM restaurant_orders o WHERE {$sale} GROUP BY o.source", $args) as $r) {
@@ -260,7 +260,8 @@ class RestaurantReports {
                     'preparing' => __('restaurant_online_preparing', 'Preparing'), 'ready' => __('restaurant_online_ready', 'Ready'),
                     'completed' => __('restaurant_online_completed', 'Completed'), 'cancelled' => __('restaurant_online_cancelled', 'Cancelled'),
                     'voided' => __('restaurant_pos_st_voided', 'Voided')];
-        $SOURCES = ['pos' => __('restaurant_orders_src_pos', 'POS'), 'online' => __('restaurant_pos_online', 'Online')];
+        $SOURCES = ['pos' => __('restaurant_orders_src_pos', 'POS'), 'online' => __('restaurant_pos_online', 'Online'),
+                    'channel' => __('restaurant_rep_src_channel', 'Channels')];
         $itemCols = [[__('restaurant_rep_item', 'Item'), $TEXT], [__('restaurant_rep_qty', 'Quantity'), $INT], [__('restaurant_rep_revenue', 'Revenue'), $MONEY]];
 
         return [
