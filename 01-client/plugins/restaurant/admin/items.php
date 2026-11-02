@@ -65,11 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_ajax'])) {
             }
             $out(['ok' => true]);
         case 'delete':
-            foreach ($ids as $id) {
-                Database::delete('restaurant_item_modifier_groups', 'item_id = ? AND tenant_id = ?', [$id, $tid]);
-                Database::delete('restaurant_items', 'id = ? AND tenant_id = ?', [$id, $tid]);
-                AuditLog::record('restaurant.item_deleted', (string)$id);
-            }
+            foreach ($ids as $id) RestaurantAPI::deleteItem($id);
             $out(['ok' => true]);
     }
     $out(['ok' => false, 'error' => __('restaurant_err_action', 'Unknown action.')]);
@@ -127,9 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'delete') {
             $id = (int)($_POST['id'] ?? 0);
             if ($id > 0) {
-                Database::delete('restaurant_item_modifier_groups', 'item_id = ? AND tenant_id = ?', [$id, $tid]);
-                Database::delete('restaurant_items', 'id = ? AND tenant_id = ?', [$id, $tid]);
-                AuditLog::record('restaurant.item_deleted', (string)$id);
+                RestaurantAPI::deleteItem($id);
                 header('Location: ' . plugin_url('restaurant', 'admin/items.php'));
                 exit;
             }
@@ -232,19 +226,74 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 </div>
             </div>
             <div class="field-row field-row-2">
-                <div class="field">
-                    <label class="field-label" for="photo_path">Photo URL / path</label>
-                    <input type="text" id="photo_path" name="photo_path" maxlength="255" value="<?= e((string)($it['photo_path'] ?? '')) ?>" placeholder="/uploads/…">
-                </div>
+                <label class="field-check ri-86">
+                    <input type="checkbox" name="is_86" value="1" <?= !empty($it['is_86']) ? 'checked' : '' ?>>
+                    <span><?= e(__('restaurant_item_86_label', '86: sold out for now (greyed out in the POS and online)')) ?></span>
+                </label>
                 <div class="field" style="margin-bottom:0;">
-                    <label class="field-label" for="sort_order">Sort order</label>
+                    <label class="field-label" for="sort_order"><?= e(__('restaurant_item_sort', 'Sort order')) ?></label>
                     <input type="number" id="sort_order" name="sort_order" step="1" value="<?= (int)$it['sort_order'] ?>">
                 </div>
             </div>
-            <label class="field-check" style="display:flex;align-items:center;gap:8px;margin-top:6px;">
-                <input type="checkbox" name="is_86" value="1" <?= !empty($it['is_86']) ? 'checked' : '' ?>>
-                <span>86 this item — temporarily unavailable (hidden from the POS)</span>
-            </label>
+        <?php slate_edit_card_close(); ?>
+
+        <?php
+        // Photo: the shared media-library picker when that plugin is on, else a path or URL.
+        $mediaOn  = class_exists('MediaLibrary') && PluginLoader::isActive('media-library');
+        $photoVal = trim((string)($it['photo_path'] ?? ''));
+        $photoUrl = $photoVal === '' ? '' : (preg_match('#^https?://#', $photoVal) ? $photoVal : rtrim(SLATE_URL, '/') . '/' . ltrim($photoVal, '/'));
+        slate_edit_card_open(['icon' => 'box', 'eyebrow' => __('restaurant_item_photo_eyebrow', 'Photo'), 'title' => __('restaurant_item_photo_title', 'Item photo')]); ?>
+            <?php if ($mediaOn): ?>
+                <link rel="stylesheet" href="<?= e(plugin_url('media-library', 'assets/css/picker.css')) ?>">
+                <script src="<?= e(plugin_url('media-library', 'assets/js/picker.js')) ?>"></script>
+            <?php endif; ?>
+            <div class="ri-photo">
+                <button type="button" class="ri-photo-prev<?= $photoUrl ? ' has-img' : '' ?>" id="riPhotoPrev"
+                        <?= $mediaOn ? 'data-mlp-target="photo_path" data-mlp-mode="single"' : '' ?>
+                        style="<?= $photoUrl ? "background-image:url('" . e(str_replace("'", '%27', $photoUrl)) . "')" : '' ?>"
+                        aria-label="<?= e(__('restaurant_item_photo_pick', 'Choose from library')) ?>">
+                    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+                </button>
+                <div class="ri-photo-ctl">
+                    <div class="ri-photo-btns">
+                        <?php if ($mediaOn): ?>
+                            <button type="button" class="btn btn-sm btn-primary" data-mlp-target="photo_path" data-mlp-mode="single"><?= e(__('restaurant_item_photo_pick', 'Choose from library')) ?></button>
+                        <?php endif; ?>
+                        <button type="button" class="btn btn-sm btn-ghost" id="riPhotoClear"<?= $photoVal === '' ? ' hidden' : '' ?>><?= e(__('restaurant_item_photo_remove', 'Remove photo')) ?></button>
+                    </div>
+                    <label class="field-label" for="photo_path"><?= e(__('restaurant_item_photo_url', 'Or paste an image address')) ?></label>
+                    <input type="text" id="photo_path" name="photo_path" maxlength="255" value="<?= e($photoVal) ?>" placeholder="https://… or /uploads/…">
+                    <p class="field-hint"><?= e($mediaOn ? __('restaurant_item_photo_hint', 'Shown on the POS tile and the online menu. A square photo of at least 600 px looks best; upload new ones in the library.')
+                                                        : __('restaurant_item_photo_hint_off', 'Turn on the Media library plugin to pick and upload photos here.')) ?></p>
+                </div>
+            </div>
+            <script>
+            (function () {
+                var inp = document.getElementById('photo_path'), prev = document.getElementById('riPhotoPrev'), clr = document.getElementById('riPhotoClear');
+                var base = <?= json_encode(rtrim(SLATE_URL, '/') . '/') ?>;
+                function sync() {
+                    var v = inp.value.trim();
+                    var url = !v ? '' : (/^https?:\/\//i.test(v) ? v : base + v.replace(/^\/+/, ''));
+                    prev.style.backgroundImage = url ? "url('" + url.replace(/'/g, '%27') + "')" : '';
+                    prev.classList.toggle('has-img', !!url);
+                    clr.hidden = !v;
+                }
+                inp.addEventListener('input', sync); inp.addEventListener('change', sync);
+                clr.addEventListener('click', function () { inp.value = ''; sync(); });
+            })();
+            </script>
+            <style>
+            .ri-photo { display: flex; gap: 16px; align-items: flex-start; }
+            .ri-photo-prev { flex: none; width: 112px; height: 112px; display: grid; place-items: center; border: 1.5px dashed var(--border-strong); border-radius: var(--radius-lg); background: var(--surface-2) center / cover no-repeat; color: var(--muted); cursor: pointer; }
+            .ri-photo-prev:hover { border-color: var(--accent); color: var(--accent); }
+            .ri-photo-prev.has-img { border-style: solid; border-color: var(--border); }
+            .ri-photo-prev.has-img svg { display: none; }
+            .ri-photo-ctl { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+            .ri-photo-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+            .ri-photo [hidden] { display: none !important; }
+            .ri-86 { display: flex; align-items: center; gap: 8px; align-self: end; padding-bottom: 10px; }
+            @media (max-width: 560px) { .ri-photo-prev { width: 84px; height: 84px; } .ri-photo { gap: 12px; } }
+            </style>
         <?php slate_edit_card_close(); ?>
 
         <?php slate_edit_card_open(['icon' => 'list', 'eyebrow' => 'Modifiers', 'title' => 'Attached modifier groups']); ?>
@@ -341,13 +390,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <span class="rm-thumb"<?= $img ? ' style="background-image:url(\'' . e(str_replace("'", '%27', $img)) . '\')"' : '' ?>><?= $img ? '' : e(mb_strtoupper(mb_substr($it['name'], 0, 1))) ?></span>
                 <a class="rm-name" href="?edit=<?= (int)$it['id'] ?>">
                     <strong><?= e($it['name']) ?></strong>
-                    <span class="text-sm text-muted"><?= e(trim(mb_substr((string)($it['description'] ?? ''), 0, 80))) ?><?= (int)$it['group_count'] ? ' · ' . e(sprintf(__('restaurant_items_groups_n', '%s option groups'), (int)$it['group_count'])) : '' ?></span>
+                    <?php $sub = array_filter([trim(mb_substr((string)($it['description'] ?? ''), 0, 80)),
+                        !empty($it['is_combo']) ? __('restaurant_combo', 'Combo') : '',
+                        (int)$it['group_count'] ? sprintf(__('restaurant_items_groups_n', '%s option groups'), (int)$it['group_count']) : '']); ?>
+                    <?php if ($sub): ?><span class="text-sm text-muted"><?= e(implode(' · ', $sub)) ?></span><?php endif; ?>
                 </a>
                 <label class="rm-price"><span><?= e(trim(preg_replace('/[0-9.,\s-]/u', '', RestaurantAPI::money(0)))) ?></span>
                     <input type="number" step="0.01" min="0" inputmode="decimal" value="<?= e(number_format((int)$it['price_cents'] / 100, 2, '.', '')) ?>" aria-label="<?= e(sprintf(__('restaurant_items_price_of', 'Price of %s'), $it['name'])) ?>"></label>
-                <label class="rm-switch" title="<?= e(__('restaurant_items_sold_out', 'Sold out')) ?>"><input type="checkbox" data-flag="is_86" <?= !empty($it['is_86']) ? 'checked' : '' ?>><span>86</span></label>
-                <label class="rm-switch" title="<?= e(__('restaurant_items_visible', 'Visible')) ?>"><input type="checkbox" data-flag="is_active" <?= !empty($it['is_active']) ? 'checked' : '' ?>><span><?= e(__('restaurant_items_visible', 'Visible')) ?></span></label>
-                <a class="btn btn-sm btn-ghost" href="?edit=<?= (int)$it['id'] ?>"><?= e(__('restaurant_items_edit', 'Edit')) ?></a>
+                <span class="rm-flags"><label class="rm-switch" data-k="86" title="<?= e(__('restaurant_items_sold_out', 'Sold out')) ?>"><input type="checkbox" data-flag="is_86" <?= !empty($it['is_86']) ? 'checked' : '' ?>><span>86</span></label>
+                <label class="rm-switch" data-k="vis" title="<?= e(__('restaurant_items_visible', 'Visible')) ?>"><input type="checkbox" data-flag="is_active" <?= !empty($it['is_active']) ? 'checked' : '' ?>><span><?= e(__('restaurant_items_visible', 'Visible')) ?></span></label></span>
+                <a class="btn btn-sm btn-ghost rm-edit" href="?edit=<?= (int)$it['id'] ?>"><?= e(__('restaurant_items_edit', 'Edit')) ?></a>
             </li>
             <?php endforeach; ?>
         </ol>
@@ -356,38 +408,66 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
     <div class="rm-toast" id="rmToast" role="status" hidden></div>
     <style>
-    .rm-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; }
-    .rm-search input { min-width: 240px; }
-    .rm-filter { display: flex; gap: 6px; }
-    .rm-filter .is-active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+    .rm-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; }
+    .rm-search { flex: 1; min-width: 200px; max-width: 360px; }
+    .rm-search input { width: 100%; }
+    .rm-filter { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--surface-2); }
+    .rm-filter .btn { border: 0; border-radius: 999px; background: transparent; min-height: 30px; }
+    .rm-filter .btn.is-active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
     .rm-hint { margin-left: auto; }
-    .rm-bulk { position: sticky; top: 8px; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; border-color: var(--accent); box-shadow: var(--shadow-sm); }
-    .rm-cat .card-header { gap: 10px; }
-    .rm-cat .card-header h2 { flex: 1; }
+    .rm-bulk { position: sticky; top: 8px; z-index: 5; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-color: var(--accent); box-shadow: var(--shadow-sm); overflow-x: auto; scrollbar-width: none; }
+    .rm-bulk > * { flex: none; }
+    .rm-bulk[hidden] { display: none; }
+    .rm-bulk select { min-height: 32px; padding: 0 28px 0 10px; font-size: 13px; width: auto; }
+    .rm-cat { padding: 0; overflow: hidden; }
+    .rm-cat .card-header { gap: 10px; padding: 12px 14px; margin: 0; }
+    .rm-cat .card-header h2 { flex: 1; font-size: 15px; margin: 0; }
     .rm-list { list-style: none; margin: 0; padding: 0; }
-    .rm-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--border); background: var(--surface); }
+    .rm-item { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-top: 1px solid var(--border); background: var(--surface); }
+    .rm-item:hover { background: var(--surface-2); }
     .rm-item.is-dragging { opacity: .4; }
     .rm-item.is-over { box-shadow: inset 0 2px 0 var(--accent); }
     .rm-item.is-86 .rm-name strong { text-decoration: line-through; color: var(--muted); }
-    .rm-item.is-hidden { background: var(--surface-2); }
+    .rm-item.is-hidden .rm-thumb, .rm-item.is-hidden .rm-name { opacity: .55; }
     .rm-drag { cursor: grab; color: var(--subtle); letter-spacing: -2px; user-select: none; padding: 6px 2px; }
-    .rm-check input { width: 18px; height: 18px; accent-color: var(--accent); }
-    .rm-thumb { flex: none; width: 48px; height: 48px; border-radius: var(--radius); background: var(--accent-soft) center / cover no-repeat; display: grid; place-items: center; font-weight: 700; color: var(--text-2); }
-    .rm-name { flex: 1; min-width: 0; display: flex; flex-direction: column; color: inherit; text-decoration: none; }
-    .rm-name span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .rm-price { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 0 8px; background: var(--surface); }
-    .rm-price input { width: 80px; border: 0; padding: 8px 0; background: transparent; text-align: right; font-variant-numeric: tabular-nums; }
-    .rm-price.is-saved { border-color: var(--success); }
-    .rm-switch { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); cursor: pointer; }
-    .rm-switch input { width: 18px; height: 18px; accent-color: var(--accent); }
-    .rm-empty { padding: 14px 16px; border-top: 1px solid var(--border); }
-    .rm-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 16px; border-radius: var(--radius); background: #111; color: #fff; font-weight: 600; z-index: 60; }
+    .rm-check { display: inline-flex; }
+    .rm-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+    .rm-thumb { flex: none; width: 44px; height: 44px; border-radius: 10px; background: var(--accent-soft) center / cover no-repeat; display: grid; place-items: center; font-weight: 700; color: var(--text-2); }
+    .rm-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; color: inherit; text-decoration: none; }
+    .rm-name strong { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rm-name span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; }
+    /* The input is the box (the admin's input style applies); the currency sits inside it. */
+    .rm-price { flex: none; position: relative; display: inline-flex; }
+    .rm-price span { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; }
+    .rm-item .rm-price input[type="number"] { width: 92px !important; height: 34px !important; min-height: 34px !important; padding: 0 8px 0 20px !important; text-align: right; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+    .rm-item .rm-price input[type="number"]::-webkit-inner-spin-button, .rm-item .rm-price input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .rm-price.is-saved input { border-color: var(--success) !important; }
+    /* 86 / Visible as pill toggles: the checkbox stays for keyboard and screen readers, the pill shows the state */
+    .rm-switch { flex: none; position: relative; display: inline-flex; cursor: pointer; }
+    .rm-switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+    .rm-switch span { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--border-strong); font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface); }
+    .rm-switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .rm-switch input[data-flag="is_86"]:checked + span { background: var(--danger-soft); border-color: transparent; color: var(--danger); }
+    .rm-switch input[data-flag="is_active"]:checked + span { background: var(--success-soft); border-color: transparent; color: var(--success); }
+    .rm-flags { flex: none; display: inline-flex; gap: 6px; }
+    .rm-empty { padding: 14px; border-top: 1px solid var(--border); }
+    /* Same spot as the register's notifications: top-centre, clear of the floating bulk bar and the bottom menu. */
+    .rm-toast { position: fixed; left: 50%; top: calc(72px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); max-width: min(460px, calc(100% - 24px)); padding: 10px 16px; border-radius: 12px; background: #16181d; color: #fff; font-size: 14px; font-weight: 600; box-shadow: 0 12px 32px rgba(0,0,0,.28); z-index: 80; }
     .rm-toast.is-error { background: var(--danger); }
     @media (max-width: 760px) {
-        .rm-item { flex-wrap: wrap; }
-        .rm-name { flex-basis: calc(100% - 140px); }
-        .rm-hint { display: none; }
-        .rm-search input { min-width: 0; width: 100%; }
+        .rm-hint, .rm-drag, .rm-edit { display: none; }
+        .rm-tools { padding: 8px 10px; gap: 8px; }
+        .rm-search { max-width: none; flex-basis: 100%; }
+        .rm-bulk { position: fixed; top: auto; left: 10px; right: 10px; bottom: calc(72px + env(safe-area-inset-bottom)); z-index: 40; margin: 0; padding: 6px 8px; border-radius: 14px; box-shadow: var(--shadow-lg, 0 10px 30px rgba(0,0,0,.18)); }
+        .rm-cat .card-header { padding: 10px 12px; }
+        /* Two lines: [check] [photo] name … price / 86 · Visible */
+        .rm-item { display: grid; grid-template-columns: auto 40px minmax(0, 1fr) auto; grid-template-areas: "chk img name price" "chk img flags flags"; column-gap: 10px; row-gap: 6px; padding: 10px 12px; }
+        .rm-item .rm-check { grid-area: chk; }
+        .rm-thumb { grid-area: img; width: 40px; height: 40px; align-self: start; }
+        .rm-name { grid-area: name; }
+        .rm-price { grid-area: price; }
+        .rm-item .rm-price input[type="number"] { width: 84px !important; }
+        .rm-flags { grid-area: flags; }
     }
     </style>
     <script>

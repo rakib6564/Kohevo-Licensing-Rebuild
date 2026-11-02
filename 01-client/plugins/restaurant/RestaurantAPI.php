@@ -11,6 +11,7 @@
  *   RestaurantAPI::slugify($name, $table, $excludeId)
  *   RestaurantAPI::recalcOrder($orderId)    // recompute line + order totals
  *   RestaurantAPI::getOrder($orderId)       // order + items + modifiers + payments + refunds
+ *   RestaurantAPI::saveCombo($itemId, $slots) / validateLineChoices(…)
  *   RestaurantAPI::refundPayment($paymentId, $cents, $reason)
  *   RestaurantAPI::handleStripeEvent($event)
  *
@@ -306,6 +307,190 @@ class RestaurantAPI {
         return $groups;
     }
 
+    // ── Combos ────────────────────────────────────────────────
+
+    /**
+     * Slots of a combo item in order, each with its choices: [id, label,
+     * min_pick, max_pick, choices => [id (choice), item_id, name,
+     * price_delta_cents, is_active, is_86]]. Empty for an item that is not
+     * a combo.
+     */
+    public static function getComboSlots(int $itemId): array {
+        $tid  = current_tenant_id();
+        $item = Database::row("SELECT is_combo FROM restaurant_items WHERE id = ? AND tenant_id = ?", [$itemId, $tid]);
+        if (!$item || empty($item['is_combo'])) return [];
+        $slots = Database::rows(
+            "SELECT id, label, min_pick, max_pick, sort_order FROM restaurant_combo_slots
+              WHERE combo_item_id = ? AND tenant_id = ? ORDER BY sort_order, id", [$itemId, $tid]);
+        foreach ($slots as &$sl) {
+            $sl['choices'] = Database::rows(
+                "SELECT ch.id, ch.item_id, ch.price_delta_cents, i.name, i.is_active, i.is_86
+                   FROM restaurant_combo_choices ch
+                   JOIN restaurant_items i ON i.id = ch.item_id AND i.tenant_id = ch.tenant_id
+                  WHERE ch.slot_id = ? AND ch.tenant_id = ? ORDER BY ch.sort_order, ch.id", [(int)$sl['id'], $tid]);
+        }
+        unset($sl);
+        return $slots;
+    }
+
+    /**
+     * Check a line's choices against its item, the one rule set the POS, the
+     * storefront cart and addLine() all use. $modifierIds are modifier ids;
+     * $comboPicks are combo choice ids (one per pick). Every modifier group
+     * and combo slot must meet its required / min / max; a pick must belong
+     * to the item and its item must be on sale. Returns ['modifiers' =>
+     * modifier rows, 'components' => [[slot, choice], …]]; throws a message
+     * fit to show the guest otherwise.
+     */
+    public static function validateLineChoices(int $itemId, array $modifierIds, array $comboPicks = []): array {
+        $chosen = array_values(array_unique(array_map('intval', $modifierIds)));
+        $mods   = [];
+        foreach (self::getItemModifierGroups($itemId) as $g) {
+            $picked = [];
+            foreach ($g['modifiers'] as $m) {
+                if (in_array((int)$m['id'], $chosen, true)) { $picked[] = $m; $mods[] = $m; }
+            }
+            $min = (int)$g['min_select']; $max = (int)$g['max_select'];
+            if (!empty($g['is_required']) && count($picked) < max(1, $min)) {
+                throw new \RuntimeException(sprintf(__('restaurant_err_choose_min', 'Choose at least %1$d for: %2$s'), max(1, $min), $g['name']));
+            }
+            if ($max > 0 && count($picked) > $max) {
+                throw new \RuntimeException(sprintf(__('restaurant_err_choose_max', 'Choose at most %1$d for: %2$s'), $max, $g['name']));
+            }
+        }
+
+        $picks      = array_values(array_unique(array_filter(array_map('intval', $comboPicks))));
+        $components = [];
+        $known      = [];
+        foreach (self::getComboSlots($itemId) as $sl) {
+            $inSlot = [];
+            foreach ($sl['choices'] as $ch) {
+                $known[] = (int)$ch['id'];
+                if (!in_array((int)$ch['id'], $picks, true)) continue;
+                if (empty($ch['is_active'])) {
+                    throw new \RuntimeException(sprintf(__('restaurant_err_choice_off', '%s is not on the menu any more.'), $ch['name']));
+                }
+                if (!empty($ch['is_86'])) {
+                    throw new \RuntimeException(sprintf(__('restaurant_err_choice_86', '%s is sold out right now.'), $ch['name']));
+                }
+                $inSlot[] = [$sl, $ch];
+            }
+            $min = (int)$sl['min_pick']; $max = (int)$sl['max_pick'];
+            if (count($inSlot) < $min) {
+                throw new \RuntimeException(sprintf(__('restaurant_err_choose_min', 'Choose at least %1$d for: %2$s'), $min, $sl['label']));
+            }
+            if ($max > 0 && count($inSlot) > $max) {
+                throw new \RuntimeException(sprintf(__('restaurant_err_choose_max', 'Choose at most %1$d for: %2$s'), $max, $sl['label']));
+            }
+            array_push($components, ...$inSlot);
+        }
+        if (array_diff($picks, $known)) {
+            throw new \RuntimeException(__('restaurant_err_choice_bad', 'That choice is not part of this combo.'));
+        }
+        return ['modifiers' => $mods, 'components' => $components];
+    }
+
+    /**
+     * Delete a menu item with what hangs off it: its modifier-group links, its
+     * combo slots if it is a combo, and its place as a choice in any combo.
+     * Past order lines keep their name and price snapshots.
+     */
+    public static function deleteItem(int $itemId): void {
+        $tid = current_tenant_id();
+        Database::delete('restaurant_item_modifier_groups', 'item_id = ? AND tenant_id = ?', [$itemId, $tid]);
+        foreach (array_column(Database::rows("SELECT id FROM restaurant_combo_slots WHERE combo_item_id = ? AND tenant_id = ?", [$itemId, $tid]), 'id') as $sid) {
+            Database::delete('restaurant_combo_choices', 'slot_id = ? AND tenant_id = ?', [(int)$sid, $tid]);
+        }
+        Database::delete('restaurant_combo_slots', 'combo_item_id = ? AND tenant_id = ?', [$itemId, $tid]);
+        Database::delete('restaurant_combo_choices', 'item_id = ? AND tenant_id = ?', [$itemId, $tid]);
+        Database::delete('restaurant_items', 'id = ? AND tenant_id = ?', [$itemId, $tid]);
+        AuditLog::record('restaurant.item_deleted', (string)$itemId);
+    }
+
+    /**
+     * Price of one unit of a line before discounts: the item's price plus the
+     * deltas of its chosen modifiers and combo picks. The storefront cart
+     * shows this; recalcOrder() reaches the same number from the stored line.
+     * Throws like validateLineChoices().
+     */
+    public static function lineUnitCents(int $itemId, array $modifierIds, array $comboPicks = []): int {
+        $price = (int) Database::value("SELECT price_cents FROM restaurant_items WHERE id = ? AND tenant_id = ?", [$itemId, current_tenant_id()]);
+        $c = self::validateLineChoices($itemId, $modifierIds, $comboPicks);
+        foreach ($c['modifiers'] as $m) $price += (int)$m['price_delta_cents'];
+        foreach ($c['components'] as [, $ch]) $price += (int)$ch['price_delta_cents'];
+        return $price;
+    }
+
+    /**
+     * Make $itemId a combo with these slots, replacing any it had. $slots is
+     * a list of [label, min_pick, max_pick, choices => [[item_id,
+     * price_delta_cents], …]]; an empty list turns the combo back into a
+     * plain item. A choice must be an active item that is not itself a combo
+     * (so a combo can never contain itself) and appears once per slot.
+     * Throws with the first problem found; nothing is written then.
+     */
+    public static function saveCombo(int $itemId, array $slots): void {
+        $tid  = current_tenant_id();
+        $item = Database::row("SELECT * FROM restaurant_items WHERE id = ? AND tenant_id = ?", [$itemId, $tid]);
+        if (!$item) throw new \RuntimeException(__('restaurant_err_item', 'Unknown menu item.'));
+
+        $clean = [];
+        foreach (array_values($slots) as $n => $sl) {
+            $label = trim((string)($sl['label'] ?? ''));
+            $min   = max(0, (int)($sl['min_pick'] ?? 0));
+            $max   = max(0, (int)($sl['max_pick'] ?? 0));
+            $where = sprintf(__('restaurant_combo_slot_n', 'Slot %d'), $n + 1);
+            if ($label === '') throw new \RuntimeException($where . ': ' . __('restaurant_combo_err_label', 'give the slot a name.'));
+            if ($max < 1 || $min > $max) throw new \RuntimeException($label . ': ' . __('restaurant_combo_err_range', 'picks must be at least 1 and the minimum no more than the maximum.'));
+            $seen = []; $choices = [];
+            foreach ((array)($sl['choices'] ?? []) as $ch) {
+                $cid = (int)($ch['item_id'] ?? 0);
+                if ($cid <= 0) continue;
+                if ($cid === $itemId) throw new \RuntimeException($label . ': ' . __('restaurant_combo_err_self', 'a combo cannot contain itself.'));
+                if (isset($seen[$cid])) throw new \RuntimeException($label . ': ' . __('restaurant_combo_err_dupe', 'each item can be offered once per slot.'));
+                $ci = Database::row("SELECT name, is_active, is_combo FROM restaurant_items WHERE id = ? AND tenant_id = ?", [$cid, $tid]);
+                if (!$ci) throw new \RuntimeException($label . ': ' . __('restaurant_err_item', 'Unknown menu item.'));
+                if (empty($ci['is_active'])) throw new \RuntimeException($label . ': ' . sprintf(__('restaurant_combo_err_inactive', '%s is not active.'), $ci['name']));
+                if (!empty($ci['is_combo'])) throw new \RuntimeException($label . ': ' . sprintf(__('restaurant_combo_err_nested', '%s is a combo; combos cannot be put inside combos.'), $ci['name']));
+                $seen[$cid] = true;
+                $choices[] = ['item_id' => $cid, 'delta' => (int)($ch['price_delta_cents'] ?? 0)];
+            }
+            if (!$choices) throw new \RuntimeException($label . ': ' . __('restaurant_combo_err_empty', 'add at least one item to choose from.'));
+            if ($min > count($choices)) throw new \RuntimeException($label . ': ' . __('restaurant_combo_err_few', 'the minimum is more than the items on offer.'));
+            $clean[] = ['label' => mb_substr($label, 0, 120), 'min' => $min, 'max' => $max, 'choices' => $choices];
+        }
+        if ($clean && (int)Database::value(
+                "SELECT COUNT(*) FROM restaurant_combo_choices WHERE item_id = ? AND tenant_id = ?", [$itemId, $tid]) > 0) {
+            throw new \RuntimeException(__('restaurant_combo_err_used', 'This item is offered inside another combo, so it cannot become a combo itself.'));
+        }
+
+        $pdo = Database::get();
+        $pdo->beginTransaction();
+        try {
+            $old = array_column(Database::rows("SELECT id FROM restaurant_combo_slots WHERE combo_item_id = ? AND tenant_id = ?", [$itemId, $tid]), 'id');
+            foreach ($old as $sid) Database::delete('restaurant_combo_choices', 'slot_id = ? AND tenant_id = ?', [(int)$sid, $tid]);
+            Database::delete('restaurant_combo_slots', 'combo_item_id = ? AND tenant_id = ?', [$itemId, $tid]);
+            foreach ($clean as $i => $sl) {
+                $sid = Database::insert('restaurant_combo_slots', [
+                    'tenant_id' => $tid, 'combo_item_id' => $itemId, 'label' => $sl['label'],
+                    'min_pick' => $sl['min'], 'max_pick' => $sl['max'], 'sort_order' => $i,
+                ]);
+                foreach ($sl['choices'] as $j => $ch) {
+                    Database::insert('restaurant_combo_choices', [
+                        'tenant_id' => $tid, 'slot_id' => $sid, 'item_id' => $ch['item_id'],
+                        'price_delta_cents' => $ch['delta'], 'sort_order' => $j,
+                    ]);
+                }
+            }
+            Database::update('restaurant_items', ['is_combo' => $clean ? 1 : 0], 'id = ? AND tenant_id = ?', [$itemId, $tid]);
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+        AuditLog::record('restaurant.combo_saved', (string)$itemId, ['slots' => count($clean)]);
+    }
+
     // ── Stripe Terminal bridge ────────────────────────────────
 
     public static function terminalAvailable(): bool {
@@ -484,8 +669,12 @@ class RestaurantAPI {
 
     /**
      * Add a line to an order. $line: item_id, qty, seat, check_no, notes,
-     * modifiers => [modifier_id, …] (validated against the item's groups).
-     * Returns the new line id. Throws on a bad item or modifier rule.
+     * modifiers => [modifier_id, …], combo => [combo choice id, …] (both
+     * checked by validateLineChoices()). A combo's picks are stored with the
+     * modifiers as kind 'component', named "Slot: Item", so the kitchen, the
+     * receipt and splitLine() carry them like any modifier, and recalcOrder()
+     * prices the line as the combo price plus every delta. Returns the new
+     * line id. Throws on a bad item, modifier or pick.
      */
     public static function addLine(int $orderId, array $line): int {
         $tid  = current_tenant_id();
@@ -496,25 +685,8 @@ class RestaurantAPI {
         if (!$item) throw new \RuntimeException('Unknown menu item.');
         if (!empty($item['is_86'])) throw new \RuntimeException($item['name'] . " is 86'd right now.");
 
-        $qty       = max(1, (int)($line['qty'] ?? 1));
-        $chosenIds = array_values(array_unique(array_map('intval', (array)($line['modifiers'] ?? []))));
-
-        // Validate chosen modifiers against the item's groups + collect snapshots.
-        $groups    = self::getItemModifierGroups($itemId);
-        $validMods = [];
-        foreach ($groups as $g) {
-            $picked = [];
-            foreach ($g['modifiers'] as $m) {
-                if (in_array((int)$m['id'], $chosenIds, true)) { $picked[] = $m; $validMods[] = $m; }
-            }
-            $min = (int)$g['min_select']; $max = (int)$g['max_select'];
-            if (!empty($g['is_required']) && count($picked) < max(1, $min)) {
-                throw new \RuntimeException('Choose at least ' . max(1, $min) . ' for: ' . $g['name']);
-            }
-            if ($max > 0 && count($picked) > $max) {
-                throw new \RuntimeException('Choose at most ' . $max . ' for: ' . $g['name']);
-            }
-        }
+        $qty    = max(1, (int)($line['qty'] ?? 1));
+        $choice = self::validateLineChoices($itemId, (array)($line['modifiers'] ?? []), (array)($line['combo'] ?? []));
 
         $lineId = Database::insert('restaurant_order_items', [
             'tenant_id'        => $tid,
@@ -529,13 +701,24 @@ class RestaurantAPI {
             'notes'            => isset($line['notes']) ? mb_substr((string)$line['notes'], 0, 255) : null,
             'kitchen_status'   => 'new',
         ]);
-        foreach ($validMods as $m) {
+        foreach ($choice['modifiers'] as $m) {
             Database::insert('restaurant_order_item_modifiers', [
                 'tenant_id'         => $tid,
                 'order_item_id'     => $lineId,
                 'modifier_id'       => (int)$m['id'],
                 'name_snapshot'     => mb_substr((string)$m['name'], 0, 160),
                 'price_delta_cents' => (int)$m['price_delta_cents'],
+            ]);
+        }
+        foreach ($choice['components'] as [$sl, $ch]) {
+            Database::insert('restaurant_order_item_modifiers', [
+                'tenant_id'         => $tid,
+                'order_item_id'     => $lineId,
+                'kind'              => 'component',
+                'slot_id'           => (int)$sl['id'],
+                'component_item_id' => (int)$ch['item_id'],
+                'name_snapshot'     => mb_substr($sl['label'] . ': ' . $ch['name'], 0, 160),
+                'price_delta_cents' => (int)$ch['price_delta_cents'],
             ]);
         }
         self::recalcOrder($orderId);
@@ -1100,14 +1283,14 @@ class RestaurantAPI {
 
     // ── Guests, seats, tables, 86 ─────────────────────────────
 
-    /** Customers matching a name, phone or email fragment (POS guest lookup). */
+    /** Active customers matching a name, phone or email fragment (POS guest lookup; archived ones are hidden). */
     public static function searchCustomers(string $q, int $limit = 8): array {
         $q = trim($q);
         if (mb_strlen($q) < 2) return [];
         $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $q) . '%';
         return Database::rows(
             "SELECT id, name, phone, email FROM restaurant_customers
-              WHERE tenant_id = ? AND (name LIKE ? OR phone LIKE ? OR email LIKE ?)
+              WHERE tenant_id = ? AND is_active = 1 AND (name LIKE ? OR phone LIKE ? OR email LIKE ?)
            ORDER BY name LIMIT " . max(1, min(25, $limit)),
             [current_tenant_id(), $like, $like, $like]);
     }
@@ -1428,6 +1611,7 @@ class RestaurantAPI {
                     'item_id'   => (int)($line['item_id'] ?? 0),
                     'qty'       => (int)($line['qty'] ?? 1),
                     'modifiers' => array_map('intval', (array)($line['modifiers'] ?? [])),
+                    'combo'     => array_map('intval', (array)($line['combo'] ?? [])),
                     'notes'     => (string)($line['notes'] ?? ''),
                 ]);
             }

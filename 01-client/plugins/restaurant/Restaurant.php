@@ -2,8 +2,9 @@
 /**
  * Restaurant plugin — bootstrap.
  *
- * Menu (categories, items, modifier groups), floor (sections, tables),
- * standalone customers, a browser POS register, card-present (Stripe
+ * Menu (categories, items, modifier groups, combos), floor (sections,
+ * tables), customers with history and CSV import / export, reports and a
+ * payments reconciliation list, a browser POS register, card-present (Stripe
  * Terminal) + cash tender with refunds and printable receipts, and the
  * public /order storefront. Registers admin nav, a dashboard widget,
  * versioned schema migrations, and the Stripe webhook bridge so Terminal
@@ -87,12 +88,21 @@ class Restaurant extends Plugin {
         $items[] = ['slug' => 'restaurant-orders',     'label' => __('restaurant_orders', 'Orders'),
                     'href' => $this->url('admin/orders.php'),
                     'icon' => 'list', 'perm' => 'restaurant.view', 'order' => 701, 'group' => 'restaurant'];
+        $items[] = ['slug' => 'restaurant-reports',    'label' => __('restaurant_reports', 'Reports'),
+                    'href' => $this->url('admin/reports.php'),
+                    'icon' => 'bar-chart-2', 'perm' => 'restaurant.reports', 'order' => 701, 'group' => 'restaurant'];
+        $items[] = ['slug' => 'restaurant-payments',   'label' => __('restaurant_payments', 'Payments'),
+                    'href' => $this->url('admin/payments.php'),
+                    'icon' => 'credit-card', 'perm' => 'restaurant.reports', 'order' => 701, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-online',     'label' => __('restaurant_online', 'Online orders'),
                     'href' => $this->url('admin/online.php'),
                     'icon' => 'shopping-bag', 'perm' => 'restaurant.view', 'order' => 702, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-items',      'label' => __('restaurant_items', 'Menu items'),
                     'href' => $this->url('admin/items.php'),
                     'icon' => 'tag', 'perm' => 'restaurant.manage_menu', 'order' => 702, 'group' => 'restaurant'];
+        $items[] = ['slug' => 'restaurant-combos',     'label' => __('restaurant_combos', 'Combos'),
+                    'href' => $this->url('admin/combos.php'),
+                    'icon' => 'box', 'perm' => 'restaurant.manage_menu', 'order' => 702, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-categories', 'label' => __('restaurant_categories', 'Categories'),
                     'href' => $this->url('admin/categories.php'),
                     'icon' => 'folder', 'perm' => 'restaurant.manage_menu', 'order' => 703, 'group' => 'restaurant'];
@@ -253,6 +263,26 @@ class Restaurant extends Plugin {
         $this->ensureColumn('restaurant_order_items', 'served_at', "DATETIME NULL");
         $this->ensureColumn('restaurant_payments', 'tendered_cents', "INT UNSIGNED NULL");
         $this->ensureColumn('restaurant_payments', 'change_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+
+        // 0.5.0 — combos, customer history and import. The combo tables come
+        // from install.sql through ensureSchema() above. Existing customers
+        // start active with no imported history; customers deleted before
+        // 0.5.0 already had their orders unlinked, which cannot be undone.
+        $this->ensureColumn('restaurant_items', 'is_combo', "TINYINT(1) NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_order_item_modifiers', 'kind', "ENUM('modifier','component') NOT NULL DEFAULT 'modifier'");
+        $this->ensureColumn('restaurant_order_item_modifiers', 'slot_id', "INT UNSIGNED NULL");
+        $this->ensureColumn('restaurant_order_item_modifiers', 'component_item_id', "INT UNSIGNED NULL");
+        $this->ensureColumn('restaurant_customers', 'member_ref', "VARCHAR(80) NULL");
+        $this->ensureColumn('restaurant_customers', 'first_seen_via', "VARCHAR(60) NULL");
+        $this->ensureColumn('restaurant_customers', 'hist_spend_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_customers', 'hist_orders', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_customers', 'hist_first_seen', "DATE NULL");
+        $this->ensureColumn('restaurant_customers', 'hist_last_visit', "DATE NULL");
+        $this->ensureColumn('restaurant_customers', 'is_active', "TINYINT(1) NOT NULL DEFAULT 1");
+        $this->ensureColumn('restaurant_customers', 'archived_at', "DATETIME NULL");
+        $this->ensureIndex('restaurant_customers', 'tenant_member', '(`tenant_id`, `member_ref`)');
+        $this->ensureIndex('restaurant_orders', 'tenant_customer', '(`tenant_id`, `customer_id`, `status`)');
+        $this->ensureIndex('restaurant_payments', 'tenant_created', '(`tenant_id`, `created_at`)');
     }
 
     private function hasColumn(string $table, string $column): bool {
@@ -273,12 +303,15 @@ class Restaurant extends Plugin {
                   WHERE TABLE_SCHEMA = DATABASE()
                     AND TABLE_NAME IN ('restaurant_items','restaurant_orders',
                                        'restaurant_order_items','restaurant_payments',
-                                       'restaurant_refunds')");
+                                       'restaurant_refunds','restaurant_combo_slots',
+                                       'restaurant_combo_choices')");
             $col = (int) Database::value(
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurant_payments'
-                    AND COLUMN_NAME IN ('central_charge_id','tendered_cents')");
-            return $tbl >= 5 && $col === 2;
+                  WHERE TABLE_SCHEMA = DATABASE()
+                    AND ((TABLE_NAME = 'restaurant_payments' AND COLUMN_NAME IN ('central_charge_id','tendered_cents'))
+                      OR (TABLE_NAME = 'restaurant_customers' AND COLUMN_NAME IN ('member_ref','is_active'))
+                      OR (TABLE_NAME = 'restaurant_order_item_modifiers' AND COLUMN_NAME = 'kind'))");
+            return $tbl >= 7 && $col === 5;
         } catch (\Throwable $e) {
             return false;
         }
