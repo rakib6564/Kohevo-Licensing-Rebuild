@@ -10,7 +10,8 @@
  *   RestaurantAPI::money($cents)            // "$12.50"
  *   RestaurantAPI::slugify($name, $table, $excludeId)
  *   RestaurantAPI::recalcOrder($orderId)    // recompute line + order totals
- *   RestaurantAPI::getOrder($orderId)       // order + items + modifiers + payments
+ *   RestaurantAPI::getOrder($orderId)       // order + items + modifiers + payments + refunds
+ *   RestaurantAPI::refundPayment($paymentId, $cents, $reason)
  *   RestaurantAPI::handleStripeEvent($event)
  *
  * Tax model: per-line tax_rate (%) snapshotted from the menu item; tax is
@@ -111,6 +112,22 @@ class RestaurantAPI {
     }
 
     // ── Helpers ───────────────────────────────────────────────
+
+    /**
+     * Deterministic Stripe Idempotency-Key. $ref names one attempt — a payment
+     * row (a retry after a failure opens a new row) or one refund of a payment
+     * — so repeating that attempt always sends the same key and Stripe replays
+     * its first answer instead of charging or refunding twice. The per-install
+     * salt keeps two installs that share a Stripe account from colliding.
+     */
+    public static function idempotencyKey(string $purpose, string $ref): string {
+        $salt = (string) self::setting('idempotency_salt', '');
+        if ($salt === '') {
+            $salt = bin2hex(random_bytes(8));
+            Database::setSetting('restaurant.idempotency_salt', $salt);
+        }
+        return 'restaurant-' . $salt . '-' . current_tenant_id() . '-' . $purpose . '-' . $ref;
+    }
 
     /** Unique slug within (tenant_id, slug) for the given table. */
     public static function slugify(string $name, string $table, ?int $excludeId = null): string {
@@ -223,6 +240,9 @@ class RestaurantAPI {
         $order['payments'] = Database::rows(
             "SELECT * FROM restaurant_payments WHERE order_id = ? AND tenant_id = ? ORDER BY id",
             [$orderId, $tid]);
+        $order['refunds'] = Database::rows(
+            "SELECT * FROM restaurant_refunds WHERE order_id = ? AND tenant_id = ? ORDER BY id",
+            [$orderId, $tid]);
         return $order;
     }
 
@@ -299,13 +319,13 @@ class RestaurantAPI {
         if (!$payment) return;
 
         if ($type === 'payment_intent.payment_failed') {
-            if ($payment['status'] !== 'paid') {
+            if (!in_array($payment['status'], ['paid', 'refunded'], true)) {
                 Database::update('restaurant_payments', ['status' => 'failed'], 'id = ?', [(int)$payment['id']]);
             }
             return;
         }
 
-        if ($payment['status'] === 'paid') return; // already settled
+        if (in_array($payment['status'], ['paid', 'refunded'], true)) return; // already settled
         self::markPaymentPaid((int)$payment['id'], $pi);
     }
 
@@ -315,28 +335,18 @@ class RestaurantAPI {
      * webhook or from the POS poll once the reader reports success.
      */
     public static function markPaymentPaid(int $paymentId, array $pi = []): void {
-        $tid     = current_tenant_id();
         $payment = Database::row(
             "SELECT * FROM restaurant_payments WHERE id = ?", [$paymentId]);
-        if (!$payment || $payment['status'] === 'paid') return;
+        if (!$payment || in_array($payment['status'], ['paid', 'refunded'], true)) return;
 
-        $chargeId = null;
-        if (class_exists('StripePaymentAPI') && !empty($payment['stripe_pi_id'])) {
-            $chargeId = StripePaymentAPI::recordCharge([
-                'source_plugin'            => 'restaurant',
-                'source_id'                => (string)$payment['order_id'],
-                'stripe_payment_intent_id' => (string)$payment['stripe_pi_id'],
-                'amount_cents'             => (int)$payment['amount_cents'] + (int)$payment['tip_cents'],
-                'currency'                 => self::currency(),
-                'status'                   => 'succeeded',
-                'meta'                     => ['method' => 'terminal', 'order_id' => (int)$payment['order_id']],
-            ]);
-        }
+        // The central charge row is what a refund is later issued against.
+        $chargeId = self::recordCentralCharge($payment);
 
         $charge = !empty($pi['latest_charge']) ? (string)$pi['latest_charge'] : ($payment['stripe_charge_id'] ?? null);
         Database::update('restaurant_payments', [
-            'status'           => 'paid',
-            'stripe_charge_id' => $charge,
+            'status'            => 'paid',
+            'stripe_charge_id'  => $charge,
+            'central_charge_id' => $chargeId,
         ], 'id = ?', [$paymentId]);
 
         AuditLog::record('restaurant.payment_paid', (string)$paymentId, [
@@ -349,10 +359,34 @@ class RestaurantAPI {
     }
 
     /**
-     * Re-sum paid payments onto the order and close it when fully paid. Tips
-     * collected at tender are folded into the order's tip, the totals are
-     * recomputed (so total includes tip), and the order closes once the paid
-     * amount covers that total.
+     * The settled money on an order, net of refunds: ['paid','tips','refunded'].
+     * A refund comes out of a payment's amount first and only then its tip, so
+     * a partial refund keeps the tip and a full refund takes it back too.
+     */
+    public static function orderMoney(int $orderId): array {
+        $rows = Database::rows(
+            "SELECT amount_cents, tip_cents, refunded_cents FROM restaurant_payments
+              WHERE order_id = ? AND tenant_id = ? AND status IN ('paid','refunded')",
+            [$orderId, current_tenant_id()]);
+        $out = ['paid' => 0, 'tips' => 0, 'refunded' => 0];
+        foreach ($rows as $r) {
+            $amount = (int)$r['amount_cents'];
+            $tip    = (int)$r['tip_cents'];
+            $ref    = min((int)$r['refunded_cents'], $amount + $tip);
+            $out['paid']     += $amount + $tip - $ref;
+            $out['tips']     += $tip - max(0, $ref - $amount);
+            $out['refunded'] += $ref;
+        }
+        return $out;
+    }
+
+    /**
+     * Re-sum settled payments (net of refunds) onto the order and mark it paid
+     * when fully covered. Tips collected at tender are folded into the order's
+     * tip, the totals are recomputed (so total includes tip), and the order is
+     * marked paid once the net paid amount covers that total. A refund never
+     * reopens a paid or closed check; it lowers paid_cents and raises
+     * refunded_cents.
      */
     public static function syncOrderPayment(int $orderId): void {
         $tid   = current_tenant_id();
@@ -362,20 +396,16 @@ class RestaurantAPI {
 
         // Fold tender-time tips into the order tip, then recompute totals so
         // total_cents includes the tip before we compare against paid.
-        $tips = (int) Database::value(
-            "SELECT COALESCE(SUM(tip_cents),0) FROM restaurant_payments
-              WHERE order_id = ? AND tenant_id = ? AND status = 'paid'", [$orderId, $tid]);
-        Database::update('restaurant_orders', ['tip_cents' => $tips], 'id = ? AND tenant_id = ?', [$orderId, $tid]);
+        $money = self::orderMoney($orderId);
+        Database::update('restaurant_orders', ['tip_cents' => $money['tips']], 'id = ? AND tenant_id = ?', [$orderId, $tid]);
         self::recalcOrder($orderId);
 
         $order = Database::row("SELECT * FROM restaurant_orders WHERE id = ? AND tenant_id = ?", [$orderId, $tid]);
-        $paid  = (int) Database::value(
-            "SELECT COALESCE(SUM(amount_cents + tip_cents),0) FROM restaurant_payments
-              WHERE order_id = ? AND tenant_id = ? AND status = 'paid'", [$orderId, $tid]);
+        $paid  = $money['paid'];
 
-        $fields = ['paid_cents' => $paid];
+        $fields = ['paid_cents' => $paid, 'refunded_cents' => $money['refunded']];
         if ((int)$order['total_cents'] > 0 && $paid >= (int)$order['total_cents']
-            && !in_array($order['status'], ['voided', 'closed'], true)) {
+            && !in_array($order['status'], ['voided', 'closed', 'paid'], true)) {
             $fields['status']    = 'paid';
             $fields['closed_at'] = slate_db_now();
         }
@@ -588,31 +618,50 @@ class RestaurantAPI {
         $reader = Database::row("SELECT * FROM restaurant_readers WHERE id = ? AND tenant_id = ?", [$readerRowId, $tid]);
         if (!$reader) return ['ok' => false, 'error' => 'Reader not found.'];
 
-        $charge = max(0, $amountCents) + max(0, $tipCents);
+        $amountCents = max(0, $amountCents);
+        $tipCents    = max(0, $tipCents);
+        $charge      = $amountCents + $tipCents;
         if ($charge <= 0) return ['ok' => false, 'error' => 'Nothing to charge.'];
 
-        $orderNo = (string) Database::value("SELECT order_no FROM restaurant_orders WHERE id = ?", [$orderId]);
-        try {
-            $pi = StripeTerminalAPI::createCardPresentIntent($charge, [
-                'currency' => strtolower(self::currency()),
-                'metadata' => ['source' => 'restaurant', 'order_id' => (string)$orderId, 'order_no' => $orderNo],
-            ]);
-        } catch (\Throwable $e) {
-            return ['ok' => false, 'error' => $e->getMessage()];
-        }
+        $orderNo = (string) Database::value(
+            "SELECT order_no FROM restaurant_orders WHERE id = ? AND tenant_id = ?", [$orderId, $tid]);
 
-        $pid = Database::insert('restaurant_payments', [
+        // The payment row comes first so its id can key the Stripe calls. A
+        // repeated begin for the same check, reader and amount (a double tap,
+        // a retried request) reuses the pending row, so Stripe replays the
+        // first PaymentIntent and reader push instead of making new ones.
+        $pending = Database::row(
+            "SELECT id FROM restaurant_payments
+              WHERE tenant_id = ? AND order_id = ? AND method = 'terminal' AND status = 'pending'
+                AND reader_id = ? AND amount_cents = ? AND tip_cents = ?
+                AND created_at >= NOW() - INTERVAL 15 MINUTE
+           ORDER BY id DESC LIMIT 1",
+            [$tid, $orderId, $readerRowId, $amountCents, $tipCents]);
+        $pid = $pending ? (int)$pending['id'] : Database::insert('restaurant_payments', [
             'tenant_id'    => $tid,
             'order_id'     => $orderId,
             'method'       => 'terminal',
-            'amount_cents' => max(0, $amountCents),
-            'tip_cents'    => max(0, $tipCents),
+            'amount_cents' => $amountCents,
+            'tip_cents'    => $tipCents,
             'status'       => 'pending',
-            'stripe_pi_id' => (string)$pi['id'],
             'reader_id'    => $readerRowId,
         ]);
 
-        $proc = StripeTerminalAPI::processOnReader((string)$reader['stripe_reader_id'], (string)$pi['id']);
+        try {
+            $pi = StripeTerminalAPI::createCardPresentIntent($charge, [
+                'currency'        => strtolower(self::currency()),
+                'metadata'        => ['source' => 'restaurant', 'order_id' => (string)$orderId,
+                                      'order_no' => $orderNo, 'payment_id' => (string)$pid],
+                'idempotency_key' => self::idempotencyKey('terminal-pi', (string)$pid),
+            ]);
+        } catch (\Throwable $e) {
+            Database::update('restaurant_payments', ['status' => 'failed'], 'id = ?', [$pid]);
+            return ['ok' => false, 'error' => $e->getMessage(), 'payment_id' => $pid];
+        }
+        Database::update('restaurant_payments', ['stripe_pi_id' => (string)$pi['id']], 'id = ?', [$pid]);
+
+        $proc = StripeTerminalAPI::processOnReader((string)$reader['stripe_reader_id'], (string)$pi['id'],
+            self::idempotencyKey('terminal-reader', (string)$pid));
         if (!$proc['ok']) {
             Database::update('restaurant_payments', ['status' => 'failed'], 'id = ?', [$pid]);
             return ['ok' => false, 'error' => $proc['error'], 'payment_id' => $pid];
@@ -636,7 +685,7 @@ class RestaurantAPI {
         $tid = current_tenant_id();
         $pay = Database::row("SELECT * FROM restaurant_payments WHERE id = ? AND tenant_id = ?", [$paymentId, $tid]);
         if (!$pay) return ['ok' => false, 'state' => 'failed', 'error' => 'Payment not found.'];
-        if ($pay['status'] === 'paid')   return ['ok' => true,  'state' => 'paid'];
+        if (in_array($pay['status'], ['paid', 'refunded'], true)) return ['ok' => true, 'state' => 'paid'];
         if ($pay['status'] === 'failed') return ['ok' => false, 'state' => 'failed', 'error' => 'Payment failed or was cancelled.'];
 
         $piId = (string)$pay['stripe_pi_id'];
@@ -681,6 +730,159 @@ class RestaurantAPI {
         }
         Database::update('restaurant_payments', ['status' => 'failed'], 'id = ?', [$paymentId]);
         return ['ok' => true];
+    }
+
+    // ── Refunds ───────────────────────────────────────────────
+
+    /**
+     * Record (or find) the stripe-payment central charge row for a card
+     * payment. recordCharge() is idempotent on the PaymentIntent, so calling
+     * this again for the same payment returns the same row. Null for payments
+     * that never touched Stripe.
+     */
+    private static function recordCentralCharge(array $payment): ?int {
+        if (!class_exists('StripePaymentAPI') || empty($payment['stripe_pi_id'])) return null;
+        return StripePaymentAPI::recordCharge([
+            'source_plugin'            => 'restaurant',
+            'source_id'                => (string)$payment['order_id'],
+            'stripe_payment_intent_id' => (string)$payment['stripe_pi_id'],
+            'amount_cents'             => (int)$payment['amount_cents'] + (int)$payment['tip_cents'],
+            'currency'                 => self::currency(),
+            'status'                   => 'succeeded',
+            'meta'                     => ['method'   => $payment['method'] === 'terminal' ? 'terminal' : 'online',
+                                           'order_id' => (int)$payment['order_id']],
+        ]);
+    }
+
+    /** Amount of a payment that can still be refunded (amount + tip − refunded). */
+    public static function refundableCents(array $payment): int {
+        if ($payment['status'] !== 'paid') return 0;
+        return max(0, (int)$payment['amount_cents'] + (int)$payment['tip_cents'] - (int)$payment['refunded_cents']);
+    }
+
+    /**
+     * Refund all or part of a settled payment. A card payment (terminal or
+     * online) is refunded through Stripe against the central charge recorded
+     * when it settled; a cash payment is recorded only, the money leaves the
+     * drawer. $amountCents null refunds what is left. A partial refund keeps
+     * the payment 'paid' with refunded_cents set; the last one marks it
+     * 'refunded'. Returns ['ok'=>true,'refund_id'=>int,'refunded_cents'=>int]
+     * or ['ok'=>false,'error'=>string].
+     */
+    public static function refundPayment(int $paymentId, ?int $amountCents = null, string $reason = ''): array {
+        $tid = current_tenant_id();
+        $pay = Database::row("SELECT * FROM restaurant_payments WHERE id = ? AND tenant_id = ?", [$paymentId, $tid]);
+        if (!$pay) return ['ok' => false, 'error' => __('restaurant_refund_err_not_found', 'Payment not found.')];
+        if ($pay['status'] === 'refunded') {
+            return ['ok' => false, 'error' => __('restaurant_refund_err_already', 'This payment is already fully refunded.')];
+        }
+        if ($pay['status'] !== 'paid') {
+            return ['ok' => false, 'error' => __('restaurant_refund_err_not_paid', 'Only a settled payment can be refunded.')];
+        }
+
+        $before    = (int)$pay['refunded_cents'];
+        $remaining = self::refundableCents($pay);
+        $amount    = $amountCents ?? $remaining;
+        if ($remaining <= 0) {
+            return ['ok' => false, 'error' => __('restaurant_refund_err_already', 'This payment is already fully refunded.')];
+        }
+        if ($amount <= 0 || $amount > $remaining) {
+            return ['ok' => false, 'error' => sprintf(
+                __('restaurant_refund_err_range', 'Refund between %1$s and %2$s.'), self::money(1), self::money($remaining))];
+        }
+
+        $isCard = !empty($pay['stripe_pi_id']);
+        if ($isCard && !(class_exists('StripePaymentAPI') && StripePaymentAPI::isConfigured())) {
+            return ['ok' => false, 'error' => __('restaurant_refund_err_stripe', 'Card refunds need the Stripe plugin configured.')];
+        }
+
+        // Claim the amount first, in one statement, so two refunds racing on
+        // one payment can never together exceed what was paid. The claim is
+        // released if Stripe refuses the refund.
+        $claimed = Database::query(
+            "UPDATE restaurant_payments SET refunded_cents = refunded_cents + ?
+              WHERE id = ? AND tenant_id = ? AND status = 'paid' AND refunded_cents = ?
+                AND refunded_cents + ? <= amount_cents + tip_cents",
+            [$amount, $paymentId, $tid, $before, $amount])->rowCount();
+        if ($claimed !== 1) {
+            return ['ok' => false, 'error' => __('restaurant_refund_err_changed', 'This payment changed while you were refunding it. Reload and try again.')];
+        }
+
+        $refundId = Database::insert('restaurant_refunds', [
+            'tenant_id'    => $tid,
+            'payment_id'   => $paymentId,
+            'order_id'     => (int)$pay['order_id'],
+            'method'       => $pay['method'],
+            'amount_cents' => $amount,
+            'status'       => 'pending',
+            'reason'       => $reason !== '' ? mb_substr($reason, 0, 255) : null,
+            'user_id'      => Auth::userId() ?: null,
+        ]);
+
+        $stripeRefundId = null;
+        if ($isCard) {
+            $chargeId = !empty($pay['central_charge_id']) ? (int)$pay['central_charge_id'] : self::recordCentralCharge($pay);
+            if ($chargeId && empty($pay['central_charge_id'])) {
+                Database::update('restaurant_payments', ['central_charge_id' => $chargeId], 'id = ?', [$paymentId]);
+            }
+            // The key is what was refunded before, this amount, and how many
+            // refunds Stripe has definitely refused on this payment. Re-sending
+            // after a lost answer therefore replays the first refund instead of
+            // issuing a second; a retry after a refusal gets a fresh key.
+            $refused = (int) Database::value(
+                "SELECT COUNT(*) FROM restaurant_refunds WHERE payment_id = ? AND tenant_id = ? AND status = 'failed'",
+                [$paymentId, $tid]);
+            $res = $chargeId
+                ? StripePaymentAPI::refundCharge($chargeId, $amount, [
+                      'idempotency_key' => self::idempotencyKey('refund',
+                          $paymentId . '-' . $before . '-' . $amount . '-' . $refused),
+                  ])
+                : ['ok' => false, 'error' => __('restaurant_refund_err_no_charge', 'No Stripe charge is recorded for this payment.')];
+            if (empty($res['ok'])) {
+                Database::query(
+                    "UPDATE restaurant_payments SET refunded_cents = refunded_cents - ?
+                      WHERE id = ? AND tenant_id = ? AND refunded_cents >= ?",
+                    [$amount, $paymentId, $tid, $amount]);
+                $err = (string)($res['error'] ?? 'Refund failed.');
+                // No answer from Stripe: the refund may have gone through. The
+                // row stays 'pending' (not a refusal), so a retry of the same
+                // amount sends the same key and Stripe replays what happened.
+                $unknown = str_starts_with($err, 'Stripe HTTP transport error')
+                        || str_starts_with($err, 'Stripe response was not JSON');
+                Database::update('restaurant_refunds', [
+                    'status' => $unknown ? 'pending' : 'failed',
+                    'error'  => mb_substr($err, 0, 255),
+                ], 'id = ?', [$refundId]);
+                AuditLog::record('restaurant.refund_failed', (string)$paymentId, [
+                    'order_id' => (int)$pay['order_id'], 'amount' => $amount, 'error' => $err, 'unknown' => $unknown,
+                ]);
+                if ($unknown) {
+                    $err = __('restaurant_refund_err_unknown',
+                        'Stripe did not answer, so the refund may or may not have gone through. Retry the same amount: Stripe will not refund it twice.');
+                }
+                return ['ok' => false, 'error' => $err];
+            }
+            $stripeRefundId = (string)($res['refund_id'] ?? '') ?: null;
+        }
+
+        Database::update('restaurant_refunds', ['status' => 'succeeded', 'stripe_refund_id' => $stripeRefundId],
+            'id = ?', [$refundId]);
+        Database::query(
+            "UPDATE restaurant_payments SET status = 'refunded'
+              WHERE id = ? AND tenant_id = ? AND status = 'paid' AND refunded_cents >= amount_cents + tip_cents",
+            [$paymentId, $tid]);
+
+        AuditLog::record('restaurant.payment_refunded', (string)$paymentId, [
+            'order_id'      => (int)$pay['order_id'],
+            'amount'        => $amount,
+            'method'        => $pay['method'],
+            'refund_id'     => $refundId,
+            'stripe_refund' => $stripeRefundId,
+            'reason'        => $reason,
+        ]);
+
+        self::syncOrderPayment((int)$pay['order_id']);
+        return ['ok' => true, 'refund_id' => $refundId, 'refunded_cents' => $before + $amount];
     }
 
     // ── Close / void ──────────────────────────────────────────
@@ -855,6 +1057,19 @@ class RestaurantAPI {
         if (!$lineItems) return ['ok' => false, 'error' => 'Nothing to charge.'];
 
         $tid = current_tenant_id();
+        // A second press of Pay for the same order reuses the session still open.
+        $pending = Database::row(
+            "SELECT * FROM restaurant_payments
+              WHERE tenant_id = ? AND order_id = ? AND method = 'other' AND status = 'pending'
+                AND stripe_session_id IS NOT NULL AND amount_cents = ?
+           ORDER BY id DESC LIMIT 1", [$tid, $orderId, (int)$order['total_cents']]);
+        if ($pending) {
+            $open = StripePaymentAPI::getSession((string)$pending['stripe_session_id']);
+            if ($open && ($open['status'] ?? '') === 'open' && !empty($open['url'])) {
+                return ['ok' => true, 'url' => (string)$open['url'], 'payment_id' => (int)$pending['id']];
+            }
+        }
+
         $pid = Database::insert('restaurant_payments', [
             'tenant_id'    => $tid,
             'order_id'     => $orderId,
@@ -866,12 +1081,13 @@ class RestaurantAPI {
 
         try {
             $sess = StripePaymentAPI::createCheckout($lineItems, [
-                'currency'       => strtolower(self::currency()),
-                'success_url'    => $successUrl,
-                'cancel_url'     => $cancelUrl,
-                'customer_email' => $order['customer_email'] ?? null,
-                'metadata'       => ['source' => 'restaurant', 'source_plugin' => 'restaurant',
-                                     'order_id' => (string)$orderId, 'payment_id' => (string)$pid],
+                'currency'        => strtolower(self::currency()),
+                'success_url'     => $successUrl,
+                'cancel_url'      => $cancelUrl,
+                'customer_email'  => $order['customer_email'] ?? null,
+                'metadata'        => ['source' => 'restaurant', 'source_plugin' => 'restaurant',
+                                      'order_id' => (string)$orderId, 'payment_id' => (string)$pid],
+                'idempotency_key' => self::idempotencyKey('checkout', (string)$pid),
             ]);
         } catch (\Throwable $e) {
             Database::update('restaurant_payments', ['status' => 'failed'], 'id = ?', [$pid]);
@@ -901,7 +1117,7 @@ class RestaurantAPI {
                     Database::update('restaurant_payments',
                         ['stripe_pi_id' => (string)$sess['payment_intent']], 'id = ?', [(int)$pay['id']]);
                 }
-                self::markPaymentPaid((int)$pay['id'], ['latest_charge' => $sess['payment_intent'] ?? null]);
+                self::markPaymentPaid((int)$pay['id']);
             }
         }
         return self::getOrder((int)$pay['order_id']);
@@ -924,7 +1140,31 @@ class RestaurantAPI {
         if ($amount <= 0) return ['ok' => false, 'error' => 'Nothing to charge.'];
 
         $tid = current_tenant_id();
-        $pid = Database::insert('restaurant_payments', [
+        // Reloading the checkout page reuses the pending payment and its
+        // PaymentIntent, so the customer can never be holding two to pay.
+        $pending = Database::row(
+            "SELECT * FROM restaurant_payments
+              WHERE tenant_id = ? AND order_id = ? AND method = 'other' AND status = 'pending'
+                AND stripe_session_id IS NULL AND amount_cents = ?
+           ORDER BY id DESC LIMIT 1", [$tid, $orderId, $amount]);
+        if ($pending && !empty($pending['stripe_pi_id'])) {
+            $existing = StripePaymentAPI::getPaymentIntent((string)$pending['stripe_pi_id']);
+            $state    = (string)($existing['status'] ?? '');
+            if ($state === 'succeeded') {
+                self::markPaymentPaid((int)$pending['id'], $existing);
+                return ['ok' => false, 'error' => 'This order is already paid.'];
+            }
+            if ($existing && $state !== 'canceled' && !empty($existing['client_secret'])) {
+                return [
+                    'ok'             => true,
+                    'payment_id'     => (int)$pending['id'],
+                    'pi_id'          => (string)$existing['id'],
+                    'client_secret'  => (string)$existing['client_secret'],
+                    'publishable_key'=> StripePaymentAPI::publishableKey(),
+                ];
+            }
+        }
+        $pid = ($pending && empty($pending['stripe_pi_id'])) ? (int)$pending['id'] : Database::insert('restaurant_payments', [
             'tenant_id'    => $tid,
             'order_id'     => $orderId,
             'method'       => 'other',
@@ -940,6 +1180,7 @@ class RestaurantAPI {
                 'payment_method_types' => ['card'],
                 'metadata'             => ['source' => 'restaurant', 'source_plugin' => 'restaurant',
                                            'order_id' => (string)$orderId, 'payment_id' => (string)$pid],
+                'idempotency_key'      => self::idempotencyKey('online-pi', (string)$pid),
             ]);
         } catch (\Throwable $e) {
             Database::update('restaurant_payments', ['status' => 'failed'], 'id = ?', [$pid]);

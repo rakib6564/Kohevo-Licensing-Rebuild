@@ -62,6 +62,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <a href="#start">Getting started</a>
             <a href="#pos">Using the POS</a>
             <a href="#pay">Payments &amp; card readers</a>
+            <a href="#refunds"><?= e(__('restaurant_help_refunds_toc', 'Refunds & receipts')) ?></a>
             <a href="#online">Online ordering</a>
             <a href="#settings">Settings</a>
             <a href="#perms">Roles &amp; permissions</a>
@@ -76,7 +77,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <li><b>Settings</b> — set currency, your <b>tax rate</b>, tip presets, and the business name + address (the address is required to register a Stripe Terminal card reader). <a href="<?= e($url('settings.php')) ?>">Open Settings →</a></li>
             <li><b>Categories</b> — create the sections your menu is grouped into (e.g. <em>BBQ Plates</em>, <em>Beverages</em>). <a href="<?= e($url('categories.php')) ?>">Categories →</a></li>
             <li><b>Modifier groups</b> — optional. Reusable option sets (e.g. <em>Sides</em>, <em>Temperature</em>) with a required flag and min/max picks. <a href="<?= e($url('modifiers.php')) ?>">Modifier groups →</a></li>
-            <li><b>Menu items</b> — name, price, tax, category, photo, daypart, and which modifier groups apply. <a href="<?= e($url('items.php')) ?>">Menu items →</a></li>
+            <li><b>Menu items</b> — name, price, tax, category, photo, and which modifier groups apply. <a href="<?= e($url('items.php')) ?>">Menu items →</a></li>
             <li><b>Floor &amp; tables</b> — for dine-in: create sections and the tables in them. <a href="<?= e($url('floor.php')) ?>">Floor &amp; tables →</a></li>
             <li><b>Card readers</b> — optional. Pair a Stripe Terminal reader to take cards in person. <a href="<?= e($url('readers.php')) ?>">Card readers →</a></li>
         </ol>
@@ -99,6 +100,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <li><b>Pay</b> — opens the tender window for cash or card (see below).</li>
             <li><b>Void check</b> — cancels the whole check (needs the <em>void</em> permission).</li>
             <li><b>Close check</b> — closes it without further payment.</li>
+            <li><b><?= e(__('restaurant_pos_print_check', 'Print check')) ?></b> — <?= e(__('restaurant_help_print_check', 'prints the bill for the guest before they pay. Once paid, the button becomes Print receipt.')) ?></li>
         </ul>
         <div class="note">An <b>86'd</b> item (marked unavailable on its menu-item page) shows greyed out and can't be added until you un-86 it.</div>
     </div>
@@ -119,6 +121,19 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <?php endif; ?>
     </div>
 
+    <div class="card" id="refunds">
+        <h2><?= e(__('restaurant_help_refunds_toc', 'Refunds & receipts')) ?></h2>
+        <h3><?= e(__('restaurant_refunds', 'Refunds')) ?></h3>
+        <ol>
+            <li><?= e(__('restaurant_help_refund_1', 'Open the order (Orders → View, or Order details in the POS).')) ?></li>
+            <li><?= e(__('restaurant_help_refund_2', 'In Payments, press Refund on the payment, keep or lower the amount, add a reason, and press Issue refund.')) ?></li>
+            <li><?= e(__('restaurant_help_refund_3', 'Card payments go back to the card through Stripe. Cash refunds are recorded only: hand the cash back from the drawer.')) ?></li>
+        </ol>
+        <p class="text-sm"><?= e(__('restaurant_help_refund_4', 'A payment can be refunded in several parts, never for more than was paid. A refund lowers the order\'s paid total and does not reopen the check. Refunding needs the restaurant.manage_orders permission.')) ?></p>
+        <h3><?= e(__('restaurant_rcpt_title', 'Receipt')) ?></h3>
+        <p class="text-sm"><?= e(__('restaurant_help_receipt', 'Print receipt (in the POS on a paid check, or on the order page) opens a receipt sized for an 80 mm printer. It shows the business name and address, the receipt header and footer from Settings, every item with its options, the money breakdown, payments and refunds.')) ?></p>
+    </div>
+
     <div class="card" id="online">
         <h2>Online ordering (public storefront)</h2>
         <p class="text-sm">Customers order from your own site at <code><?= e(rtrim(SLATE_URL, '/')) ?>/order</code> — no SpotOn needed.</p>
@@ -134,7 +149,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <li><b>Send to kitchen</b> fires the ticket; then advance <b>Accepted → Preparing → Ready → Completed</b> as you go. <b>Cancel</b> if you can't fulfil it.</li>
             <li>Card orders are paid before they arrive (status <b>Paid</b>). Pay-at-pickup orders show <b>Due</b> — collect on the POS or at the counter.</li>
         </ul>
-        <p class="text-sm">Only items marked active and not 86'd appear online. Sizes (Piglet/Porker/…) and add-ons show as choices, exactly like the in-house menu.</p>
+        <p class="text-sm">Only items marked active and not 86'd appear online. Sizes and add-ons show as choices, exactly like the in-house menu.</p>
     </div>
 
     <div class="card" id="settings">
@@ -145,7 +160,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <tr><td>Service charge</td><td>An optional percentage of the discounted subtotal. Turn on <em>auto-apply</em> to add it to every new check; the percent is snapshotted at open time.</td></tr>
             <tr><td>Tip presets</td><td>The quick-tip buttons in the tender window, as percentages (e.g. <code>15,18,20</code>).</td></tr>
             <tr><td>Receipt header / footer</td><td>Free text printed at the top and bottom of receipts.</td></tr>
-            <tr><td>Business name &amp; address</td><td>Used to register the Stripe Terminal <b>Location</b> — required before pairing a card reader.</td></tr>
+            <tr><td>Business name &amp; address</td><td>Printed on receipts, and used to register the Stripe Terminal <b>Location</b> — required before pairing a card reader.</td></tr>
         </table>
         <p class="text-sm"><a href="<?= e($url('settings.php')) ?>">Edit settings →</a></p>
     </div>
@@ -158,10 +173,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <tr><td>restaurant.pos</td><td>Operate the POS register and take orders.</td></tr>
             <tr><td>restaurant.manage_menu</td><td>Create / edit menu items, categories, and modifiers.</td></tr>
             <tr><td>restaurant.manage_floor</td><td>Manage sections and tables.</td></tr>
-            <tr><td>restaurant.manage_orders</td><td>Void / comp / reopen checks and issue refunds.</td></tr>
+            <tr><td>restaurant.manage_orders</td><td><?= e(__('restaurant_help_perm_orders', 'Void checks and refund payments.')) ?></td></tr>
             <tr><td>restaurant.manage_customers</td><td>Manage customer records.</td></tr>
             <tr><td>restaurant.manage_settings</td><td>Configure tax, service charge, tips, receipts, and card readers.</td></tr>
-            <tr><td>restaurant.reports</td><td>View reports (coming in a later phase).</td></tr>
+            <tr><td>restaurant.reports</td><td><?= e(__('restaurant_help_perm_reports', 'Reserved for the reports screen, which does not exist yet. Granting it changes nothing today.')) ?></td></tr>
         </table>
     </div>
 

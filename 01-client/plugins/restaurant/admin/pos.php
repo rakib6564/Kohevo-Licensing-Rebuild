@@ -203,6 +203,13 @@ $boot = [
     'currencySym' => $sym ?: '$',
     'canVoid'     => Auth::can('restaurant.manage_orders') || Auth::isSuperAdmin(),
     'endpoint'    => plugin_url('restaurant', 'admin/pos.php'),
+    'receiptUrl'  => plugin_url('restaurant', 'admin/receipt.php'),
+    'orderUrl'    => plugin_url('restaurant', 'admin/order.php'),
+    't'           => __js([
+        'restaurant_rcpt_print'   => 'Print receipt',
+        'restaurant_pos_print_check' => 'Print check',
+        'restaurant_pos_details'  => 'Order details',
+    ]),
     'csrf'        => csrf_token(),
 ];
 
@@ -534,8 +541,11 @@ require SLATE_ROOT . '/admin/partials/header.php';
         bind('actVoid', voidOrder); bind('actClose', closeOrder);
     }
     function renderActions(o, editable, balance) {
+        const receipt = (label) => `<a class="btn" href="${esc(BOOT.receiptUrl)}?id=${o.id}&print=1" target="_blank" rel="noopener">${esc(label)}</a>`;
         if (o.status === 'paid' || o.status === 'closed' || o.status === 'voided')
-            return `<div class="rpos-actions"><div class="full" style="text-align:center;color:var(--muted,#6b7280);">Check ${o.status}.</div></div>`;
+            return `<div class="rpos-actions"><div class="full" style="text-align:center;color:var(--muted,#6b7280);">Check ${o.status}.</div>
+                ${receipt(BOOT.t.restaurant_rcpt_print)}
+                <a class="btn btn-ghost" href="${esc(BOOT.orderUrl)}?id=${o.id}">${esc(BOOT.t.restaurant_pos_details)}</a></div>`;
         const hasNew = (o.items || []).some(it => it.kitchen_status === 'new');
         return `<div class="rpos-actions">
             <button class="btn" id="actSend" ${hasNew ? '' : 'disabled'}>Send to kitchen</button>
@@ -543,6 +553,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <button class="btn btn-primary full" id="actPay" ${Number(o.total_cents) > 0 ? '' : 'disabled'}>Pay ${fmt(balance)}</button>
             ${BOOT.canVoid ? '<button class="btn btn-danger" id="actVoid">Void check</button>' : '<span></span>'}
             <button class="btn btn-ghost" id="actClose">Close check</button>
+            ${(o.items || []).length ? receipt(BOOT.t.restaurant_pos_print_check) : ''}
         </div>`;
     }
 

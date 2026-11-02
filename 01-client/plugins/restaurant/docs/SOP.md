@@ -1,8 +1,8 @@
 # Restaurant — Standard Operating Procedure (SOP)
 
-**Business:** Chef Gregory's BBQ Smokehouse · 6550 El Camino Real, Atascadero, CA 93422
-**System:** Slate Restaurant plugin v0.1.0 (in-house POS) · Phase 1
+**System:** Kohevo Restaurant plugin v0.3.0 (POS, card + cash payments with refunds and receipts, online ordering)
 **Audience:** owners, managers, cashiers/servers
+**Before you hand this to staff:** replace `https://your-site.example` below with your own site address.
 
 ---
 
@@ -14,9 +14,9 @@
 | **Phone** | Customer calls; staff take it down | Staff, on the POS (type = Takeout) |
 | **Online (your own site)** | Customer orders at **`/order`** — menu, cart, pay by card or at pickup | Self-service; lands in **Online orders** for staff to fire |
 
-**Customer ordering link:** `https://greenlightinduction.rakibhasaan.com/order` — share this on your menu, social bios, Google profile, and as a QR code. Customers pick items (with sizes/add-ons), check out, and pay online (Stripe) or choose pay-at-pickup.
+**Customer ordering link:** `https://your-site.example/order` — share this on your menu, social bios, Google profile, and as a QR code. Customers pick items (with sizes/add-ons), check out, and pay online (Stripe) or choose pay-at-pickup.
 
-**Staff POS link (NOT for customers):** `https://greenlightinduction.rakibhasaan.com/plugins/restaurant/admin/pos.php` — requires a staff login. Do not share with customers.
+**Staff POS link (NOT for customers):** `https://your-site.example/plugins/restaurant/admin/pos.php` — requires a staff login. Do not share with customers.
 
 ### Handling online orders (staff)
 1. New orders appear in **Restaurant → Online orders** (a badge/contact/items/paid status card per order).
@@ -62,16 +62,35 @@
 3. Customer taps/inserts their card on the reader. The screen shows **present card → approved/declined**.
 4. On **approved**, the check closes automatically. On **declined**, retry or take another tender. **Cancel charge** aborts a stuck charge.
 
-> Card payments also settle by Stripe webhook, so a check still closes even if the browser hiccups mid-charge. Never charge the same check twice — the system blocks double-settlement, but always confirm the check shows **paid** before re-trying.
+> Card payments also settle by Stripe webhook, so a check still closes even if the browser hiccups mid-charge. Pressing **Charge on reader** twice for the same amount re-uses the first charge rather than starting a second one, but always confirm the check shows **paid** before re-trying.
+
+### Receipts
+- **Print check** (on an open check) prints the bill before payment; **Print receipt** (on a paid check, or the **Print receipt** button on the order page) prints the receipt with payments.
+- The receipt shows your business name and address and the **Receipt header / footer** text from **Settings**, every item with its options, subtotal, discount, service charge, tax, tip, total, the payments and any refunds.
 
 ---
 
-## 4. Discounts, comps, voids
+## 3a. Refunds
+
+Needs `restaurant.manage_orders`.
+
+1. **Restaurant → Orders** → **View** the order (or open it from the POS with **Order details**).
+2. In **Payments**, press **Refund** on the payment. The amount defaults to everything not yet refunded; lower it for a partial refund, and enter a reason.
+3. **Issue refund** and confirm.
+   - **Card** payments go back to the customer's card through Stripe (usually 5–10 days to appear on their statement).
+   - **Cash** payments are only recorded: hand the cash back from the drawer.
+4. The order shows **Refunded** and its **Paid** total drops. A payment can be refunded in several parts, never for more than was paid. A refund does not reopen the check.
+
+If Stripe refuses a refund (for example the Stripe balance is too low), nothing is recorded as refunded and you can retry. If Stripe does not answer at all, the order page says so: retry the **same amount** — Stripe will not refund it twice.
+
+---
+
+## 4. Discounts and voids
 
 - **Discount** — manager-approved dollar amount off a check (button on the check).
-- **Void check** — cancels the entire check (requires the **Void/comp** permission, `restaurant.manage_orders`). Enter a reason. Use for mistakes/walkouts.
-- **Close check** — closes a check with no further payment (e.g. a comp). Use sparingly and per policy.
-- All voids/discounts/payments are recorded in the **audit log**.
+- **Void check** — cancels the entire check (requires `restaurant.manage_orders`). Enter a reason. Use for mistakes/walkouts.
+- **Close check** — closes a check with no further payment. There is no separate comp action yet, so use this sparingly and per policy.
+- All voids, discounts, payments and refunds are recorded in the **audit log**.
 
 ---
 
@@ -86,7 +105,7 @@
 
 1. Make sure **no checks are left open** (open-checks rail on the POS should be empty). Settle or void any stragglers.
 2. Reconcile the cash drawer against cash payments (per your cash policy).
-3. Card totals reconcile in the Stripe dashboard (stripe-payment plugin).
+3. Card totals reconcile in the Stripe dashboard (stripe-payment plugin). Refunds show on each order page and in Stripe.
 4. Log out.
 
 ---
@@ -97,7 +116,7 @@
 |---|---|
 | `restaurant.pos` | run the register, take orders & payment |
 | `restaurant.manage_menu` | edit menu, prices, 86 items |
-| `restaurant.manage_orders` | void / comp / reopen / refund |
+| `restaurant.manage_orders` | void checks, refund payments |
 | `restaurant.manage_settings` | change tax, tips, receipts, readers |
 | `restaurant.view` | see orders, menu, the help page |
 
@@ -113,10 +132,11 @@ Grant these per role under **Settings → Roles**. Cashiers typically get `resta
 | Card button disabled | No reader available — configure stripe-payment and pair a reader. Cash still works. |
 | Reader offline | Re-pair on **Card readers**; check the reader's network. |
 | "Security check failed" in the POS | Session expired — reload the register and log in again. |
-| Wrong total/tax | Check the item's **tax rate** and the **Default tax rate** in Settings (currently 8.75% — verify vs. CDTFA). |
+| Wrong total/tax | Check the item's **tax rate** and the **Default tax rate** in Settings (verify it against your tax authority). |
+| Refund button missing | Your role lacks `restaurant.manage_orders`, or the payment is already fully refunded, pending or failed. |
 
 ---
 
-## 9. Enabling native online ordering (future)
+## 9. Online ordering settings
 
-To replace the external SpotOn link with a **customer-facing ordering page on your own domain**, the developer builds **Phase 3 (Online ordering)**: a public menu, cart, checkout, and online card payment that drops orders straight into this POS as `source = online`. The order engine, menu, and payments are already in place to support it. Request this when you're ready to bring online ordering in-house.
+Online ordering is built in (see section 0). Switch it on or off, and choose card online, pay at pickup and delivery, under **Restaurant settings → Online ordering**. Card orders arrive already paid and can be refunded from the order page like any other card payment.
