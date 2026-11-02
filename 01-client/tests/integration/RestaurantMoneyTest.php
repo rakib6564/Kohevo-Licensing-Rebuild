@@ -263,6 +263,13 @@ try {
         RestaurantAPI::cancelTerminalPayment($b['payment_id']);
     });
 
+    unit('deleting a reader sends a real DELETE to Stripe and reports what Stripe answered', function () use ($rmtRequests): void {
+        $res = StripeTerminalAPI::deleteReader('tmr_gone');
+        assert_true($res['ok'], $res['error'] ?? '');
+        assert_eq(1, count($rmtRequests('DELETE', '#^/v1/terminal/readers/tmr_gone$#')));
+        assert_eq(0, count($rmtRequests('GET', '#^/v1/terminal/readers/tmr_gone$#')), 'not sent as a GET');
+    });
+
     unit('webhook settlement: payment_intent.succeeded settles once; a repeated delivery changes nothing', function () use ($rmtOrder, $rmtTerminal, $rmtPay, $rmtOrd): void {
         $order = $rmtOrder();
         $res   = $rmtTerminal($order, 2200, 200);

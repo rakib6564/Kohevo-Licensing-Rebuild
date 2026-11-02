@@ -124,6 +124,9 @@ if ($method === 'POST' && $path === '/__test/fail_next_refund') {
         unset($db['readers'][$m[1]]);
         $body = ['id' => $m[1], 'object' => 'terminal.reader', 'action' => ['status' => $declined ? 'failed' : 'succeeded']];
     }
+} elseif (preg_match('#^/v1/terminal/readers/([A-Za-z0-9_]+)$#', $path, $m) && $method === 'DELETE') {
+    unset($db['readers'][$m[1]]);
+    $body = ['id' => $m[1], 'object' => 'terminal.reader', 'deleted' => true];
 } elseif ($method === 'POST' && $path === '/v1/refunds') {
     $pi = $db['pi'][(string) ($params['payment_intent'] ?? '')] ?? null;
     $remaining = $pi ? (int) $pi['amount_received'] - (int) $pi['refunded'] : 0;

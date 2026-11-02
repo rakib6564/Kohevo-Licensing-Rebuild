@@ -699,6 +699,8 @@ class StripePaymentAPI {
         } else {
             $qs = $params ? '?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986) : '';
             curl_setopt($ch, CURLOPT_URL, $url . $qs);
+            // Without this a DELETE went out as a GET and deleted nothing.
+            if (strtoupper($method) !== 'GET') curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
         }
 
         $body = curl_exec($ch);
