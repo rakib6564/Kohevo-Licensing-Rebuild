@@ -223,6 +223,44 @@ class Restaurant extends Plugin {
         $this->ensureColumn('restaurant_payments', 'refunded_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
         $this->ensureColumn('restaurant_payments', 'central_charge_id', "INT UNSIGNED NULL");
         $this->ensureColumn('restaurant_orders', 'refunded_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+
+        // 0.4.0 — POS completeness: line and percentage discounts with a
+        // reason, comp, kitchen timestamps, cash tendered and change.
+        $hadFixed = $this->hasColumn('restaurant_orders', 'discount_fixed_cents');
+        $this->ensureColumn('restaurant_orders', 'discount_fixed_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_orders', 'discount_pct', "DECIMAL(6,3) NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_orders', 'discount_reason', "VARCHAR(160) NULL");
+        $this->ensureColumn('restaurant_orders', 'comp_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_orders', 'comp_reason', "VARCHAR(160) NULL");
+        if (!$hadFixed && $this->hasColumn('restaurant_orders', 'discount_fixed_cents')) {
+            // Before 0.4.0 discount_cents was both the amount typed in and the
+            // amount applied; it becomes the typed-in fixed amount.
+            try {
+                Database::query("UPDATE restaurant_orders SET discount_fixed_cents = discount_cents WHERE discount_cents > 0");
+            } catch (\Throwable $e) {
+                slate_log('Restaurant 0.4.0 discount backfill failed: ' . $e->getMessage(), 'error');
+            }
+        }
+        $this->ensureColumn('restaurant_order_items', 'discount_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_order_items', 'discount_fixed_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_order_items', 'discount_pct', "DECIMAL(6,3) NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_order_items', 'discount_reason', "VARCHAR(160) NULL");
+        $this->ensureColumn('restaurant_order_items', 'sent_at', "DATETIME NULL");
+        $this->ensureColumn('restaurant_order_items', 'ready_at', "DATETIME NULL");
+        $this->ensureColumn('restaurant_order_items', 'served_at', "DATETIME NULL");
+        $this->ensureColumn('restaurant_payments', 'tendered_cents', "INT UNSIGNED NULL");
+        $this->ensureColumn('restaurant_payments', 'change_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+    }
+
+    private function hasColumn(string $table, string $column): bool {
+        try {
+            return (int) Database::value(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+                [$table, $column]) > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     private function schemaIsCurrent(): bool {
@@ -236,8 +274,8 @@ class Restaurant extends Plugin {
             $col = (int) Database::value(
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
                   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurant_payments'
-                    AND COLUMN_NAME = 'central_charge_id'");
-            return $tbl >= 5 && $col === 1;
+                    AND COLUMN_NAME IN ('central_charge_id','tendered_cents')");
+            return $tbl >= 5 && $col === 2;
         } catch (\Throwable $e) {
             return false;
         }

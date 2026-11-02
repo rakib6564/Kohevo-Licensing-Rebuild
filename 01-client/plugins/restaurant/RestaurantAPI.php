@@ -164,9 +164,19 @@ class RestaurantAPI {
     // ── Order engine ──────────────────────────────────────────
 
     /**
-     * Recompute one line item's modifier total + line total from its stored
-     * modifier rows, then roll up the whole order's subtotal/tax/service/total.
-     * Void lines and voided orders contribute nothing.
+     * Recompute every line (modifiers, line discount, line total) and roll up
+     * the order: subtotal, order discount, service charge, tax, total.
+     *
+     *   gross line     = (unit price + modifier deltas) × qty
+     *   line discount  = fixed amount (capped at gross) or gross × pct
+     *   line total     = gross − line discount         (tax is on this)
+     *   subtotal       = Σ non-void line totals
+     *   order discount = subtotal × pct, or the fixed amount capped at subtotal
+     *   service charge = (subtotal − order discount) × service pct
+     *   total          = subtotal − order discount + service + tax + tip
+     *
+     * Void lines and voided orders contribute nothing. Tax stays on the line
+     * totals (after line discounts, before the order discount), as before.
      */
     public static function recalcOrder(int $orderId): void {
         $tid   = current_tenant_id();
@@ -184,11 +194,14 @@ class RestaurantAPI {
             $modTotal = (int) Database::value(
                 "SELECT COALESCE(SUM(price_delta_cents),0) FROM restaurant_order_item_modifiers
                   WHERE order_item_id = ?", [(int)$it['id']]);
-            $qty       = max(1, (int)$it['qty']);
-            $lineTotal = ((int)$it['unit_price_cents'] + $modTotal) * $qty;
+            $qty   = max(1, (int)$it['qty']);
+            $gross = max(0, ((int)$it['unit_price_cents'] + $modTotal) * $qty);
+            $disc  = self::discountOn($gross, (int)($it['discount_fixed_cents'] ?? 0), (float)($it['discount_pct'] ?? 0));
+            $lineTotal = $gross - $disc;
 
             Database::update('restaurant_order_items', [
                 'modifiers_total_cents' => $modTotal,
+                'discount_cents'        => $disc,
                 'line_total_cents'      => $lineTotal,
             ], 'id = ?', [(int)$it['id']]);
 
@@ -200,7 +213,7 @@ class RestaurantAPI {
         // Service charge is a percentage of the discounted subtotal. The
         // percent is snapshotted onto the order at open time so later recalcs
         // stay stable even if the global setting changes mid-service.
-        $discount = min((int)$order['discount_cents'], $subtotal);
+        $discount = self::discountOn($subtotal, (int)($order['discount_fixed_cents'] ?? 0), (float)($order['discount_pct'] ?? 0));
         $svcBase  = max(0, $subtotal - $discount);
         $pct      = (float)($order['service_charge_pct'] ?? 0);
         $service  = $pct > 0 ? (int) round($svcBase * $pct / 100) : 0;
@@ -214,6 +227,13 @@ class RestaurantAPI {
             'tax_cents'            => $taxTotal,
             'total_cents'          => max(0, $total),
         ], 'id = ? AND tenant_id = ?', [$orderId, $tid]);
+    }
+
+    /** A discount on $base: the percent when set, else the fixed amount; never more than $base. */
+    public static function discountOn(int $base, int $fixedCents, float $pct): int {
+        if ($base <= 0) return 0;
+        $d = $pct > 0 ? (int) round($base * min(100, $pct) / 100) : max(0, $fixedCents);
+        return min($base, $d);
     }
 
     /** Full order with items (+ their modifiers) and payments. Null if missing. */
@@ -243,6 +263,7 @@ class RestaurantAPI {
         $order['refunds'] = Database::rows(
             "SELECT * FROM restaurant_refunds WHERE order_id = ? AND tenant_id = ? ORDER BY id",
             [$orderId, $tid]);
+        $order['checks'] = self::checkTotals($order);
         return $order;
     }
 
@@ -552,31 +573,65 @@ class RestaurantAPI {
         self::recalcOrder((int)$line['order_id']);
     }
 
-    /** Move a line onto a different check number (split-check support). */
-    public static function moveLineToCheck(int $lineId, int $checkNo): void {
-        $tid  = current_tenant_id();
-        $line = Database::row("SELECT * FROM restaurant_order_items WHERE id = ? AND tenant_id = ?", [$lineId, $tid]);
-        if (!$line) return;
-        Database::update('restaurant_order_items', ['check_no' => max(1, $checkNo)], 'id = ?', [$lineId]);
-    }
-
     /** Fire all 'new' lines to the kitchen. */
     public static function sendToKitchen(int $orderId): void {
         $tid = current_tenant_id();
         Database::query(
-            "UPDATE restaurant_order_items SET kitchen_status = 'sent'
-              WHERE order_id = ? AND tenant_id = ? AND kitchen_status = 'new'", [$orderId, $tid]);
+            "UPDATE restaurant_order_items SET kitchen_status = 'sent', sent_at = ?
+              WHERE order_id = ? AND tenant_id = ? AND kitchen_status = 'new'", [slate_db_now(), $orderId, $tid]);
         Database::update('restaurant_orders', ['status' => 'sent'],
             "id = ? AND tenant_id = ? AND status = 'open'", [$orderId, $tid]);
         AuditLog::record('restaurant.order_sent', (string)$orderId);
     }
 
-    public static function setDiscount(int $orderId, int $discountCents): void {
+    /** Fixed-amount order discount (replaces any percentage discount). */
+    public static function setDiscount(int $orderId, int $discountCents, string $reason = ''): void {
         $tid = current_tenant_id();
-        Database::update('restaurant_orders', ['discount_cents' => max(0, $discountCents)],
-            'id = ? AND tenant_id = ?', [$orderId, $tid]);
+        Database::update('restaurant_orders', [
+            'discount_fixed_cents' => max(0, $discountCents),
+            'discount_pct'         => 0,
+            'discount_reason'      => $reason !== '' ? mb_substr($reason, 0, 160) : null,
+        ], 'id = ? AND tenant_id = ?', [$orderId, $tid]);
         self::recalcOrder($orderId);
-        AuditLog::record('restaurant.discount_set', (string)$orderId, ['cents' => max(0, $discountCents)]);
+        AuditLog::record('restaurant.discount_set', (string)$orderId, ['cents' => max(0, $discountCents), 'reason' => $reason]);
+    }
+
+    /** Percentage order discount, 0–100 (replaces any fixed discount). */
+    public static function setDiscountPct(int $orderId, float $pct, string $reason = ''): void {
+        $tid = current_tenant_id();
+        $pct = max(0, min(100, round($pct, 3)));
+        Database::update('restaurant_orders', [
+            'discount_fixed_cents' => 0,
+            'discount_pct'         => $pct,
+            'discount_reason'      => $reason !== '' ? mb_substr($reason, 0, 160) : null,
+        ], 'id = ? AND tenant_id = ?', [$orderId, $tid]);
+        self::recalcOrder($orderId);
+        AuditLog::record('restaurant.discount_set', (string)$orderId, ['pct' => $pct, 'reason' => $reason]);
+    }
+
+    /**
+     * Discount one line: $type 'amount' (cents), 'pct' (0–100) or 'none'.
+     * A 100% line discount is how a single item is comped.
+     */
+    public static function setLineDiscount(int $lineId, string $type, float $value, string $reason = ''): void {
+        $tid  = current_tenant_id();
+        $line = Database::row("SELECT * FROM restaurant_order_items WHERE id = ? AND tenant_id = ?", [$lineId, $tid]);
+        if (!$line) throw new \RuntimeException('Line not found.');
+        self::assertEditable((int)$line['order_id']);
+        $fields = ['discount_fixed_cents' => 0, 'discount_pct' => 0, 'discount_reason' => null];
+        if ($type === 'amount' && $value > 0) $fields['discount_fixed_cents'] = (int) round($value);
+        if ($type === 'pct' && $value > 0)    $fields['discount_pct'] = max(0, min(100, round($value, 3)));
+        if ($type !== 'none' && $reason !== '') $fields['discount_reason'] = mb_substr($reason, 0, 160);
+        Database::update('restaurant_order_items', $fields, 'id = ? AND tenant_id = ?', [$lineId, $tid]);
+        self::recalcOrder((int)$line['order_id']);
+        AuditLog::record('restaurant.line_discount', (string)$lineId, [
+            'order_id' => (int)$line['order_id'], 'type' => $type, 'value' => $value, 'reason' => $reason]);
+    }
+
+    /** Comp one line: a 100% line discount with the reason, audited as a comp. */
+    public static function compLine(int $lineId, string $reason): void {
+        self::setLineDiscount($lineId, 'pct', 100, $reason !== '' ? $reason : 'Comp');
+        AuditLog::record('restaurant.line_comped', (string)$lineId, ['reason' => $reason]);
     }
 
     public static function setTip(int $orderId, int $tipCents): void {
@@ -588,18 +643,32 @@ class RestaurantAPI {
 
     // ── Tender ────────────────────────────────────────────────
 
-    /** Tender cash. Closes the order if the paid total now covers it. */
-    public static function recordCashPayment(int $orderId, int $amountCents, int $tipCents = 0): int {
-        $tid = current_tenant_id();
+    /**
+     * Tender cash against one check of the order. $tenderedCents is what the
+     * guest handed over (null = exact); it must cover amount + tip, and the
+     * difference is stored as change. Marks the order paid once covered.
+     */
+    public static function recordCashPayment(int $orderId, int $amountCents, int $tipCents = 0,
+                                             ?int $tenderedCents = null, int $checkNo = 1): int {
+        $tid    = current_tenant_id();
+        $amount = max(0, $amountCents);
+        $tip    = max(0, $tipCents);
+        if ($tenderedCents !== null && $tenderedCents < $amount + $tip) {
+            throw new \RuntimeException('Cash tendered is less than the amount plus tip.');
+        }
         $pid = Database::insert('restaurant_payments', [
-            'tenant_id'    => $tid,
-            'order_id'     => $orderId,
-            'method'       => 'cash',
-            'amount_cents' => max(0, $amountCents),
-            'tip_cents'    => max(0, $tipCents),
-            'status'       => 'paid',
+            'tenant_id'      => $tid,
+            'order_id'       => $orderId,
+            'check_no'       => max(1, $checkNo),
+            'method'         => 'cash',
+            'amount_cents'   => $amount,
+            'tip_cents'      => $tip,
+            'tendered_cents' => $tenderedCents,
+            'change_cents'   => $tenderedCents !== null ? $tenderedCents - $amount - $tip : 0,
+            'status'         => 'paid',
         ]);
-        AuditLog::record('restaurant.cash_payment', (string)$orderId, ['cents' => $amountCents, 'tip' => $tipCents]);
+        AuditLog::record('restaurant.cash_payment', (string)$orderId, [
+            'cents' => $amount, 'tip' => $tip, 'tendered' => $tenderedCents, 'check' => max(1, $checkNo)]);
         self::syncOrderPayment($orderId);
         return $pid;
     }
@@ -610,7 +679,8 @@ class RestaurantAPI {
      * then pushes it to the reader. Returns ['ok','payment_id','pi_id','simulated']
      * or ['ok'=>false,'error'=>…]. Poll with pollTerminalPayment().
      */
-    public static function beginTerminalPayment(int $orderId, int $readerRowId, int $amountCents, int $tipCents = 0): array {
+    public static function beginTerminalPayment(int $orderId, int $readerRowId, int $amountCents, int $tipCents = 0,
+                                                int $checkNo = 1): array {
         if (!self::terminalAvailable()) {
             return ['ok' => false, 'error' => 'Stripe Terminal is not available. Configure the Stripe plugin first.'];
         }
@@ -633,13 +703,14 @@ class RestaurantAPI {
         $pending = Database::row(
             "SELECT id FROM restaurant_payments
               WHERE tenant_id = ? AND order_id = ? AND method = 'terminal' AND status = 'pending'
-                AND reader_id = ? AND amount_cents = ? AND tip_cents = ?
+                AND reader_id = ? AND amount_cents = ? AND tip_cents = ? AND check_no = ?
                 AND created_at >= NOW() - INTERVAL 15 MINUTE
            ORDER BY id DESC LIMIT 1",
-            [$tid, $orderId, $readerRowId, $amountCents, $tipCents]);
+            [$tid, $orderId, $readerRowId, $amountCents, $tipCents, max(1, $checkNo)]);
         $pid = $pending ? (int)$pending['id'] : Database::insert('restaurant_payments', [
             'tenant_id'    => $tid,
             'order_id'     => $orderId,
+            'check_no'     => max(1, $checkNo),
             'method'       => 'terminal',
             'amount_cents' => $amountCents,
             'tip_cents'    => $tipCents,
@@ -730,6 +801,357 @@ class RestaurantAPI {
         }
         Database::update('restaurant_payments', ['status' => 'failed'], 'id = ?', [$paymentId]);
         return ['ok' => true];
+    }
+
+    // ── Checks (split / merge) ────────────────────────────────
+
+    /** Throw unless the order exists in this tenant and is still open or sent. */
+    private static function assertEditable(int $orderId): array {
+        $order = Database::row("SELECT * FROM restaurant_orders WHERE id = ? AND tenant_id = ?",
+            [$orderId, current_tenant_id()]);
+        if (!$order) throw new \RuntimeException('Check not found.');
+        if (!in_array($order['status'], ['open', 'sent'], true)) {
+            throw new \RuntimeException(__('restaurant_err_not_open', 'This check is no longer open.'));
+        }
+        return $order;
+    }
+
+    /**
+     * Totals per check number. Lines carry their own subtotal and tax; the
+     * order discount and service charge are shared out in proportion to each
+     * check's subtotal, the last check taking the rounding, so the checks
+     * always add up to the order exactly. Tips and payments are those
+     * recorded against the check. Returns a list of
+     * [check_no, subtotal, discount, service, tax, tip, total, paid, balance, lines].
+     */
+    public static function checkTotals(array $order): array {
+        $byCheck = [];
+        foreach ($order['items'] ?? [] as $it) {
+            $no = max(1, (int)$it['check_no']);
+            $byCheck[$no] ??= ['check_no' => $no, 'subtotal' => 0, 'tax' => 0, 'lines' => 0];
+            if ($it['kitchen_status'] === 'void') continue;
+            $byCheck[$no]['subtotal'] += (int)$it['line_total_cents'];
+            $byCheck[$no]['tax']      += (int) round((int)$it['line_total_cents'] * ((float)$it['tax_rate'] / 100));
+            $byCheck[$no]['lines']++;
+        }
+        foreach ($order['payments'] ?? [] as $p) {
+            $no = max(1, (int)$p['check_no']);
+            $byCheck[$no] ??= ['check_no' => $no, 'subtotal' => 0, 'tax' => 0, 'lines' => 0];
+        }
+        if (!$byCheck) $byCheck[1] = ['check_no' => 1, 'subtotal' => 0, 'tax' => 0, 'lines' => 0];
+        ksort($byCheck);
+
+        $sub   = max(0, (int)$order['subtotal_cents']);
+        $share = function (int $whole) use ($byCheck, $sub): array {
+            $out = []; $given = 0; $nos = array_keys($byCheck); $last = end($nos);
+            foreach ($byCheck as $no => $c) {
+                $part = $no === $last ? $whole - $given
+                      : ($sub > 0 ? intdiv($whole * $c['subtotal'], $sub) : 0);
+                $out[$no] = $part; $given += $part;
+            }
+            return $out;
+        };
+        $disc = $share((int)$order['discount_cents']);
+        $svc  = $share((int)$order['service_charge_cents']);
+
+        $out = [];
+        foreach ($byCheck as $no => $c) {
+            $tip = 0; $paid = 0;
+            foreach ($order['payments'] ?? [] as $p) {
+                if (max(1, (int)$p['check_no']) !== $no || !in_array($p['status'], ['paid', 'refunded'], true)) continue;
+                $amount = (int)$p['amount_cents']; $t = (int)$p['tip_cents'];
+                $ref    = min((int)$p['refunded_cents'], $amount + $t);
+                $tip   += $t - max(0, $ref - $amount);
+                $paid  += $amount + $t - $ref;
+            }
+            $total = $c['subtotal'] - $disc[$no] + $svc[$no] + $c['tax'] + $tip;
+            $out[] = [
+                'check_no' => $no, 'subtotal' => $c['subtotal'], 'discount' => $disc[$no], 'service' => $svc[$no],
+                'tax' => $c['tax'], 'tip' => $tip, 'total' => $total, 'paid' => $paid,
+                'balance' => max(0, $total - $paid), 'lines' => $c['lines'],
+            ];
+        }
+        return $out;
+    }
+
+    /** True when a check number already holds a settled payment (its lines are locked). */
+    private static function checkHasPayments(int $orderId, int $checkNo): bool {
+        return (bool) Database::value(
+            "SELECT 1 FROM restaurant_payments WHERE order_id = ? AND tenant_id = ? AND check_no = ?
+                AND status IN ('paid','refunded','pending') LIMIT 1",
+            [$orderId, current_tenant_id(), $checkNo]);
+    }
+
+    /** The next unused check number on an order. */
+    public static function nextCheckNo(int $orderId): int {
+        $tid = current_tenant_id();
+        $a = (int) Database::value("SELECT COALESCE(MAX(check_no),0) FROM restaurant_order_items WHERE order_id = ? AND tenant_id = ?", [$orderId, $tid]);
+        $b = (int) Database::value("SELECT COALESCE(MAX(check_no),0) FROM restaurant_payments WHERE order_id = ? AND tenant_id = ?", [$orderId, $tid]);
+        return max($a, $b, 0) + 1;
+    }
+
+    /**
+     * Move a line onto another check of the same order (split a check). A
+     * check that already holds a payment is locked: lines move neither out
+     * of it nor into it, so a settled amount can never change underneath it.
+     */
+    public static function moveLineToCheck(int $lineId, int $checkNo): void {
+        $tid  = current_tenant_id();
+        $line = Database::row("SELECT * FROM restaurant_order_items WHERE id = ? AND tenant_id = ?", [$lineId, $tid]);
+        if (!$line) throw new \RuntimeException('Line not found.');
+        self::assertEditable((int)$line['order_id']);
+        $checkNo = max(1, $checkNo);
+        $from    = max(1, (int)$line['check_no']);
+        if ($from === $checkNo) return;
+        if (self::checkHasPayments((int)$line['order_id'], $from) || self::checkHasPayments((int)$line['order_id'], $checkNo)) {
+            throw new \RuntimeException(__('restaurant_err_check_paid', 'A check with a payment on it is locked. Refund the payment first to change it.'));
+        }
+        Database::update('restaurant_order_items', ['check_no' => $checkNo], 'id = ? AND tenant_id = ?', [$lineId, $tid]);
+        AuditLog::record('restaurant.line_moved', (string)$lineId, ['order_id' => (int)$line['order_id'], 'from' => $from, 'to' => $checkNo]);
+    }
+
+    /**
+     * Split $qty units off a line onto check $toCheck (e.g. two of three
+     * beers onto another guest's check). The new line copies the original's
+     * price, tax, modifiers, notes, seat and kitchen state; the original keeps
+     * the rest. Returns the new line id.
+     */
+    public static function splitLine(int $lineId, int $qty, int $toCheck): int {
+        $tid  = current_tenant_id();
+        $line = Database::row("SELECT * FROM restaurant_order_items WHERE id = ? AND tenant_id = ?", [$lineId, $tid]);
+        if (!$line) throw new \RuntimeException('Line not found.');
+        self::assertEditable((int)$line['order_id']);
+        if ($line['kitchen_status'] === 'void') throw new \RuntimeException('A void line cannot be split.');
+        $have = (int)$line['qty'];
+        if ($qty < 1 || $qty >= $have) throw new \RuntimeException(sprintf('Split between 1 and %d.', $have - 1));
+        $toCheck = max(1, $toCheck);
+        if (self::checkHasPayments((int)$line['order_id'], max(1, (int)$line['check_no']))
+            || self::checkHasPayments((int)$line['order_id'], $toCheck)) {
+            throw new \RuntimeException(__('restaurant_err_check_paid', 'A check with a payment on it is locked. Refund the payment first to change it.'));
+        }
+
+        $copy = $line;
+        unset($copy['id'], $copy['created_at']);
+        $copy['qty']      = $qty;
+        $copy['check_no'] = $toCheck;
+        $newId = Database::insert('restaurant_order_items', $copy);
+        foreach (Database::rows("SELECT * FROM restaurant_order_item_modifiers WHERE order_item_id = ?", [$lineId]) as $m) {
+            unset($m['id']);
+            $m['order_item_id'] = $newId;
+            Database::insert('restaurant_order_item_modifiers', $m);
+        }
+        Database::update('restaurant_order_items', ['qty' => $have - $qty], 'id = ? AND tenant_id = ?', [$lineId, $tid]);
+        self::recalcOrder((int)$line['order_id']);
+        AuditLog::record('restaurant.line_split', (string)$lineId, [
+            'order_id' => (int)$line['order_id'], 'qty' => $qty, 'to_check' => $toCheck, 'new_line' => $newId]);
+        return $newId;
+    }
+
+    /**
+     * Merge open check $sourceId into open check $targetId: lines move over
+     * on fresh check numbers after the target's, the guest counts add up,
+     * and the source is voided with a note pointing at the target. A source
+     * that already holds a payment is refused (refund it, or pay it, first).
+     */
+    public static function mergeOrders(int $targetId, int $sourceId): void {
+        $tid = current_tenant_id();
+        if ($targetId === $sourceId) throw new \RuntimeException('Pick two different checks.');
+        $target = self::assertEditable($targetId);
+        $source = self::assertEditable($sourceId);
+        if (!empty($target['table_id']) && !empty($source['table_id']) && (int)$target['table_id'] !== (int)$source['table_id']) {
+            throw new \RuntimeException(__('restaurant_err_merge_table', 'Only checks on the same table can be merged.'));
+        }
+        $paid = (int) Database::value(
+            "SELECT COUNT(*) FROM restaurant_payments WHERE order_id = ? AND tenant_id = ? AND status IN ('paid','refunded','pending')",
+            [$sourceId, $tid]);
+        if ($paid > 0) {
+            throw new \RuntimeException(__('restaurant_err_merge_paid', 'The check being merged already has a payment. Settle it on its own instead.'));
+        }
+
+        $offset = self::nextCheckNo($targetId) - 1;
+        Database::query(
+            "UPDATE restaurant_order_items SET order_id = ?, check_no = check_no + ? WHERE order_id = ? AND tenant_id = ?",
+            [$targetId, $offset, $sourceId, $tid]);
+        Database::update('restaurant_orders', [
+            'guest_count' => (int)$target['guest_count'] + (int)$source['guest_count'],
+            'customer_id' => $target['customer_id'] ?: ($source['customer_id'] ?: null),
+            'status'      => ($target['status'] === 'sent' || $source['status'] === 'sent') ? 'sent' : 'open',
+        ], 'id = ? AND tenant_id = ?', [$targetId, $tid]);
+        $note = trim((($source['notes'] ?? '') !== '' ? $source['notes'] . ' · ' : '') . 'Merged into #' . $target['order_no']);
+        Database::update('restaurant_orders', ['status' => 'voided', 'closed_at' => slate_db_now(), 'notes' => mb_substr($note, 0, 255)],
+            'id = ? AND tenant_id = ?', [$sourceId, $tid]);
+        self::recalcOrder($sourceId);
+        self::recalcOrder($targetId);
+        AuditLog::record('restaurant.orders_merged', (string)$targetId, ['source' => $sourceId]);
+    }
+
+    // ── Comp / reopen ─────────────────────────────────────────
+
+    /**
+     * Close a check whose balance will not be collected (a comp), recording
+     * the written-off amount and the reason. Needs restaurant.manage_orders
+     * at the caller.
+     */
+    public static function compOrder(int $orderId, string $reason): void {
+        $tid   = current_tenant_id();
+        $order = self::assertEditable($orderId);
+        $reason = trim($reason);
+        if ($reason === '') throw new \RuntimeException(__('restaurant_err_reason', 'Enter a reason.'));
+        $due = max(0, (int)$order['total_cents'] - (int)$order['paid_cents']);
+        Database::update('restaurant_orders', [
+            'status' => 'closed', 'closed_at' => slate_db_now(),
+            'comp_cents' => $due, 'comp_reason' => mb_substr($reason, 0, 160),
+        ], 'id = ? AND tenant_id = ?', [$orderId, $tid]);
+        self::freeTableIfSettled($order);
+        AuditLog::record('restaurant.order_comped', (string)$orderId, ['cents' => $due, 'reason' => $reason]);
+    }
+
+    /**
+     * Reopen a paid or closed check so it can be changed and settled again.
+     * A comp on it is undone (the balance is owed again). The table, if any,
+     * is seated again. Needs restaurant.manage_orders at the caller.
+     */
+    public static function reopenOrder(int $orderId, string $reason = ''): void {
+        $tid   = current_tenant_id();
+        $order = Database::row("SELECT * FROM restaurant_orders WHERE id = ? AND tenant_id = ?", [$orderId, $tid]);
+        if (!$order) throw new \RuntimeException('Check not found.');
+        if (!in_array($order['status'], ['paid', 'closed'], true)) {
+            throw new \RuntimeException(__('restaurant_err_reopen', 'Only a paid or closed check can be reopened.'));
+        }
+        $sent = (bool) Database::value(
+            "SELECT 1 FROM restaurant_order_items WHERE order_id = ? AND tenant_id = ? AND kitchen_status IN ('sent','ready','served') LIMIT 1",
+            [$orderId, $tid]);
+        Database::update('restaurant_orders', [
+            'status' => $sent ? 'sent' : 'open', 'closed_at' => null, 'comp_cents' => 0, 'comp_reason' => null,
+        ], 'id = ? AND tenant_id = ?', [$orderId, $tid]);
+        if (!empty($order['table_id'])) {
+            Database::update('restaurant_tables', ['status' => 'seated'], 'id = ? AND tenant_id = ?', [(int)$order['table_id'], $tid]);
+        }
+        AuditLog::record('restaurant.order_reopened', (string)$orderId, ['reason' => $reason, 'was' => $order['status']]);
+    }
+
+    // ── Kitchen display ───────────────────────────────────────
+
+    /**
+     * Advance one line through the kitchen: 'ready' (bumped by the cook),
+     * 'served' (run to the guest) or back to 'sent' (recalled). Only the
+     * legal steps are taken: sent → ready → served, ready → sent.
+     */
+    public static function setKitchenStatus(int $lineId, string $to): void {
+        $tid  = current_tenant_id();
+        $line = Database::row("SELECT * FROM restaurant_order_items WHERE id = ? AND tenant_id = ?", [$lineId, $tid]);
+        if (!$line) throw new \RuntimeException('Line not found.');
+        $legal = ['sent' => ['ready'], 'ready' => ['served', 'sent']];
+        if (!in_array($to, $legal[$line['kitchen_status']] ?? [], true)) {
+            throw new \RuntimeException(sprintf('A %s line cannot become %s.', $line['kitchen_status'], $to));
+        }
+        $fields = ['kitchen_status' => $to];
+        if ($to === 'ready')  $fields['ready_at']  = slate_db_now();
+        if ($to === 'served') $fields['served_at'] = slate_db_now();
+        if ($to === 'sent')   $fields['ready_at']  = null;
+        Database::update('restaurant_order_items', $fields, 'id = ? AND tenant_id = ?', [$lineId, $tid]);
+        AuditLog::record('restaurant.kitchen_' . $to, (string)$lineId, ['order_id' => (int)$line['order_id']]);
+    }
+
+    /** Bump every sent line of an order to ready (or every ready line to served). */
+    public static function bumpOrder(int $orderId, string $to = 'ready'): int {
+        $from = $to === 'served' ? 'ready' : 'sent';
+        $ids  = array_column(Database::rows(
+            "SELECT id FROM restaurant_order_items WHERE order_id = ? AND tenant_id = ? AND kitchen_status = ?",
+            [$orderId, current_tenant_id(), $from]), 'id');
+        foreach ($ids as $id) self::setKitchenStatus((int)$id, $to);
+        return count($ids);
+    }
+
+    /**
+     * Tickets for the kitchen display: every order with a line still in the
+     * kitchen (sent or ready), oldest first, each with its lines, modifiers,
+     * seats and notes, and the time the oldest line was fired.
+     */
+    public static function kitchenTickets(): array {
+        $tid  = current_tenant_id();
+        $rows = Database::rows(
+            "SELECT o.id, o.order_no, o.type, o.source, o.notes, o.guest_count, o.requested_time,
+                    t.label AS table_label, c.name AS customer_name,
+                    MIN(i.sent_at) AS fired_at
+               FROM restaurant_orders o
+               JOIN restaurant_order_items i ON i.order_id = o.id AND i.tenant_id = o.tenant_id
+               LEFT JOIN restaurant_tables t ON t.id = o.table_id
+               LEFT JOIN restaurant_customers c ON c.id = o.customer_id
+              WHERE o.tenant_id = ? AND o.status <> 'voided' AND i.kitchen_status IN ('sent','ready')
+           GROUP BY o.id, o.order_no, o.type, o.source, o.notes, o.guest_count, o.requested_time, t.label, c.name
+           ORDER BY fired_at, o.id", [$tid]);
+        foreach ($rows as &$r) {
+            $r['lines'] = Database::rows(
+                "SELECT id, name_snapshot, qty, seat, notes, kitchen_status, sent_at, ready_at, check_no
+                   FROM restaurant_order_items
+                  WHERE order_id = ? AND tenant_id = ? AND kitchen_status IN ('sent','ready')
+               ORDER BY id", [(int)$r['id'], $tid]);
+            foreach ($r['lines'] as &$l) {
+                $l['modifiers'] = array_column(Database::rows(
+                    "SELECT name_snapshot FROM restaurant_order_item_modifiers WHERE order_item_id = ? ORDER BY id",
+                    [(int)$l['id']]), 'name_snapshot');
+            }
+            unset($l);
+        }
+        unset($r);
+        return $rows;
+    }
+
+    // ── Guests, seats, tables, 86 ─────────────────────────────
+
+    /** Customers matching a name, phone or email fragment (POS guest lookup). */
+    public static function searchCustomers(string $q, int $limit = 8): array {
+        $q = trim($q);
+        if (mb_strlen($q) < 2) return [];
+        $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $q) . '%';
+        return Database::rows(
+            "SELECT id, name, phone, email FROM restaurant_customers
+              WHERE tenant_id = ? AND (name LIKE ? OR phone LIKE ? OR email LIKE ?)
+           ORDER BY name LIMIT " . max(1, min(25, $limit)),
+            [current_tenant_id(), $like, $like, $like]);
+    }
+
+    /** Set (or clear, with null) the seat number of a line. */
+    public static function setLineSeat(int $lineId, ?int $seat): void {
+        $tid  = current_tenant_id();
+        $line = Database::row("SELECT order_id FROM restaurant_order_items WHERE id = ? AND tenant_id = ?", [$lineId, $tid]);
+        if (!$line) throw new \RuntimeException('Line not found.');
+        self::assertEditable((int)$line['order_id']);
+        Database::update('restaurant_order_items', ['seat' => ($seat !== null && $seat > 0) ? $seat : null],
+            'id = ? AND tenant_id = ?', [$lineId, $tid]);
+    }
+
+    /** Mark a menu item 86'd (sold out) or back on, from the register. */
+    public static function set86(int $itemId, bool $on): void {
+        $tid = current_tenant_id();
+        $n = Database::update('restaurant_items', ['is_86' => $on ? 1 : 0], 'id = ? AND tenant_id = ?', [$itemId, $tid]);
+        if ($n) AuditLog::record('restaurant.item_86', (string)$itemId, ['on' => $on]);
+    }
+
+    /** Set a table's status by hand (e.g. mark a dirty table clean). */
+    public static function setTableStatus(int $tableId, string $status): void {
+        if (!in_array($status, ['open', 'seated', 'dirty'], true)) return;
+        Database::update('restaurant_tables', ['status' => $status], 'id = ? AND tenant_id = ?', [$tableId, current_tenant_id()]);
+    }
+
+    /** Active tables with their section and the open checks on each (POS table map). */
+    public static function floorMap(): array {
+        $tid = current_tenant_id();
+        $tables = Database::rows(
+            "SELECT t.id, t.label, t.seats, t.status, t.pos_x, t.pos_y, t.section_id, s.name AS section, s.sort_order AS section_sort
+               FROM restaurant_tables t
+               LEFT JOIN restaurant_sections s ON s.id = t.section_id
+              WHERE t.tenant_id = ? AND t.is_active = 1
+           ORDER BY s.sort_order, s.name, t.label", [$tid]);
+        $open = Database::rows(
+            "SELECT id, table_id, order_no, total_cents, paid_cents, guest_count, opened_at, status
+               FROM restaurant_orders WHERE tenant_id = ? AND status IN ('open','sent') AND table_id IS NOT NULL", [$tid]);
+        foreach ($tables as &$t) {
+            $t['orders'] = array_values(array_filter($open, fn($o) => (int)$o['table_id'] === (int)$t['id']));
+        }
+        unset($t);
+        return $tables;
     }
 
     // ── Refunds ───────────────────────────────────────────────
@@ -887,10 +1309,20 @@ class RestaurantAPI {
 
     // ── Close / void ──────────────────────────────────────────
 
+    /**
+     * Close a check. Refuses while a balance is due: an underpaid check is
+     * closed through compOrder() (with a reason), never silently.
+     */
     public static function closeOrder(int $orderId): void {
         $tid   = current_tenant_id();
         $order = Database::row("SELECT * FROM restaurant_orders WHERE id = ? AND tenant_id = ?", [$orderId, $tid]);
         if (!$order) return;
+        $due = (int)$order['total_cents'] - (int)$order['paid_cents'] - (int)$order['comp_cents'];
+        if ($due > 0) {
+            throw new \RuntimeException(sprintf(
+                __('restaurant_err_close_balance', 'This check still owes %s. Take payment, or comp the balance with a reason.'),
+                self::money($due)));
+        }
         Database::update('restaurant_orders',
             ['status' => 'closed', 'closed_at' => slate_db_now()],
             'id = ? AND tenant_id = ?', [$orderId, $tid]);
