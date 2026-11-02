@@ -7,9 +7,13 @@
  * last day's completed and cancelled. One click moves an order on (accepting
  * also fires its lines to the kitchen). The board refreshes itself every few
  * seconds and chimes when a new order lands. Links to the full check.
+ * Delivery orders can get a courier (DoorDash Drive): Request courier shows
+ * the quote (fee and times) to confirm; the card then follows the courier's
+ * status, updated by the provider's webhooks.
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/RestaurantAPI.php';
+require_once dirname(__DIR__) . '/includes/delivery.php';
 
 Auth::require();
 Auth::requirePerm('restaurant.view');
@@ -17,6 +21,8 @@ ModuleGuard::require('restaurant');
 RestaurantAPI::ensureSchema();
 
 $tid = current_tenant_id();
+$canCourier = Auth::can('restaurant.pos') || Auth::isSuperAdmin();
+$couriers = $canCourier ? array_map(fn($p) => $p->label(), RestaurantDelivery::enabledProviders()) : [];
 
 /** The board's orders: everything not finished, plus finished in the last 24 hours. */
 $channelNames = array_column(Database::rows("SELECT slug, name FROM restaurant_channels WHERE tenant_id = ?", [$tid]), 'name', 'slug');
@@ -39,6 +45,7 @@ $board = function () use ($tid, $channelNames): array {
             'total' => RestaurantAPI::money((int)$o['total_cents']),
             'paid'  => (int)$o['total_cents'] > 0 && (int)$o['paid_cents'] >= (int)$o['total_cents'],
             'channel_paid' => !empty($r['channel_paid']),   // the channel collected payment; nothing is due here
+            'courier' => $o['type'] === 'delivery' ? RestaurantDelivery::view(RestaurantDelivery::latestJob((int)$o['id'])) : null,
             'has_new' => (bool) array_filter($o['items'], fn($i) => $i['kitchen_status'] === 'new'),
             'items' => array_values(array_map(fn($i) => [
                 'qty' => (int)$i['qty'], 'name' => $i['name_snapshot'], 'k' => $i['kitchen_status'],
@@ -66,6 +73,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_ajax'])) {
                 RestaurantAPI::setFulfillment($orderId, $to);
             } elseif ($action === 'send') {
                 RestaurantAPI::sendToKitchen($orderId);
+            } elseif (str_starts_with($action, 'courier_')) {
+                if (!$canCourier) throw new \RuntimeException(__('restaurant_cr_err_perm', 'You cannot request couriers.'));
+                $job = $action === 'courier_quote' ? null : RestaurantDelivery::job((int)($_POST['job_id'] ?? 0));
+                if ($action !== 'courier_quote' && (!$job || (int)$job['order_id'] !== $orderId)) throw new \RuntimeException(__('restaurant_cr_err_job', 'Courier request not found.'));
+                $r = match ($action) {
+                    'courier_quote'   => RestaurantDelivery::quote($orderId, (string)($_POST['provider'] ?? '')),
+                    'courier_accept'  => RestaurantDelivery::accept((int)$job['id']),
+                    'courier_cancel'  => RestaurantDelivery::cancel((int)$job['id']),
+                    'courier_dismiss' => (function () use ($job) { RestaurantDelivery::dismiss((int)$job['id']); return ['ok' => true]; })(),
+                    default           => ['ok' => false, 'error' => __('restaurant_err_action', 'Unknown action.')],
+                };
+                if (empty($r['ok'])) { echo json_encode(['ok' => false, 'error' => (string)$r['error'], 'orders' => $board()]); exit; }
             } else {
                 throw new \RuntimeException(__('restaurant_err_action', 'Unknown action.'));
             }
@@ -136,6 +155,12 @@ require SLATE_ROOT . '/admin/partials/header.php';
 .ron-pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); }
 .ron-pill.is-paid { background: var(--success-soft); color: var(--success); }
 .ron-pill.is-due { background: var(--warning-soft); color: var(--warning); }
+.ron-courier { margin: 8px 12px 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 12.5px; display: grid; gap: 6px; }
+.ron-courier.is-quote { border-color: var(--info); background: var(--info-soft); }
+.ron-courier.is-delivered { border-color: var(--success); background: var(--success-soft); }
+.ron-courier.is-failed > div:first-child { color: var(--danger); }
+.ron-cbtns { display: flex; flex-wrap: wrap; gap: 6px; }
+.ron-cbtns .btn-primary { flex: 1; }
 .ron-empty { padding: 18px 6px; text-align: center; font-size: 13px; color: var(--muted); }
 .ron-done { margin-top: 14px; }
 .ron-done summary { padding: 12px 16px; cursor: pointer; font-weight: 600; }
@@ -173,12 +198,38 @@ require SLATE_ROOT . '/admin/partials/header.php';
         'restaurant_rcpt_takeout'         => 'Takeout',
         'restaurant_rcpt_delivery'        => 'Delivery',
         'restaurant_pos_failed'           => 'That did not work. Try again.',
+        'restaurant_cr_request'           => 'Request %s courier',
+        'restaurant_cr_confirm'           => 'Confirm courier',
+        'restaurant_cr_quote_line'        => '%1$s · pickup %2$s · drop-off %3$s',
+        'restaurant_cr_cancel_courier'    => 'Cancel courier',
+        'restaurant_cr_cancel_q'          => 'Cancel the courier? The order stays as it is.',
+        'restaurant_cr_dismiss'           => 'Not now',
+        'restaurant_cr_track'             => 'Track',
     ]), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     const COLS = ['new', 'accepted', 'preparing', 'ready'];
     const NEXT = { new: 'accepted', accepted: 'preparing', preparing: 'ready', ready: 'completed' };
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
     const fmt = (k, ...a) => { let i = 0; return String(T[k] || k).replace(/%(\d+\$)?s/g, (m, p) => esc(p ? a[parseInt(p, 10) - 1] : a[i++])); };
     let orders = <?= json_encode($orders, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const COURIERS = <?= json_encode((object)$couriers, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    function courier(o) {
+        if (o.type !== 'delivery') return '';
+        const c = o.courier, keys = Object.keys(COURIERS);
+        if (c && c.live_quote) {
+            return '<div class="ron-courier is-quote"><div><b>' + esc(c.provider) + '</b> ' + fmt('restaurant_cr_quote_line', c.fee, c.pickup_eta || '—', c.dropoff_eta || '—') + '</div>'
+                + '<div class="ron-cbtns"><button type="button" class="btn btn-sm btn-primary" data-courier="courier_accept" data-order="' + o.id + '" data-job="' + c.id + '">' + fmt('restaurant_cr_confirm') + '</button>'
+                + '<button type="button" class="btn btn-sm btn-ghost" data-courier="courier_dismiss" data-order="' + o.id + '" data-job="' + c.id + '">' + fmt('restaurant_cr_dismiss') + '</button></div></div>';
+        }
+        if (c && (c.active || c.status === 'delivered')) {
+            return '<div class="ron-courier is-' + esc(c.status) + '"><div><b>' + esc(c.provider) + '</b> · ' + esc(c.label) + (c.courier ? ' · ' + esc(c.courier) : '')
+                + (c.dropoff_eta && c.status !== 'delivered' ? ' · ' + fmt('restaurant_online_for', c.dropoff_eta) : '') + '</div>'
+                + '<div class="ron-cbtns">' + (c.tracking_url ? '<a class="btn btn-sm" href="' + esc(c.tracking_url) + '" target="_blank" rel="noopener">' + fmt('restaurant_cr_track') + ' ↗</a>' : '')
+                + (c.status === 'requested' ? '<button type="button" class="btn btn-sm btn-ghost" data-courier="courier_cancel" data-order="' + o.id + '" data-job="' + c.id + '" data-confirm="1">' + fmt('restaurant_cr_cancel_courier') + '</button>' : '') + '</div></div>';
+        }
+        if (!keys.length) return c && c.error ? '<div class="ron-courier is-failed"><div>' + esc(c.label) + ': ' + esc(c.error) + '</div></div>' : '';
+        return '<div class="ron-courier' + (c && c.error ? ' is-failed' : '') + '">' + (c && c.error && c.error !== 'quote expired' ? '<div>' + esc(c.label) + ': ' + esc(c.error) + '</div>' : '')
+            + '<div class="ron-cbtns">' + keys.map((k) => '<button type="button" class="btn btn-sm" data-courier="courier_quote" data-order="' + o.id + '" data-provider="' + esc(k) + '">' + fmt('restaurant_cr_request', COURIERS[k]) + '</button>').join('') + '</div></div>';
+    }
     let seen = new Set(orders.map((o) => o.id)), fresh = new Set(), busy = false;
 
     const age = (ts) => Math.max(0, Math.round((Date.now() - new Date(String(ts).replace(' ', 'T')).getTime()) / 60000));
@@ -192,6 +243,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             + (done ? '' : '<ul class="ron-items">' + o.items.map((i) => '<li><b>' + i.qty + '×</b> ' + esc(i.name) + (i.mods.length ? '<small>' + i.mods.map(esc).join(', ') + '</small>' : '') + (i.notes ? '<small>' + esc(i.notes) + '</small>' : '') + '</li>').join('') + '</ul>')
             + (o.flag && !done ? '<div class="ron-flag">' + esc(o.flag) + '</div>' : '')
             + (o.notes && !done ? '<div class="ron-note">' + esc(o.notes) + '</div>' : '')
+            + (!done || (o.courier && o.courier.status === 'delivered') ? courier(o) : '')
             + '<div class="ron-foot">'
             + (done ? '<span class="ron-pill">' + fmt('restaurant_online_' + o.status) + '</span>'
                 : '<button type="button" class="btn btn-sm btn-primary" data-move="' + o.id + '" data-to="' + NEXT[o.status] + '">' + fmt('restaurant_online_go_' + NEXT[o.status]) + '</button>'
@@ -218,7 +270,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         try {
             const r = await fetch(location.pathname, { method: 'POST', credentials: 'same-origin', body: new URLSearchParams(Object.assign({ _ajax: '1', _csrf: csrf }, data)) });
             const j = await r.json();
-            if (!j.ok) { alert(j.error || T.restaurant_pos_failed); return; }
+            if (!j.ok) { if (j.orders) { orders = j.orders; render(); } alert(j.error || T.restaurant_pos_failed); return; }
             const incoming = j.orders.filter((o) => !seen.has(o.id));
             incoming.forEach((o) => { seen.add(o.id); fresh.add(o.id); });
             if (incoming.length && data.action === 'list') chime();
@@ -237,6 +289,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
         } catch (e) { /* audio needs a first click on the page */ }
     }
     document.addEventListener('click', (e) => {
+        const cr = e.target.closest('[data-courier]');
+        if (cr) { if (cr.dataset.confirm && !confirm(T.restaurant_cr_cancel_q)) return;
+                  post({ action: cr.dataset.courier, order_id: cr.dataset.order, job_id: cr.dataset.job || '', provider: cr.dataset.provider || '' }); return; }
         const mv = e.target.closest('[data-move]'), sd = e.target.closest('[data-send]');
         if (mv) { if (mv.dataset.to === 'cancelled' && !confirm(T.restaurant_online_cancel_q)) return; post({ action: 'move', order_id: mv.dataset.move, to: mv.dataset.to }); }
         else if (sd) post({ action: 'send', order_id: sd.dataset.send });

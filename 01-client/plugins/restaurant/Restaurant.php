@@ -15,6 +15,7 @@
 
 require_once __DIR__ . '/RestaurantAPI.php';
 require_once __DIR__ . '/includes/channels.php';
+require_once __DIR__ . '/includes/delivery.php';
 
 class Restaurant extends Plugin {
 
@@ -49,6 +50,7 @@ class Restaurant extends Plugin {
         if (!$channelsWired) {
             $channelsWired = true;
             Hook::addAction('restaurant_fulfillment_changed', [RestaurantChannels::class, 'fulfillmentChanged'], 10, 3);
+            Hook::addAction('restaurant_order_paid', [RestaurantDelivery::class, 'onOrderPaid'], 10, 1);
         }
 
         // Settle Terminal/card payments routed through the stripe-payment plugin.
@@ -71,6 +73,8 @@ class Restaurant extends Plugin {
         // Channel order intake (signed POST) and the token-protected menu feed.
         $routes['order-channel'] = ['handler' => __DIR__ . '/channels/intake.php', 'methods' => ['POST']];
         $routes['menu-feed']     = ['handler' => __DIR__ . '/channels/feed.php', 'methods' => ['GET']];
+        // Courier provider webhooks: /courier-webhook/<provider>/<token>.
+        $routes['courier-webhook'] = ['handler' => __DIR__ . '/channels/courier-webhook.php', 'methods' => ['POST']];
         return $routes;
     }
 
@@ -127,6 +131,9 @@ class Restaurant extends Plugin {
         $items[] = ['slug' => 'restaurant-channels',   'label' => __('restaurant_channels', 'Channels'),
                     'href' => $this->url('admin/channels.php'),
                     'icon' => 'link', 'perm' => 'restaurant.channels', 'order' => 706, 'group' => 'restaurant'];
+        $items[] = ['slug' => 'restaurant-couriers',   'label' => __('restaurant_couriers', 'Couriers'),
+                    'href' => $this->url('admin/couriers.php'),
+                    'icon' => 'truck', 'perm' => 'restaurant.channels', 'order' => 706, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-customers',  'label' => __('restaurant_customers', 'Customers'),
                     'href' => $this->url('admin/customers.php'),
                     'icon' => 'user', 'perm' => 'restaurant.manage_customers', 'order' => 706, 'group' => 'restaurant'];
@@ -357,7 +364,8 @@ class Restaurant extends Plugin {
                                        'restaurant_order_items','restaurant_payments',
                                        'restaurant_refunds','restaurant_combo_slots',
                                        'restaurant_combo_choices','restaurant_channels',
-                                       'restaurant_channel_orders','restaurant_item_mappings')");
+                                       'restaurant_channel_orders','restaurant_item_mappings',
+                                       'restaurant_delivery_jobs')");
             $col = (int) Database::value(
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
                   WHERE TABLE_SCHEMA = DATABASE()
@@ -367,7 +375,7 @@ class Restaurant extends Plugin {
                       OR (TABLE_NAME = 'restaurant_orders' AND COLUMN_NAME = 'channel')
                       OR (TABLE_NAME = 'restaurant_channels' AND COLUMN_NAME = 'config')
                       OR (TABLE_NAME = 'restaurant_channel_orders' AND COLUMN_NAME IN ('cancelled_at','channel_paid')))");
-            return $tbl >= 10 && $col === 9;
+            return $tbl >= 11 && $col === 9;
         } catch (\Throwable $e) {
             return false;
         }

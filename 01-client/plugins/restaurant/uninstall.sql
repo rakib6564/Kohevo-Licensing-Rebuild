@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS `restaurant_tables`;
 DROP TABLE IF EXISTS `restaurant_sections`;
 DROP TABLE IF EXISTS `restaurant_customers`;
 DROP TABLE IF EXISTS `restaurant_readers`;
+DROP TABLE IF EXISTS `restaurant_delivery_jobs`;
 DROP TABLE IF EXISTS `restaurant_channel_events`;
 DROP TABLE IF EXISTS `restaurant_channel_orders`;
 DROP TABLE IF EXISTS `restaurant_item_mappings`;

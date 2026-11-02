@@ -618,7 +618,10 @@ class RestaurantAPI {
             $fields['closed_at'] = slate_db_now();
         }
         Database::update('restaurant_orders', $fields, 'id = ? AND tenant_id = ?', [$orderId, $tid]);
-        if (($fields['status'] ?? '') === 'paid') self::freeTableIfSettled((array)$order);
+        if (($fields['status'] ?? '') === 'paid') {
+            self::freeTableIfSettled((array)$order);
+            Hook::doAction('restaurant_order_paid', $orderId);   // e.g. the courier auto-request
+        }
     }
 
     // ── Order lifecycle ───────────────────────────────────────
