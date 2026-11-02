@@ -18,8 +18,8 @@
  * webhook can never move a job on its own word.
  *
  * Providers implement RestaurantCourierProvider and register on the
- * restaurant_courier_providers filter; DoorDash Drive ships here
- * (RestaurantDoorDashDrive), Uber Direct is the next part.
+ * restaurant_courier_providers filter; DoorDash Drive
+ * (RestaurantDoorDashDrive) and Uber Direct (RestaurantUberDirect) ship here.
  */
 
 require_once __DIR__ . '/../RestaurantAPI.php';
@@ -38,6 +38,10 @@ interface RestaurantCourierProvider {
     public function fetch(array $job): array;
     /** Cancel while the provider still allows it. Returns ['ok', 'remote'?] or ['ok' => false, 'error']. */
     public function cancel(array $job): array;
+    /** Which delivery a webhook body names: ['external_id' => our id, 'provider_delivery_id' => theirs] (either may be ''). */
+    public function webhookRef(array $body): array;
+    /** Whether a webhook may be read at all (a signature check where the provider signs; true where it does not). */
+    public function verifyWebhook(string $raw, array $headers): bool;
 }
 
 class RestaurantDelivery {
@@ -48,7 +52,7 @@ class RestaurantDelivery {
 
     /** @return RestaurantCourierProvider[] by key */
     public static function providers(): array {
-        $map = Hook::applyFilters('restaurant_courier_providers', ['doordash_drive' => new RestaurantDoorDashDrive()]);
+        $map = Hook::applyFilters('restaurant_courier_providers', ['doordash_drive' => new RestaurantDoorDashDrive(), 'uber_direct' => new RestaurantUberDirect()]);
         return array_filter(is_array($map) ? $map : [], fn($p) => $p instanceof RestaurantCourierProvider);
     }
 
@@ -79,7 +83,25 @@ class RestaurantDelivery {
         $s = RestaurantAPI::settings();
         $addr = implode(', ', array_filter(array_map('trim', [$s['addr_line1'], $s['addr_line2'],
             trim($s['addr_city'] . ', ' . $s['addr_state'] . ' ' . $s['addr_postal'], ', ')])));
-        return ['name' => $s['biz_name'], 'address' => $addr, 'phone' => self::e164((string) RestaurantAPI::setting('biz_phone', ''))];
+        return ['name' => $s['biz_name'], 'address' => $addr, 'phone' => self::e164((string) RestaurantAPI::setting('biz_phone', '')),
+                'parts' => ['street' => array_values(array_filter(array_map('trim', [$s['addr_line1'], $s['addr_line2']]))), 'city' => trim($s['addr_city']),
+                            'state' => trim($s['addr_state']), 'zip' => trim($s['addr_postal']), 'country' => trim($s['addr_country']) ?: 'US']];
+    }
+
+    /**
+     * Best-effort split of a one-line address ("12 Main St, Apt 4, Springfield,
+     * IL 62701") into street lines, city, state and ZIP, for providers that
+     * want parts. The last comma part holding "ST 12345" gives state and ZIP,
+     * the part before it the city; anything that does not fit stays a street
+     * line.
+     */
+    public static function splitAddress(string $line, string $country = 'US'): array {
+        $bits = array_values(array_filter(array_map('trim', explode(',', $line)), 'strlen'));
+        $out = ['street' => $bits, 'city' => '', 'state' => '', 'zip' => '', 'country' => $country];
+        if (count($bits) >= 3 && preg_match('/^([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/', end($bits), $m)) {
+            $out = ['street' => array_slice($bits, 0, -2), 'city' => $bits[count($bits) - 2], 'state' => strtoupper($m[1]), 'zip' => $m[2], 'country' => $country];
+        }
+        return $out;
     }
 
     /**
@@ -153,6 +175,7 @@ class RestaurantDelivery {
         }
         Database::update('restaurant_delivery_jobs', ['fee_cents' => $q['fee_cents'], 'currency' => $q['currency'] ?: RestaurantAPI::currency(),
             'pickup_eta' => $q['pickup_eta'], 'dropoff_eta' => $q['dropoff_eta'], 'quote_expires_at' => $q['expires_at'],
+            'provider_delivery_id' => ($q['provider_ref'] ?? '') !== '' ? mb_substr((string)$q['provider_ref'], 0, 120) : null,
             'raw_last_payload' => json_encode($q['raw'] ?? null)], 'id = ?', [$jobId]);
         AuditLog::record('restaurant.courier_quoted', (string)$orderId, ['provider' => $providerKey, 'fee' => $q['fee_cents']]);
         return ['ok' => true, 'job' => self::job($jobId)];
@@ -262,19 +285,24 @@ class RestaurantDelivery {
     }
 
     /**
-     * A provider's webhook. The URL token must match (else 401, nothing
+     * A provider's webhook. The URL token must match, and where the
+     * provider signs its webhooks (Uber) the signature too (else 401, nothing
      * read); the body only names the delivery. The job is then re-read from
      * the provider and that answer applied, so what the body claims is never
-     * trusted. Unknown deliveries are acknowledged and ignored. Returns
-     * [http status, body].
+     * trusted. Unknown deliveries are acknowledged and ignored. $headers are
+     * lower-case names. Returns [http status, body].
      */
-    public static function webhook(string $providerKey, string $token, string $raw): array {
+    public static function webhook(string $providerKey, string $token, string $raw, array $headers = []): array {
         $want = self::webhookToken();
         if ($want === '' || !hash_equals($want, $token)) return [401, ['ok' => false]];
-        if (!self::provider($providerKey)) return [404, ['ok' => false]];
+        $p = self::provider($providerKey);
+        if (!$p) return [404, ['ok' => false]];
+        if (!$p->verifyWebhook($raw, $headers)) return [401, ['ok' => false]];
         $body = json_decode($raw, true);
-        $ext = is_array($body) ? trim((string)($body['external_delivery_id'] ?? ($body['external_id'] ?? ''))) : '';
+        $ref = is_array($body) ? $p->webhookRef($body) : [];
+        [$ext, $pid] = [trim((string)($ref['external_id'] ?? '')), trim((string)($ref['provider_delivery_id'] ?? ''))];
         $job = $ext !== '' ? Database::row("SELECT * FROM restaurant_delivery_jobs WHERE tenant_id = ? AND provider = ? AND external_id = ?", [current_tenant_id(), $providerKey, $ext]) : null;
+        if (!$job && $pid !== '') $job = Database::row("SELECT * FROM restaurant_delivery_jobs WHERE tenant_id = ? AND provider = ? AND provider_delivery_id = ? ORDER BY id DESC LIMIT 1", [current_tenant_id(), $providerKey, $pid]);
         if (!$job) return [200, ['ok' => true, 'ignored' => true]];
         $r = self::sync((int)$job['id']);
         return [200, ['ok' => true, 'synced' => !empty($r['ok'])]];
@@ -470,11 +498,238 @@ class RestaurantDoorDashDrive implements RestaurantCourierProvider {
         return ['ok' => true, 'remote' => is_array($json) ? self::normalise($json) : ['status' => 'cancelled']];
     }
 
+    public function webhookRef(array $body): array {
+        return ['external_id' => (string)($body['external_delivery_id'] ?? ''), 'provider_delivery_id' => ''];
+    }
+
+    /** Drive webhooks are not signed; the URL token and the re-fetch protect them. */
+    public function verifyWebhook(string $raw, array $headers): bool { return true; }
+
     /** Check the credentials: a lookup of a delivery that cannot exist is 404 with good keys, 401/403 with bad ones. */
     public static function checkCredentials(): array {
         [$code, , $err] = self::call('GET', '/deliveries/kv-credentials-check-' . bin2hex(random_bytes(4)));
         if ($err) return ['ok' => false, 'error' => $err];
         if ($code === 404) return ['ok' => true];
         return ['ok' => false, 'error' => 'HTTP ' . (int)$code . ($code === 401 ? ' — DoorDash did not accept the key' : '')];
+    }
+}
+
+/**
+ * Uber Direct (DaaS API v1, https://api.uber.com/v1/customers/{customer_id}/).
+ * Auth is OAuth client credentials at https://auth.uber.com/oauth/v2/token
+ * (scope eats.deliveries); the token lasts 30 days and is cached sealed.
+ * Quotes: POST /delivery_quotes (fee in cents, an expiry time). Booking:
+ * POST /deliveries with the quote_id and our id as external_id; Uber gives
+ * the delivery its own id (del_…), which later calls use. Status: GET
+ * /deliveries/{id}. Cancel: POST /deliveries/{id}/cancel. Addresses are
+ * JSON strings with street_address[], city, state, zip_code, country.
+ * Errors come back as {kind: error, code, message, metadata}. Webhooks
+ * (event.delivery_status, event.courier_update) are signed: hex
+ * HMAC-SHA256 of the raw body with the webhook's signing key, in
+ * x-uber-signature (x-postmates-signature for older ones). Checked against
+ * developer.uber.com on 2 Nov 2026; tested here against a local stand-in
+ * only.
+ */
+class RestaurantUberDirect implements RestaurantCourierProvider {
+
+    /** Uber status → our job status ('pending' with a courier on it is courier_assigned; see normalise()). */
+    public const STATUS_MAP = [
+        'pending' => 'requested', 'pickup' => 'enroute_pickup', 'pickup_complete' => 'picked_up', 'dropoff' => 'picked_up',
+        'delivered' => 'delivered', 'canceled' => 'cancelled', 'returned' => 'failed',
+    ];
+
+    private static ?array $token = null;
+
+    public function key(): string { return 'uber_direct'; }
+    public function label(): string { return 'Uber'; }
+
+    public function enabled(): bool {
+        return RestaurantAPI::setting('uber_enabled', '0') === '1'
+            && trim((string) RestaurantAPI::setting('uber_customer_id', '')) !== ''
+            && trim((string) RestaurantAPI::setting('uber_client_id', '')) !== ''
+            && self::clientSecret() !== '';
+    }
+
+    private static function clientSecret(): string {
+        return RestaurantChannels::unseal((string) RestaurantAPI::setting('uber_client_secret', ''));
+    }
+
+    private static function base(): string {
+        return rtrim((string) RestaurantAPI::setting('uber_api_base', 'https://api.uber.com'), '/') . '/v1/customers/'
+            . rawurlencode(trim((string) RestaurantAPI::setting('uber_customer_id', '')));
+    }
+
+    /** Drop the cached token (after new credentials). */
+    public static function forgetToken(): void {
+        self::$token = null;
+        Database::setSetting('restaurant.uber_token', '');
+        Database::setSetting('restaurant.uber_token_expires', '0');
+    }
+
+    /** One HTTP request: [http status|null, decoded body|null, error|null]. */
+    private static function http(string $method, string $url, array $headers, ?string $body): array {
+        if (!RestaurantChannels::allowedUrl($url)) return [null, null, 'API URL not allowed'];
+        if (!function_exists('curl_init')) return [null, null, 'cURL missing'];
+        $ch = curl_init($url);
+        $opts = [CURLOPT_CUSTOMREQUEST => $method, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 12, CURLOPT_CONNECTTIMEOUT => 4,
+                 CURLOPT_FOLLOWLOCATION => false, CURLOPT_USERAGENT => 'Kohevo-Restaurant-Courier/1', CURLOPT_HTTPHEADER => $headers];
+        if ($body !== null) $opts[CURLOPT_POSTFIELDS] = $body;
+        curl_setopt_array($ch, $opts);
+        $out = curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = $out === false ? curl_error($ch) : null;
+        $json = is_string($out) ? json_decode($out, true) : null;
+        return [$code ?: null, is_array($json) ? $json : null, $err];
+    }
+
+    /** A bearer token: [token, error]. Cached (sealed) until a day before it expires. */
+    public static function token(bool $fresh = false): array {
+        if (!$fresh) {
+            $c = self::$token ?? ['t' => RestaurantChannels::unseal((string) RestaurantAPI::setting('uber_token', '')),
+                                  'exp' => (int) RestaurantAPI::setting('uber_token_expires', '0')];
+            if ($c['t'] !== '' && $c['exp'] > time() + 86400) return [$c['t'], null];
+        }
+        $url = (string) RestaurantAPI::setting('uber_auth_url', 'https://auth.uber.com/oauth/v2/token');
+        [$code, $json, $err] = self::http('POST', $url, ['Content-Type: application/x-www-form-urlencoded', 'Accept: application/json'], http_build_query([
+            'client_id' => trim((string) RestaurantAPI::setting('uber_client_id', '')), 'client_secret' => self::clientSecret(),
+            'grant_type' => 'client_credentials', 'scope' => 'eats.deliveries']));
+        $t = (string)($json['access_token'] ?? '');
+        if ($code !== 200 || $t === '') return ['', 'Uber: ' . ($err ?: trim((string)($json['error_description'] ?? ($json['error'] ?? ''))) ?: 'HTTP ' . (int)$code)];
+        $exp = time() + max(60, (int)($json['expires_in'] ?? 2592000));
+        self::$token = ['t' => $t, 'exp' => $exp];
+        try {
+            Database::setSetting('restaurant.uber_token', RestaurantChannels::seal($t));
+            Database::setSetting('restaurant.uber_token_expires', (string)$exp);
+        } catch (\RuntimeException $e) { /* no app secret: the token lives for this request only */ }
+        return [$t, null];
+    }
+
+    /** One API call with the cached token, fetching a new one once on 401. Never logs the token. */
+    private static function call(string $method, string $path, ?array $body = null): array {
+        for ($try = 0; $try < 2; $try++) {
+            [$t, $terr] = self::token($try > 0);
+            if ($t === '') return [null, null, $terr];
+            $r = self::http($method, self::base() . $path, ['Content-Type: application/json', 'Accept: application/json', 'Authorization: Bearer ' . $t],
+                $body === null ? null : (string) json_encode($body, JSON_UNESCAPED_SLASHES));
+            if ($r[0] !== 401) return $r;
+        }
+        return $r;
+    }
+
+    /** Uber's error, readable for staff: its message plus any field details. */
+    private static function errorText(?int $code, ?array $json, ?string $err): string {
+        if ($err) return str_starts_with($err, 'Uber') ? $err : sprintf(__('restaurant_cr_err_reach', 'Could not reach %s: %s'), 'Uber', $err);
+        $msg = trim((string)($json['message'] ?? ''));
+        $meta = [];
+        foreach ((array)($json['metadata'] ?? []) as $k => $v) if (is_scalar($v)) $meta[] = $k . ': ' . $v;
+        $text = trim($msg . ($meta ? ' (' . implode('; ', $meta) . ')' : ''));
+        return 'Uber: ' . ($text !== '' ? $text : (trim((string)($json['code'] ?? '')) ?: 'HTTP ' . (int)$code));
+    }
+
+    private static function when($iso): ?string {
+        $t = is_string($iso) && $iso !== '' ? strtotime($iso) : false;
+        return $t ? date('Y-m-d H:i:s', $t) : null;
+    }
+
+    /** Address parts → the JSON string Uber wants. */
+    public static function address(array $parts): string {
+        return (string) json_encode(['street_address' => array_values($parts['street'] ?? []), 'city' => (string)($parts['city'] ?? ''),
+            'state' => (string)($parts['state'] ?? ''), 'zip_code' => (string)($parts['zip'] ?? ''), 'country' => (string)($parts['country'] ?? 'US')], JSON_UNESCAPED_SLASHES);
+    }
+
+    /** Uber delivery → our normalised state. */
+    public static function normalise(array $d): array {
+        $s = (string)($d['status'] ?? '');
+        $status = self::STATUS_MAP[$s] ?? '';
+        if ($s === 'pending' && !empty($d['courier']['name'])) $status = 'courier_assigned';
+        return ['status' => $status, 'tracking_url' => (string)($d['tracking_url'] ?? ''), 'provider_delivery_id' => (string)($d['id'] ?? ''),
+                'fee_cents' => isset($d['fee']) ? (int)$d['fee'] : null, 'pickup_eta' => self::when($d['pickup_eta'] ?? null),
+                'dropoff_eta' => self::when($d['dropoff_eta'] ?? null), 'courier_name' => (string)($d['courier']['name'] ?? ''),
+                'reason' => (string)($d['undeliverable_reason'] ?? ($d['cancelation_reason']['primary_reason'] ?? '')), 'raw' => $d];
+    }
+
+    private static function drop(array $dropoff): array {
+        return RestaurantDelivery::splitAddress($dropoff['address'], (string)(RestaurantAPI::settings()['addr_country'] ?? 'US') ?: 'US');
+    }
+
+    public function quote(array $job, array $pickup, array $dropoff, array $order): array {
+        $body = ['pickup_address' => self::address($pickup['parts']), 'dropoff_address' => self::address(self::drop($dropoff)),
+                 'pickup_phone_number' => $pickup['phone'], 'dropoff_phone_number' => $dropoff['phone'],
+                 'manifest_total_value' => (int)$order['subtotal_cents'], 'external_store_id' => 'kv' . current_tenant_id()];
+        [$code, $json, $err] = self::call('POST', '/delivery_quotes', $body);
+        if ($code < 200 || $code >= 300 || !is_array($json)) return ['ok' => false, 'error' => self::errorText($code, $json, $err), 'raw' => $json];
+        $exp = self::when($json['expires'] ?? null) ?? date('Y-m-d H:i:s', time() + 15 * 60);
+        return ['ok' => true, 'fee_cents' => isset($json['fee']) ? (int)$json['fee'] : null,
+                'currency' => strtoupper((string)($json['currency'] ?? ($json['currency_type'] ?? ''))),
+                'pickup_eta' => isset($json['pickup_duration']) ? date('Y-m-d H:i:s', time() + 60 * (int)$json['pickup_duration']) : null,
+                'dropoff_eta' => self::when($json['dropoff_eta'] ?? null), 'expires_at' => $exp, 'provider_ref' => (string)($json['id'] ?? ''), 'raw' => $json];
+    }
+
+    /** Uber has no "accept quote": the delivery is created with the quote id, from the order as it is now. */
+    public function accept(array $job): array {
+        $order = RestaurantAPI::getOrder((int)$job['order_id']);
+        if (!$order) return ['ok' => false, 'error' => __('restaurant_cr_err_job', 'Courier request not found.')];
+        $pickup = RestaurantDelivery::pickup(); $drop = RestaurantDelivery::dropoff($order);
+        $items = [];
+        foreach ($order['items'] as $it) {
+            if (($it['kitchen_status'] ?? '') === 'void') continue;
+            $items[] = ['name' => mb_substr((string)$it['name_snapshot'], 0, 100), 'quantity' => max(1, (int)$it['qty']), 'size' => 'small',
+                        'price' => (int)$it['unit_price_cents']];
+        }
+        $body = array_filter([
+            'quote_id' => (string)$job['provider_delivery_id'], 'external_id' => (string)$job['external_id'],
+            'pickup_name' => $pickup['name'], 'pickup_address' => self::address($pickup['parts']), 'pickup_phone_number' => $pickup['phone'],
+            'dropoff_name' => trim($drop['given_name'] . ' ' . $drop['family_name']), 'dropoff_address' => self::address(self::drop($drop)),
+            'dropoff_phone_number' => $drop['phone'], 'dropoff_notes' => $drop['instructions'],
+            'manifest_items' => $items ?: [['name' => 'Order #' . $order['order_no'], 'quantity' => 1, 'size' => 'small']],
+            'manifest_reference' => 'Order #' . $order['order_no'], 'manifest_total_value' => (int)$order['subtotal_cents'],
+        ], fn($v) => $v !== '' && $v !== null);
+        [$code, $json, $err] = self::call('POST', '/deliveries', $body);
+        if ($code < 200 || $code >= 300 || !is_array($json)) return ['ok' => false, 'error' => self::errorText($code, $json, $err)];
+        return ['ok' => true, 'remote' => self::normalise($json)];
+    }
+
+    public function fetch(array $job): array {
+        $id = (string)($job['provider_delivery_id'] ?? '');
+        if (!str_starts_with($id, 'del_')) return ['ok' => false, 'error' => 'Uber: no delivery id yet', 'http' => null];
+        [$code, $json, $err] = self::call('GET', '/deliveries/' . rawurlencode($id));
+        if ($code < 200 || $code >= 300 || !is_array($json)) return ['ok' => false, 'error' => self::errorText($code, $json, $err), 'http' => $code];
+        return ['ok' => true, 'remote' => self::normalise($json)];
+    }
+
+    public function cancel(array $job): array {
+        $id = (string)($job['provider_delivery_id'] ?? '');
+        if (!str_starts_with($id, 'del_')) return ['ok' => false, 'error' => 'Uber: no delivery id yet'];
+        [$code, $json, $err] = self::call('POST', '/deliveries/' . rawurlencode($id) . '/cancel', []);
+        if ($code < 200 || $code >= 300) {
+            $msg = self::errorText($code, $json, $err);
+            if (($json['code'] ?? '') === 'noncancelable_delivery' || $code === 409) $msg .= ' ' . __('restaurant_cr_cancel_portal', 'Once a courier is assigned, cancel in the provider\'s merchant portal or through its support.');
+            return ['ok' => false, 'error' => $msg];
+        }
+        return ['ok' => true, 'remote' => is_array($json) ? self::normalise($json) : ['status' => 'cancelled']];
+    }
+
+    /** Delivery status webhooks carry delivery_id at the top and the delivery (with our external_id) in data. */
+    public function webhookRef(array $body): array {
+        $d = is_array($body['data'] ?? null) ? $body['data'] : [];
+        return ['external_id' => (string)($d['external_id'] ?? ($body['external_id'] ?? '')),
+                'provider_delivery_id' => (string)($body['delivery_id'] ?? ($d['id'] ?? ''))];
+    }
+
+    /** With a signing key saved, the HMAC must match; without one, only the URL token and the re-fetch protect the hook. */
+    public function verifyWebhook(string $raw, array $headers): bool {
+        $key = RestaurantChannels::unseal((string) RestaurantAPI::setting('uber_webhook_key', ''));
+        if ($key === '') return true;
+        $sig = strtolower(trim((string)($headers['x-uber-signature'] ?? ($headers['x-postmates-signature'] ?? ''))));
+        return $sig !== '' && hash_equals(hash_hmac('sha256', $raw, $key), $sig);
+    }
+
+    /** Check the credentials: a token must be issued, then a delivery that cannot exist must answer 404 (not 401/403). */
+    public static function checkCredentials(): array {
+        self::forgetToken();
+        [$code, $json, $err] = self::call('GET', '/deliveries/del_kvcheck' . bin2hex(random_bytes(4)));
+        if ($err) return ['ok' => false, 'error' => $err];
+        if ($code === 404) return ['ok' => true];
+        return ['ok' => false, 'error' => self::errorText($code, $json, null)];
     }
 }

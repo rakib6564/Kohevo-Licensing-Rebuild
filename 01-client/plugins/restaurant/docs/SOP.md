@@ -222,7 +222,7 @@ Answers: **200** `{"ok":true,"order_no":…}`; **401** wrong signature (nothing 
 
 **Menu feed.** On the Channels page, **Turn on the feed** to get a token. A channel reads the whole menu (categories, items with price, tax, photo and sold-out state, modifier groups, combos) from `GET /menu-feed` with the header `Authorization: Bearer <token>`. Making a new token stops the old one at once.
 
-## 11. Couriers for your own delivery orders (DoorDash Drive)
+## 11. Couriers for your own delivery orders (DoorDash Drive, Uber Direct)
 
 **What it is.** For delivery orders you took yourself (website or register), you can have a DoorDash Dasher carry the order instead of your own driver. DoorDash bills you for each delivery. This is not about orders placed in the DoorDash app (those come through a channel, section 10).
 
@@ -237,4 +237,10 @@ Answers: **200** `{"ok":true,"order_no":…}`; **401** wrong signature (nothing 
 **Sending an order.** On **Online orders**, a delivery card shows **Request DoorDash courier**. Press it to see the price and the pickup and drop-off times; **Confirm courier** within five minutes books it (after that, ask again for a fresh price). The card then shows the courier's progress (finding a courier, courier assigned, on the way, out for delivery, delivered) and a **Track** link; the customer's order page shows the same tracking link. When the courier delivers, the order is marked completed.
 
 **When something goes wrong.** If DoorDash refuses (address outside its area, missing phone), the reason shows on the card and nothing about the order changes: fix the details or use your own driver. **Cancel courier** works until a Dasher is assigned; after that, cancel in DoorDash's merchant portal or through its support.
+
+**Uber Direct.** The same, with an Uber courier. You need an Uber Direct account; Uber approves each business, and test credentials only make test deliveries. Kohevo's Uber connection has been tested against a stand-in, not against Uber itself.
+1. In the Uber Direct dashboard (Developer), copy the **Customer ID**, **Client ID** and **Client secret** into the Uber Direct card on Couriers, pick **Test** or **Production** to match, tick **Offer Uber couriers** and save. **Check the credentials** confirms Uber accepts them.
+2. In the dashboard's webhooks, add the **Uber** webhook address from the Couriers page for delivery status, and paste the webhook's **signing key** into the card: Kohevo then refuses any update without Uber's signature.
+3. Delivery cards on Online orders now also show **Request Uber courier**. Uber's quote lasts about fifteen minutes. **Cancel courier** works until a courier is on the way; after that, cancel in the Uber Direct dashboard.
+4. Uber wants the address in parts (street, city, state, ZIP). Kohevo splits the one-line delivery address; write it as "street, city, ST 12345" so it splits cleanly.
 

@@ -3,7 +3,8 @@
  * Restaurant — couriers for our own delivery orders.
  *
  * DoorDash Drive settings (environment label, developer ID, key ID, signing
- * secret stored encrypted), the pickup details couriers are given (business
+ * secret stored encrypted), Uber Direct settings (customer ID, client ID,
+ * client secret and webhook signing key, secrets stored encrypted), the pickup details couriers are given (business
  * name and address from Settings, plus a phone number), the webhook address
  * to paste into the provider's portal, the auto-request switch, and the
  * latest courier jobs. RestaurantDelivery (includes/delivery.php) does the
@@ -40,6 +41,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     AuditLog::record('restaurant.courier_settings', 'doordash_drive', ['env' => $env, 'enabled' => !empty($_POST['enabled'])]);
                     $flash = ['type' => 'success', 'msg' => __('restaurant_cr_saved', 'DoorDash Drive settings saved.')];
                     break;
+                case 'uber':
+                    $env = in_array($_POST['env'] ?? '', ['test', 'live'], true) ? (string)$_POST['env'] : 'test';
+                    $set('uber_env', $env);
+                    $set('uber_customer_id', mb_substr(trim((string)($_POST['customer_id'] ?? '')), 0, 100));
+                    $set('uber_client_id', mb_substr(trim((string)($_POST['client_id'] ?? '')), 0, 200));
+                    $secret = trim((string)($_POST['client_secret'] ?? ''));
+                    if ($secret !== '') $set('uber_client_secret', RestaurantChannels::seal($secret));
+                    $hook = trim((string)($_POST['webhook_key'] ?? ''));
+                    if ($hook !== '') $set('uber_webhook_key', RestaurantChannels::seal($hook));
+                    $set('uber_enabled', !empty($_POST['enabled']) ? '1' : '0');
+                    RestaurantUberDirect::forgetToken();
+                    AuditLog::record('restaurant.courier_settings', 'uber_direct', ['env' => $env, 'enabled' => !empty($_POST['enabled'])]);
+                    $flash = ['type' => 'success', 'msg' => __('restaurant_cr_uber_saved', 'Uber Direct settings saved.')];
+                    break;
+                case 'check_uber':
+                    $r = RestaurantUberDirect::checkCredentials();
+                    $flash = $r['ok'] ? ['type' => 'success', 'msg' => __('restaurant_cr_uber_check_ok', 'Uber accepted the credentials.')]
+                                      : ['type' => 'error', 'msg' => sprintf(__('restaurant_cr_uber_check_bad', 'Uber did not accept the credentials: %s'), $r['error'])];
+                    break;
                 case 'check':
                     $r = RestaurantDoorDashDrive::checkCredentials();
                     $flash = $r['ok'] ? ['type' => 'success', 'msg' => __('restaurant_cr_check_ok', 'DoorDash accepted the key.')]
@@ -65,8 +85,12 @@ $pickup  = RestaurantDelivery::pickup();
 $drive   = new RestaurantDoorDashDrive();
 $dEnv    = (string) RestaurantAPI::setting('drive_env', 'sandbox');
 $hasKey  = trim((string) RestaurantAPI::setting('drive_signing_secret', '')) !== '';
+$uber    = new RestaurantUberDirect();
+$uEnv    = (string) RestaurantAPI::setting('uber_env', 'test');
+$hasUSec = trim((string) RestaurantAPI::setting('uber_client_secret', '')) !== '';
+$hasUKey = trim((string) RestaurantAPI::setting('uber_webhook_key', '')) !== '';
 $token   = RestaurantDelivery::webhookToken();
-$hookUrl = $token !== '' ? rtrim(SLATE_URL, '/') . '/courier-webhook/doordash_drive/' . $token : '';
+$hookUrl = fn(string $provider) => $token !== '' ? rtrim(SLATE_URL, '/') . '/courier-webhook/' . $provider . '/' . $token : '';
 $jobs    = Database::rows("SELECT j.*, o.order_no FROM restaurant_delivery_jobs j LEFT JOIN restaurant_orders o ON o.id = j.order_id
                             WHERE j.tenant_id = ? ORDER BY j.id DESC LIMIT 25", [$tid]);
 
@@ -86,7 +110,7 @@ if ($flash): ?><div class="alert alert-<?= e($flash['type']) ?>" role="status"><
         <p class="page-header-sub"><?= e(__('restaurant_cr_sub', 'Send a courier for your own delivery orders. Staff request one from Online orders; the courier service bills you for each delivery.')) ?></p></div>
 </div>
 
-<div class="alert alert-info"><?= e(__('restaurant_cr_truth', 'DoorDash Drive needs your own DoorDash Developer account. DoorDash currently limits Drive API access and reviews every integration before production; its sandbox and Delivery Simulator are for testing. Orders placed in the DoorDash or Uber Eats apps are a different thing: they reach you through a channel (see Channels).')) ?></div>
+<div class="alert alert-info"><?= e(__('restaurant_cr_truth', 'Each courier service needs your own account with it. DoorDash Drive: DoorDash currently limits Drive API access and reviews every integration before production; its sandbox and Delivery Simulator are for testing. Uber Direct: Uber approves each business and its test credentials only make test deliveries. Orders placed in the DoorDash or Uber Eats apps are a different thing: they reach you through a channel (see Channels).')) ?></div>
 
 <div class="rcu-grid">
 <section class="card">
@@ -117,6 +141,37 @@ if ($flash): ?><div class="alert alert-<?= e($flash['type']) ?>" role="status"><
 </section>
 
 <section class="card">
+    <header class="rcu-h"><h2>Uber Direct</h2>
+        <span class="badge badge-<?= $uber->enabled() ? 'active' : 'inactive' ?>"><?= e($uber->enabled() ? ($uEnv === 'live' ? __('restaurant_cr_on_prod', 'On · production') : __('restaurant_cr_on_test', 'On · test')) : __('restaurant_ch_off', 'Off')) ?></span></header>
+    <form method="post" class="rcu-form" autocomplete="off">
+        <?= csrf_field() ?><input type="hidden" name="_action" value="uber">
+        <div class="field"><label class="field-label" for="u_env"><?= e(__('restaurant_cr_env', 'Environment')) ?></label>
+            <select id="u_env" name="env">
+                <option value="test" <?= $uEnv === 'test' ? 'selected' : '' ?>><?= e(__('restaurant_cr_uber_test', 'Test (test deliveries)')) ?></option>
+                <option value="live" <?= $uEnv === 'live' ? 'selected' : '' ?>><?= e(__('restaurant_cr_production', 'Production')) ?></option>
+            </select>
+            <p class="field-hint"><?= e(__('restaurant_cr_uber_env_hint', 'Uber decides the environment by the credentials you paste: test credentials only make test deliveries. This label is what staff see.')) ?></p></div>
+        <div class="field"><label class="field-label" for="u_cus"><?= e(__('restaurant_cr_uber_customer', 'Customer ID')) ?></label>
+            <input type="text" id="u_cus" name="customer_id" maxlength="100" value="<?= e((string) RestaurantAPI::setting('uber_customer_id', '')) ?>">
+            <p class="field-hint"><?= e(__('restaurant_cr_uber_customer_hint', 'In the Uber Direct dashboard, under Developer.')) ?></p></div>
+        <div class="field"><label class="field-label" for="u_cid"><?= e(__('restaurant_cr_uber_client', 'Client ID')) ?></label>
+            <input type="text" id="u_cid" name="client_id" maxlength="200" value="<?= e((string) RestaurantAPI::setting('uber_client_id', '')) ?>"></div>
+        <div class="field"><label class="field-label" for="u_sec"><?= e(__('restaurant_cr_uber_secret', 'Client secret')) ?></label>
+            <input type="password" id="u_sec" name="client_secret" maxlength="300" placeholder="<?= e($hasUSec ? __('restaurant_cr_keep', 'Set (leave empty to keep)') : '') ?>"></div>
+        <div class="field"><label class="field-label" for="u_hk"><?= e(__('restaurant_cr_uber_hook_key', 'Webhook signing key')) ?></label>
+            <input type="password" id="u_hk" name="webhook_key" maxlength="300" placeholder="<?= e($hasUKey ? __('restaurant_cr_keep', 'Set (leave empty to keep)') : '') ?>">
+            <p class="field-hint"><?= e(__('restaurant_cr_uber_hook_key_hint', 'From the webhook in the Uber Direct dashboard. With it saved, webhooks without Uber\'s signature are refused.')) ?></p></div>
+        <label class="field-check rcu-check"><input type="checkbox" name="enabled" value="1" <?= RestaurantAPI::setting('uber_enabled', '0') === '1' ? 'checked' : '' ?>>
+            <span><?= e(__('restaurant_cr_uber_enable', 'Offer Uber couriers on delivery orders')) ?></span></label>
+        <div class="rcu-actions"><button class="btn btn-primary"><?= e(__('restaurant_ch_save', 'Save')) ?></button></div>
+    </form>
+    <?php if ($uber->enabled()): ?>
+    <form method="post" class="rcu-actions" style="margin-top:8px;"><?= csrf_field() ?><input type="hidden" name="_action" value="check_uber">
+        <button class="btn btn-sm"><?= e(__('restaurant_cr_uber_check', 'Check the credentials')) ?></button></form>
+    <?php endif; ?>
+</section>
+
+<section class="card">
     <header class="rcu-h"><h2><?= e(__('restaurant_cr_pickup', 'Pickup and requests')) ?></h2></header>
     <dl class="rc-dl">
         <div><dt><?= e(__('restaurant_cr_pickup_at', 'Couriers collect from')) ?></dt>
@@ -134,10 +189,13 @@ if ($flash): ?><div class="alert alert-<?= e($flash['type']) ?>" role="status"><
         <div class="rcu-actions"><button class="btn btn-primary"><?= e(__('restaurant_ch_save', 'Save')) ?></button></div>
     </form>
     <h3 class="rcu-sub"><?= e(__('restaurant_cr_webhook', 'Status webhook')) ?></h3>
-    <?php if ($hookUrl !== ''): ?>
-        <p class="text-sm" style="margin:0 0 6px;"><code class="rcu-code"><?= e($hookUrl) ?></code></p>
+    <?php if ($token !== ''): ?>
+        <p class="text-sm" style="margin:0 0 2px;">DoorDash</p>
+        <p class="text-sm" style="margin:0 0 6px;"><code class="rcu-code"><?= e($hookUrl('doordash_drive')) ?></code></p>
+        <p class="text-sm" style="margin:0 0 2px;">Uber</p>
+        <p class="text-sm" style="margin:0 0 6px;"><code class="rcu-code"><?= e($hookUrl('uber_direct')) ?></code></p>
     <?php endif; ?>
-    <p class="field-hint"><?= e(__('restaurant_cr_webhook_hint', 'Paste this address into the DoorDash Developer Portal (Webhooks). Each call only tells us which delivery changed; Kohevo then asks DoorDash for its real status.')) ?></p>
+    <p class="field-hint"><?= e(__('restaurant_cr_webhook_hint2', 'Paste each address into that provider\'s portal (DoorDash Developer Portal, Webhooks; Uber Direct dashboard, Webhooks, delivery status). Each call only tells us which delivery changed; Kohevo then asks the provider for its real status.')) ?></p>
     <form method="post" <?= $token !== '' ? 'onsubmit="return confirm(this.dataset.confirm)"' : '' ?> data-confirm="<?= e(__('restaurant_cr_hook_confirm', 'Make a new address? The old one stops working at once.')) ?>">
         <?= csrf_field() ?><input type="hidden" name="_action" value="webhook_token">
         <button class="btn btn-sm"><?= e($token !== '' ? __('restaurant_cr_hook_rotate', 'Make a new address') : __('restaurant_cr_hook_make', 'Make the webhook address')) ?></button>
