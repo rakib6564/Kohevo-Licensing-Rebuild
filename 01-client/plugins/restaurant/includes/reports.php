@@ -14,6 +14,11 @@
  *   - comps        = balances written off with compOrder()
  *   - refunds      = succeeded rows of the refunds ledger, by refund date
  *   - net sales    = order totals − comps − refunds
+ *   - Sales by channel split the channel source by the channel each order
+ *     came through (orders.channel); cancelled = voided channel orders.
+ *   - courier fees = Σ fees of courier jobs booked in the range (by the
+ *     job's created_at) that were delivered or are still under way; a cost,
+ *     never taken out of net sales.
  *   - Payment mix and the payments list go by the payment's own date;
  *     "online" is a card payment taken on the storefront (method 'other'
  *     with a Stripe PaymentIntent or Checkout session).
@@ -135,8 +140,58 @@ class RestaurantReports {
             'items'        => self::topItems($sale, $args),
             'categories'   => self::topCategories($sale, $args),
             'sources'      => self::sources($sale, $args),
+            'channels'     => self::channels($sale, $args, $lo, $hi),
             'fulfilment'   => self::fulfilment($lo, $hi),
-        ];
+        ] + self::couriers($lo, $hi);
+    }
+
+    /**
+     * Channel orders by channel slug: orders, sales (totals less comps) and
+     * cancelled (voided) orders. Every configured channel is listed, plus any
+     * slug an order still carries after its channel was deleted.
+     */
+    private static function channels(string $sale, array $args, string $lo, string $hi): array {
+        $tid = current_tenant_id();
+        $out = [];
+        foreach (Database::rows("SELECT slug, name FROM restaurant_channels WHERE tenant_id = ? ORDER BY name", [$tid]) as $c) {
+            $out[$c['slug']] = ['name' => $c['name'], 'orders' => 0, 'sales' => 0, 'cancelled' => 0];
+        }
+        $blank = fn(string $slug) => ['name' => $slug, 'orders' => 0, 'sales' => 0, 'cancelled' => 0];
+        foreach (Database::rows(
+            "SELECT COALESCE(o.channel, '') AS ch, COUNT(*) AS n, COALESCE(SUM(CAST(o.total_cents AS SIGNED) - CAST(o.comp_cents AS SIGNED)),0) AS s
+               FROM restaurant_orders o WHERE {$sale} AND o.source = 'channel' GROUP BY ch", $args) as $r) {
+            $out[$r['ch']] ??= $blank($r['ch']);
+            $out[$r['ch']]['orders'] = (int)$r['n'];
+            $out[$r['ch']]['sales']  = (int)$r['s'];
+        }
+        foreach (Database::rows(
+            "SELECT COALESCE(channel, '') AS ch, COUNT(*) AS n FROM restaurant_orders
+              WHERE tenant_id = ? AND source = 'channel' AND status = 'voided' AND opened_at BETWEEN ? AND ? GROUP BY ch", [$tid, $lo, $hi]) as $r) {
+            $out[$r['ch']] ??= $blank($r['ch']);
+            $out[$r['ch']]['cancelled'] = (int)$r['n'];
+        }
+        return $out;
+    }
+
+    /**
+     * Courier jobs booked in the range that cost money: delivered or still
+     * under way (quotes, cancellations and failures never charged here).
+     * Returns courier_fees, courier_jobs and couriers (by provider key:
+     * delivered, active, fees).
+     */
+    private static function couriers(string $lo, string $hi): array {
+        $by = [];
+        foreach (Database::rows(
+            "SELECT provider, SUM(status = 'delivered') AS delivered, SUM(status <> 'delivered') AS active, COALESCE(SUM(fee_cents),0) AS fees
+               FROM restaurant_delivery_jobs
+              WHERE tenant_id = ? AND created_at BETWEEN ? AND ?
+                AND status IN ('requested','courier_assigned','enroute_pickup','picked_up','delivered')
+           GROUP BY provider", [current_tenant_id(), $lo, $hi]) as $r) {
+            $by[$r['provider']] = ['delivered' => (int)$r['delivered'], 'active' => (int)$r['active'], 'fees' => (int)$r['fees']];
+        }
+        return ['courier_fees' => array_sum(array_column($by, 'fees')),
+                'courier_jobs' => array_sum(array_column($by, 'delivered')) + array_sum(array_column($by, 'active')),
+                'couriers' => $by];
     }
 
     /** Payments taken in the range by method class: count, collected, refunds (by refund date), net. */
@@ -251,6 +306,7 @@ class RestaurantReports {
             ['avg_order', __('restaurant_rep_aov', 'Average order'), $MONEY],
             ['covers', __('restaurant_rep_covers', 'Covers'), $INT],
             ['voided', __('restaurant_rep_voided', 'Voided orders'), $INT],
+            ['courier_fees', __('restaurant_rep_courier_fees', 'Courier fees'), $MONEY],
         ] as [$k, $label, $type]) {
             $head[] = [$label, $cur[$k], $prev[$k], self::change((int)$cur[$k], (int)$prev[$k]), $k, $type];
         }
@@ -263,6 +319,15 @@ class RestaurantReports {
                     'voided' => __('restaurant_pos_st_voided', 'Voided')];
         $SOURCES = ['pos' => __('restaurant_orders_src_pos', 'POS'), 'online' => __('restaurant_pos_online', 'Online'),
                     'channel' => __('restaurant_rep_src_channel', 'Channels')];
+        $chSlugs  = array_keys($cur['channels'] + $prev['channels']);
+        $chName   = fn(string $slug) => $slug === '' ? __('restaurant_rep_ch_unknown', 'Unnamed channel') : (string)(($cur['channels'][$slug] ?? $prev['channels'][$slug])['name']);
+        $chGet    = fn(array $sum, string $slug, string $k) => (int)($sum['channels'][$slug][$k] ?? 0);
+        $provKeys = array_keys($cur['couriers'] + $prev['couriers']);
+        $provName = function (string $key): string {
+            if (class_exists('RestaurantDelivery') && ($p = RestaurantDelivery::provider($key))) return $p->label();
+            return $key;
+        };
+        $cuGet    = fn(array $sum, string $key, string $k) => (int)($sum['couriers'][$key][$k] ?? 0);
         $itemCols = [[__('restaurant_rep_item', 'Item'), $TEXT], [__('restaurant_rep_qty', 'Quantity'), $INT], [__('restaurant_rep_revenue', 'Revenue'), $MONEY]];
 
         return [
@@ -304,6 +369,25 @@ class RestaurantReports {
                               [__('restaurant_rep_change', 'Change'), $PCT]],
                 'rows'    => array_map(fn($s) => [$SOURCES[$s], $cur['sources'][$s]['orders'], $cur['sources'][$s]['sales'],
                               $prev['sources'][$s]['sales'], self::change($cur['sources'][$s]['sales'], $prev['sources'][$s]['sales'])], array_keys($SOURCES)),
+            ],
+            'channels' => [
+                'title'   => __('restaurant_rep_t_channels', 'Sales by channel'),
+                'columns' => [[__('restaurant_rep_channel', 'Channel'), $TEXT], [__('restaurant_rep_orders', 'Orders'), $INT],
+                              [__('restaurant_rep_sales', 'Sales'), $MONEY], [__('restaurant_rep_aov', 'Average order'), $MONEY],
+                              [__('restaurant_rep_ch_cancelled', 'Cancelled'), $INT], [__('restaurant_rep_prev', 'Previous period'), $MONEY],
+                              [__('restaurant_rep_change', 'Change'), $PCT]],
+                'rows'    => array_map(fn($c) => [$chName($c), $chGet($cur, $c, 'orders'), $chGet($cur, $c, 'sales'),
+                              $chGet($cur, $c, 'orders') > 0 ? (int) round($chGet($cur, $c, 'sales') / $chGet($cur, $c, 'orders')) : 0,
+                              $chGet($cur, $c, 'cancelled'), $chGet($prev, $c, 'sales'),
+                              self::change($chGet($cur, $c, 'sales'), $chGet($prev, $c, 'sales'))], $chSlugs),
+            ],
+            'couriers' => [
+                'title'   => __('restaurant_rep_t_couriers', 'Courier deliveries'),
+                'columns' => [[__('restaurant_rep_provider', 'Courier service'), $TEXT], [__('restaurant_rep_delivered', 'Delivered'), $INT],
+                              [__('restaurant_rep_underway', 'Under way'), $INT], [__('restaurant_rep_fees', 'Fees'), $MONEY],
+                              [__('restaurant_rep_prev', 'Previous period'), $MONEY], [__('restaurant_rep_change', 'Change'), $PCT]],
+                'rows'    => array_map(fn($k) => [$provName($k), $cuGet($cur, $k, 'delivered'), $cuGet($cur, $k, 'active'), $cuGet($cur, $k, 'fees'),
+                              $cuGet($prev, $k, 'fees'), self::change($cuGet($cur, $k, 'fees'), $cuGet($prev, $k, 'fees'))], $provKeys),
             ],
             'fulfilment' => [
                 'title'   => __('restaurant_rep_t_fulfilment', 'Online orders by status'),
