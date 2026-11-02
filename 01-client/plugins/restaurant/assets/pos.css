@@ -239,6 +239,8 @@ html, body.pos-body { height: 100%; margin: 0; overflow: hidden; background: var
 .pos-toast.is-error { background: var(--danger); }
 .pos-toast[hidden] { display: none; }
 
+/* The multilang switcher floats over the register; these screens follow the admin language. */
+.pos-body .mlt-switcher { display: none !important; }
 .pos-mobile-nav { display: none; }
 .pos-msearch { display: none; }
 
