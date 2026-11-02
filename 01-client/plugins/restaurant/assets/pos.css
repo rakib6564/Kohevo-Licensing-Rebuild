@@ -56,6 +56,28 @@ html, body.pos-body { height: 100%; margin: 0; overflow: hidden; background: var
 .pos-empty { padding: 28px 16px; text-align: center; color: var(--muted); }
 .pos-link { border: 0; background: none; padding: 0; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 
+/* Hover and focus. The admin sheet's global a:hover recolours links to near-black, so every
+   link styled as a control states its own colour here, and every control gets a visible hover. */
+.pos-top-back, .pos-top-back:hover, .pos-top-back:focus-visible { color: rgba(255,255,255,.95); text-decoration: none; }
+.pos-tab:not(.is-active):hover { background: rgba(255,255,255,.1); color: #fff; }
+a.pos-tab:hover, a.pos-tab:focus-visible { color: #fff; text-decoration: none; }
+.pos-tab.is-active:hover { background: #fff; color: #111; }
+.pos-top .pos-icon-btn:hover { color: #fff; }
+a.pos-btn:hover, a.pos-btn:focus-visible { color: var(--text); text-decoration: none; }
+.pos-btn-primary:hover, a.pos-btn-primary:hover, a.pos-btn-primary:focus-visible { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--on-accent); }
+.pos-btn-danger:hover { color: var(--danger); }
+.pos-chip:not(.is-active):hover { background: var(--surface-2); border-color: var(--border-stronger); }
+.pos-chip.is-active:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--on-accent); }
+.pos-seg button:not(.is-active):not(:disabled):hover { color: var(--text); background: color-mix(in srgb, var(--surface) 60%, transparent); }
+.pos-quick button:not(.is-active):hover, .pos-seats button:not(.is-active):hover,
+.pos-checktabs button:not(.is-active):hover, .pos-table-pick button:not(.is-active):hover,
+.pos-kp button:hover, .pos-stepper button:hover { background: var(--surface-2); border-color: var(--border-stronger); }
+.pos-quick button.is-active:hover, .pos-seats button.is-active:hover { background: var(--accent-hover); color: var(--on-accent); }
+.pos-link:hover { color: var(--text); }
+.pos-mobile-nav button:hover { color: var(--text); }
+:where(.pos-body) :is(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pos-top :is(button, a):focus-visible { outline-color: #fff; }
+
 /* Segmented control */
 .pos-seg { display: flex; gap: 4px; padding: 4px; background: var(--surface-sunken); border-radius: var(--radius); }
 .pos-seg button { flex: 1; min-height: 38px; padding: 0 6px; white-space: nowrap; font-size: 13px; border: 0; border-radius: var(--radius-sm); background: transparent; font-weight: 600; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
