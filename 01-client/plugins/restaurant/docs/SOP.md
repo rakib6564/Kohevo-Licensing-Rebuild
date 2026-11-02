@@ -1,6 +1,6 @@
 # Restaurant — Standard Operating Procedure (SOP)
 
-**System:** Kohevo Restaurant plugin v0.3.0 (POS, card + cash payments with refunds and receipts, online ordering)
+**System:** Kohevo Restaurant plugin v0.4.0 (full-screen POS with split checks and a table map, kitchen display, card + cash payments with refunds and receipts, online ordering)
 **Audience:** owners, managers, cashiers/servers
 **Before you hand this to staff:** replace `https://your-site.example` below with your own site address.
 
@@ -37,24 +37,37 @@
 
 ## 2. Taking an order (every order)
 
-1. **+ New check** → choose type:
-   - **Dine in** → pick the table + guest count (the table turns "seated").
-   - **Takeout** / **Delivery** → guest count only.
-2. Tap menu items to add them.
-   - If an item has required options (e.g. side, sauce), a window prompts for them — choose, add any **note** (e.g. *no onions, extra sauce*), then add.
-   - Adjust quantity with **−/+**; remove an un-sent line with **×**.
-3. Read the order back to the customer. Check the running **Total** (top of the check).
-4. **Send to kitchen** — fires the kitchen ticket. *Sent lines lock; to change one you must **void** it, not delete it.*
+The register opens full screen. Use the full-screen button (top right) on a tablet; **?** lists the keyboard shortcuts.
+
+1. **New check** (or tap a free table on **Tables**) → choose **Dine in** (pick the table), **Takeout** or **Delivery**, and the number of guests.
+2. For dine in, tap the **seat** number above the check before adding each guest's items, so the ticket and any split show who ordered what.
+3. Tap menu items to add them (or type in **Search the menu**, then Enter).
+   - Items with options open a window: choose, add a **note** (e.g. *no onions*), set the quantity, then **Add**.
+   - Tap a line on the check to change quantity, seat or check, discount it, comp it (manager), or remove it. Lines already sent are **voided** instead of removed.
+4. **Guest** and **note** chips under the check: attach a customer by name, phone or email (or create one), and write an order note.
+5. Read the order back. **Send** fires the new lines to the kitchen display.
+
+### Tables
+**Tables** shows every table by section: green is free, blue is seated (with the check total and how long it has been open), amber needs clearing. Tap a seated table to open its check, a free one to start a check, an amber one to mark it clean.
+
+### Split and merge checks
+- **Split** lets you put each line on check 1, 2, 3… or press **One check per seat**. Tap a line to split part of it (e.g. two of three drinks) onto another check.
+- Each check shows its own balance and is paid on its own (**Pay** asks which check). The table frees once every check is paid.
+- A check that already has a payment is locked: lines cannot move in or out of it.
+- **More → Merge** brings another open check on the same table into this one (only if that check has no payment yet).
+
+### Kitchen display
+The kitchen screen (**Restaurant → Kitchen display**, permission `restaurant.kitchen`) shows each sent check as a ticket, oldest first, green under 10 minutes, amber under 20, red after. Tap a line when it is ready, **Ready** for the whole ticket, then **Served** when it has gone out; **Recall** puts a ready ticket back. Tickets chime as they arrive.
 
 ---
 
 ## 3. Taking payment
 
 ### Cash
-1. **Pay** → **Cash**.
+1. **Pay** (choose the check if it is split) → **Cash**.
 2. Add a tip if the customer states one (preset % or custom).
-3. Enter **cash tendered** → the screen shows **change due**.
-4. Confirm → the check records the payment and **closes** when covered. Make change from the drawer.
+3. Tap the bill the guest handed over (**Exact**, $20, $50…) or type it on the keypad → the screen shows **change due**.
+4. **Take cash** → the payment, what was handed over and the change are recorded, and the check is paid when covered. A big **change due** screen confirms what to hand back.
 
 ### Card (Stripe Terminal)
 1. **Pay** → **Card / Terminal** → pick the reader.
@@ -85,19 +98,23 @@ If Stripe refuses a refund (for example the Stripe balance is too low), nothing 
 
 ---
 
-## 4. Discounts and voids
+## 4. Discounts, comps, voids and reopening
 
-- **Discount** — manager-approved dollar amount off a check (button on the check).
-- **Void check** — cancels the entire check (requires `restaurant.manage_orders`). Enter a reason. Use for mistakes/walkouts.
-- **Close check** — closes a check with no further payment. There is no separate comp action yet, so use this sparingly and per policy.
-- All voids, discounts, payments and refunds are recorded in the **audit log**.
+- **Discount** — on the whole check or one line (tap the line): a percentage or an amount, with a reason (quick reasons: promotion, staff meal, manager, complaint, regular guest).
+- **Comp an item** — tap the line → **Comp this item** (needs `restaurant.manage_orders` and a reason). The item stays on the check at no charge.
+- **Comp the balance** — **More → Comp the balance** closes the check and writes off what is still owed, with a reason (manager).
+- **Close check** — only closes a check that is fully paid. A check that still owes money must be paid, or comped with a reason.
+- **Void check** — cancels the entire check (manager). Enter a reason. Use for mistakes and walkouts.
+- **Reopen** — a paid or closed check can be reopened by a manager (from **Recently closed** in the register) to add items or settle again. A comp on it is undone.
+- All voids, discounts, comps, reopens, payments and refunds are recorded in the **audit log**.
 
 ---
 
 ## 5. 86-ing an item (sold out)
 
-1. **Menu items** → open the item → toggle **86** on → save.
-2. It immediately greys out on the register. Toggle off when restocked.
+- From the register: **press and hold** (or right-click) the item → **86 it**. Do the same to put it back.
+- From **Menu items**: tick the **86** box on the item's row, or select several and **Mark sold out**.
+- An 86'd item greys out on every register and disappears from the online menu until it is back on.
 
 ---
 
@@ -116,7 +133,8 @@ If Stripe refuses a refund (for example the Stripe balance is too low), nothing 
 |---|---|
 | `restaurant.pos` | run the register, take orders & payment |
 | `restaurant.manage_menu` | edit menu, prices, 86 items |
-| `restaurant.manage_orders` | void checks, refund payments |
+| `restaurant.manage_orders` | void, comp and reopen checks; comp items; refund payments |
+| `restaurant.kitchen` | use the kitchen display |
 | `restaurant.manage_settings` | change tax, tips, receipts, readers |
 | `restaurant.view` | see orders, menu, the help page |
 

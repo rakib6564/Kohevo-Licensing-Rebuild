@@ -1,11 +1,12 @@
 <?php
 /**
- * Restaurant — online orders queue.
+ * Restaurant — online orders queue (live board).
  *
- * Staff-facing list of orders placed through the public storefront (/order):
- * contact, items, payment status, and a fulfilment workflow
- * (new → accepted → preparing → ready → completed). Also fires lines to the
- * kitchen and links to the full check in the POS view.
+ * Orders placed through the public storefront (/order) as a board with one
+ * column per fulfilment state: new → accepted → preparing → ready, plus the
+ * last day's completed and cancelled. One click moves an order on (accepting
+ * also fires its lines to the kitchen). The board refreshes itself every few
+ * seconds and chimes when a new order lands. Links to the full check.
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/RestaurantAPI.php';
@@ -15,130 +16,226 @@ Auth::requirePerm('restaurant.view');
 ModuleGuard::require('restaurant');
 RestaurantAPI::ensureSchema();
 
-$tid   = current_tenant_id();
-$flash = null;
+$tid = current_tenant_id();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
-    } else {
+/** The board's orders: everything not finished, plus finished in the last 24 hours. */
+$board = function () use ($tid): array {
+    $rows = Database::rows(
+        "SELECT o.id FROM restaurant_orders o
+          WHERE o.tenant_id = ? AND o.source = 'online'
+            AND (o.fulfillment_status NOT IN ('completed','cancelled') OR o.updated_at >= NOW() - INTERVAL 1 DAY)
+       ORDER BY o.id DESC LIMIT 150", [$tid]);
+    $out = [];
+    foreach ($rows as $r) {
+        $o = RestaurantAPI::getOrder((int)$r['id']);
+        if (!$o) continue;
+        $out[] = [
+            'id' => (int)$o['id'], 'order_no' => $o['order_no'], 'type' => $o['type'], 'status' => $o['fulfillment_status'],
+            'order_status' => $o['status'], 'customer' => (string)($o['customer_name'] ?? ''), 'phone' => (string)($o['customer_phone'] ?? ''),
+            'requested' => (string)($o['requested_time'] ?? ''), 'notes' => (string)($o['notes'] ?? ''), 'opened_at' => $o['opened_at'],
+            'total' => RestaurantAPI::money((int)$o['total_cents']),
+            'paid'  => (int)$o['total_cents'] > 0 && (int)$o['paid_cents'] >= (int)$o['total_cents'],
+            'has_new' => (bool) array_filter($o['items'], fn($i) => $i['kitchen_status'] === 'new'),
+            'items' => array_values(array_map(fn($i) => [
+                'qty' => (int)$i['qty'], 'name' => $i['name_snapshot'], 'k' => $i['kitchen_status'],
+                'mods' => array_column($i['modifiers'] ?? [], 'name_snapshot'), 'notes' => (string)($i['notes'] ?? ''),
+            ], array_filter($o['items'], fn($i) => $i['kitchen_status'] !== 'void'))),
+        ];
+    }
+    return $out;
+};
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_ajax'])) {
+    header('Content-Type: application/json; charset=utf-8');
+    if (!csrf_verify()) { echo json_encode(['ok' => false, 'error' => __('restaurant_err_csrf', 'Security check failed. Reload the page and try again.')]); exit; }
+    try {
         $orderId = (int)($_POST['order_id'] ?? 0);
-        $own = $orderId > 0 && Database::value("SELECT 1 FROM restaurant_orders WHERE id = ? AND tenant_id = ? AND source = 'online'", [$orderId, $tid]);
-        if ($own) {
-            switch ($_POST['_action'] ?? '') {
-                case 'fulfill':
-                    RestaurantAPI::setFulfillment($orderId, (string)($_POST['status'] ?? ''));
-                    $flash = ['type' => 'success', 'msg' => 'Order updated.'];
-                    break;
-                case 'send':
-                    RestaurantAPI::sendToKitchen($orderId);
-                    RestaurantAPI::setFulfillment($orderId, 'preparing');
-                    $flash = ['type' => 'success', 'msg' => 'Sent to kitchen.'];
-                    break;
+        $action  = (string)($_POST['action'] ?? 'list');
+        if ($action !== 'list') {
+            if (!Database::value("SELECT 1 FROM restaurant_orders WHERE id = ? AND tenant_id = ? AND source = 'online'", [$orderId, $tid])) {
+                throw new \RuntimeException(__('restaurant_err_check', 'Check not found.'));
+            }
+            if ($action === 'move') {
+                $to = (string)($_POST['to'] ?? '');
+                // Accepting an order fires whatever has not gone to the kitchen yet.
+                if (in_array($to, ['accepted', 'preparing'], true)) RestaurantAPI::sendToKitchen($orderId);
+                RestaurantAPI::setFulfillment($orderId, $to);
+            } elseif ($action === 'send') {
+                RestaurantAPI::sendToKitchen($orderId);
+            } else {
+                throw new \RuntimeException(__('restaurant_err_action', 'Unknown action.'));
             }
         }
-        header('Location: ' . plugin_url('restaurant', 'admin/online.php'));
-        exit;
+        echo json_encode(['ok' => true, 'orders' => $board()]);
+    } catch (\Throwable $e) {
+        echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
     }
+    exit;
 }
 
-$orders = RestaurantAPI::getOnlineOrders(100);
-// Hydrate each with its items for the inline summary.
-foreach ($orders as &$o) { $o['_full'] = RestaurantAPI::getOrder((int)$o['id']); }
-unset($o);
-
-$active = array_filter($orders, fn($o) => !in_array($o['fulfillment_status'], ['completed', 'cancelled'], true));
-
-$pageTitle  = 'Online orders';
+$orders = $board();
+$pageTitle  = __('restaurant_online', 'Online orders');
 $currentNav = 'restaurant-online';
-
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
 <?php slate_breadcrumbs([
     ['label' => __('dashboard', 'Dashboard'), 'href' => SLATE_URL . '/admin/'],
     ['label' => __('restaurant', 'Restaurant'), 'href' => plugin_url('restaurant', 'admin/index.php')],
-    ['label' => 'Online orders'],
+    ['label' => __('restaurant_online', 'Online orders')],
 ]); ?>
 
-<?php if ($flash): ?><div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div><?php endif; ?>
-
 <div class="page-header">
-    <div><h1>Online orders</h1><p class="page-header-sub"><?= count($active) ?> active · <?= count($orders) ?> total</p></div>
-    <?php if (RestaurantAPI::onlineOrderingEnabled()): ?>
-        <a href="<?= e(rtrim(SLATE_URL, '/')) ?>/order" target="_blank" rel="noopener" class="btn">View storefront ↗</a>
-    <?php else: ?>
-        <a href="<?= e(plugin_url('restaurant', 'admin/settings.php')) ?>" class="btn btn-primary">Enable online ordering</a>
-    <?php endif; ?>
+    <div><h1><?= e(__('restaurant_online', 'Online orders')) ?></h1>
+        <p class="page-header-sub" id="ronSub"></p></div>
+    <div class="toolbar">
+        <label class="ron-sound"><input type="checkbox" id="ronSound" checked> <?= e(__('restaurant_online_sound', 'Chime on new orders')) ?></label>
+        <?php if (RestaurantAPI::onlineOrderingEnabled()): ?>
+            <a href="<?= e(rtrim(SLATE_URL, '/')) ?>/order" target="_blank" rel="noopener" class="btn"><?= e(__('restaurant_online_storefront', 'View storefront')) ?> ↗</a>
+        <?php else: ?>
+            <a href="<?= e(plugin_url('restaurant', 'admin/settings.php')) ?>?tab=online" class="btn btn-primary"><?= e(__('restaurant_online_enable', 'Enable online ordering')) ?></a>
+        <?php endif; ?>
+    </div>
 </div>
 
 <?php if (!RestaurantAPI::onlineOrderingEnabled()): ?>
-    <div class="alert alert-info">Online ordering is currently <strong>off</strong>. Turn it on in <a href="<?= e(plugin_url('restaurant', 'admin/settings.php')) ?>">Settings</a> to start taking orders at <code><?= e(rtrim(SLATE_URL, '/')) ?>/order</code>.</div>
+    <div class="alert alert-info"><?= e(sprintf(__('restaurant_online_off', 'Online ordering is off. Turn it on in Settings to start taking orders at %s.'), rtrim(SLATE_URL, '/') . '/order')) ?></div>
 <?php endif; ?>
 
-<?php if (!$orders): ?>
-    <div class="card"><div class="empty"><div class="empty-title">No online orders yet</div><p class="text-sm">Orders placed at your storefront will appear here.</p></div></div>
-<?php else: ?>
-    <style>
-    .ron-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
-    .ron-card{border:1px solid var(--border,#e5e7eb);border-radius:12px;background:var(--surface,#fff);overflow:hidden}
-    .ron-h{padding:10px 14px;border-bottom:1px solid var(--border,#e5e7eb);display:flex;justify-content:space-between;align-items:center}
-    .ron-h b{font-size:1.02rem}
-    .ron-body{padding:10px 14px}
-    .ron-li{display:flex;justify-content:space-between;padding:3px 0;font-size:.9rem}
-    .ron-meta{color:var(--muted,#6b7280);font-size:.85rem;margin:6px 0}
-    .ron-foot{padding:10px 14px;border-top:1px solid var(--border,#e5e7eb);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-    .ron-pill{font-size:.72rem;padding:2px 8px;border-radius:999px;background:var(--surface-2,#f3f4f6)}
-    .ron-pill.paid{background:#dcfce7;color:#166534}.ron-pill.due{background:#fef9c3;color:#854d0e}
-    .ron-pill.s-new{background:#dbeafe;color:#1e40af}.ron-pill.s-ready{background:#dcfce7;color:#166534}
-    .ron-pill.s-cancelled{background:#fee2e2;color:#991b1b}
-    </style>
-    <div class="ron-grid">
-    <?php foreach ($orders as $o):
-        $f = $o['_full']; if (!$f) continue;
-        $paid = (int)$f['paid_cents'] >= (int)$f['total_cents'] && (int)$f['total_cents'] > 0;
-        $st = (string)$o['fulfillment_status'];
-        $hasNew = false; foreach ($f['items'] as $it) { if ($it['kitchen_status'] === 'new') $hasNew = true; }
-        $next = ['new' => 'accepted', 'accepted' => 'preparing', 'preparing' => 'ready', 'ready' => 'completed'];
-    ?>
-        <div class="ron-card">
-            <div class="ron-h">
-                <b>#<?= e($o['order_no']) ?></b>
-                <span>
-                    <span class="ron-pill <?= $paid ? 'paid' : 'due' ?>"><?= $paid ? 'Paid' : 'Due' ?></span>
-                    <span class="ron-pill s-<?= e($st) ?>"><?= e(ucfirst($st)) ?></span>
-                </span>
-            </div>
-            <div class="ron-body">
-                <div class="ron-meta">
-                    <strong><?= e((string)($o['customer_name'] ?? 'Guest')) ?></strong>
-                    <?= $o['customer_phone'] ? ' · ' . e($o['customer_phone']) : '' ?><br>
-                    <?= e(ucfirst((string)$f['type'])) ?><?= $o['requested_time'] ? ' · ' . e($o['requested_time']) : '' ?>
-                    · <?= e(date('M j, g:ia', strtotime((string)$o['opened_at']))) ?>
-                </div>
-                <?php foreach ($f['items'] as $it): if ($it['kitchen_status'] === 'void') continue;
-                    $mods = array_map(fn($m) => $m['name_snapshot'], $it['modifiers'] ?? []); ?>
-                    <div class="ron-li"><span><?= (int)$it['qty'] ?>× <?= e($it['name_snapshot']) ?><?= $mods ? ' <span class="text-muted">(' . e(implode(', ', $mods)) . ')</span>' : '' ?></span>
-                        <span><?= e(RestaurantAPI::money((int)$it['line_total_cents'])) ?></span></div>
-                <?php endforeach; ?>
-                <?php if (trim((string)$f['notes']) !== ''): ?><div class="ron-meta"><?= slate_admin_nav_icon('edit-3') ?> <?= e($f['notes']) ?></div><?php endif; ?>
-                <div class="ron-li" style="font-weight:700;border-top:1px solid var(--border,#e5e7eb);margin-top:6px;padding-top:6px">
-                    <span>Total</span><span><?= e(RestaurantAPI::money((int)$f['total_cents'])) ?></span></div>
-            </div>
-            <div class="ron-foot">
-                <?php if ($hasNew): ?>
-                    <form method="post" style="margin:0"><?= csrf_field() ?><input type="hidden" name="_action" value="send"><input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>"><button class="btn btn-sm btn-primary">Send to kitchen</button></form>
-                <?php endif; ?>
-                <?php if (isset($next[$st])): ?>
-                    <form method="post" style="margin:0"><?= csrf_field() ?><input type="hidden" name="_action" value="fulfill"><input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>"><input type="hidden" name="status" value="<?= e($next[$st]) ?>"><button class="btn btn-sm">Mark <?= e($next[$st]) ?></button></form>
-                <?php endif; ?>
-                <?php if (!in_array($st, ['completed', 'cancelled'], true)): ?>
-                    <form method="post" style="margin:0" onsubmit="return confirm('Cancel this order?')"><?= csrf_field() ?><input type="hidden" name="_action" value="fulfill"><input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>"><input type="hidden" name="status" value="cancelled"><button class="btn btn-sm btn-danger">Cancel</button></form>
-                <?php endif; ?>
-            </div>
-        </div>
-    <?php endforeach; ?>
-    </div>
-<?php endif; ?>
+<div class="ron-board" id="ronBoard"></div>
+<details class="ron-done card" id="ronDoneWrap"><summary id="ronDoneSum"></summary><div class="ron-done-list" id="ronDone"></div></details>
+
+<style>
+.ron-sound { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); margin-right: 8px; }
+.ron-board { display: grid; grid-template-columns: repeat(4, minmax(240px, 1fr)); gap: 14px; align-items: start; overflow-x: auto; padding-bottom: 6px; }
+.ron-col { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px; min-height: 160px; }
+.ron-col > h2 { display: flex; justify-content: space-between; align-items: center; margin: 2px 4px 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.ron-col > h2 span { min-width: 24px; text-align: center; padding: 2px 8px; border-radius: 999px; background: var(--surface); color: var(--text); }
+.ron-col.is-new > h2 span { background: var(--info); color: #fff; }
+.ron-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+.ron-card.is-fresh { animation: ronPulse 1.6s ease-out 2; border-color: var(--info); }
+@keyframes ronPulse { 50% { box-shadow: 0 0 0 4px var(--info-soft); } }
+@media (prefers-reduced-motion: reduce) { .ron-card.is-fresh { animation: none; } }
+.ron-card header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 12px 4px; }
+.ron-card header b { font-size: 16px; }
+.ron-age { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ron-age.is-late { color: var(--danger); font-weight: 700; }
+.ron-who { padding: 0 12px; font-size: 13px; color: var(--text-2); }
+.ron-items { list-style: none; margin: 8px 0 0; padding: 0 12px; font-size: 13.5px; }
+.ron-items li { padding: 3px 0; border-top: 1px dashed var(--border); }
+.ron-items small { display: block; color: var(--muted); }
+.ron-note { margin: 6px 12px 0; padding: 6px 8px; border-radius: var(--radius-sm); background: var(--warning-soft); font-size: 12.5px; }
+.ron-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 10px 12px; }
+.ron-foot .btn-primary { flex: 1; }
+.ron-pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); }
+.ron-pill.is-paid { background: var(--success-soft); color: var(--success); }
+.ron-pill.is-due { background: var(--warning-soft); color: var(--warning); }
+.ron-empty { padding: 18px 6px; text-align: center; font-size: 13px; color: var(--muted); }
+.ron-done { margin-top: 14px; }
+.ron-done summary { padding: 12px 16px; cursor: pointer; font-weight: 600; }
+.ron-done-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; padding: 0 16px 16px; }
+@media (max-width: 900px) { .ron-board { grid-template-columns: repeat(4, 82vw); scroll-snap-type: x mandatory; } .ron-col { scroll-snap-align: start; } }
+</style>
+<script>
+(function () {
+    const csrf = <?= json_encode(csrf_token()) ?>;
+    const orderUrl = <?= json_encode(plugin_url('restaurant', 'admin/order.php')) ?>;
+    const receiptUrl = <?= json_encode(plugin_url('restaurant', 'admin/receipt.php')) ?>;
+    const T = <?= json_encode(__js([
+        'restaurant_online_col_new'       => 'New',
+        'restaurant_online_col_accepted'  => 'Accepted',
+        'restaurant_online_col_preparing' => 'Preparing',
+        'restaurant_online_col_ready'     => 'Ready for pickup',
+        'restaurant_online_go_accepted'   => 'Accept and fire',
+        'restaurant_online_go_preparing'  => 'Start preparing',
+        'restaurant_online_go_ready'      => 'Mark ready',
+        'restaurant_online_go_completed'  => 'Picked up',
+        'restaurant_online_cancel'        => 'Cancel',
+        'restaurant_online_cancel_q'      => 'Cancel this order? Refund any card payment from the order page.',
+        'restaurant_online_fire'          => 'Fire new items',
+        'restaurant_online_empty'         => 'Nothing here.',
+        'restaurant_online_sub'           => '%1$s active · %2$s finished today',
+        'restaurant_online_done'          => 'Finished in the last 24 hours (%s)',
+        'restaurant_online_for'           => 'for %s',
+        'restaurant_online_paid'          => 'Paid',
+        'restaurant_online_due'           => 'Due at pickup',
+        'restaurant_online_completed'     => 'Picked up',
+        'restaurant_online_cancelled'     => 'Cancelled',
+        'restaurant_pos_details'          => 'Order details',
+        'restaurant_rcpt_print'           => 'Print receipt',
+        'restaurant_rcpt_takeout'         => 'Takeout',
+        'restaurant_rcpt_delivery'        => 'Delivery',
+        'restaurant_pos_failed'           => 'That did not work. Try again.',
+    ]), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const COLS = ['new', 'accepted', 'preparing', 'ready'];
+    const NEXT = { new: 'accepted', accepted: 'preparing', preparing: 'ready', ready: 'completed' };
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    const fmt = (k, ...a) => { let i = 0; return String(T[k] || k).replace(/%(\d+\$)?s/g, (m, p) => esc(p ? a[parseInt(p, 10) - 1] : a[i++])); };
+    let orders = <?= json_encode($orders, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    let seen = new Set(orders.map((o) => o.id)), fresh = new Set(), busy = false;
+
+    const age = (ts) => Math.max(0, Math.round((Date.now() - new Date(String(ts).replace(' ', 'T')).getTime()) / 60000));
+    function card(o, done) {
+        const m = age(o.opened_at);
+        return '<article class="ron-card' + (fresh.has(o.id) ? ' is-fresh' : '') + '">'
+            + '<header><b>#' + esc(o.order_no) + '</b><span class="ron-age' + (!done && m >= 20 ? ' is-late' : '') + '">' + m + '′</span></header>'
+            + '<div class="ron-who"><strong>' + esc(o.customer || '—') + '</strong>' + (o.phone ? ' · <a href="tel:' + esc(o.phone) + '">' + esc(o.phone) + '</a>' : '')
+            + '<br>' + esc(T['restaurant_rcpt_' + o.type] || o.type) + (o.requested ? ' · ' + fmt('restaurant_online_for', o.requested) : '') + ' · ' + esc(o.total)
+            + ' <span class="ron-pill ' + (o.paid ? 'is-paid">' + fmt('restaurant_online_paid') : 'is-due">' + fmt('restaurant_online_due')) + '</span></div>'
+            + (done ? '' : '<ul class="ron-items">' + o.items.map((i) => '<li><b>' + i.qty + '×</b> ' + esc(i.name) + (i.mods.length ? '<small>' + i.mods.map(esc).join(', ') + '</small>' : '') + (i.notes ? '<small>' + esc(i.notes) + '</small>' : '') + '</li>').join('') + '</ul>')
+            + (o.notes && !done ? '<div class="ron-note">' + esc(o.notes) + '</div>' : '')
+            + '<div class="ron-foot">'
+            + (done ? '<span class="ron-pill">' + fmt('restaurant_online_' + o.status) + '</span>'
+                : '<button type="button" class="btn btn-sm btn-primary" data-move="' + o.id + '" data-to="' + NEXT[o.status] + '">' + fmt('restaurant_online_go_' + NEXT[o.status]) + '</button>'
+                  + (o.has_new && o.status !== 'new' ? '<button type="button" class="btn btn-sm" data-send="' + o.id + '">' + fmt('restaurant_online_fire') + '</button>' : '')
+                  + '<button type="button" class="btn btn-sm btn-ghost" data-move="' + o.id + '" data-to="cancelled">' + fmt('restaurant_online_cancel') + '</button>')
+            + '<a class="btn btn-sm btn-ghost" href="' + orderUrl + '?id=' + o.id + '">' + fmt('restaurant_pos_details') + '</a>'
+            + '<a class="btn btn-sm btn-ghost" href="' + receiptUrl + '?id=' + o.id + '" target="_blank" rel="noopener">' + fmt('restaurant_rcpt_print') + '</a>'
+            + '</div></article>';
+    }
+    function render() {
+        const live = orders.filter((o) => COLS.includes(o.status)), done = orders.filter((o) => !COLS.includes(o.status));
+        document.getElementById('ronBoard').innerHTML = COLS.map((c) => {
+            const list = live.filter((o) => o.status === c).sort((a, b) => a.id - b.id);
+            return '<section class="ron-col is-' + c + '"><h2>' + fmt('restaurant_online_col_' + c) + '<span>' + list.length + '</span></h2>'
+                + (list.length ? list.map((o) => card(o, false)).join('') : '<div class="ron-empty">' + fmt('restaurant_online_empty') + '</div>') + '</section>';
+        }).join('');
+        document.getElementById('ronDone').innerHTML = done.map((o) => card(o, true)).join('');
+        document.getElementById('ronDoneSum').innerHTML = fmt('restaurant_online_done', done.length);
+        document.getElementById('ronDoneWrap').hidden = !done.length;
+        document.getElementById('ronSub').innerHTML = fmt('restaurant_online_sub', live.length, done.length);
+    }
+    async function post(data) {
+        if (busy) return; busy = true;
+        try {
+            const r = await fetch(location.pathname, { method: 'POST', credentials: 'same-origin', body: new URLSearchParams(Object.assign({ _ajax: '1', _csrf: csrf }, data)) });
+            const j = await r.json();
+            if (!j.ok) { alert(j.error || T.restaurant_pos_failed); return; }
+            const incoming = j.orders.filter((o) => !seen.has(o.id));
+            incoming.forEach((o) => { seen.add(o.id); fresh.add(o.id); });
+            if (incoming.length && data.action === 'list') chime();
+            orders = j.orders; render();
+            setTimeout(() => { incoming.forEach((o) => fresh.delete(o.id)); }, 4000);
+        } catch (e) { /* offline: the next poll tries again */ } finally { busy = false; }
+    }
+    function chime() {
+        if (!document.getElementById('ronSound').checked) return;
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            [0, 0.2, 0.4].forEach((d, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = [659, 784, 1046][i];
+                o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001, ctx.currentTime + d);
+                g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + d + 0.3);
+                o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.32); });
+        } catch (e) { /* audio needs a first click on the page */ }
+    }
+    document.addEventListener('click', (e) => {
+        const mv = e.target.closest('[data-move]'), sd = e.target.closest('[data-send]');
+        if (mv) { if (mv.dataset.to === 'cancelled' && !confirm(T.restaurant_online_cancel_q)) return; post({ action: 'move', order_id: mv.dataset.move, to: mv.dataset.to }); }
+        else if (sd) post({ action: 'send', order_id: sd.dataset.send });
+    });
+    render();
+    setInterval(() => { if (!document.hidden) post({ action: 'list' }); }, 8000);
+})();
+</script>
 
 <?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>

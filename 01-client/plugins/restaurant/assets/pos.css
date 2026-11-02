@@ -240,6 +240,7 @@ html, body.pos-body { height: 100%; margin: 0; overflow: hidden; background: var
 .pos-toast[hidden] { display: none; }
 
 .pos-mobile-nav { display: none; }
+.pos-msearch { display: none; }
 
 @media (max-width: 1180px) {
     .pos { grid-template-columns: 210px minmax(0, 1fr) 360px; }
@@ -265,5 +266,6 @@ html, body.pos-body { height: 100%; margin: 0; overflow: hidden; background: var
 }
 @media (max-width: 520px) {
     .pos-search { display: none; }
+    .pos-msearch { display: block; margin: 10px 14px 0; min-height: 44px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); }
     .pos-tabs { margin-left: auto; }
 }

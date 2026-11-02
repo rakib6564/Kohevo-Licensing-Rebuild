@@ -85,7 +85,7 @@ class Restaurant extends Plugin {
                     'href' => $this->url('admin/kds.php'),
                     'icon' => 'clock', 'perm' => 'restaurant.kitchen', 'order' => 700, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-orders',     'label' => __('restaurant_orders', 'Orders'),
-                    'href' => $this->url('admin/index.php'),
+                    'href' => $this->url('admin/orders.php'),
                     'icon' => 'list', 'perm' => 'restaurant.view', 'order' => 701, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-online',     'label' => __('restaurant_online', 'Online orders'),
                     'href' => $this->url('admin/online.php'),

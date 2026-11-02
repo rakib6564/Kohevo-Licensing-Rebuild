@@ -208,10 +208,12 @@
             b.addEventListener('click', () => { if (!long) addItem(id); });
         });
     }
-    $('#posSearch').addEventListener('input', (e) => { state.q = e.target.value; renderGrid(); });
-    $('#posSearch').addEventListener('keydown', (e) => {
+    ['#posSearch', '#posSearch2'].forEach((sel) => {
+    $(sel).addEventListener('input', (e) => { state.q = e.target.value; renderGrid(); });
+    $(sel).addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { const first = $('#posGrid [data-item]:not(.is-86)'); if (first) first.click(); }
         if (e.key === 'Escape') { e.target.value = ''; state.q = ''; renderGrid(); e.target.blur(); }
+    });
     });
 
     function itemSheet(id) {

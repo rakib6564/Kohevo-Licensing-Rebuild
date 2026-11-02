@@ -85,24 +85,26 @@ require SLATE_ROOT . '/admin/partials/header.php';
     </div>
 
     <div class="card" id="pos">
-        <h2>Using the POS register</h2>
-        <p class="text-sm text-muted">The register has three panes: <b>open checks</b> (left), the <b>menu</b> (middle), and the <b>current check</b> (right).</p>
-        <h3>Take an order</h3>
+        <h2><?= e(__('restaurant_help_pos_title', 'Using the POS register')) ?></h2>
+        <p class="text-sm text-muted"><?= e(__('restaurant_help_pos_intro', 'The register opens full screen: open checks on the left, the menu (or the table map) in the middle, the current check on the right. On a phone the three are tabs at the bottom. Press ? for keyboard shortcuts.')) ?></p>
+        <h3><?= e(__('restaurant_help_pos_take', 'Take an order')) ?></h3>
         <ol>
-            <li>Click <b>+ New check</b>, choose the type — <em>Dine in</em> (pick a table), <em>Takeout</em>, or <em>Delivery</em> — and the guest count.</li>
-            <li>Tap menu items to add them. If an item has required options, a window asks you to choose before it's added; add a note (e.g. <em>no onions</em>) there too.</li>
-            <li>Use the <code>−</code> / <code>+</code> steppers to change quantity, or <code>×</code> to remove a line that hasn't been sent.</li>
-            <li><b>Send to kitchen</b> fires the new lines (they lock from deletion — void instead).</li>
+            <li><?= e(__('restaurant_help_pos_1', 'New check (or tap a free table on Tables): dine in with a table, takeout or delivery, and the number of guests.')) ?></li>
+            <li><?= e(__('restaurant_help_pos_2', 'For dine in, pick the seat above the check before adding each guest\'s items.')) ?></li>
+            <li><?= e(__('restaurant_help_pos_3', 'Tap items, or search the menu and press Enter. Items with options ask for them, with a note and quantity.')) ?></li>
+            <li><?= e(__('restaurant_help_pos_4', 'Tap a line to change its quantity, seat or check, discount or comp it, or remove it (void it once sent).')) ?></li>
+            <li><?= e(__('restaurant_help_pos_5', 'Send fires new lines to the kitchen display.')) ?></li>
         </ol>
-        <h3>Adjust &amp; close</h3>
+        <h3><?= e(__('restaurant_help_pos_adjust', 'Split, discount and close')) ?></h3>
         <ul>
-            <li><b>Discount</b> — enter a dollar amount off the check.</li>
-            <li><b>Pay</b> — opens the tender window for cash or card (see below).</li>
-            <li><b>Void check</b> — cancels the whole check (needs the <em>void</em> permission).</li>
-            <li><b>Close check</b> — closes it without further payment.</li>
+            <li><?= e(__('restaurant_help_pos_split', 'Split puts lines on separate checks (or one check per seat); each check is paid on its own. A check with a payment is locked. More → Merge brings another open check on the same table into this one.')) ?></li>
+            <li><?= e(__('restaurant_help_pos_disc', 'Discount takes a percentage or an amount off the check or one line, with a reason.')) ?></li>
+            <li><?= e(__('restaurant_help_pos_close', 'Close check only works once the check is paid. Managers can comp the balance (with a reason), comp single items, void a check, or reopen a paid or closed one.')) ?></li>
             <li><b><?= e(__('restaurant_pos_print_check', 'Print check')) ?></b> — <?= e(__('restaurant_help_print_check', 'prints the bill for the guest before they pay. Once paid, the button becomes Print receipt.')) ?></li>
         </ul>
-        <div class="note">An <b>86'd</b> item (marked unavailable on its menu-item page) shows greyed out and can't be added until you un-86 it.</div>
+        <h3><?= e(__('restaurant_kds_title', 'Kitchen display')) ?></h3>
+        <p class="text-sm"><?= e(__('restaurant_help_kds', 'Each sent check is a ticket, oldest first, green, then amber after 10 minutes, red after 20. Tap a line when it is ready, Ready for the whole ticket, Served once it has gone out. Needs restaurant.kitchen.')) ?></p>
+        <div class="note"><?= e(__('restaurant_help_86', 'Sold out? Press and hold the item in the register (or tick 86 on Menu items). It greys out everywhere, online too, until you put it back.')) ?></div>
     </div>
 
     <div class="card" id="pay">
@@ -173,7 +175,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <tr><td>restaurant.pos</td><td>Operate the POS register and take orders.</td></tr>
             <tr><td>restaurant.manage_menu</td><td>Create / edit menu items, categories, and modifiers.</td></tr>
             <tr><td>restaurant.manage_floor</td><td>Manage sections and tables.</td></tr>
-            <tr><td>restaurant.manage_orders</td><td><?= e(__('restaurant_help_perm_orders', 'Void checks and refund payments.')) ?></td></tr>
+            <tr><td>restaurant.manage_orders</td><td><?= e(__('restaurant_help_perm_orders2', 'Void, comp and reopen checks, comp items, and refund payments.')) ?></td></tr>
+            <tr><td>restaurant.kitchen</td><td><?= e(__('restaurant_help_perm_kitchen', 'Use the kitchen display: mark lines ready and served.')) ?></td></tr>
             <tr><td>restaurant.manage_customers</td><td>Manage customer records.</td></tr>
             <tr><td>restaurant.manage_settings</td><td>Configure tax, service charge, tips, receipts, and card readers.</td></tr>
             <tr><td>restaurant.reports</td><td><?= e(__('restaurant_help_perm_reports', 'Reserved for the reports screen, which does not exist yet. Granting it changes nothing today.')) ?></td></tr>

@@ -367,6 +367,7 @@ $user = Auth::user();
 
     <main class="pos-main">
         <section class="pos-menu" id="posMenu">
+            <input type="search" class="pos-msearch" id="posSearch2" placeholder="<?= e(__('restaurant_pos_search', 'Search the menu')) ?>" autocomplete="off" aria-label="<?= e(__('restaurant_pos_search', 'Search the menu')) ?>">
             <div class="pos-cats" id="posCats"></div>
             <div class="pos-grid" id="posGrid"></div>
         </section>
