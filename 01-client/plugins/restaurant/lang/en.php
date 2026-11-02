@@ -827,4 +827,10 @@ return [
     'restaurant_help_dl_6'                   => 'Each step goes back to Deliverect (accepted, preparing, ready, completed, cancelled). An order we cannot take is reported as Failed with the reason, so the marketplace hears of it. A marketplace cancellation voids the order here unless it is already completed. Delivery fees, service fees, tips and marketplace discounts stay with the marketplace: our total is the food and tax, and a card warns when it differs from what the marketplace charged. A modifier ordered twice is taken once and written on the line for the kitchen.',
     'restaurant_online_paid_via'             => 'Paid via %s',
     'restaurant_order_paid_via'              => 'Paid via %s: the marketplace collected payment, so there is nothing to take here.',
+    'restaurant_refund_err_channel'          => 'This was paid through an ordering channel: refund it there.',
+    'restaurant_rep_m_channel'               => 'Paid via channel',
+    'restaurant_pay_channel_cancelled'       => 'Cancelled by channel',
+    'restaurant_rcpt_channel'                => 'Paid via ordering channel',
+    'restaurant_pay_channel_refund'          => 'Refunds for this payment go through the ordering channel.',
+    'restaurant_help_dl_7'                   => 'An order the marketplace has already collected payment for is recorded as paid via the channel, with any tip the marketplace passes on to you, so it shows as paid in the register and counts in reports. Do not take payment for it. Refunds for it are made in the marketplace; when the marketplace cancels, its payment stops counting.',
 ];

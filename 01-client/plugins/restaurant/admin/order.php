@@ -116,7 +116,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 </div>
 
 <?php if ($flash): ?><div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div><?php endif; ?>
-<?php if ($chanPaid && $paid < $total): ?><div class="alert alert-info" role="status"><?= e(sprintf(__('restaurant_order_paid_via', 'Paid via %s: the marketplace collected payment, so there is nothing to take here.'), $chanName)) ?></div><?php endif; ?>
+<?php if ($chanPaid): ?><div class="alert alert-info" role="status"><?= e(sprintf(__('restaurant_order_paid_via', 'Paid via %s: the marketplace collected payment, so there is nothing to take here.'), $chanName)) ?></div><?php endif; ?>
 <?php if ($isChannel && trim((string)($order['flag_reason'] ?? '')) !== ''): ?><div class="alert alert-warning" role="status"><?= e((string)$order['flag_reason']) ?></div><?php endif; ?>
 
 <?php slate_page_layout('with-aside'); ?>
@@ -204,7 +204,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         ['label' => __('restaurant_refunded', 'Refunded'), 'value' => (int)$p['refunded_cents'] > 0 ? RestaurantAPI::money((int)$p['refunded_cents']) : '—',
                          'muted' => (int)$p['refunded_cents'] === 0],
                     ];
-                    if (in_array($p['status'], ['paid', 'refunded'], true)) {
+                    if (in_array($p['status'], ['paid', 'refunded'], true) && $p['method'] !== 'channel') {
                         $detail[] = ['label' => __('restaurant_pay_refundable', 'Left to refund'), 'value' => RestaurantAPI::money($left)];
                     }
                     if (!empty($p['stripe_pi_id'])) {
@@ -230,6 +230,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
                                            ? __('restaurant_refund_hint_card', 'Goes back to the card through Stripe.')
                                            : __('restaurant_refund_hint_cash', 'Recorded only: hand the cash back from the drawer.'))) . '</span>'
                                  . '</form>';
+                    } elseif ($p['method'] === 'channel') {
+                        $actions = '<span class="text-sm text-muted">' . e(__('restaurant_pay_channel_refund', 'Refunds for this payment go through the ordering channel.')) . '</span>';
                     } elseif ($canRefund && in_array($p['status'], ['paid', 'refunded'], true)) {
                         $actions = '<span class="text-sm text-muted">' . e(__('restaurant_pay_no_refund', 'Nothing left to refund')) . '</span>';
                     }
@@ -244,7 +246,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
                                               ? ' · ' . sprintf(__('restaurant_pay_refunded_of', '%s refunded'), RestaurantAPI::money((int)$p['refunded_cents']))
                                               : ''),
                         'badge'        => [$partial ? __('restaurant_pay_partially_refunded', 'Partially refunded')
-                                                    : ($pLabels[$p['status']] ?? ucfirst((string)$p['status'])),
+                                                    : ($p['method'] === 'channel' && $p['status'] === 'failed' ? __('restaurant_pay_channel_cancelled', 'Cancelled by channel')
+                                                    : ($pLabels[$p['status']] ?? ucfirst((string)$p['status']))),
                                            $partial ? 'warning' : ($pColors[$p['status']] ?? 'muted')],
                         'detail'       => $detail,
                         'actions'      => $actions !== '' ? $actions : null,

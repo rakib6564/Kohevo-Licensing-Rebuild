@@ -23,7 +23,9 @@
  *     "totals": {"total_cents": 4406},              what the channel charged, for the cross-check
  *     "callback_url": "https://…",                  optional; where status updates go
  *     "ready_at": "2026-11-02T18:45:00Z",           optional; when the channel wants it ready
- *     "paid": true,                                 optional; the channel collected payment (nothing due here)
+ *     "paid": true,                                 optional; the channel collected payment: recorded as a
+ *                                                   'channel' payment of our total, so nothing is due here
+ *     "totals": {"tip_cents": 200}                  optional; a tip the channel passes on to the restaurant
  *     "notes": ""                                   optional
  *   }
  *
@@ -371,6 +373,7 @@ class RestaurantChannels {
             Database::update('restaurant_orders', ['flag_reason' => mb_substr($flag, 0, 255)], 'id = ?', [$orderId]);
             AuditLog::record('restaurant.channel_total_mismatch', (string)$orderId, ['channel' => $slug, 'claimed' => (int)$claimed, 'ours' => (int)$order['total_cents']]);
         }
+        if (!empty($payload['paid'])) RestaurantAPI::recordChannelPayment($orderId, max(0, (int)($payload['totals']['tip_cents'] ?? 0)));
         $body = ['ok' => true, 'order_no' => (string)$order['order_no'], 'order_id' => $orderId];
         Database::update('restaurant_channel_orders', ['intake_status' => 'created', 'order_id' => $orderId, 'reject_reason' => null,
             'unmapped' => null, 'http_status' => 200, 'response' => json_encode($body)], 'id = ?', [$intakeId]);
@@ -437,7 +440,10 @@ class RestaurantChannels {
         }
         Database::update('restaurant_channel_orders', ['cancelled_at' => slate_db_now()], 'id = ?', [(int)$row['id']]);
         if ($order) {
+            // The marketplace refunds its customer and will not pay this order out: its payment no longer counts.
+            Database::query("UPDATE restaurant_payments SET status = 'failed' WHERE tenant_id = ? AND order_id = ? AND method = 'channel' AND status = 'paid'", [$tid, (int)$order['id']]);
             RestaurantAPI::voidOrder((int)$order['id'], $reason);
+            RestaurantAPI::syncOrderPayment((int)$order['id']);
             RestaurantAPI::setFulfillment((int)$order['id'], 'cancelled');
             self::notify(sprintf(__('restaurant_ch_note_cancelled', '%1$s cancelled order %2$s'), self::channelName($slug), $order['order_no']),
                 $reason, plugin_url('restaurant', 'admin/order.php') . '?id=' . (int)$order['id']);

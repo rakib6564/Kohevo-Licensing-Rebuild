@@ -24,7 +24,8 @@
  * pickupTime, customer {name, phoneNumber, email, note}, deliveryAddress
  * {street, extraAddressInfo, postalCode, city}, courier.deliveryBy, table,
  * note, testOrder, orderIsAlreadyPaid (the board then shows "Paid via …"
- * instead of "Due at pickup"), payment {amount, due}, the channel
+ * and a 'channel' payment is recorded), payment {amount, due}, tip (the
+ * restaurant's tip, kept on that payment; driverTip is the courier's), the channel
  * fees (deliveryCost, serviceCharge, bagFee, smallOrderFee, fixedCost, tip,
  * driverTip, discountTotal) and items[] {plu, quantity, remark, subItems[]
  * {plu, name, quantity, subItems[]…}}. Every sub-item at any depth becomes
@@ -108,7 +109,7 @@ class RestaurantDeliverectAdapter implements RestaurantChannelAdapter {
             'delivery_address'  => $type === 2 && $addr ? ['line1' => (string)($addr['street'] ?? ''), 'line2' => (string)($addr['extraAddressInfo'] ?? ''),
                                                            'city' => (string)($addr['city'] ?? ''), 'postal_code' => (string)($addr['postalCode'] ?? '')] : null,
             'items'             => $items,
-            'totals'            => $claimed !== null ? ['total_cents' => $claimed] : [],
+            'totals'            => ($claimed !== null ? ['total_cents' => $claimed] : []) + (($cents($p['tip'] ?? 0)) > 0 ? ['tip_cents' => $cents($p['tip'])] : []),
             'paid'              => array_key_exists('orderIsAlreadyPaid', $p) ? (bool)$p['orderIsAlreadyPaid'] : null,
             'notes'             => implode(' · ', $notes),
         ];

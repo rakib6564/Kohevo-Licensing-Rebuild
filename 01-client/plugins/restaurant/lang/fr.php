@@ -826,4 +826,10 @@ return [
     'restaurant_help_dl_6'                   => 'Chaque étape est renvoyée à Deliverect (acceptée, en préparation, prête, terminée, annulée). Une commande que nous ne pouvons pas prendre est signalée comme échouée, avec la raison, pour que la plateforme le sache. Une annulation par la plateforme annule la commande ici, sauf si elle est déjà terminée. Les frais de livraison et de service, les pourboires et les remises de la plateforme restent chez la plateforme : notre total couvre les plats et la taxe, et une carte avertit s\'il diffère du montant facturé par la plateforme. Une option commandée deux fois est prise une fois et notée sur la ligne pour la cuisine.',
     'restaurant_online_paid_via'             => 'Payée via %s',
     'restaurant_order_paid_via'              => 'Payée via %s : la plateforme a encaissé le paiement, il n\'y a rien à encaisser ici.',
+    'restaurant_refund_err_channel'          => 'Payée via un canal de commande : remboursez-la là-bas.',
+    'restaurant_rep_m_channel'               => 'Payée via un canal',
+    'restaurant_pay_channel_cancelled'       => 'Annulée par le canal',
+    'restaurant_rcpt_channel'                => 'Payée via le canal de commande',
+    'restaurant_pay_channel_refund'          => 'Les remboursements de ce paiement passent par le canal de commande.',
+    'restaurant_help_dl_7'                   => 'Une commande déjà encaissée par la plateforme est enregistrée comme payée via le canal, avec le pourboire que la plateforme vous reverse, le cas échéant : elle apparaît payée à la caisse et compte dans les rapports. N\'encaissez rien pour elle. Ses remboursements se font sur la plateforme ; si la plateforme l\'annule, son paiement ne compte plus.',
 ];

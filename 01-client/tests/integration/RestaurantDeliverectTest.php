@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 require_once SLATE_ROOT . '/plugins/restaurant/Restaurant.php';
 require_once SLATE_ROOT . '/plugins/restaurant/includes/channels.php';
+require_once SLATE_ROOT . '/plugins/restaurant/includes/reports.php';
 
 $rdl = ['items' => [], 'groups' => [], 'settings' => [], 'maxOrder' => 0, 'maxCustomer' => 0, 'maxNote' => 0, 'proc' => null, 'state' => '', 'port' => 0,
         'slug' => 'rdl-' . bin2hex(random_bytes(3)), 'canon' => 'rdc-' . bin2hex(random_bytes(3)), 'secret' => 'chl-synthetic-01'];
@@ -105,7 +106,7 @@ try {
         assert_eq([['external_sku' => 'BRISKET-PL', 'qty' => 2, 'modifiers' => [['external_sku' => 'SAUCE-HOT']], 'notes' => 'extra bark'],
                    ['external_sku' => 'TEA-SW', 'qty' => 1, 'modifiers' => [], 'notes' => '']], $c['items']);
         // 48.49 paid − 2.99 delivery − 1.50 service − 2.00 tip − 3.00 driver tip + 5.00 channel discount = 44.00 of food and tax.
-        assert_eq(['total_cents' => 4400], $c['totals']);
+        assert_eq(['total_cents' => 4400, 'tip_cents' => 200], $c['totals'], 'the food total, and the restaurant tip (not the driver tip)');
         foreach (['Deliverect #UE812', 'Courier: Uber Eats', 'Ring twice', 'No cutlery'] as $want) assert_true(str_contains($c['notes'], $want), $want . ' in ' . $c['notes']);
 
         $p = (new RestaurantDeliverectAdapter())->toCanonical($rdlFixture('order-pickup.json'));
@@ -139,8 +140,17 @@ try {
         assert_eq(200, $code, json_encode($body));
         assert_true(RestaurantChannels::channel($rdl['slug'])['last_verified_at'] !== null, 'verified');
         $ours = Database::row("SELECT * FROM restaurant_orders WHERE id = ?", [$body['order_id']]);
-        assert_eq(['channel', $rdl['slug'], '65f0c0ffee0000000000d001', 'delivery', 4000, 400, 4400, null],
-            [$ours['source'], $ours['channel'], $ours['external_ref'], $ours['type'], (int)$ours['subtotal_cents'], (int)$ours['tax_cents'], (int)$ours['total_cents'], $ours['flag_reason']]);
+        // 40.00 food + 4.00 tax match what the marketplace charged (no flag); its 2.00 restaurant tip lands on the channel payment.
+        assert_eq(['channel', $rdl['slug'], '65f0c0ffee0000000000d001', 'delivery', 4000, 400, 200, 4600, null, 'paid', 4600],
+            [$ours['source'], $ours['channel'], $ours['external_ref'], $ours['type'], (int)$ours['subtotal_cents'], (int)$ours['tax_cents'],
+             (int)$ours['tip_cents'], (int)$ours['total_cents'], $ours['flag_reason'], $ours['status'], (int)$ours['paid_cents']]);
+        $pay = Database::row("SELECT * FROM restaurant_payments WHERE order_id = ?", [$body['order_id']]);
+        assert_eq(['channel', 4400, 200, 'paid', 0], [$pay['method'], (int)$pay['amount_cents'], (int)$pay['tip_cents'], $pay['status'], RestaurantAPI::refundableCents($pay)]);
+        $refund = RestaurantAPI::refundPayment((int)$pay['id']);
+        assert_true(!$refund['ok'] && str_contains($refund['error'], 'refund it there'), 'a channel payment is refunded by the channel, not here');
+        $day = date('Y-m-d', strtotime((string)$ours['opened_at']));
+        $sum = RestaurantReports::summary($day, $day);
+        assert_true($sum['methods']['channel']['collected'] >= 4600, 'reports count it as paid via channel: ' . json_encode($sum['methods']['channel']));
         assert_true(str_contains((string)$ours['notes'], 'Deliver to: 42 Fixture Lane, Apt 3, Testville, 00042'), (string)$ours['notes']);
         assert_eq(1, (int) Database::value("SELECT channel_paid FROM restaurant_channel_orders WHERE order_id = ?", [$body['order_id']]), 'the marketplace collected payment');
 
@@ -231,6 +241,17 @@ try {
 
         [$code] = $rdlSend($rdlFixture('cancel.json'));
         assert_eq(409, $code, 'the completed delivery order cannot be cancelled');
+        assert_eq('paid', Database::value("SELECT status FROM restaurant_payments WHERE order_id = ?", [(int)$rdlIntake('65f0c0ffee0000000000d001')['order_id']]), 'and its payment stands');
+
+        $paidOrder = $rdlFixture('order-delivery.json'); $paidOrder['_id'] = '65f0c0ffee0000000000d005';
+        [$code, $body] = $rdlSend($paidOrder);
+        assert_eq('paid', Database::value("SELECT status FROM restaurant_orders WHERE id = ?", [$body['order_id']]));
+        $cancelPaid = $rdlFixture('cancel.json'); $cancelPaid['_id'] = '65f0c0ffee0000000000d005';
+        [$code] = $rdlSend($cancelPaid);
+        assert_eq(200, $code);
+        assert_eq(['voided', 0, 'failed'], [Database::value("SELECT status FROM restaurant_orders WHERE id = ?", [$body['order_id']]),
+            (int) Database::value("SELECT paid_cents FROM restaurant_orders WHERE id = ?", [$body['order_id']]),
+            Database::value("SELECT status FROM restaurant_payments WHERE order_id = ?", [$body['order_id']])], 'a cancelled paid order keeps no money: the marketplace will not pay it out');
         assert_eq('completed', Database::value("SELECT fulfillment_status FROM restaurant_orders WHERE id = ?", [(int)$rdlIntake('65f0c0ffee0000000000d001')['order_id']]));
 
         $early = $rdlFixture('cancel.json'); $early['_id'] = '65f0c0ffee0000000000d009';

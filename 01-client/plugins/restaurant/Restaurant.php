@@ -322,6 +322,19 @@ class Restaurant extends Plugin {
         $this->ensureColumn('restaurant_channels', 'config', "TEXT NULL");
         $this->ensureColumn('restaurant_channel_orders', 'cancelled_at', "DATETIME NULL");
         $this->ensureColumn('restaurant_channel_orders', 'channel_paid', "TINYINT(1) NULL");
+        // A channel that collected payment is recorded as a 'channel' payment.
+        foreach (['restaurant_payments', 'restaurant_refunds'] as $tbl) {
+            try {
+                $type = (string) Database::value(
+                    "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+                      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'method'", [$tbl]);
+                if ($type !== '' && !str_contains($type, "'channel'")) {
+                    Database::query("ALTER TABLE `{$tbl}` MODIFY `method` ENUM('cash','terminal','other','channel') NOT NULL DEFAULT 'cash'");
+                }
+            } catch (\Throwable $e) {
+                slate_log("Restaurant 0.5.2 {$tbl}.method widen failed: " . $e->getMessage(), 'error');
+            }
+        }
     }
 
     private function hasColumn(string $table, string $column): bool {

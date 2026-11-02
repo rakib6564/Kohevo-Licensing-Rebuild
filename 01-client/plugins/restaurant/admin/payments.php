@@ -19,11 +19,13 @@ ModuleGuard::require('restaurant');
 RestaurantAPI::ensureSchema();
 
 $METHODS  = ['cash' => __('restaurant_rep_m_cash', 'Cash'), 'terminal' => __('restaurant_rep_m_terminal', 'Card reader'),
-             'online' => __('restaurant_rep_m_online', 'Online card'), 'other' => __('restaurant_rep_m_other', 'Other')];
+             'online' => __('restaurant_rep_m_online', 'Online card'), 'other' => __('restaurant_rep_m_other', 'Other'),
+             'channel' => __('restaurant_rep_m_channel', 'Paid via channel')];
 $STATUSES = ['paid' => __('restaurant_pay_st_paid', 'Paid'), 'partial' => __('restaurant_pay_st_partial', 'Partly refunded'),
              'refunded' => __('restaurant_pay_st_refunded', 'Refunded'), 'pending' => __('restaurant_pay_st_pending', 'Pending'),
              'failed' => __('restaurant_pay_st_failed', 'Failed')];
-$SOURCES  = ['pos' => __('restaurant_orders_src_pos', 'POS'), 'online' => __('restaurant_pos_online', 'Online')];
+$SOURCES  = ['pos' => __('restaurant_orders_src_pos', 'POS'), 'online' => __('restaurant_pos_online', 'Online'),
+             'channel' => __('restaurant_rep_src_channel', 'Channels')];
 $TONES    = ['paid' => 'active', 'partial' => 'warning', 'refunded' => 'inactive', 'pending' => 'installed', 'failed' => 'danger'];
 
 $today = substr(slate_db_now(), 0, 10);
@@ -113,7 +115,7 @@ slate_breadcrumbs([
         $settled = in_array($r['status'], ['paid', 'refunded'], true);
         $meta = [$METHODS[$r['method']] ?? $r['method'], date('M j, g:ia', strtotime((string)$r['created_at'])), sprintf(__('restaurant_pay_check', 'check %d'), (int)$r['check_no'])];
         if ($r['reader']) $meta[] = $r['reader'];
-        if ($r['source'] === 'online') $meta[] = $SOURCES['online'];
+        if ($r['source'] === 'online' || $r['source'] === 'channel') $meta[] = $SOURCES[$r['source']];
         if ((int)$r['refunded_cents']) $meta[] = __('restaurant_pay_refunded', 'Refunded') . ' -' . $money($r['refunded_cents']);
         slate_data_row([
             'avatar'       => mb_strtoupper(mb_substr($METHODS[$r['method']] ?? $r['method'], 0, 2)),
@@ -121,7 +123,9 @@ slate_breadcrumbs([
             'title'        => '#' . $r['order_no'],
             'meta'         => implode(' · ', $meta),
             'value'        => $settled ? $money($r['net_cents']) : $money((int)$r['amount_cents'] + (int)$r['tip_cents']),
-            'badge'        => [$STATUSES[$r['state']] ?? $r['state'], $TONES[$r['state']] ?? 'inactive'],
+            'badge'        => $r['method'] === 'channel' && $r['state'] === 'failed'
+                                ? [__('restaurant_pay_channel_cancelled', 'Cancelled by channel'), 'inactive']
+                                : [$STATUSES[$r['state']] ?? $r['state'], $TONES[$r['state']] ?? 'inactive'],
             'detail'       => [
                 ['label' => __('restaurant_pay_amount', 'Amount'), 'value' => $money($r['amount_cents'])],
                 ['label' => __('restaurant_rcpt_tip', 'Tip'), 'value' => (int)$r['tip_cents'] ? $money($r['tip_cents']) : '—', 'muted' => !(int)$r['tip_cents']],
