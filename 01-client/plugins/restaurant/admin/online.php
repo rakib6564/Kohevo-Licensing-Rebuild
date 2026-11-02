@@ -7,7 +7,7 @@
  * last day's completed and cancelled. One click moves an order on (accepting
  * also fires its lines to the kitchen). The board refreshes itself every few
  * seconds and chimes when a new order lands. Links to the full check.
- * Delivery orders can get a courier (DoorDash Drive): Request courier shows
+ * Delivery orders can get a courier (DoorDash Drive, Uber Direct): Request courier shows
  * the quote (fee and times) to confirm; the card then follows the courier's
  * status, updated by the provider's webhooks.
  */

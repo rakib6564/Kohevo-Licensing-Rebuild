@@ -204,6 +204,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <li><?= e(__('restaurant_help_cr_4', 'On Online orders, a delivery card has Request DoorDash courier: it shows the price and times; Confirm courier within five minutes books it. The card and the customer\'s order page then show the courier\'s progress and a tracking link; a delivered order is marked completed.')) ?></li>
         </ol>
         <p class="text-sm"><?= e(__('restaurant_help_cr_5', 'If DoorDash refuses (outside its area, a missing phone), the reason shows on the card and the order is left as it was. Cancel courier works until a Dasher is assigned; after that cancel in DoorDash\'s merchant portal. Automatic requests, if switched on, apply to paid online delivery orders only, never to channel orders.')) ?></p>
+        <p class="text-sm"><?= e(__('restaurant_help_cr_6', 'Uber Direct works the same way with an Uber courier: on Couriers, paste the Customer ID, Client ID and Client secret from the Uber Direct dashboard (and the webhook signing key, so only Uber\'s signed updates are read), switch it on and press Check the credentials; paste the Uber webhook address into the dashboard\'s webhooks. Delivery cards then also offer Request Uber courier. Uber approves each business first; Kohevo has tested this against a stand-in, not Uber itself.')) ?></p>
     </div>
 
     <div class="card" id="online">
