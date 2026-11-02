@@ -145,6 +145,8 @@ a.pos-btn:hover, a.pos-btn:focus-visible { color: var(--text); text-decoration: 
 
 /* Check panel */
 .pos-check { grid-area: check; display: flex; flex-direction: column; min-height: 0; background: var(--surface); border-left: 1px solid var(--border); }
+/* Only the line list grows and scrolls; the header rows keep their height (they scroll sideways, which made them shrinkable and clipped them on short screens). */
+.pos-check > *:not(.pos-lines):not(.pos-check-empty) { flex: none; }
 .pos-check-empty { margin: auto; padding: 24px; text-align: center; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .pos-check-empty svg { width: 36px; height: 36px; }
 .pos-check-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 14px 16px 8px; }
@@ -290,6 +292,30 @@ a.pos-btn:hover, a.pos-btn:focus-visible { color: var(--text); text-decoration: 
     .pos-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
     .pos-modal { align-items: end; padding: 0; }
     .pos-sheet, .pos-sheet.is-wide { width: 100%; border-radius: var(--radius-xl) var(--radius-xl) 0 0; max-height: 92dvh; }
+}
+/* Phones: a denser check so the lines, totals and Pay fit without scrolling past chrome */
+@media (max-width: 860px) {
+    .pos { grid-template-rows: 52px minmax(0, 1fr) 54px; }
+    .pos-check-h { align-items: center; padding: 10px 14px 4px; }
+    .pos-check-h h2 { font-size: 19px; letter-spacing: -.01em; }
+    .pos-check-h p { font-size: 12.5px; }
+    .pos-check-meta { gap: 6px; padding: 2px 14px 6px; }
+    .pos-check-meta .pos-chip { min-height: 32px; padding: 0 11px; font-size: 13px; }
+    .pos-checktabs { gap: 6px; padding: 2px 14px 6px; }
+    .pos-checktabs button { flex-direction: row; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 32px; padding: 0 12px; border-radius: 999px; font-size: 13px; white-space: nowrap; }
+    .pos-checktabs button small { font-size: 12px; }
+    .pos-check > .pos-seats { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; padding: 0 14px 8px; }
+    .pos-seats button { min-width: 34px; min-height: 30px; padding: 0 8px; font-size: 13px; }
+    .pos-line { gap: 8px; padding: 9px 14px; }
+    .pos-line-qty { width: 24px; height: 24px; font-size: 12px; }
+    .pos-totals { padding: 6px 14px; font-size: 13.5px; }
+    .pos-total.is-grand { font-size: 17px; padding-top: 4px; }
+    .pos-actions { gap: 6px; padding: 8px 10px 10px; }
+    .pos-actions .pos-btn { min-height: 46px; gap: 1px; font-size: 11.5px; border-radius: 12px; }
+    .pos-actions .pos-btn svg { width: 16px; height: 16px; }
+    .pos-actions .pos-pay { min-height: 48px; gap: 8px; font-size: 16px; border-radius: 12px; }
+    .pos-actions .pos-pay kbd { display: none; }
+    .pos-mobile-nav button { font-size: 13.5px; }
 }
 @media (max-width: 520px) {
     .pos-search { display: none; }

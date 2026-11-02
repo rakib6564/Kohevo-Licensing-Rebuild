@@ -681,4 +681,13 @@ return [
     'restaurant_cust_via'                    => 'via %s',
     'restaurant_pay_pi'                      => 'PaymentIntent',
     'restaurant_pay_central'                 => 'Charge record',
+    'restaurant_item_86_label'               => '86: sold out for now (greyed out in the POS and online)',
+    'restaurant_item_photo_eyebrow'          => 'Photo',
+    'restaurant_item_photo_hint'             => 'Shown on the POS tile and the online menu. A square photo of at least 600 px looks best; upload new ones in the library.',
+    'restaurant_item_photo_hint_off'         => 'Turn on the Media library plugin to pick and upload photos here.',
+    'restaurant_item_photo_pick'             => 'Choose from library',
+    'restaurant_item_photo_remove'           => 'Remove photo',
+    'restaurant_item_photo_title'            => 'Item photo',
+    'restaurant_item_photo_url'              => 'Or paste an image address',
+    'restaurant_item_sort'                   => 'Sort order',
 ];

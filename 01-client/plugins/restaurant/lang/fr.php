@@ -680,4 +680,13 @@ return [
     'restaurant_cust_via'                    => 'via %s',
     'restaurant_pay_pi'                      => 'PaymentIntent',
     'restaurant_pay_central'                 => 'Enregistrement du débit',
+    'restaurant_item_86_label'               => '86 : épuisé pour le moment (grisé en caisse et en ligne)',
+    'restaurant_item_photo_eyebrow'          => 'Photo',
+    'restaurant_item_photo_hint'             => 'Affichée sur la tuile de la caisse et le menu en ligne. Une photo carrée d\'au moins 600 px rend le mieux ; envoyez-en de nouvelles dans la médiathèque.',
+    'restaurant_item_photo_hint_off'         => 'Activez l\'extension Médiathèque pour choisir et envoyer des photos ici.',
+    'restaurant_item_photo_pick'             => 'Choisir dans la médiathèque',
+    'restaurant_item_photo_remove'           => 'Retirer la photo',
+    'restaurant_item_photo_title'            => 'Photo de l\'article',
+    'restaurant_item_photo_url'              => 'Ou coller l\'adresse d\'une image',
+    'restaurant_item_sort'                   => 'Ordre de tri',
 ];
