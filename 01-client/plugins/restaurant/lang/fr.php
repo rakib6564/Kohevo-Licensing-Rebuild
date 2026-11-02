@@ -689,4 +689,5 @@ return [
     'restaurant_item_photo_title'            => 'Photo de l\'article',
     'restaurant_item_photo_url'              => 'Ou coller l\'adresse d\'une image',
     'restaurant_item_sort'                   => 'Ordre de tri',
+    'restaurant_pos_picked'                  => '%1$s sur %2$s',
 ];
