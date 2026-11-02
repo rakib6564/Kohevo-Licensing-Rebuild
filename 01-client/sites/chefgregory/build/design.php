@@ -35,6 +35,7 @@ $fonts = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="
 // Google, Ahrefs and the business details, only on the real domain so a copy of the site never reports to them.
 $live = str_contains((string) (defined('APP_URL') ? APP_URL : ($_ENV['APP_URL'] ?? getenv('APP_URL'))), 'chefgregory.com') || getenv('CHEF_LIVE_TAGS') === '1';
 Database::setSetting(StudioCodePolicy::SETTING_HEAD_SNIPPET, StudioCodePolicy::prepareSnippet($fonts . ($live ? (string) file_get_contents(__DIR__ . '/live-head.html') : ''), 'head'), $tid);
+foreach (['brand_logo_path' => 'uploads/media/chef/2026-01-logo-chef-1024x474.png', 'brand_logo_dark_path' => 'uploads/media/chef/2026-01-logo-white.png', 'brand_login_image_path' => 'uploads/media/chef/2026-03-roasted-rack-of-lamb-7-scaled-1.png', 'brand_login_tagline' => 'Where Fine Cuisine Meets Every Occasion', 'brand_accent_color' => '#b4471d'] as $key => $value) { Database::setSetting($key, $value, $tid); }
 $css = StudioCodePolicy::prepareCustomCss((string) file_get_contents(__DIR__ . '/gap.css') . "\n" . (string) file_get_contents(__DIR__ . '/design.css'));
 Database::setSetting(StudioCodePolicy::SETTING_CUSTOM_CSS, $css['css'], $tid);
 
@@ -156,7 +157,7 @@ $hero = SEC('Hero', [
 ], INK, ['padding' => ['top' => '64px', 'right' => '24px', 'bottom' => '72px', 'left' => '24px']], WRAP(), '44px');
 
 $fact = static fn(string $big, string $small): array => VBOX([B('core.text', ['content' => $big, 'size' => 'inherit'], [], ['color' => EMBER, 'typography' => ['size' => '40px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.1'], 'align' => ['base' => 'center']]), B('core.text', ['content' => $small, 'size' => 'inherit'], [], ['color' => COCOA, 'typography' => ['size' => '14px', 'font_family' => BODY, 'weight' => '500', 'line_height' => '1.4'], 'align' => ['base' => 'center']])], '6px', ['padding' => ['top' => '4px', 'right' => '8px', 'bottom' => '4px', 'left' => '8px']]);
-$facts = SEC('Why book', [B('layout.flex', ['direction' => 'row', 'gap' => 'none'], [$fact('25+', 'Years of experience'), $fact('5 Star', 'Rating on Yelp'), $fact('CIA', 'Culinary Institute of America trained'), $fact('1997', 'Established on the Central Coast')], ['layout' => ['display' => 'grid', 'columns' => 4, 'gap' => '16px']], ['responsive' => ['mobile' => ['style' => ['layout' => ['columns' => 2, 'gap' => '28px']]]]])], SAND, ['padding' => ['top' => '40px', 'right' => '24px', 'bottom' => '40px', 'left' => '24px']], WRAP(), '36px');
+$facts = SEC('Why book', [B('layout.flex', ['direction' => 'row', 'gap' => 'none'], [$fact('25+', 'Years of experience'), $fact('5 Star', 'Rating on Yelp'), $fact('CIA', 'Culinary Institute of America trained'), $fact('1997', 'Catering business founded')], ['layout' => ['display' => 'grid', 'columns' => 4, 'gap' => '16px']], ['responsive' => ['mobile' => ['style' => ['layout' => ['columns' => 2, 'gap' => '28px']]]]])], SAND, ['padding' => ['top' => '40px', 'right' => '24px', 'bottom' => '40px', 'left' => '24px']], WRAP(), '36px');
 
 $tile = static function (string $n, string $title, string $text, string $href, string $file, string $h, string $mh = '230px'): array {
     return VBOX([PIC($file, $title, $h, $mh, $href), VBOX([EYE($n), H($title, 'h3', '30px', '28px'), P($text, COCOA, '16px'), B('core.link', ['link' => L('Learn more →', $href), 'style' => 'plain'], [], ['color' => EMBER, 'typography' => ['size' => '15px', 'font_family' => BODY, 'weight' => '600']], ['classNames' => ['cg-link']])], '8px', ['padding' => ['top' => '18px']])], '0px', [], ['classNames' => ['cg-tile']]);
@@ -184,7 +185,7 @@ $chef = SEC('Meet the Chef', [
             PIC('2023-08-20230812-181431-scaled.jpg', 'Filo purses plated by Chef Gregory’s team', '520px', '280px'),
             ROW([
                 B('core.image', ['media' => IMGREF('design-chef-portrait.jpg', 'Chef Gregory Kalatsky'), 'aspect_ratio' => 'auto', 'rounded' => false], [], ['dimensions' => ['width' => '96px', 'height' => '96px', 'object_fit' => 'cover']], ['classNames' => ['cg-round']]),
-                VBOX([B('core.text', ['content' => 'Chef Gregory S. Kalatsky', 'size' => 'inherit'], [], ['color' => INK, 'typography' => ['size' => '22px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.2']]), P('Cooking on the Central Coast since 1997', COCOA, '15px')], '2px'),
+                VBOX([B('core.text', ['content' => 'Chef Gregory S. Kalatsky', 'size' => 'inherit'], [], ['color' => INK, 'typography' => ['size' => '22px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.2']]), P('Catering since 1997', COCOA, '15px')], '2px'),
             ], '18px', ['background' => ['color' => CREAM], 'padding' => ['top' => '14px', 'right' => '26px', 'bottom' => '14px', 'left' => '14px'], 'margin' => ['top' => '-64px', 'left' => '24px'], 'dimensions' => ['width' => 'fit-content', 'max_width' => 'calc(100% - 48px)']], ['layout' => ['direction' => 'row'], 'margin' => ['top' => '-40px', 'left' => '12px'], 'dimensions' => ['max_width' => 'calc(100% - 24px)']], ['align' => 'center']),
         ]), '50%'),
         W(VBOX([

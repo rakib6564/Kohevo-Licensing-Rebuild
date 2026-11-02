@@ -89,3 +89,17 @@ $own = ['' . (int) Database::value("SELECT id FROM studiobuilder_pages WHERE ten
 foreach ($AREAPAGES as $slug => $flat) { if ($flat) { $own[(string) $AREAIDS[$slug]] = ''; } }
 Database::setSetting(PageRoutes::SETTING_PAGE_PREFIXES, json_encode($own), $tid);
 PageRoutes::forget($tid);
+
+// Wording corrected from the client's timeline, over text captured from the old site.
+$facts = (array) json_decode((string) file_get_contents(__DIR__ . '/facts.json'), true);
+$fix = static function (mixed $v) use (&$fix, $facts): mixed {
+    if (is_string($v)) { return strtr($v, $facts); }
+    if (is_array($v)) { foreach ($v as $k => $x) { $v[$k] = $fix($x); } }
+    return $v;
+};
+foreach (Database::all('SELECT r.id, r.document_json FROM studiobuilder_revisions r JOIN studiobuilder_pages p ON p.id = r.page_id WHERE p.tenant_id = ? AND r.id IN (p.published_revision_id, p.active_draft_revision_id)', [$tid]) as $r) {
+    Database::query('UPDATE studiobuilder_revisions SET document_json = ? WHERE id = ?', [json_encode($fix(json_decode((string) $r['document_json'], true)), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $r['id']]);
+}
+foreach (Database::all("SELECT setting_key, setting_value FROM settings WHERE tenant_id = ? AND setting_key LIKE 'studio_page_meta%'", [$tid]) as $r) {
+    Database::setSetting($r['setting_key'], (string) json_encode($fix(json_decode((string) $r['setting_value'], true)), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tid);
+}

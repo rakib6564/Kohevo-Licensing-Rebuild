@@ -3,10 +3,9 @@
 declare(strict_types=1);
 
 // ── About ──────────────────────────────────────────────────────────────────────
-$year = static fn(string $when, string $title, string $text): array => ROW([
+$year = static fn(string $when, string $title): array => ROW([
     W(B('core.text', ['content' => $when, 'size' => 'inherit'], [], ['color' => EMBERLT, 'typography' => ['size' => '34px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.2']]), '18%'),
-    W(B('core.text', ['content' => $title, 'size' => 'inherit'], [], ['color' => CREAM, 'typography' => ['size' => '24px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.3']]), '32%'),
-    W(P($text, '#d9cdbd', '16px'), '50%'),
+    W(B('core.text', ['content' => $title, 'size' => 'inherit'], [], ['color' => CREAM, 'typography' => ['size' => '24px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.3']]), '82%'),
 ], '24px', ['border' => ['bottom' => ['width' => '1px', 'style' => 'solid', 'color' => 'rgba(247,241,230,.18)']], 'padding' => ['top' => '22px', 'bottom' => '22px']], ['layout' => ['direction' => 'column', 'gap' => '6px']]);
 $pillar = static fn(string $n, string $t): array => ROW([B('core.text', ['content' => $n, 'size' => 'inherit'], [], ['color' => EMBER, 'typography' => ['size' => '30px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.2']]), B('core.text', ['content' => $t, 'size' => 'inherit'], [], ['color' => INK, 'typography' => ['size' => '30px', 'font_family' => DISPLAY, 'weight' => '400', 'line_height' => '1.2']])], '18px', ['border' => ['bottom' => ['width' => '1px', 'style' => 'solid', 'color' => '#c9b99d']], 'padding' => ['top' => '14px', 'bottom' => '14px']], ['layout' => ['direction' => 'row']]);
 
@@ -19,7 +18,7 @@ build_page('about-us', 'About Us', 'page', 'standalone', [
     SEC('Biography', [ROW([
         W(VBOX([EYE('Full Biography'), H('A Quarter Century of Culinary Passion', 'h2', '50px', '36px')], '14px', [], ['classNames' => ['cg-sticky']]), '38%'),
         W(VBOX([
-            PROSE('<p>Born with an innate love for food and an unwavering drive for perfection, <strong>Gregory S. Kalatsky</strong> has built one of California’s Central Coast most respected culinary careers over the past 27 years. His journey began at the <strong>Culinary Institute of America</strong> in Hyde Park, New York — widely regarded as the finest culinary school in the United States — where he mastered classical technique, kitchen leadership, and the discipline that defines world-class cooking.</p><p>After graduating from the CIA, Gregory set his sights on California’s emerging wine country, drawn by the richness of the land, the quality of local producers, and the growing appetite for sophisticated, farm-to-table dining. In <strong>1997</strong>, he established Chef Gregory’s Gourmet Catering in Paso Robles, quickly earning a reputation for uncompromising quality, creative menus, and seamless event execution.</p><p>Over the decades, Gregory has evolved into a multi-dimensional culinary entrepreneur. Beyond his flagship catering business, he has operated a celebrated BBQ restaurant, competed in regional and national BBQ championships, developed proprietary food products for the e-commerce market, and offered culinary instruction to aspiring home cooks and professionals alike.</p><p>What sets Chef Gregory apart is not merely technical skill — it is his obsessive attention to preparation. Every event he accepts receives <strong>30 to 50 hours of dedicated pre-event preparation</strong>, from sourcing the finest seasonal ingredients to conducting thorough pre-event tastings with clients.</p>'),
+            PROSE('<p>Born with an innate love for food and an unwavering drive for perfection, <strong>Gregory S. Kalatsky</strong> has built one of California’s most respected culinary careers over nearly three decades. His journey began at the <strong>Culinary Institute of America</strong> in Hyde Park, New York — widely regarded as the finest culinary school in the United States — where he mastered classical technique, kitchen leadership, and the discipline that defines world-class cooking.</p><p>Gregory graduated from the CIA in 1995. In <strong>1997</strong>, he founded VVSI Gourmet Catering, which later became Chef Gregory’s Gourmet Catering, quickly earning a reputation for uncompromising quality, creative menus, and seamless event execution. In <strong>2020</strong>, he moved to California’s Central Coast, drawn by the richness of the land, the quality of local producers, and the growing appetite for sophisticated, farm-to-table dining.</p><p>Over the decades, Gregory has evolved into a multi-dimensional culinary entrepreneur. Beyond his flagship catering business, he has opened Chef Gregory’s Barbecue Smokehouse Emporium, competed in regional and national BBQ championships, developed proprietary food products for the e-commerce market, and offered culinary instruction to aspiring home cooks and professionals alike.</p><p>What sets Chef Gregory apart is not merely technical skill — it is his obsessive attention to preparation. Every event he accepts receives <strong>30 to 50 hours of dedicated pre-event preparation</strong>, from sourcing the finest seasonal ingredients to conducting thorough pre-event tastings with clients.</p>'),
             VBOX([P('“The event is the performance. The weeks before the event are the rehearsal — and I never shortchange the rehearsal.”', INK, '28px', 'left', DISPLAY)], '0px', ['border' => ['left' => ['width' => '3px', 'style' => 'solid', 'color' => EMBER]], 'padding' => ['left' => '24px'], 'margin' => ['top' => '10px', 'bottom' => '10px']]),
             PROSE('<p>Today, Chef Gregory’s Gourmet Catering serves clients across San Luis Obispo County, Paso Robles, Santa Barbara, and beyond, consistently earning five-star reviews and the loyalty of clients who return event after event.</p>'),
         ], '14px'), '56%'),
@@ -33,12 +32,18 @@ build_page('about-us', 'About Us', 'page', 'standalone', [
     ], '48px', [], ['layout' => ['direction' => 'column', 'gap' => '28px']], ['justify' => 'between', 'align' => 'center'])], SAND, GUT('96px', '96px'), WRAP(), '60px'),
     SEC('Timeline', [
         VBOX([EYE('Career Journey', EMBERLT), H('Chef Gregory’s Timeline', 'h2', '52px', '38px', CREAM)], '14px', ['margin' => ['bottom' => '28px']]),
-        $year('1990s', 'Culinary Institute of America', 'Graduates from the CIA in Hyde Park, New York, gaining mastery in classical French technique, food science, and professional kitchen management.'),
-        $year('1997', 'Founded Chef Gregory’s Gourmet Catering', 'Establishes his catering business in Paso Robles, CA, focusing on high-end wedding and corporate event catering across the Central Coast.'),
-        $year('2000s', 'BBQ Restaurant & Competition Circuit', 'Opens a BBQ restaurant and begins competing in regional championships, earning recognition for his award-winning smoked meats and bold flavors.'),
-        $year('2010s', 'E-Commerce & Product Development', 'Launches a line of proprietary food products available online, including signature spice rubs, sauces, and pantry items inspired by his competition-winning recipes.'),
-        $year('2015+', 'Culinary Education & Consulting', 'Expands into culinary instruction, offering private cooking classes, corporate team-building workshops, and menu development consulting for restaurants.'),
-        $year('Today', 'Central Coast’s Premier Culinary Professional', 'With 5-star ratings across platforms, a loyal client base, and operations spanning 5+ service locations, Chef Gregory continues to set the standard for premium event catering on the Central Coast.'),
+        $year('1994', 'ChefGregory.com was conceived'),
+        $year('1995', 'Graduates from the Culinary Institute of America'),
+        $year('1997', 'Founded VVSI Gourmet Catering, which later turned into Chef Gregory’s Gourmet Catering'),
+        $year('1998', 'Started participating in the Memphis in May World Championship Barbecue competition, through 2025'),
+        $year('1999', 'Started teaching at the Orange County School of Culinary Arts as a chef instructor'),
+        $year('2000', 'Started the development of Chef Gregory’s Gourmet Me Now food product line'),
+        $year('2001', 'Southwestern FLAIR seasoning was developed and started distributing'),
+        $year('2005', 'Started Chef Gregory’s Gourmet Catering'),
+        $year('2006', 'Added consulting to the Chef Gregory umbrella'),
+        $year('2020', 'Picked up and moved to the Central Coast of California'),
+        $year('2022', 'Started mass-producing over 20 flavors of peanut brittle'),
+        $year('2024', 'Started Chef Gregory’s Barbecue Smokehouse Emporium'),
     ], INK, GUT(), WRAP()),
     SEC('From the kitchen', [ROW([
         W(PIC('2026-08-fb-img-1748360801989.jpg', 'Ribs and brisket on Chef Gregory’s smoker', '320px', '220px'), '34%'),
