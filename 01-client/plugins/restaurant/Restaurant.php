@@ -35,6 +35,7 @@ class Restaurant extends Plugin {
 
         Hook::addFilter('admin_nav_items',         [$this, 'addAdminNav']);
         Hook::addFilter('admin_dashboard_widgets', [$this, 'addAdminDashboardWidget']);
+        Hook::addFilter('i18n_lang_paths',         [$this, 'addLangPath']);
 
         // Public online-ordering storefront at /order (Phase 3). Routed via
         // the core PublicRouter — no .htaccess change needed.
@@ -42,6 +43,13 @@ class Restaurant extends Plugin {
 
         // Settle Terminal/card payments routed through the stripe-payment plugin.
         Hook::addAction('stripe_webhook_event', [$this, 'onStripeEvent']);
+    }
+
+    public function addLangPath(array $paths): array {
+        foreach (['fr', 'en'] as $loc) {
+            $paths[$loc][] = $this->dir('lang');
+        }
+        return $paths;
     }
 
     /** Register the /order storefront prefix with the public router. */
