@@ -42,6 +42,18 @@ echo '<h1 class="sf-h1">Order #' . e($order['order_no']) . '</h1>';
 echo '<p class="sf-sub">' . $typeLabel . ($order['requested_time'] ? ' · ' . e($order['requested_time']) : '')
    . ' · ' . e(ucfirst((string)($order['fulfillment_status'] ?? 'new'))) . '</p>';
 
+// A courier on a delivery order: who, where it is, when it should arrive, and the provider's tracking page.
+if ($order['type'] === 'delivery') {
+    require_once dirname(__DIR__) . '/includes/delivery.php';
+    $cj = RestaurantDelivery::view(RestaurantDelivery::latestJob((int)$order['id']));
+    if ($cj && ($cj['active'] || $cj['status'] === 'delivered')) {
+        echo '<div class="sf-flash sf-flash-info">' . sf_icon('check', 15) . ' ' . e(sprintf(__('restaurant_cr_cust_line', 'Delivery by %1$s: %2$s'), $cj['provider'], $cj['label']))
+           . ($cj['dropoff_eta'] !== '' && $cj['status'] !== 'delivered' ? ' · ' . e(sprintf(__('restaurant_cr_cust_eta', 'expected around %s'), $cj['dropoff_eta'])) : '')
+           . ($cj['tracking_url'] !== '' ? ' · <a href="' . e($cj['tracking_url']) . '" target="_blank" rel="noopener">' . e(__('restaurant_cr_cust_track', 'Track your delivery')) . ' ↗</a>' : '')
+           . '</div>';
+    }
+}
+
 echo '<div class="sf-card">';
 foreach ($order['items'] as $it) {
     if ($it['kitchen_status'] === 'void') continue;

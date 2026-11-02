@@ -11,6 +11,7 @@
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/RestaurantAPI.php';
+require_once dirname(__DIR__) . '/includes/delivery.php';
 require_once dirname(__DIR__) . '/includes/receipt.php';
 
 Auth::require();
@@ -320,6 +321,12 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <?php endif; ?>
                 <?php if ($isOnline && trim((string)($order['fulfillment_status'] ?? '')) !== ''): ?>
                     <li class="kv-row"><span class="kv-label">Fulfillment</span><span class="kv-value"><?= e(ucfirst((string)$order['fulfillment_status'])) ?></span></li>
+                <?php endif; ?>
+                <?php $cj = $order['type'] === 'delivery' ? RestaurantDelivery::view(RestaurantDelivery::latestJob((int)$order['id'])) : null;
+                if ($cj && $cj['status'] !== 'quoted'): ?>
+                    <li class="kv-row"><span class="kv-label"><?= e(__('restaurant_cr_courier', 'Courier')) ?></span><span class="kv-value"><?= e($cj['provider'] . ' · ' . $cj['label']) ?>
+                        <?php if ($cj['tracking_url'] !== ''): ?> · <a href="<?= e($cj['tracking_url']) ?>" target="_blank" rel="noopener"><?= e(__('restaurant_cr_track', 'Track')) ?> ↗</a><?php endif; ?>
+                        <?php if ($cj['error'] !== ''): ?><br><small class="text-muted"><?= e($cj['error']) ?></small><?php endif; ?></span></li>
                 <?php endif; ?>
                 <?php if ($isOnline && trim((string)($order['requested_time'] ?? '')) !== ''): ?>
                     <li class="kv-row"><span class="kv-label">Requested</span><span class="kv-value"><?= e($order['requested_time']) ?></span></li>

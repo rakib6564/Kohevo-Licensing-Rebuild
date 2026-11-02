@@ -67,6 +67,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <a href="#reports"><?= e(__('restaurant_help_reports_toc', 'Reports & payments')) ?></a>
             <a href="#customers"><?= e(__('restaurant_customers', 'Customers')) ?></a>
             <a href="#channels"><?= e(__('restaurant_channels', 'Channels')) ?></a>
+            <a href="#couriers"><?= e(__('restaurant_couriers', 'Couriers')) ?></a>
             <a href="#online">Online ordering</a>
             <a href="#settings">Settings</a>
             <a href="#perms">Roles &amp; permissions</a>
@@ -192,6 +193,17 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </ol>
         <p class="text-sm"><?= e(__('restaurant_help_dl_6', 'Each step goes back to Deliverect (accepted, preparing, ready, completed, cancelled). An order we cannot take is reported as Failed with the reason, so the marketplace hears of it. A marketplace cancellation voids the order here unless it is already completed. Delivery fees, service fees, tips and marketplace discounts stay with the marketplace: our total is the food and tax, and a card warns when it differs from what the marketplace charged. A modifier ordered twice is taken once and written on the line for the kitchen.')) ?></p>
         <p class="text-sm"><?= e(__('restaurant_help_dl_7', 'An order the marketplace has already collected payment for is recorded as paid via the channel, with any tip the marketplace passes on to you, so it shows as paid in the register and counts in reports. Do not take payment for it. Refunds for it are made in the marketplace; when the marketplace cancels, its payment stops counting.')) ?></p>
+    </div>
+
+    <div class="card" id="couriers">
+        <h2><?= e(__('restaurant_couriers', 'Couriers')) ?></h2>
+        <p class="text-sm"><?= e(__('restaurant_help_cr_1', 'For delivery orders you took yourself, a DoorDash Dasher can carry the order instead of your own driver; DoorDash bills you per delivery. You need your own DoorDash Developer account with Drive access. DoorDash currently limits Drive access and reviews each integration before real deliveries, so until then only its sandbox works; Kohevo has tested this against a stand-in, not DoorDash itself.')) ?></p>
+        <ol>
+            <li><?= e(__('restaurant_help_cr_2', 'Couriers: paste the Developer ID, Key ID and Signing secret from the DoorDash Developer Portal, pick Sandbox or Production to match, switch it on and press Check the key.')) ?></li>
+            <li><?= e(__('restaurant_help_cr_3', 'Enter the restaurant phone for couriers, make the webhook address and paste it into the Developer Portal so courier updates reach Kohevo.')) ?></li>
+            <li><?= e(__('restaurant_help_cr_4', 'On Online orders, a delivery card has Request DoorDash courier: it shows the price and times; Confirm courier within five minutes books it. The card and the customer\'s order page then show the courier\'s progress and a tracking link; a delivered order is marked completed.')) ?></li>
+        </ol>
+        <p class="text-sm"><?= e(__('restaurant_help_cr_5', 'If DoorDash refuses (outside its area, a missing phone), the reason shows on the card and the order is left as it was. Cancel courier works until a Dasher is assigned; after that cancel in DoorDash\'s merchant portal. Automatic requests, if switched on, apply to paid online delivery orders only, never to channel orders.')) ?></p>
     </div>
 
     <div class="card" id="online">

@@ -222,3 +222,19 @@ Answers: **200** `{"ok":true,"order_no":…}`; **401** wrong signature (nothing 
 
 **Menu feed.** On the Channels page, **Turn on the feed** to get a token. A channel reads the whole menu (categories, items with price, tax, photo and sold-out state, modifier groups, combos) from `GET /menu-feed` with the header `Authorization: Bearer <token>`. Making a new token stops the old one at once.
 
+## 11. Couriers for your own delivery orders (DoorDash Drive)
+
+**What it is.** For delivery orders you took yourself (website or register), you can have a DoorDash Dasher carry the order instead of your own driver. DoorDash bills you for each delivery. This is not about orders placed in the DoorDash app (those come through a channel, section 10).
+
+**What you need.** Your own DoorDash Developer account with Drive access. DoorDash currently limits Drive API access and reviews every integration before allowing real deliveries; until then its sandbox and Delivery Simulator only make test deliveries. Kohevo's Drive connection has been tested against a stand-in, not against DoorDash itself.
+
+**Set it up (Restaurant → Couriers, permission `restaurant.channels`):**
+1. In the DoorDash Developer Portal, make an access key. Paste its **Developer ID**, **Key ID** and **Signing secret**, pick **Sandbox** or **Production** to match the key, tick **Offer DoorDash couriers** and save. **Check the key** confirms DoorDash accepts it.
+2. Check **Couriers collect from** (your business name and address from Settings) and enter the **restaurant phone** the courier can call.
+3. **Make the webhook address** and paste it into the Developer Portal's webhooks, so courier updates reach Kohevo.
+4. Leave **automatic** off to choose per order, or tick it to book a courier as soon as an online delivery order is paid.
+
+**Sending an order.** On **Online orders**, a delivery card shows **Request DoorDash courier**. Press it to see the price and the pickup and drop-off times; **Confirm courier** within five minutes books it (after that, ask again for a fresh price). The card then shows the courier's progress (finding a courier, courier assigned, on the way, out for delivery, delivered) and a **Track** link; the customer's order page shows the same tracking link. When the courier delivers, the order is marked completed.
+
+**When something goes wrong.** If DoorDash refuses (address outside its area, missing phone), the reason shows on the card and nothing about the order changes: fix the details or use your own driver. **Cancel courier** works until a Dasher is assigned; after that, cancel in DoorDash's merchant portal or through its support.
+

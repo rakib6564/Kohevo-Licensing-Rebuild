@@ -389,3 +389,33 @@ CREATE TABLE IF NOT EXISTS `restaurant_readers` (
     UNIQUE KEY `tenant_reader` (`tenant_id`, `stripe_reader_id`),
     KEY `tenant` (`tenant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Couriers for our own delivery orders (DoorDash Drive, then Uber Direct).
+-- One row per attempt with one provider; external_id is OUR id, sent to the
+-- provider as the delivery id, so a repeated create is refused, not doubled.
+-- Status only moves forward; cancelled and failed end a job.
+CREATE TABLE IF NOT EXISTS `restaurant_delivery_jobs` (
+    `id`                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`            INT UNSIGNED NOT NULL DEFAULT 1,
+    `order_id`             INT UNSIGNED NOT NULL,
+    `provider`             VARCHAR(30) NOT NULL,
+    `attempt`              SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    `external_id`          VARCHAR(100) NOT NULL,
+    `provider_delivery_id` VARCHAR(120) NULL,
+    `status`               ENUM('quoted','requested','courier_assigned','enroute_pickup','picked_up','delivered','cancelled','failed') NOT NULL DEFAULT 'quoted',
+    `fee_cents`            INT NULL,
+    `currency`             CHAR(3) NOT NULL DEFAULT 'USD',
+    `pickup_eta`           DATETIME NULL,
+    `dropoff_eta`          DATETIME NULL,
+    `quote_expires_at`     DATETIME NULL,
+    `tracking_url`         VARCHAR(500) NULL,
+    `courier_name`         VARCHAR(120) NULL,
+    `error`                VARCHAR(500) NULL,
+    `raw_last_payload`     MEDIUMTEXT NULL,
+    `created_at`           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `tenant_provider_ext` (`tenant_id`, `provider`, `external_id`),
+    KEY `tenant_order` (`tenant_id`, `order_id`),
+    KEY `tenant_status` (`tenant_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
