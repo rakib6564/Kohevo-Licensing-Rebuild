@@ -2,13 +2,19 @@
 
 A restaurant management module for the Kohevo (Slate) admin platform, licensed
 per install under the `restaurant` entitlement. It ships a menu (categories,
-items, modifier groups, 86-ing), a floor (sections + tables), standalone
-customer records, a **browser point-of-sale** — open checks, build orders,
+items, modifier groups, combos, 86-ing), a floor (sections + tables),
+customers with spend history and CSV import/export, sales **reports** and a
+payments reconciliation list, a **browser point-of-sale** — open checks, build orders,
 take cash, and charge cards in person through **Stripe Terminal** — and a
 public **online-ordering storefront** at `/order` that drops orders into the
 POS. Single-location, self-contained.
 
-**Version 0.4.0** — a **full-screen POS** (table map, seats, split and merged
+**Version 0.5.0** — **combos** (a priced bundle with slots to pick from, in
+the POS and online), a **reports** screen (period comparison, CSV per table),
+a **payments** list for reconciling Stripe payouts, and **customer history**
+(spend, visits, archiving instead of deleting, CSV import and export in the
+column shape other POS systems export).
+0.4.0 added a **full-screen POS** (table map, seats, split and merged
 checks, line and percentage discounts with reasons, comps and reopening, cash
 keypad with change, guest lookup, 86 from the register), a **kitchen display**,
 and reworked admin screens (orders list with filters and totals, menu board
@@ -17,9 +23,9 @@ with a receipt preview, floor overview).
 0.3.0 added **refunds**, **Idempotency-Keys** on every Stripe object the module
 creates, and a **printable receipt**.
 
-Not built yet (do not sell these): combos, reports and payments
-reconciliation, customer history and CSV import, ordering hours and online
-tips, loyalty, gift cards. Items carry a daypart field that is stored but does
+Not built yet (do not sell these): ordering hours and scheduling, online
+tips, order notifications, loyalty, gift cards, delivery-partner
+integrations. Items carry a daypart field that is stored but does
 not yet hide anything.
 
 ---
@@ -30,6 +36,7 @@ not yet hide anything.
 - **Categories** — sections that group items; slug, description, sort order, active toggle
 - **Items** — name, price, per-item tax rate, photo, **86** toggle (mark temporarily unavailable), category and modifier-group assignment. A daypart (all/breakfast/lunch/dinner/late) is stored but not yet applied to the POS or the storefront
 - **Modifier groups** — reusable option sets (e.g. *Temperature*, *Add-ons*) with `min`/`max` select and a *required* flag; each option carries a price delta
+- **Combos** (`admin/combos.php`) — a menu item flagged `is_combo`, sold at its own price, with slots (label, min/max picks) offering other active menu items, each with an optional price delta. A combo cannot contain itself or another combo. The POS sheet and the storefront panel enforce the slot rules, and the server checks again through `RestaurantAPI::validateLineChoices()`, the one rule set for both
 - Items snapshot their name, price, and tax onto each order line, so menu edits never rewrite history
 
 ### Floor
@@ -79,9 +86,18 @@ route or build step.
 - **Online orders** (`admin/online.php`) — live board by fulfilment state with one-click advance (accepting fires the kitchen), chime, last 24 hours of finished orders
 - **Settings** — tabs with a live receipt preview; **Floor** — section cards with table status and open checks
 
-### Customers
-- Light standalone CRUD (`admin/customers.php`): name, phone, email, notes
-- The POS can find-or-create by phone when attaching a guest to a check
+### Reports and payments (`admin/reports.php`, `admin/payments.php`, permission `restaurant.reports`)
+- **Reports** — today / yesterday / this week / last week / this month / custom, every figure against the equivalent previous period with the change: gross sales, discounts (line + order), refunds (count and amount, from the refunds ledger), comps, net sales, orders, average order, covers, tax, service charges, tips (cash vs card), payment-method mix net of refunds, top 10 items by quantity and by revenue, categories, POS vs online, online orders by fulfilment state
+- Rules (all in `includes/reports.php`, class `RestaurantReports`): an order is a sale when paid or closed, by `opened_at`; voided never counts; net sales = order totals − comps − refunds; refunds count by refund date; payment mix by payment date
+- **CSV**: one file per table (`?export=<table>`), written from the same cells the screen shows
+- **Payments** — every payment with order, check, method, amount, tip, refunded, net, status (paid / partly refunded / refunded / pending / failed), PaymentIntent id, central charge id and reader; filters for date range, method, status, source and a search on order number or Stripe id; a totals strip over the whole filter (settled payments only) and a CSV with a totals row
+
+### Customers (`admin/customers.php`, `includes/customers.php`)
+- Records with name, phone, email, member ID and notes; the POS finds-or-creates by exact phone when attaching a guest (unchanged)
+- **History** — orders, total spend (order total − comp − refunds), average, last visit, first seen, from an aggregate over the customer's paid and closed orders (index `tenant_customer`), so it always agrees with the orders after voids, refunds, merges and reopens. Sort by name, spend or last visit; a row opens to the latest orders
+- **Archive, not delete** — a customer any order points at is archived (`is_active = 0`): kept, hidden from the guest lookup, restorable; one with no orders is deleted
+- **Import** — the column shape of SpotOn's customer-directory export: `Name, Member ID, Email, Phone, Avg. Spend, Total Spend, Last Visit, First Seen` (case-insensitive header, extra columns ignored). Checked against a real 423-row export: `-` and `N/A` mean empty, Last Visit reads like `4:56 PM 10/31/2026` (also `Y-m-d`, `m/d/Y`), and First Seen is the channel the customer first came through (`ORD Web`, `Counter`, `POS`…; stored in `first_seen_via`; a date there is kept as the first-seen date). Dry run first: creates, updates and every bad row by file line and reason; confirm writes in one transaction and is audited. Match on phone (digits compared), else member ID; otherwise create. Email never matches, because exports put one placeholder address on many walk-in customers. Rows that land on one customer (a shared phone) have their history added; imported spend, visits (Total ÷ Avg.) and last visit are stored as history (`hist_*`) and merged on read, and a re-import replaces them, so importing twice changes nothing. An update only fills in empty fields. A blank name stays blank and the list shows the email, phone or member ID instead
+- **Export** — the same columns (money as `$1,040.00`, dates `Y-m-d`, First Seen as the channel when known) with the merged history; importing it into another install recreates the same file (importing it back into the same install would count its Kohevo orders twice)
 
 ### Settings (`admin/settings.php`)
 - Currency, default tax rate, **service charge** (percent + auto-apply toggle, snapshotted onto each order at open time), tip presets, receipt header/footer, business name and address (printed on receipts, used for the Terminal Location)
@@ -113,14 +129,15 @@ re-creates any missing table defensively on every admin page load.
 | Table | Holds |
 |---|---|
 | `restaurant_menu_categories` | menu sections |
-| `restaurant_items` | menu items (price, tax, daypart, 86, photo) |
+| `restaurant_items` | menu items (price, tax, daypart, 86, photo, `is_combo`) |
+| `restaurant_combo_slots` / `restaurant_combo_choices` | a combo's slots and the items each offers, with a price delta |
 | `restaurant_modifier_groups` / `restaurant_modifiers` | option sets and their options |
 | `restaurant_item_modifier_groups` | which groups attach to which item |
 | `restaurant_sections` / `restaurant_tables` | the floor |
-| `restaurant_customers` | standalone customer records |
+| `restaurant_customers` | customers — contact, member ID, imported history (`hist_*`), `is_active` / `archived_at` |
 | `restaurant_orders` | checks — type, status, totals, service-charge snapshot |
 | `restaurant_order_items` | check lines — name/price/tax **snapshots**, qty, seat, check_no, kitchen status |
-| `restaurant_order_item_modifiers` | per-line chosen options with price snapshot |
+| `restaurant_order_item_modifiers` | per-line chosen options and combo picks (`kind` = modifier / component, named "Slot: Item") with price snapshot |
 | `restaurant_payments` | cash/terminal/online tenders — amount, tip, status, refunded amount, Stripe ids, central charge id |
 | `restaurant_refunds` | one row per refund attempt — amount, status, Stripe refund id, reason, who |
 | `restaurant_readers` | registered Stripe Terminal readers |
@@ -150,7 +167,7 @@ total           = subtotal − discount + service_charge + tax + tip
 
 The plugin lives at `plugins/restaurant/`. Activate it from the admin
 **Plugins** page (or it's already registered on this install). Activation
-runs `install.sql` (14 tables) and registers its permissions; deactivation
+runs `install.sql` (16 tables) and registers its permissions; deactivation
 preserves data; uninstall runs `uninstall.sql` to drop every
 `restaurant_*` table.
 
@@ -159,13 +176,13 @@ preserves data; uninstall runs `uninstall.sql` to drop every
 |---|---|
 | `restaurant.view` | see orders, menu, the floor; the dashboard widget |
 | `restaurant.pos` | operate the POS / take orders |
-| `restaurant.manage_menu` | create/edit menu, categories, modifiers |
+| `restaurant.manage_menu` | create/edit menu, categories, modifiers, combos |
 | `restaurant.manage_floor` | manage sections and tables |
 | `restaurant.kitchen` | use the kitchen display |
 | `restaurant.manage_orders` | void, comp and reopen checks; comp items; refund payments |
-| `restaurant.manage_customers` | manage customer records |
+| `restaurant.manage_customers` | manage customers; archive/restore; import and export |
 | `restaurant.manage_settings` | configure tax, service charge, tips, receipts, readers |
-| `restaurant.reports` | reserved for the reports screen (not built; grants nothing today) |
+| `restaurant.reports` | Reports and Payments, with their CSV exports |
 
 ---
 
@@ -174,7 +191,8 @@ preserves data; uninstall runs `uninstall.sql` to drop every
 `RestaurantAPI` is the single source of truth — the admin pages, the POS,
 and other plugins all call its static methods. Highlights:
 
-- **Reads** — `getPosMenu()`, `getOpenOrders()`, `getOrder($id)`, `getItemModifierGroups($itemId)`
+- **Reads** — `getPosMenu()`, `getOpenOrders()`, `getOrder($id)`, `getItemModifierGroups($itemId)`, `getComboSlots($itemId)`
+- **Combos** — `saveCombo($itemId, $slots)`, `validateLineChoices($itemId, $modifierIds, $comboPicks)`, `lineUnitCents(…)`, `deleteItem($itemId)`
 - **Lifecycle** — `openOrder($args)`, `addLine($orderId, $line)`, `setLineQty`, `removeLine`, `voidLine`, `setLineSeat`, `sendToKitchen`, `setDiscount`, `setDiscountPct`, `setLineDiscount`, `compLine`, `setTip`, `closeOrder`, `compOrder`, `reopenOrder`, `voidOrder`
 - **Checks** — `checkTotals`, `nextCheckNo`, `moveLineToCheck`, `splitLine`, `mergeOrders`
 - **Kitchen** — `setKitchenStatus`, `bumpOrder`, `kitchenTickets`
@@ -184,8 +202,11 @@ and other plugins all call its static methods. Highlights:
 - **Stripe bridge** — `handleStripeEvent`, `markPaymentPaid`, `syncOrderPayment`, `idempotencyKey`
 - **Money** — `money($cents)` → localized string; everything else is integer cents
 
-`addLine()` validates chosen modifiers against the item's groups (required /
-min / max) and throws a human-readable error on a bad pick or an 86'd item.
+`addLine()` validates chosen modifiers and combo picks through
+`validateLineChoices()` (required / min / max per group and slot) and throws a
+human-readable error on a bad pick or an 86'd item. Reports live in
+`RestaurantReports` (`includes/reports.php`) and customer history, import and
+export in `RestaurantCustomers` (`includes/customers.php`).
 
 ---
 
@@ -195,14 +216,18 @@ min / max) and throws a human-readable error on a bad pick or an 86'd item.
 Terminal (poll, capture, webhook, decline, cancel) and receipt paths, and
 `tests/integration/RestaurantPosEngineTest.php` the discounts, per-check
 totals, split/merge, comp/reopen, cash tendered, kitchen lifecycle, seats,
-guests and 86, against `tests/fixtures/fake-stripe.php` (a loopback stand-in
+guests and 86, `RestaurantCombosTest.php` combo setup, pricing, slot rules
+(POS and cart alike), online = POS totals, kitchen and receipt,
+`RestaurantReportsTest.php` every report figure and the payments list against
+hand-computed sums, and `RestaurantCustomersTest.php` history, archiving and a
+423-row import, against `tests/fixtures/fake-stripe.php` (a loopback stand-in
 for the Stripe API that honours Idempotency-Keys; see
 `tests/support/fake_stripe.php`).
 
 ## Roadmap
 
-Combos · reports and payments reconciliation · customer
-history and CSV import/export · ordering hours, scheduling and online tips ·
-dayparts applied · loyalty and gift cards. Each is additive: new tables via
+Ordering hours, scheduling, online tips and order notifications · dayparts
+applied · loyalty and gift cards · floor-map editor. Shipped: combos, reports
+and payments reconciliation, customer history and CSV import/export (0.5.0). Each is additive: new tables via
 version-gated migrations in `Restaurant.php`, new nav items via the
 `admin_nav_items` filter.

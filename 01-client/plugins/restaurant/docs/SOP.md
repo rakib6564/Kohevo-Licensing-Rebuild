@@ -1,6 +1,6 @@
 # Restaurant — Standard Operating Procedure (SOP)
 
-**System:** Kohevo Restaurant plugin v0.4.0 (full-screen POS with split checks and a table map, kitchen display, card + cash payments with refunds and receipts, online ordering)
+**System:** Kohevo Restaurant plugin v0.5.0 (full-screen POS with split checks and a table map, combos, kitchen display, card + cash payments with refunds and receipts, reports and payments reconciliation, customer history with import/export, online ordering)
 **Audience:** owners, managers, cashiers/servers
 **Before you hand this to staff:** replace `https://your-site.example` below with your own site address.
 
@@ -43,6 +43,7 @@ The register opens full screen. Use the full-screen button (top right) on a tabl
 2. For dine in, tap the **seat** number above the check before adding each guest's items, so the ticket and any split show who ordered what.
 3. Tap menu items to add them (or type in **Search the menu**, then Enter).
    - Items with options open a window: choose, add a **note** (e.g. *no onions*), set the quantity, then **Add**.
+   - **Combos** open the same window with a section per slot (e.g. *Sides — choose 2*, *Drink — choose 1*). **Add** stays refused until each slot has the right number of picks; extras show their price. The picks print on the ticket and the receipt as *Sides: Mac & cheese*.
    - Tap a line on the check to change quantity, seat or check, discount it, comp it (manager), or remove it. Lines already sent are **voided** instead of removed.
 4. **Guest** and **note** chips under the check: attach a customer by name, phone or email (or create one), and write an order note.
 5. Read the order back. **Send** fires the new lines to the kitchen display.
@@ -121,9 +122,21 @@ If Stripe refuses a refund (for example the Stripe balance is too low), nothing 
 ## 6. End of day
 
 1. Make sure **no checks are left open** (open-checks rail on the POS should be empty). Settle or void any stragglers.
-2. Reconcile the cash drawer against cash payments (per your cash policy).
-3. Card totals reconcile in the Stripe dashboard (stripe-payment plugin). Refunds show on each order page and in Stripe.
-4. Log out.
+2. Open **Reports** (period *Today*) for the day's net sales, tips (cash and card), payment methods and top items, each compared with yesterday. **CSV** on any table downloads it.
+3. **Cash drawer:** in **Payments**, filter today and method *Cash*. The **Net** total is the cash that should be in the drawer above the float (cash refunds already taken off).
+4. **Cards:** in **Payments**, filter the day and method *Card reader* (and again *Online card*). The **Net** total is what Stripe owes for that day; set it beside the matching payout in the Stripe dashboard. Pending and failed attempts are listed but not counted. **Export CSV** keeps a copy.
+5. Log out.
+
+Reports count an order on the day it was opened, once it is paid or closed; voided orders never count. Net sales are order totals (with tax, service charge and tips) less comps and refunds, and a refund counts on the day it was made.
+
+---
+
+## 6a. Customers
+
+- **History:** Customers shows each guest's orders, total spend (after refunds), average spend and last visit. Sort by spend to find regulars; open a row for their latest orders.
+- **Deleting:** a customer with orders is **archived**, not deleted, so old orders keep their name. Archived customers leave the POS guest lookup; restore them from the **Archived** tab.
+- **Bringing your list over:** export the customer directory from your old POS as CSV (SpotOn's export works as it is: *Name, Member ID, Email, Phone, Avg. Spend, Total Spend, Last Visit, First Seen*), then **Customers → Import CSV → Check file**. Read the check: new customers, updates, and every row left out with its line number and reason. Fix those rows in the file if you want them, and press **Import**. Importing the same file again updates rather than duplicates.
+- **Taking your list elsewhere:** **Export CSV** writes the same columns, with spend and visits including orders taken here.
 
 ---
 
@@ -132,13 +145,15 @@ If Stripe refuses a refund (for example the Stripe balance is too low), nothing 
 | Role needs… | To… |
 |---|---|
 | `restaurant.pos` | run the register, take orders & payment |
-| `restaurant.manage_menu` | edit menu, prices, 86 items |
+| `restaurant.manage_menu` | edit menu, prices, combos, 86 items |
 | `restaurant.manage_orders` | void, comp and reopen checks; comp items; refund payments |
 | `restaurant.kitchen` | use the kitchen display |
 | `restaurant.manage_settings` | change tax, tips, receipts, readers |
+| `restaurant.reports` | see Reports and Payments, download their CSV files |
+| `restaurant.manage_customers` | edit, archive and restore customers; import and export the list |
 | `restaurant.view` | see orders, menu, the help page |
 
-Grant these per role under **Settings → Roles**. Cashiers typically get `restaurant.view` + `restaurant.pos`; shift leads add `restaurant.manage_orders`.
+Grant these per role under **Settings → Roles**. Cashiers typically get `restaurant.view` + `restaurant.pos`; shift leads add `restaurant.manage_orders`; owners and managers add `restaurant.reports`.
 
 ---
 
@@ -151,6 +166,9 @@ Grant these per role under **Settings → Roles**. Cashiers typically get `resta
 | Reader offline | Re-pair on **Card readers**; check the reader's network. |
 | "Security check failed" in the POS | Session expired — reload the register and log in again. |
 | Wrong total/tax | Check the item's **tax rate** and the **Default tax rate** in Settings (verify it against your tax authority). |
+| A combo won't add | Every slot needs its number of picks (the window says which is short). A pick that is 86'd shows as sold out. |
+| Report and drawer disagree | Reports go by the day an order was **opened**; Payments by the day each payment was **taken**. A check opened before midnight and paid after it lands on different days. |
+| Import left rows out | The check names each row by line and reason (bad email, date or amount). Fix them in the file and import again; good rows are already in. |
 | Refund button missing | Your role lacks `restaurant.manage_orders`, or the payment is already fully refunded, pending or failed. |
 
 ---

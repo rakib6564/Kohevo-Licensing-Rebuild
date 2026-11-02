@@ -14,6 +14,11 @@
  * The import accepts the customer export of common POS systems (Name,
  * Member ID, Email, Phone, Avg. Spend, Total Spend, Last Visit, First Seen)
  * and the export writes the same columns, so data leaves the way it came.
+ * Checked against a real 423-row SpotOn directory export: blanks there are
+ * written "-" (or "N/A" for a customer never seen), Last Visit is "4:56 PM
+ * 10/31/2026", and First Seen is the channel the customer first came
+ * through ("ORD Web", "Counter", "POS"…), not a date. A First Seen that is
+ * a date is kept as the first-seen date; any other text as the channel.
  */
 
 require_once __DIR__ . '/reports.php';
@@ -28,11 +33,12 @@ class RestaurantCustomers {
         return (strlen($d) === 11 && $d[0] === '1') ? substr($d, 1) : $d;
     }
 
-    /** What to show for a customer: the name, else the email, else the phone, else the record number. */
+    /** What to show for a customer: the name, else the email, else the phone, else the member ID, else the record number. */
     public static function displayName(array $c): string {
         foreach (['name', 'email', 'phone'] as $k) {
             if (trim((string)($c[$k] ?? '')) !== '') return trim((string)$c[$k]);
         }
+        if (trim((string)($c['member_ref'] ?? '')) !== '') return sprintf(__('restaurant_cust_member_n', 'Member %s'), trim((string)$c['member_ref']));
         return '#' . (int)($c['id'] ?? 0);
     }
 
@@ -150,10 +156,21 @@ class RestaurantCustomers {
         return (int) round((float)$v * 100);
     }
 
-    /** "2024-03-09" or "3/9/2024" to Y-m-d; '' for blank; null when it is not a date. */
-    public static function parseDate(string $v): ?string {
+    /** A cell as data: trimmed, with the "-", "—" and "N/A" exports use for nothing turned into ''. */
+    public static function cell(string $v): string {
         $v = trim($v);
+        return in_array(strtolower($v), ['-', '—', '–', 'n/a', 'na', 'null'], true) ? '' : $v;
+    }
+
+    /**
+     * "2024-03-09", "3/9/2024" or SpotOn's "4:56 PM 10/31/2026" (a time on
+     * either side is ignored) to Y-m-d; '' for blank; null when it is not a
+     * date.
+     */
+    public static function parseDate(string $v): ?string {
+        $v = self::cell($v);
         if ($v === '') return '';
+        $v = trim(preg_replace('/(^|\s)\d{1,2}:\d{2}(:\d{2})?\s*([ap]\.?m\.?)?(?=\s|$)/i', ' ', $v));
         if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $v, $m))       [$y, $mo, $d] = [(int)$m[1], (int)$m[2], (int)$m[3]];
         elseif (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', $v, $m))   [$mo, $d, $y] = [(int)$m[1], (int)$m[2], (int)$m[3]];
         else return null;
@@ -169,10 +186,11 @@ class RestaurantCustomers {
      * reported and left out; it never stops the good ones.
      *
      * Matching, per row: same phone (digits compared, so "(555) 010-2000"
-     * and "5550102000" match), else same Member ID, else same email
-     * (ignoring case) → update that customer; otherwise create one. Rows
-     * earlier in the same file count, so a file never creates two customers
-     * with one phone.
+     * and "5550102000" match), else same Member ID → update that customer;
+     * otherwise create one. Email is never used to match: exports put one
+     * placeholder address on many walk-in customers. Rows earlier in the same
+     * file count, so a file never creates two customers with one phone; rows
+     * that land on one customer have their history added together.
      */
     public static function plan(string $csv): array {
         $out = ['rows' => [], 'errors' => [], 'creates' => 0, 'updates' => 0, 'skipped' => 0, 'fatal' => null];
@@ -193,15 +211,13 @@ class RestaurantCustomers {
             return $out;
         }
 
-        // Existing customers, keyed the three ways a row can match.
+        // Existing customers, keyed the two ways a row can match.
         $tid = current_tenant_id();
-        $byPhone = $byRef = $byEmail = [];
-        foreach (Database::rows("SELECT id, phone, member_ref, email FROM restaurant_customers WHERE tenant_id = ? ORDER BY id", [$tid]) as $c) {
+        $byPhone = $byRef = [];
+        foreach (Database::rows("SELECT id, phone, member_ref FROM restaurant_customers WHERE tenant_id = ? ORDER BY id", [$tid]) as $c) {
             $p = self::normalizePhone($c['phone']);
             if ($p !== '' && !isset($byPhone[$p])) $byPhone[$p] = ['id' => (int)$c['id']];
             if (trim((string)$c['member_ref']) !== '' && !isset($byRef[$c['member_ref']])) $byRef[trim((string)$c['member_ref'])] = ['id' => (int)$c['id']];
-            $e = strtolower(trim((string)$c['email']));
-            if ($e !== '' && !isset($byEmail[$e])) $byEmail[$e] = ['id' => (int)$c['id']];
         }
 
         while (true) {
@@ -210,8 +226,8 @@ class RestaurantCustomers {
             $cells = fgetcsv($fh, 0, ',', '"', '');
             if ($cells === false) break;
             $line += substr_count(substr($csv, $pos, (int)ftell($fh) - $pos), "\n");
-            $get = fn(string $name) => ($i = $idx($name)) !== null ? trim((string)($cells[$i] ?? '')) : '';
-            if (implode('', array_map('trim', array_map('strval', $cells))) === '') { $out['skipped']++; continue; }
+            $get = fn(string $name) => ($i = $idx($name)) !== null ? self::cell((string)($cells[$i] ?? '')) : '';
+            if (implode('', array_map(fn($c) => self::cell((string)$c), $cells)) === '') { $out['skipped']++; continue; }
 
             $name  = preg_replace('/\s+/u', ' ', $get('Name'));
             $email = $get('Email');
@@ -221,6 +237,8 @@ class RestaurantCustomers {
             $avg   = self::parseMoney($get('Avg. Spend'));
             $last  = self::parseDate($get('Last Visit'));
             $first = self::parseDate($get('First Seen'));
+            $via   = '';
+            if ($first === null) { $via = mb_substr($get('First Seen'), 0, 60); $first = ''; }   // a channel, not a date
 
             $why = [];
             if ($name === '' && $email === '' && $phone === '' && $ref === '') $why[] = __('restaurant_imp_err_blank', 'no name, email, phone or member ID');
@@ -229,19 +247,17 @@ class RestaurantCustomers {
             if ($total === null) $why[] = sprintf(__('restaurant_imp_err_money', '%1$s "%2$s" is not an amount'), 'Total Spend', $get('Total Spend'));
             if ($avg === null)   $why[] = sprintf(__('restaurant_imp_err_money', '%1$s "%2$s" is not an amount'), 'Avg. Spend', $get('Avg. Spend'));
             if ($last === null)  $why[] = sprintf(__('restaurant_imp_err_date', '%1$s "%2$s" is not a date (use 2024-03-09 or 3/9/2024)'), 'Last Visit', $get('Last Visit'));
-            if ($first === null) $why[] = sprintf(__('restaurant_imp_err_date', '%1$s "%2$s" is not a date (use 2024-03-09 or 3/9/2024)'), 'First Seen', $get('First Seen'));
             if ($why) { $out['errors'][] = [$start, implode('; ', $why)]; continue; }
 
             // Visits are not in the file; they follow from Total ÷ Avg. (at least one when anything was spent).
             $visits = $total > 0 ? ($avg > 0 ? max(1, (int) round($total / $avg)) : 1) : 0;
 
             $p = self::normalizePhone($phone);
-            $e = strtolower($email);
-            $hit = ($p !== '' ? ($byPhone[$p] ?? null) : null) ?? ($ref !== '' ? ($byRef[$ref] ?? null) : null) ?? ($e !== '' ? ($byEmail[$e] ?? null) : null);
+            $hit = ($p !== '' ? ($byPhone[$p] ?? null) : null) ?? ($ref !== '' ? ($byRef[$ref] ?? null) : null);
             $row = ['line' => $start, 'name' => mb_substr($name, 0, 160), 'email' => mb_substr($email, 0, 200),
                     'phone' => mb_substr($phone, 0, 40), 'member_ref' => mb_substr($ref, 0, 80),
                     'hist_spend_cents' => $total, 'hist_orders' => $visits,
-                    'hist_last_visit' => $last ?: null, 'hist_first_seen' => $first ?: null];
+                    'hist_last_visit' => $last ?: null, 'hist_first_seen' => $first ?: null, 'first_seen_via' => $via];
             if ($hit) {
                 $row['action'] = 'update';
                 $row['target'] = $hit;           // an existing id, or ['new' => n] for an earlier row of this file
@@ -253,7 +269,6 @@ class RestaurantCustomers {
             }
             if ($p !== '' && !isset($byPhone[$p])) $byPhone[$p] = $hit;
             if ($ref !== '' && !isset($byRef[$ref])) $byRef[$ref] = $hit;
-            if ($e !== '' && !isset($byEmail[$e])) $byEmail[$e] = $hit;
             $out['rows'][] = $row;
         }
         fclose($fh);
@@ -262,10 +277,13 @@ class RestaurantCustomers {
 
     /**
      * Import a CSV: plan it, then write every good row in one transaction and
-     * audit the counts. An update overwrites the imported history with the
-     * file's (so importing the same file twice changes nothing), fills in a
-     * name, email or member ID the file has, and adds a phone only where the
-     * customer had none. Returns the plan's counts plus 'written'.
+     * audit the counts. A customer's imported history becomes the file's:
+     * the rows that landed on them added together (spend and visits summed,
+     * latest last visit, earliest first seen, first channel), replacing what
+     * an earlier import stored, so importing the same file twice changes
+     * nothing. An update only fills in what the customer lacks (name, email,
+     * phone, member ID, channel); it never overwrites what is there.
+     * Returns the plan's counts plus 'written'.
      */
     public static function import(string $csv): array {
         $plan = self::plan($csv);
@@ -275,25 +293,32 @@ class RestaurantCustomers {
         $pdo = Database::get();
         $pdo->beginTransaction();
         try {
+            $hist = [];   // customer id => the file's history for them
             foreach ($plan['rows'] as $n => $r) {
-                $hist = array_intersect_key($r, array_flip(['hist_spend_cents', 'hist_orders', 'hist_last_visit', 'hist_first_seen']));
                 if ($r['action'] === 'create') {
-                    $ids[$n] = Database::insert('restaurant_customers', $hist + [
+                    $ids[$n] = Database::insert('restaurant_customers', [
                         'tenant_id' => $tid, 'name' => $r['name'], 'email' => $r['email'] ?: null,
                         'phone' => $r['phone'] ?: null, 'member_ref' => $r['member_ref'] ?: null,
+                        'first_seen_via' => $r['first_seen_via'] ?: null,
                     ]);
-                    continue;
+                } else {
+                    $id  = isset($r['target']['new']) ? $ids[$r['target']['new']] : (int)$r['target']['id'];
+                    $cur = Database::row("SELECT name, email, phone, member_ref, first_seen_via FROM restaurant_customers WHERE id = ? AND tenant_id = ?", [$id, $tid]);
+                    $set = [];
+                    foreach (['name', 'email', 'phone', 'member_ref', 'first_seen_via'] as $k) {
+                        if ($r[$k] !== '' && trim((string)($cur[$k] ?? '')) === '') $set[$k] = $r[$k];
+                    }
+                    if ($set) Database::update('restaurant_customers', $set, 'id = ? AND tenant_id = ?', [$id, $tid]);
+                    $ids[$n] = $id;
                 }
-                $id  = isset($r['target']['new']) ? $ids[$r['target']['new']] : (int)$r['target']['id'];
-                $cur = Database::row("SELECT name, email, phone, member_ref FROM restaurant_customers WHERE id = ? AND tenant_id = ?", [$id, $tid]);
-                $set = $hist;
-                if ($r['name'] !== '')       $set['name'] = $r['name'];
-                if ($r['email'] !== '')      $set['email'] = $r['email'];
-                if ($r['member_ref'] !== '') $set['member_ref'] = $r['member_ref'];
-                if ($r['phone'] !== '' && trim((string)($cur['phone'] ?? '')) === '') $set['phone'] = $r['phone'];
-                Database::update('restaurant_customers', $set, 'id = ? AND tenant_id = ?', [$id, $tid]);
-                $ids[$n] = $id;
+                $h = $hist[$ids[$n]] ?? ['hist_spend_cents' => 0, 'hist_orders' => 0, 'hist_last_visit' => null, 'hist_first_seen' => null];
+                $h['hist_spend_cents'] += $r['hist_spend_cents'];
+                $h['hist_orders']      += $r['hist_orders'];
+                if ($r['hist_last_visit'] && (!$h['hist_last_visit'] || $r['hist_last_visit'] > $h['hist_last_visit'])) $h['hist_last_visit'] = $r['hist_last_visit'];
+                if ($r['hist_first_seen'] && (!$h['hist_first_seen'] || $r['hist_first_seen'] < $h['hist_first_seen'])) $h['hist_first_seen'] = $r['hist_first_seen'];
+                $hist[$ids[$n]] = $h;
             }
+            foreach ($hist as $id => $h) Database::update('restaurant_customers', $h, 'id = ? AND tenant_id = ?', [$id, $tid]);
             $pdo->commit();
         } catch (\Throwable $e) {
             $pdo->rollBack();
@@ -306,7 +331,8 @@ class RestaurantCustomers {
 
     /**
      * Every customer (archived ones too) in the import's column shape, with
-     * merged history: Total Spend and visits include Kohevo orders, so the
+     * money as "$1,040.00", dates as Y-m-d and First Seen as the channel when
+     * one is known (else the first-seen date), with merged history: Total Spend and visits include Kohevo orders, so the
      * file is the full record to take elsewhere. Importing it into another
      * install recreates the same file; importing it back into this one would
      * count the Kohevo orders twice.
@@ -315,7 +341,7 @@ class RestaurantCustomers {
         $tid = current_tenant_id();
         $fh  = fopen('php://temp', 'w+');
         fputcsv($fh, self::COLUMNS, ',', '"', '');
-        $m = fn(int $c) => number_format($c / 100, 2, '.', '');
+        $m = fn(int $c) => '$' . number_format($c / 100, 2, '.', ',');
         foreach (Database::rows(
             "SELECT c.*, h.k_orders, h.k_spend, h.k_first, h.k_last
                FROM restaurant_customers c LEFT JOIN (" . self::HISTORY_SQL . ") h ON h.customer_id = c.id
@@ -324,7 +350,7 @@ class RestaurantCustomers {
             fputcsv($fh, array_map([RestaurantReports::class, 'csvSafe'], [
                 (string)$c['name'], (string)($c['member_ref'] ?? ''), (string)($c['email'] ?? ''), (string)($c['phone'] ?? ''),
                 $c['orders'] > 0 ? $m($c['avg']) : '', $c['spend'] > 0 || $c['orders'] > 0 ? $m($c['spend']) : '',
-                (string)($c['last_visit'] ?? ''), (string)($c['first_seen'] ?? ''),
+                (string)($c['last_visit'] ?? ''), (string)($c['first_seen_via'] ?: ($c['first_seen'] ?? '')),
             ]));
         }
         rewind($fh);

@@ -52,7 +52,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <div class="page-header">
         <div>
             <h1>Help &amp; documentation</h1>
-            <p class="page-header-sub">How to run the menu, the floor, the POS register, and card payments. Version <?= e((string) RestaurantAPI::setting('applied_version', '0.1.0')) ?>.</p>
+            <p class="page-header-sub">How to run the menu and combos, the floor, the POS register, card payments, reports and customers. Version <?= e((string) RestaurantAPI::setting('applied_version', '0.1.0')) ?>.</p>
         </div>
         <a href="<?= e($url('pos.php')) ?>" class="btn btn-primary">Open POS register</a>
     </div>
@@ -63,6 +63,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <a href="#pos">Using the POS</a>
             <a href="#pay">Payments &amp; card readers</a>
             <a href="#refunds"><?= e(__('restaurant_help_refunds_toc', 'Refunds & receipts')) ?></a>
+            <a href="#combos"><?= e(__('restaurant_combos', 'Combos')) ?></a>
+            <a href="#reports"><?= e(__('restaurant_help_reports_toc', 'Reports & payments')) ?></a>
+            <a href="#customers"><?= e(__('restaurant_customers', 'Customers')) ?></a>
             <a href="#online">Online ordering</a>
             <a href="#settings">Settings</a>
             <a href="#perms">Roles &amp; permissions</a>
@@ -78,6 +81,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <li><b>Categories</b> — create the sections your menu is grouped into (e.g. <em>BBQ Plates</em>, <em>Beverages</em>). <a href="<?= e($url('categories.php')) ?>">Categories →</a></li>
             <li><b>Modifier groups</b> — optional. Reusable option sets (e.g. <em>Sides</em>, <em>Temperature</em>) with a required flag and min/max picks. <a href="<?= e($url('modifiers.php')) ?>">Modifier groups →</a></li>
             <li><b>Menu items</b> — name, price, tax, category, photo, and which modifier groups apply. <a href="<?= e($url('items.php')) ?>">Menu items →</a></li>
+            <li><b><?= e(__('restaurant_combos', 'Combos')) ?></b> — <?= e(__('restaurant_help_start_combos', 'optional. Bundles such as a plate with two sides and a drink, at one price.')) ?> <a href="<?= e($url('combos.php')) ?>"><?= e(__('restaurant_combos', 'Combos')) ?> →</a></li>
             <li><b>Floor &amp; tables</b> — for dine-in: create sections and the tables in them. <a href="<?= e($url('floor.php')) ?>">Floor &amp; tables →</a></li>
             <li><b>Card readers</b> — optional. Pair a Stripe Terminal reader to take cards in person. <a href="<?= e($url('readers.php')) ?>">Card readers →</a></li>
         </ol>
@@ -136,6 +140,37 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <p class="text-sm"><?= e(__('restaurant_help_receipt', 'Print receipt (in the POS on a paid check, or on the order page) opens a receipt sized for an 80 mm printer. It shows the business name and address, the receipt header and footer from Settings, every item with its options, the money breakdown, payments and refunds.')) ?></p>
     </div>
 
+    <div class="card" id="combos">
+        <h2><?= e(__('restaurant_combos', 'Combos')) ?></h2>
+        <ol>
+            <li><?= e(__('restaurant_help_combo_1', 'Create the combo as a menu item: its name, the combo price, tax and photo (Menu items → New item).')) ?></li>
+            <li><?= e(__('restaurant_help_combo_2', 'In Combos → New combo, choose that item, then add slots: a name ("Sides"), how many to pick at least and at most, and the menu items to choose from. An "Extra" amount adds to the price for a premium pick.')) ?></li>
+            <li><?= e(__('restaurant_help_combo_3', 'In the register and on the online menu the combo asks for its picks; it cannot be added until every slot has the right number. The picks go to the kitchen display and print on the receipt as "Sides: Mac & cheese".')) ?></li>
+        </ol>
+        <p class="text-sm"><?= e(__('restaurant_help_combo_4', 'A combo line is priced as the combo price plus any extras, and takes line discounts, comps, splits and kitchen bumps like any other line. A combo cannot hold itself or another combo. If a pick is 86\'d it shows as sold out; deleting an item removes it from every combo.')) ?></p>
+    </div>
+
+    <div class="card" id="reports">
+        <h2><?= e(__('restaurant_help_reports_toc', 'Reports & payments')) ?></h2>
+        <p class="text-sm"><?= e(__('restaurant_help_reports_1', 'Reports shows sales for today, yesterday, this or last week, this month or any range, each figure beside the period before with the change: gross sales, discounts, refunds, net sales, orders, average order, covers, tax, service charges, tips (cash and card), payment methods, top items and categories, POS against online, and online orders by status. Every table has a CSV button that downloads exactly that table.')) ?></p>
+        <p class="text-sm"><?= e(__('restaurant_help_reports_2', 'An order counts once it is paid or closed, on the day it was opened; voided orders never count. Net sales are order totals (with tax, service and tips) less comps and refunds, and a refund counts on the day it was made.')) ?></p>
+        <p class="text-sm"><?= e(__('restaurant_help_payments_1', 'Payments lists every payment with its order, check, method, amount, tip, refunds and Stripe reference. Filter one day and the card reader (or online card) method, and the Net total is what to set beside that day\'s Stripe payout; pending and failed attempts are listed but never counted. Export CSV takes the same filter.')) ?></p>
+        <p class="text-sm"><?= e(__('restaurant_help_reports_perm', 'Both need the restaurant.reports permission.')) ?> <a href="<?= e($url('reports.php')) ?>"><?= e(__('restaurant_reports', 'Reports')) ?> →</a></p>
+    </div>
+
+    <div class="card" id="customers">
+        <h2><?= e(__('restaurant_customers', 'Customers')) ?></h2>
+        <p class="text-sm"><?= e(__('restaurant_help_cust_1', 'Each customer shows their orders, total spend (net of refunds and comps), average spend, last visit and first seen, worked out from their paid and closed orders. Sort by name, spend or last visit; a row opens to their latest orders.')) ?></p>
+        <p class="text-sm"><?= e(__('restaurant_help_cust_2', 'Deleting a customer who has orders archives them instead: the orders keep their name and history, and they leave the POS guest lookup. Restore them from the Archived tab. A customer with no orders is deleted.')) ?></p>
+        <h3><?= e(__('restaurant_help_cust_import_t', 'Import and export')) ?></h3>
+        <ol>
+            <li><?= e(__('restaurant_help_cust_import_1', 'Export your customer list from your old system as CSV with the columns Name, Member ID, Email, Phone, Avg. Spend, Total Spend, Last Visit, First Seen.')) ?></li>
+            <li><?= e(__('restaurant_help_cust_import_2', 'Customers → Import CSV → Check file. You see how many customers will be created and updated, and every row that will be left out with its line number and the reason. Nothing is saved until you press Import.')) ?></li>
+            <li><?= e(__('restaurant_help_cust_import_3', 'A row updates the customer with the same phone (however it is written), else the same Member ID; otherwise it creates one. Email is not used to match, because exports give many walk-in customers the same placeholder address. Rows that share a phone become one customer with their history added together. Importing the same file again updates instead of duplicating.')) ?></li>
+        </ol>
+        <p class="text-sm"><?= e(__('restaurant_help_cust_import_4', 'Imported spend and visits are history: they add to what Kohevo records, and the later last visit wins. Visits are Total Spend ÷ Avg. Spend. First Seen is kept as the channel the customer first came through (ORD Web, Counter, POS…), or as a date if the file has one. "-" and "N/A" count as empty; a blank name stays blank and the list shows the email, phone or member ID instead. Export CSV writes the same columns with everything known, ready for another system.')) ?></p>
+    </div>
+
     <div class="card" id="online">
         <h2>Online ordering (public storefront)</h2>
         <p class="text-sm">Customers order from your own site at <code><?= e(rtrim(SLATE_URL, '/')) ?>/order</code> — no SpotOn needed.</p>
@@ -173,13 +208,13 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <table class="kbd-table">
             <tr><td>restaurant.view</td><td>See orders, the menu, the floor, and the dashboard widget.</td></tr>
             <tr><td>restaurant.pos</td><td>Operate the POS register and take orders.</td></tr>
-            <tr><td>restaurant.manage_menu</td><td>Create / edit menu items, categories, and modifiers.</td></tr>
+            <tr><td>restaurant.manage_menu</td><td><?= e(__('restaurant_help_perm_menu', 'Create and edit menu items, categories, modifier groups and combos.')) ?></td></tr>
             <tr><td>restaurant.manage_floor</td><td>Manage sections and tables.</td></tr>
             <tr><td>restaurant.manage_orders</td><td><?= e(__('restaurant_help_perm_orders2', 'Void, comp and reopen checks, comp items, and refund payments.')) ?></td></tr>
             <tr><td>restaurant.kitchen</td><td><?= e(__('restaurant_help_perm_kitchen', 'Use the kitchen display: mark lines ready and served.')) ?></td></tr>
-            <tr><td>restaurant.manage_customers</td><td>Manage customer records.</td></tr>
+            <tr><td>restaurant.manage_customers</td><td><?= e(__('restaurant_help_perm_customers', 'Manage customer records, archive and restore them, and import or export the customer list.')) ?></td></tr>
             <tr><td>restaurant.manage_settings</td><td>Configure tax, service charge, tips, receipts, and card readers.</td></tr>
-            <tr><td>restaurant.reports</td><td><?= e(__('restaurant_help_perm_reports', 'Reserved for the reports screen, which does not exist yet. Granting it changes nothing today.')) ?></td></tr>
+            <tr><td>restaurant.reports</td><td><?= e(__('restaurant_help_perm_reports2', 'See Reports and Payments, and download their CSV files.')) ?></td></tr>
         </table>
     </div>
 
@@ -194,7 +229,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <h3>How do customers order online? What's the link?</h3>
         <p class="text-sm">Share <code><?= e(rtrim(SLATE_URL, '/')) ?>/order</code> — your public storefront. Customers browse the menu, build a cart, and pay by card (secure Stripe) or choose pay-at-pickup. Their orders appear under <a href="<?= e($url('online.php')) ?>">Online orders</a>. Turn it on (and pick payment options) in <a href="<?= e($url('settings.php')) ?>">Settings → Online ordering</a>. The staff POS URL is separate, requires a login, and must not be shared with customers.</p>
         <h3>Where are the operating procedures &amp; developer reference?</h3>
-        <p class="text-sm">Staff <b>SOP</b>: <code>plugins/restaurant/docs/SOP.md</code> (opening, taking orders, payments, voids, 86-ing, end-of-day, troubleshooting). Developer reference: <code>plugins/restaurant/README.md</code> (data model, <code>RestaurantAPI</code>, roadmap).</p>
+        <p class="text-sm">Staff <b>SOP</b>: <code>plugins/restaurant/docs/SOP.md</code> (opening, taking orders, payments, voids, 86-ing, end-of-day with reports and payments, customer import, troubleshooting). Developer reference: <code>plugins/restaurant/README.md</code> (data model, <code>RestaurantAPI</code>, roadmap).</p>
     </div>
 
 </div>

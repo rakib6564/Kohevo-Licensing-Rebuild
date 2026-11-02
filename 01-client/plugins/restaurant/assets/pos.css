@@ -223,6 +223,7 @@ a.pos-btn:hover, a.pos-btn:focus-visible { color: var(--text); text-decoration: 
 .pos-mods legend small { color: var(--muted); font-weight: 500; }
 .pos-mod { display: flex; align-items: center; gap: 10px; min-height: 44px; border-bottom: 1px solid var(--border); cursor: pointer; }
 .pos-mod:last-child { border-bottom: 0; }
+.pos-mod.is-86 { opacity: .5; cursor: not-allowed; }
 .pos-mod input { width: 20px; height: 20px; accent-color: var(--accent); }
 .pos-mod .pos-muted { margin-left: auto; font-variant-numeric: tabular-nums; }
 .pos-line-sheet { display: flex; flex-direction: column; gap: 16px; }

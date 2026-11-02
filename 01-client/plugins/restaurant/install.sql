@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS `restaurant_customers` (
     `phone`      VARCHAR(40) NULL,
     `email`      VARCHAR(200) NULL,
     `member_ref` VARCHAR(80) NULL,
+    `first_seen_via` VARCHAR(60) NULL,
     `notes`      TEXT NULL,
     `hist_spend_cents` INT UNSIGNED NOT NULL DEFAULT 0,
     `hist_orders`      INT UNSIGNED NOT NULL DEFAULT 0,

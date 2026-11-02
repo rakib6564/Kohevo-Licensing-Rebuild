@@ -72,17 +72,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_ajax'])) {
                 break;
 
             case 'item_mods':
-                echo json_encode(['ok' => true, 'groups' => RestaurantAPI::getItemModifierGroups((int)($_POST['item_id'] ?? 0))]);
+                $iid = (int)($_POST['item_id'] ?? 0);
+                $slots = array_map(function ($sl) {
+                    $sl['choices'] = array_values(array_filter($sl['choices'], fn($c) => !empty($c['is_active'])));
+                    return $sl;
+                }, RestaurantAPI::getComboSlots($iid));
+                echo json_encode(['ok' => true, 'groups' => RestaurantAPI::getItemModifierGroups($iid), 'slots' => $slots]);
                 break;
 
             case 'add_line':
                 if (!$ownOrder($orderId)) $fail(__('restaurant_err_check', 'Check not found.'));
                 $mods = $_POST['modifiers'] ?? [];
                 if (is_string($mods)) $mods = array_filter(explode(',', $mods));
+                $combo = $_POST['combo'] ?? [];
+                if (is_string($combo)) $combo = array_filter(explode(',', $combo));
                 RestaurantAPI::addLine($orderId, [
                     'item_id'   => (int)($_POST['item_id'] ?? 0),
                     'qty'       => (int)($_POST['qty'] ?? 1),
                     'modifiers' => array_map('intval', (array)$mods),
+                    'combo'     => array_map('intval', (array)$combo),
                     'notes'     => (string)($_POST['notes'] ?? ''),
                     'seat'      => (int)($_POST['seat'] ?? 0),
                     'check_no'  => (int)($_POST['check_no'] ?? 1),
@@ -283,8 +291,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_ajax'])) {
 }
 
 // ── Bootstrap data for the initial render ──────────────────────────────────
+// Items that open the choice sheet when tapped: those with modifier groups, and combos.
 $modItemIds = array_map('intval', array_column(Database::rows(
-    "SELECT DISTINCT item_id FROM restaurant_item_modifier_groups WHERE tenant_id = ?", [$tid]), 'item_id'));
+    "SELECT DISTINCT item_id FROM restaurant_item_modifier_groups WHERE tenant_id = ?
+      UNION SELECT id FROM restaurant_items WHERE tenant_id = ? AND is_combo = 1", [$tid, $tid]), 'item_id'));
 $sym = trim(preg_replace('/[0-9.,\s-]/u', '', RestaurantAPI::money(0)));
 
 $boot = [

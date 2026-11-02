@@ -244,21 +244,44 @@
         if (!j.ok) return err(j.error);
         const it = state.menu.items.find((i) => i.id == itemId) || { name: '' };
         let qty = 1;
+        const base = Number(it.price_cents) || 0;
+        const rule = (min, max) => !(Number(min) || Number(max)) ? '' : ' <small>' + (Number(min) === Number(max) ? T('restaurant_pos_choose_n', max) : T('restaurant_pos_choose', min || 0, Number(max) || '∞')) + '</small>';
+        // Combo slots first ("Sides", "Drink"), then the item's modifier groups; both follow the same min/max rules.
+        const slots = (j.slots || []).map((sl) => {
+            const single = Number(sl.max_pick) === 1;
+            return '<fieldset class="pos-mods" data-min="' + Number(sl.min_pick) + '" data-max="' + Number(sl.max_pick) + '" data-name="' + esc(sl.label) + '"><legend>' + esc(sl.label)
+                + (Number(sl.min_pick) > 0 ? ' <em>*</em>' : '') + rule(sl.min_pick, sl.max_pick) + '</legend>'
+                + (sl.choices || []).map((c) => {
+                    const off = Number(c.is_86) === 1;
+                    return '<label class="pos-mod' + (off ? ' is-86' : '') + '"><input type="' + (single ? 'radio' : 'checkbox') + '" name="cs' + sl.id + '" value="' + c.id + '" data-kind="combo" data-delta="' + Number(c.price_delta_cents) + '"' + (off ? ' disabled' : '') + '><span>' + esc(c.name) + (off ? ' · 86' : '') + '</span>'
+                        + '<span class="pos-muted">' + (Number(c.price_delta_cents) ? '+' + money(c.price_delta_cents) : '') + '</span></label>';
+                }).join('') + '</fieldset>';
+        }).join('');
         const groups = (j.groups || []).map((g, gi) => {
             const single = Number(g.max_select) === 1;
-            const rule = (Number(g.min_select) || Number(g.max_select)) ? ' <small>' + T('restaurant_pos_choose', g.min_select || 0, Number(g.max_select) || '∞') + '</small>' : '';
-            return '<fieldset class="pos-mods"><legend>' + esc(g.name) + (Number(g.is_required) ? ' <em>*</em>' : '') + rule + '</legend>'
-                + (g.modifiers || []).map((m) => '<label class="pos-mod"><input type="' + (single ? 'radio' : 'checkbox') + '" name="mg' + gi + '" value="' + m.id + '"><span>' + esc(m.name) + '</span>'
+            const min = Number(g.is_required) ? Math.max(1, Number(g.min_select) || 0) : 0;
+            return '<fieldset class="pos-mods" data-min="' + min + '" data-max="' + Number(g.max_select) + '" data-name="' + esc(g.name) + '"><legend>' + esc(g.name) + (Number(g.is_required) ? ' <em>*</em>' : '') + rule(g.min_select, g.max_select) + '</legend>'
+                + (g.modifiers || []).map((m) => '<label class="pos-mod"><input type="' + (single ? 'radio' : 'checkbox') + '" name="mg' + gi + '" value="' + m.id + '" data-kind="mod" data-delta="' + Number(m.price_delta_cents) + '"><span>' + esc(m.name) + '</span>'
                     + '<span class="pos-muted">' + (Number(m.price_delta_cents) ? money(m.price_delta_cents) : '') + '</span></label>').join('') + '</fieldset>';
         }).join('');
-        sheet(it.name, groups + '<label class="pos-field"><span>' + T('restaurant_pos_note') + '</span><input type="text" id="posModNote" maxlength="255" placeholder="' + T('restaurant_pos_note_ph') + '"></label>'
+        sheet(it.name, slots + groups + '<label class="pos-field"><span>' + T('restaurant_pos_note') + '</span><input type="text" id="posModNote" maxlength="255" placeholder="' + T('restaurant_pos_note_ph') + '"></label>'
             + '<div class="pos-row pos-row-end"><div class="pos-stepper"><button type="button" data-q="-1">' + ICON.minus + '</button><span id="posModQty">1</span><button type="button" data-q="1">' + ICON.plus + '</button></div>'
-            + '<button type="button" class="pos-btn pos-btn-primary" id="posModAdd">' + T('restaurant_pos_add') + '</button></div>', (s) => {
-            $$('[data-q]', s).forEach((b) => b.onclick = () => { qty = Math.max(1, qty + Number(b.dataset.q)); $('#posModQty', s).textContent = qty; });
+            + '<button type="button" class="pos-btn pos-btn-primary" id="posModAdd">' + T('restaurant_pos_add') + ' · <span id="posModTotal">' + money(base) + '</span></button></div>', (s) => {
+            const total = () => { const unit = base + $$('input:checked', s).reduce((a, i) => a + (Number(i.dataset.delta) || 0), 0); $('#posModTotal', s).textContent = money(unit * qty); };
+            $$('[data-q]', s).forEach((b) => b.onclick = () => { qty = Math.max(1, qty + Number(b.dataset.q)); $('#posModQty', s).textContent = qty; total(); });
+            s.addEventListener('change', total);
             $('#posModAdd', s).onclick = async () => {
-                const mods = $$('input:checked', s).map((i) => i.value);
+                // Check every slot and group here too, so the server's refusal is the rare case.
+                for (const fs of $$('fieldset.pos-mods', s)) {
+                    const n = $$('input:checked', fs).length, min = Number(fs.dataset.min) || 0, max = Number(fs.dataset.max) || 0;
+                    if (n < min) return toast(T('restaurant_pos_pick_min', min, fs.dataset.name), 'error');
+                    if (max > 0 && n > max) return toast(T('restaurant_pos_pick_max', max, fs.dataset.name), 'error');
+                }
+                const mods = $$('input[data-kind="mod"]:checked', s).map((i) => i.value);
+                const combo = $$('input[data-kind="combo"]:checked', s).map((i) => i.value);
+                const note = $('#posModNote', s) ? $('#posModNote', s).value : '';
                 closeSheet();
-                const r = await act('add_line', { item_id: itemId, qty, modifiers: mods, notes: $('#posModNote', s) ? $('#posModNote', s).value : '', seat: state.seat || 0, check_no: state.check || 1 });
+                const r = await act('add_line', { item_id: itemId, qty, modifiers: mods, combo, notes: note, seat: state.seat || 0, check_no: state.check || 1 });
                 if (r) flash(it.name);
             };
         });

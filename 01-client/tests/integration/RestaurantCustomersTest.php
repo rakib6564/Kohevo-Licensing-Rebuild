@@ -1,11 +1,18 @@
 <?php
 /**
  * Restaurant — customer history, archiving, and CSV import / export
- * (Phase 3). History is checked against sums worked out by hand; the import
- * runs a 423-row file built here with the awkward rows real exports have:
- * blank names, a name that is an email, a ".con" typo, names wrapped over
- * two lines, $ amounts, both date formats, three bad rows and two rows that
- * must update rather than duplicate. The round trip runs in a scratch tenant.
+ * (Phase 3). History is checked against sums worked out by hand.
+ *
+ * The import runs a synthetic 423-row file in the shape of a real SpotOn
+ * customer-directory export (checked against one, which stays out of git):
+ * "-" for a blank name, email or phone; 91 blank names; two names that are
+ * email addresses; one ".con" email typo kept as-is; Last Visit as
+ * "4:56 PM 10/31/2026", or "N/A" for the 48 never seen; First Seen as the
+ * channel ("ORD Web", "Counter"…); eight-digit member IDs with leading zeros;
+ * "$1,234.50" amounts. Two rows share a phone written differently and one
+ * matches a customer already here. A small second file carries the bad rows
+ * and wrapped names for the line-number report. The round trip runs in a
+ * scratch tenant.
  *
  * Every row it creates is deleted and every setting it changes is restored.
  */
@@ -23,33 +30,51 @@ $rctSet = function (string $key, ?string $value) use (&$rct): void {
     else Database::setSetting($key, $value);
 };
 
-/** The 423-row import file. Rows 4 and 5 hold a line break inside the name, so later rows start one line further down each. */
-$rctFile = function (): string {
+/** Member ID of fixture row $k: eight digits, leading zeros kept. */
+$rctRef = fn(int $k): string => sprintf('%08d', ($k * 2654435761) % 100000000);
+
+/**
+ * The 423-row file in SpotOn's shape. Row 99 and row 100 share a phone
+ * (written two ways); row 200 has the regular's phone. Rows 4 and 6 hold a
+ * name wrapped over two lines.
+ */
+$rctFile = function () use ($rctRef): string {
+    $channels = ['ORD Web', 'Counter', 'Tablet', 'POS', 'SpotOn App', 'DoorDash Online Ordering'];
     $fh = fopen('php://temp', 'w+');
-    fputcsv($fh, ['name', 'MEMBER ID', 'Email', 'Phone', 'Avg. Spend', 'Total Spend', 'Last Visit', 'First Seen', 'Loyalty points'], ',', '"', '');
+    fputcsv($fh, ['Name', 'Member ID', 'Email', 'Phone', 'Avg. Spend', 'Total Spend', 'Last Visit', 'First Seen'], ',', '"', '');
+    $money = fn(int $c) => '$' . number_format($c / 100, 2);
     for ($k = 1; $k <= 423; $k++) {
-        $name  = $k % 10 === 0 ? '' : 'RCT Guest ' . $k;
-        $email = 'rct' . $k . '@example.com';
-        $phone = sprintf('(555) 01%d-%04d', intdiv($k, 1000), $k);
-        $ref   = $k % 3 === 0 ? '' : 'RCT-M' . $k;
-        $avg   = '$20.00'; $total = '$' . number_format(20 * ($k % 5 + 1), 2); // 1–5 visits of 20.00
-        $last  = $k % 2 ? '3/9/2024' : '2024-03-09';
-        $first = $k % 2 ? '2021-01-15' : '1/15/2021';
-        if ($k === 2)  $name = 'rct.name.is.email@example.com';
-        if ($k === 3)  $email = 'rct3@gmail.con';
+        $name  = ($k % 4 === 1 && $k <= 361) ? '-' : 'RCT Guest ' . $k;               // 91 blank
+        $email = $k % 7 === 3 ? '-' : 'rct' . $k . '@example.com';
+        $phone = ($k % 7 === 0 && $k !== 7) ? '-' : sprintf('(555) 210-%04d', $k);    // 59 without
+        if ($k >= 376) { $avg = $total = 0; $last = 'N/A'; }                          // 48 never seen
+        else {
+            $avg = 1000 + ($k * 37) % 9000; $total = $avg * (1 + $k % 3);
+            $last = sprintf('%d:%02d %s %02d/%02d/%04d', 1 + $k % 12, $k % 60, $k % 3 ? 'PM' : 'AM', 1 + $k % 12, 1 + $k % 28, 2024 + $k % 3);
+        }
+        $avgS = $money($avg); $totalS = $money($total);
+        if ($k === 162 || $k === 416) { $name = 'rct.fixture' . $k . '@example.com'; $email = $name; }
+        if ($k === 410) $email = 'rct410@example.con';
         if ($k === 4)  $name = "Mary\nAnn Wrapped";
-        if ($k === 5)  $name = "  Jean   Paul\nDe La  Croix ";
-        if ($k === 10) { $total = '$1,234.50'; $avg = '$411.50'; }
-        if ($k === 50) $email = 'bob@';
-        if ($k === 60) $last = '13/45/2024';
-        if ($k === 70) $total = 'about forty';
-        if ($k === 100) $phone = '555.010.0099';          // row 99's phone, written another way
-        if ($k === 200) { $phone = '+1 555 019 9001'; $total = '100'; $avg = '50'; $last = '2030-12-31'; $first = '5/5/2020'; }
-        fputcsv($fh, [$name, $ref, $email, $phone, $avg, $total, $last, $first, (string)($k * 7)], ',', '"', '');
+        if ($k === 6)  $name = "  Jean   Paul\nDe La  Croix ";
+        if ($k === 10) { $totalS = '$1,234.50'; $avgS = '$411.50'; $last = '4:56 PM 10/31/2026'; }
+        if ($k === 100) $phone = '555.210.0099';                                         // row 99's phone, written another way
+        if ($k === 200) { $phone = '+1 555 019 9001'; $totalS = '$100.00'; $avgS = '$50.00'; $last = '7:05 PM 12/31/2030'; }
+        fputcsv($fh, [$name, $rctRef($k), $email, $phone, $avgS, $totalS, $last, $channels[$k % 6]], ',', '"', '');
     }
     rewind($fh);
     return (string) stream_get_contents($fh);
 };
+
+/** A short file with the bad rows: a wrapped name pushes every later row down a line. */
+$rctMessy = "Name,Member ID,Email,Phone,Avg. Spend,Total Spend,Last Visit,First Seen\n"
+    . "RCT Messy One,RCTX1,one@example.com,(555) 220-0001,$20.00,$20.00,1:00 PM 01/02/2026,Counter\n"
+    . "\"Pat\nRivera\",RCTX2,pat@example.com,(555) 220-0002,$20.00,$40.00,2026-01-03,POS\n"
+    . "RCT Messy Three,RCTX3,bob@,(555) 220-0003,$20.00,$20.00,N/A,POS\n"
+    . "RCT Messy Four,RCTX4,four@example.com,-,$20.00,$20.00,1/4/2026,Tablet\n"
+    . "RCT Messy Five,RCTX5,five@example.com,(555) 220-0005,$20.00,$20.00,13/45/2026,Tablet\n"
+    . "RCT Messy Six,RCTX6,six@example.com,(555) 220-0006,$20.00,about forty,1/6/2026,Tablet\n"
+    . "-,RCTX7,-,-,$0.00,$0.00,N/A,POS\n";
 
 try {
     $rctSet('restaurant.currency', 'USD');
@@ -103,49 +128,67 @@ try {
         assert_eq(null, Database::row("SELECT id FROM restaurant_customers WHERE id = ?", [$other]));
     });
 
-    unit('import dry run: 423 rows, every bad row named by its file line, nothing written', function () use ($rctFile): void {
+    unit('import dry run of the SpotOn-shaped file: 423 rows, all good, nothing written', function () use ($rctFile): void {
         $before = (int) Database::value("SELECT COUNT(*) FROM restaurant_customers WHERE tenant_id = ?", [current_tenant_id()]);
         $plan = RestaurantCustomers::plan($rctFile());
         assert_null($plan['fatal']);
-        assert_eq(420, count($plan['rows']));
-        assert_eq([418, 2], [$plan['creates'], $plan['updates']], 'row 100 updates row 99; row 200 updates the regular');
-        assert_eq([53, 63, 73], array_column($plan['errors'], 0), 'rows 50, 60, 70 sit two lines lower because of the wrapped names');
-        assert_true(str_contains($plan['errors'][0][1], 'bob@'), $plan['errors'][0][1]);
-        assert_true(str_contains($plan['errors'][1][1], 'Last Visit'), $plan['errors'][1][1]);
-        assert_true(str_contains($plan['errors'][2][1], 'Total Spend'), $plan['errors'][2][1]);
+        assert_eq([423, [], 0], [count($plan['rows']), $plan['errors'], $plan['skipped']]);
+        assert_eq([421, 2], [$plan['creates'], $plan['updates']], 'row 100 updates row 99; row 200 updates the regular');
+        $rows = $plan['rows'];
+        assert_eq(91, count(array_filter($rows, fn($r) => $r['name'] === '')), '"-" names are blank');
+        assert_eq(2, count(array_filter($rows, fn($r) => str_contains($r['name'], '@'))));
+        assert_eq(['rct410@example.con'], array_values(array_filter(array_column($rows, 'email'), fn($e) => str_ends_with($e, '.con'))));
+        assert_eq(48, count(array_filter($rows, fn($r) => $r['hist_last_visit'] === null)), 'N/A is no last visit');
+        assert_eq(59, count(array_filter($rows, fn($r) => $r['phone'] === '')), '"-" phones are blank');
+        assert_eq(423, count(array_filter($rows, fn($r) => $r['first_seen_via'] !== '')), 'First Seen is a channel');
         assert_eq($before, (int) Database::value("SELECT COUNT(*) FROM restaurant_customers WHERE tenant_id = ?", [current_tenant_id()]));
     });
 
-    unit('import writes the good rows: blank and email names kept, typo kept, wrapped names joined, no duplicate phones', function () use ($rctFile, $cust): void {
+    unit('import dry run names every bad row by its file line and reason; the good rows still go', function () use ($rctMessy): void {
+        $plan = RestaurantCustomers::plan($rctMessy);
+        assert_eq([5, 7, 8], array_column($plan['errors'], 0), 'the wrapped name on lines 3–4 pushes the rest down');
+        assert_true(str_contains($plan['errors'][0][1], 'bob@'), $plan['errors'][0][1]);
+        assert_true(str_contains($plan['errors'][1][1], 'Last Visit'), $plan['errors'][1][1]);
+        assert_true(str_contains($plan['errors'][2][1], 'Total Spend'), $plan['errors'][2][1]);
+        assert_eq(['RCTX1', 'RCTX2', 'RCTX4', 'RCTX7'], array_column($plan['rows'], 'member_ref'));
+        assert_eq('Pat Rivera', $plan['rows'][1]['name']);
+        assert_eq('Member RCTX7', RestaurantCustomers::displayName($plan['rows'][3]), 'nothing but a member ID: shown by it');
+    });
+
+    unit('import writes the SpotOn file: blank and email names kept, typo kept, wrapped names joined, no duplicate phones', function () use ($rctFile, $rctRef, $cust): void {
         $res = RestaurantCustomers::import($rctFile());
-        assert_eq(420, $res['written']);
+        assert_eq(423, $res['written']);
         $tid = current_tenant_id();
-        $by = fn(string $ref) => Database::row("SELECT * FROM restaurant_customers WHERE tenant_id = ? AND member_ref = ?", [$tid, $ref]);
-        assert_eq('', (string) Database::value("SELECT name FROM restaurant_customers WHERE tenant_id = ? AND email = 'rct20@example.com'", [$tid]), 'blank name stays blank');
-        assert_eq('rct20@example.com', RestaurantCustomers::displayName(Database::row("SELECT * FROM restaurant_customers WHERE tenant_id = ? AND email = 'rct20@example.com'", [$tid])), 'shown by email');
-        assert_eq('rct.name.is.email@example.com', $by('RCT-M2')['name']);
-        assert_eq('rct3@gmail.con', (string) Database::value("SELECT email FROM restaurant_customers WHERE tenant_id = ? AND phone LIKE '%0003'", [$tid]));
-        assert_eq('Mary Ann Wrapped', $by('RCT-M4')['name']);
-        assert_eq('Jean Paul De La Croix', $by('RCT-M5')['name']);
-        assert_eq(null, $by('RCT-M50'), 'the bad rows are not written');
+        $by = fn(int $k) => Database::row("SELECT * FROM restaurant_customers WHERE tenant_id = ? AND member_ref = ?", [$tid, $rctRef($k)]);
+        assert_eq('', $by(1)['name'], 'a "-" name is stored blank, not "Guest"');
+        assert_eq('rct1@example.com', RestaurantCustomers::displayName($by(1)), 'and shown by email');
+        assert_eq('rct.fixture162@example.com', $by(162)['name']);
+        assert_eq('rct410@example.con', $by(410)['email']);
+        assert_eq([null, null], [$by(3)['email'], $by(14)['phone']], '"-" email and phone are stored empty');
+        assert_eq('Mary Ann Wrapped', $by(4)['name']);
+        assert_eq('Jean Paul De La Croix', $by(6)['name']);
+        $zero = array_values(array_filter(range(1, 423), fn($k) => str_starts_with($rctRef($k), '0')));
+        assert_true(count($zero) > 0 && (bool)$by($zero[0]), 'a member ID with a leading zero is kept as written');
         $phones = array_map(fn($p) => RestaurantCustomers::normalizePhone($p),
             array_column(Database::rows("SELECT phone FROM restaurant_customers WHERE tenant_id = ? AND phone IS NOT NULL", [$tid]), 'phone'));
         assert_eq(count($phones), count(array_unique($phones)), 'no duplicate phones');
-        assert_eq('5550100099', RestaurantCustomers::normalizePhone($by('RCT-M100')['phone'] ?? $by('RCT-M100')['phone']), 'row 100 landed on row 99');
-        $c10 = RestaurantCustomers::get((int)$by('RCT-M10')['id']);
-        assert_eq([123450, 3, 41150, '2024-03-09', '2021-01-15'], [$c10['spend'], $c10['orders'], $c10['avg'], $c10['last_visit'], $c10['first_seen']]);
+        $c10 = RestaurantCustomers::get((int)$by(10)['id']);
+        assert_eq([123450, 3, 41150, '2026-10-31', 'SpotOn App'], [$c10['spend'], $c10['orders'], $c10['avg'], $c10['last_visit'], $c10['first_seen_via']]);
+        $c99 = RestaurantCustomers::get((int)$by(99)['id']);
+        $avg = fn(int $k) => 1000 + ($k * 37) % 9000;
+        assert_eq([$avg(99) * 1 + $avg(100) * 2, 3], [$c99['spend'], $c99['orders']], 'two rows on one phone: one customer, both histories added');
+        assert_eq(null, $by(100), 'row 100 kept row 99\'s member ID');
         $reg = RestaurantCustomers::get($cust);
-        assert_eq('RCT-M200', $reg['member_ref']);
-        assert_eq('RCT Regular', $reg['name'], 'a blank Name in the file never erases one');
-        assert_eq([16100, 5, 3220, '2031-04-09', '2020-05-05'], [$reg['spend'], $reg['orders'], $reg['avg'], $reg['last_visit'], $reg['first_seen']],
-            'imported history merges: totals add, last visit the later, first seen the earlier');
+        assert_eq([$rctRef(200), 'RCT Regular', 'Tablet'], [$reg['member_ref'], $reg['name'], $reg['first_seen_via']], 'blanks filled in, the name kept');
+        assert_eq([16100, 5, 3220, '2031-04-09', '2031-04-01'], [$reg['spend'], $reg['orders'], $reg['avg'], $reg['last_visit'], $reg['first_seen']],
+            'imported history merges: totals add, last visit the later');
     });
 
     unit('re-importing the same file updates instead of duplicating, and history is not counted twice', function () use ($rctFile, $cust): void {
         $tid = current_tenant_id();
         $count = (int) Database::value("SELECT COUNT(*) FROM restaurant_customers WHERE tenant_id = ?", [$tid]);
         $res = RestaurantCustomers::import($rctFile());
-        assert_eq([0, 420], [$res['creates'], $res['updates']]);
+        assert_eq([0, 423], [$res['creates'], $res['updates']]);
         assert_eq($count, (int) Database::value("SELECT COUNT(*) FROM restaurant_customers WHERE tenant_id = ?", [$tid]));
         assert_eq(16100, RestaurantCustomers::get($cust)['spend']);
         $audit = Database::row("SELECT * FROM audit_log WHERE action = 'restaurant.customers_imported' ORDER BY id DESC LIMIT 1");
