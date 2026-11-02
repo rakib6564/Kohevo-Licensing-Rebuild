@@ -118,13 +118,15 @@ a.pos-btn:hover, a.pos-btn:focus-visible { color: var(--text); text-decoration: 
 .pos-item.is-86 .pos-item-name { text-decoration: line-through; }
 
 /* Floor */
-.pos-floor-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-right: 14px; flex-wrap: wrap; }
-.pos-legend { display: flex; gap: 12px; font-size: 13px; color: var(--muted); }
-.pos-legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.pos-floor-h { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 20px; padding: 12px 14px 6px; flex: none; }
+.pos-floor-h .pos-cats { padding: 0; }
+.pos-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.pos-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pos-legend span::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 3px; }
 .pos-legend .is-open::before { background: var(--success); }
 .pos-legend .is-seated::before { background: var(--info); }
 .pos-legend .is-dirty::before { background: var(--warning); }
-.pos-floor-map { flex: 1; overflow: auto; padding: 8px 14px 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; align-content: start; }
+.pos-floor-map { flex: 1; overflow: auto; padding: 10px 14px 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; align-content: start; }
 .pos-floor-map.is-placed { display: block; position: relative; min-height: 600px; }
 .pos-floor-map.is-placed .pos-table { position: absolute; width: 130px; }
 .pos-table { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 120px; padding: 10px; border: 2px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); cursor: pointer; text-align: center; transition: transform .06s; }
