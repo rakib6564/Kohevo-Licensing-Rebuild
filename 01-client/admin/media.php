@@ -247,8 +247,46 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
 .media-used li { display: flex; gap: 6px; align-items: baseline; }
 .media-used-src { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; color: var(--muted); flex: none; }
 .media-panel-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-@media (max-width: 960px) { .media-layout.has-panel { grid-template-columns: minmax(0, 1fr); } .media-panel { position: static; order: -1; } }
-@media (max-width: 600px) { .media-hero-counts { display: none; } .media-search { margin-left: 0; width: 100%; } }
+.media-backdrop { display: none; }
+/* Narrow screens: the grid stays in view and the details open as a bottom sheet over it. */
+@media (max-width: 960px) {
+    .media-layout.has-panel { grid-template-columns: minmax(0, 1fr); }
+    .media-backdrop { display: block; position: fixed; inset: 0; z-index: 1000; background: rgba(15, 17, 23, 0.45); }
+    .media-panel { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 1001; max-height: 82vh; overflow-y: auto; overscroll-behavior: contain;
+        border-radius: var(--radius-xl) var(--radius-xl) 0 0; border-bottom: 0; box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.18); }
+    .media-panel-head { position: sticky; top: 0; z-index: 1; background: var(--surface); }
+    .media-panel-prev, .media-panel-prev img, .media-panel-prev video { max-height: 200px; }
+    .media-panel-body { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 600px) {
+    .media-wrap { gap: 10px; }
+    .media-hero { padding: 10px 14px; }
+    .media-hero h1 { font-size: 16px; }
+    .media-hero p, .media-hero-counts { display: none; }
+    .media-uploadbar { padding: 8px 10px; gap: 8px; }
+    .media-uploadbar form { flex-wrap: nowrap; min-width: 0; }
+    .media-uploadbar input[type=file] { min-width: 0; max-width: 100%; font-size: 12px; }
+    .media-uploadbar .media-spacer { display: none; }
+    .media-toolbar { gap: 8px; }
+    .media-tabs { width: 100%; box-sizing: border-box; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .media-tabs::-webkit-scrollbar { display: none; }
+    .media-tab { flex: none; padding: 6px 10px; }
+    .media-sortform { flex: none; }
+    /* The admin's phone form styles reset select padding; keep room for the arrow. */
+    .media-toolbar .media-sortform select.media-sort { padding: 6px 30px 6px 12px; font-size: 14px; }
+    .media-search { flex: 1; margin-left: 0; min-width: 0; padding: 5px 10px; }
+    .media-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .media-card { border-radius: var(--radius-md, 8px); }
+    .media-card:hover { transform: none; }
+    .media-meta { padding: 5px 6px 6px; }
+    .media-name { font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; }
+    .media-sub { display: none; }
+    .media-row { margin-top: 4px; gap: 4px; }
+    .media-badge { font-size: 9.5px; padding: 1px 5px; }
+    .media-ico-btn { width: 22px; height: 22px; }
+    .media-ico-btn svg { width: 12px; height: 12px; }
+    .media-row .media-copy { display: none; }
+}
 </style>
 
 <div class="media-wrap">
@@ -390,6 +428,7 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
         $selIsImage = $sel['kind'] === 'image';
         $selDim = ($sel['width'] && $sel['height']) ? $sel['width'] . ' × ' . $sel['height'] . ' px' : '';
     ?>
+    <a class="media-backdrop" href="<?= e($closeUrl) ?>" aria-hidden="true" tabindex="-1"></a>
     <aside class="media-panel" aria-labelledby="media-panel-title">
         <div class="media-panel-head">
             <h2 id="media-panel-title" title="<?= e($sel['original_name']) ?>"><?= e($sel['original_name']) ?></h2>
@@ -478,6 +517,14 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
 </div>
 
 <script>
+// Escape closes the details panel (the bottom sheet on a phone).
+(function () {
+    var backdrop = document.querySelector('.media-backdrop');
+    if (!backdrop) return;
+    document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape' && !/^(INPUT|TEXTAREA|SELECT)$/.test((ev.target && ev.target.tagName) || '')) window.location.href = backdrop.href;
+    });
+})();
 document.querySelectorAll('.media-copy').forEach(function (btn) {
     btn.addEventListener('click', function () {
         var url = btn.getAttribute('data-url') || '';
