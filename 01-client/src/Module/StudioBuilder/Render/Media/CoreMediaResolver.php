@@ -46,14 +46,21 @@ final class CoreMediaResolver implements MediaResolverInterface
                 && ($row['kind'] ?? '') === 'image'
                 && Media::isManagedPath((string) ($row['path'] ?? ''))
             ) {
-                $url = Media::url((string) $row['path']);
-                if ($url !== '' && preg_match('~^(https?://[^\s"\'<>]+|/[^/\s"\'<>][^\s"\'<>]*)$~i', $url) === 1) {
+                $url = Media::versioned(Media::url((string) $row['path']), $row);
+                if ($url !== '' && self::safeUrl($url)) {
+                    $srcset = [];
+                    foreach (is_array($row['variants'] ?? null) ? $row['variants'] : [] as $w => $variantUrl) {
+                        if (is_int($w) && $w > 0 && is_string($variantUrl) && self::safeUrl($variantUrl)) {
+                            $srcset[$w] = $variantUrl;
+                        }
+                    }
                     $resolved = new ResolvedMedia(
                         $mediaId,
                         $url,
                         isset($row['width']) && is_int($row['width']) && $row['width'] > 0 ? $row['width'] : null,
                         isset($row['height']) && is_int($row['height']) && $row['height'] > 0 ? $row['height'] : null,
                         trim((string) ($row['alt_text'] ?? '')),
+                        $srcset,
                     );
                 }
             }
@@ -62,5 +69,11 @@ final class CoreMediaResolver implements MediaResolverInterface
         }
 
         return $resolved;
+    }
+
+    /** An absolute http(s) URL or a root-relative path, with nothing that could leave an attribute. */
+    private static function safeUrl(string $url): bool
+    {
+        return preg_match('~^(https?://[^\s"\'<>]+|/[^/\s"\'<>][^\s"\'<>]*)$~i', $url) === 1;
     }
 }

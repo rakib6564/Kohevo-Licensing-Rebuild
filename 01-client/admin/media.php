@@ -12,6 +12,10 @@
  *   POST _action=delete          → delete one file by id (refused if in use)
  *   POST _action=import          → scan known /uploads folders for new files
  *   POST _action=update_meta     → save alt text, title and description of one file
+ *   POST _action=replace         → swap a file for a new upload of the same type (keeps id and references)
+ *   POST _action=edit_image      → rotate, flip or crop an image, in place or as a new file
+ *   POST _action=generate_sizes  → make WebP sizes for images uploaded before sizes existed (one batch)
+ *   POST _action=image_settings  → turn image sizes / photo clean-up on or off
  *
  * Query:
  *   ?type=all|image|video|document   ?usage=all|in_use|unused   ?q=…
@@ -29,6 +33,8 @@ $currentNav = 'media';
 
 $canUpload = Auth::can('media.upload') || Auth::isSuperAdmin();
 $canDelete = Auth::can('media.delete') || Auth::isSuperAdmin();
+$canSettings = Auth::can('settings.edit') || Auth::isSuperAdmin();
+$continueSizes = false;
 
 $flash = null;
 
@@ -104,6 +110,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $flash = !empty($r['ok'])
                     ? ['type' => 'success', 'msg' => __('media_details_saved', 'Details saved.')]
                     : ['type' => 'error', 'msg' => __('media_details_not_saved', 'The details could not be saved.')];
+            }
+        }
+
+        elseif ($action === 'replace') {
+            if (!$canUpload) {
+                $flash = ['type' => 'error', 'msg' => __('no_permission', 'You do not have permission to edit media.')];
+            } else {
+                $r = Media::replaceFile((int)($_POST['id'] ?? 0), 'file');
+                $flash = !empty($r['ok'])
+                    ? ['type' => 'success', 'msg' => __('media_replaced', 'File replaced. Every page using it now shows the new file.')]
+                    : ['type' => 'error', 'msg' => (string)($r['error'] ?? __('media_replace_failed', 'The file could not be replaced.'))];
+            }
+        }
+
+        elseif ($action === 'edit_image') {
+            if (!$canUpload) {
+                $flash = ['type' => 'error', 'msg' => __('no_permission', 'You do not have permission to edit media.')];
+            } else {
+                $op  = (string)($_POST['op'] ?? '');
+                $ops = match ($op) {
+                    'rotate_left'  => ['rotate' => 270],
+                    'rotate_right' => ['rotate' => 90],
+                    'flip_h'       => ['flip' => 'h'],
+                    'flip_v'       => ['flip' => 'v'],
+                    'crop'         => ['crop' => [$_POST['x'] ?? 0, $_POST['y'] ?? 0, $_POST['w'] ?? 0, $_POST['h'] ?? 0]],
+                    default        => [],
+                };
+                $asCopy = !empty($_POST['as_copy']);
+                $r = $ops === [] ? ['ok' => false] : Media::editImage((int)($_POST['id'] ?? 0), $ops, $asCopy);
+                if (!empty($r['ok'])) {
+                    $flash = ['type' => 'success', 'msg' => $asCopy ? __('media_edited_copy', 'Saved as a new file.') : __('media_edited', 'Image updated.')];
+                    // A copy opens in the panel; an in-place edit stays where it is.
+                    if ($asCopy && !empty($r['item']['id'])) $_GET['id'] = (int)$r['item']['id'];
+                } else {
+                    $flash = ['type' => 'error', 'msg' => (string)($r['error'] ?? __('media_edit_failed', 'The image could not be edited.'))];
+                }
+            }
+        }
+
+        elseif ($action === 'generate_sizes') {
+            if (!$canUpload) {
+                $flash = ['type' => 'error', 'msg' => __('no_permission', 'You do not have permission to edit media.')];
+            } else {
+                $r = Media::generateMissing(20);
+                $flash = ['type' => 'success', 'msg' => sprintf(
+                    __('media_sizes_batch', 'Checked %1$d image(s), made %2$d resized cop(ies). %3$d left.'),
+                    (int)$r['done'], (int)$r['files'], (int)$r['left'])];
+                $continueSizes = !empty($_POST['continue']) && $r['left'] > 0 && $r['done'] > 0;
+            }
+        }
+
+        elseif ($action === 'image_settings') {
+            if (!$canSettings) {
+                $flash = ['type' => 'error', 'msg' => __('no_permission', 'You do not have permission to change settings.')];
+            } else {
+                Database::setSetting('media_image_sizes', empty($_POST['image_sizes']) ? '0' : '1');
+                Database::setSetting('media_strip_metadata', empty($_POST['strip_metadata']) ? '0' : '1');
+                AuditLog::record('media.settings', '', ['image_sizes' => !empty($_POST['image_sizes']), 'strip_metadata' => !empty($_POST['strip_metadata'])]);
+                $flash = ['type' => 'success', 'msg' => __('media_settings_saved', 'Image settings saved.')];
             }
         }
 
@@ -296,6 +361,28 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
 .media-layout.has-panel .media-list-head, .media-layout.has-panel .view-list .media-card { grid-template-columns: 56px minmax(0, 1fr) 76px 150px; }
 .media-layout.has-panel .view-list .media-col-type, .media-layout.has-panel .view-list .media-col-dim, .media-layout.has-panel .view-list .media-col-date { display: none; }
 
+.media-settings { flex-basis: 100%; font-size: 12.5px; }
+.media-settings summary { cursor: pointer; font-weight: 600; color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; }
+.media-settings-body { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
+.media-settings-form { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; margin: 0; }
+.media-settings-form label { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; line-height: 1.35; }
+.media-sizes-form { margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.media-edit-form { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.media-edit-tools, .media-crop-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.media-edit-tools[hidden], .media-crop-bar[hidden] { display: none; }
+.media-keep { display: flex !important; gap: 6px; align-items: center; font-weight: 400 !important; font-size: 12px !important; color: var(--text-2); }
+.media-replace { margin: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.media-replace input[type=file] { font-size: 12px; max-width: 100%; }
+.media-panel-prev { position: relative; }
+.media-panel-prev.is-cropping img { opacity: .55; }
+.media-crop-box { position: absolute; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 0 0 9999px rgba(0,0,0,.35); cursor: move; touch-action: none; }
+.media-crop-h { position: absolute; width: 14px; height: 14px; background: #fff; border: 1px solid rgba(0,0,0,.6); border-radius: 3px; }
+.media-crop-h.h-nw { left: -8px; top: -8px; cursor: nwse-resize; }
+.media-crop-h.h-ne { right: -8px; top: -8px; cursor: nesw-resize; }
+.media-crop-h.h-sw { left: -8px; bottom: -8px; cursor: nesw-resize; }
+.media-crop-h.h-se { right: -8px; bottom: -8px; cursor: nwse-resize; }
+.media-panel-prev.is-cropping { overflow: hidden; }
+
 .media-backdrop { display: none; }
 /* Narrow screens: the grid stays in view and the details open as a bottom sheet over it. */
 @media (max-width: 960px) {
@@ -392,6 +479,38 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
             <input type="hidden" name="_action" value="import">
             <button type="submit" class="btn btn-sm"><?= __('import_existing', 'Import existing files') ?></button>
         </form>
+        <?php
+        $sizesOn = Media::sizesEnabled();
+        $pendingSizes = $sizesOn ? Media::pendingVariantsCount() : 0;
+        ?>
+        <details class="media-settings" <?= in_array($_POST['_action'] ?? '', ['image_settings', 'generate_sizes'], true) ? 'open' : '' ?>>
+            <summary><?= __('media_image_settings', 'Image settings') ?><?php if ($pendingSizes > 0): ?> <span class="media-tab-n"><?= (int)$pendingSizes ?></span><?php endif; ?></summary>
+            <div class="media-settings-body">
+                <?php if ($canSettings): ?>
+                <form method="post" class="media-settings-form">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="_action" value="image_settings">
+                    <label><input type="checkbox" name="image_sizes" value="1" <?= $sizesOn ? 'checked' : '' ?>>
+                        <?= __('media_setting_sizes', 'Make smaller WebP copies of new images (480, 960 and 1600 px wide) so pages load faster') ?></label>
+                    <label><input type="checkbox" name="strip_metadata" value="1" <?= Media::stripMetadataEnabled() ? 'checked' : '' ?>>
+                        <?= __('media_setting_strip', 'Turn phone photos upright and remove their hidden data (GPS location, camera details)') ?></label>
+                    <button type="submit" class="btn btn-sm"><?= __('save', 'Save') ?></button>
+                </form>
+                <?php endif; ?>
+                <?php if ($sizesOn && $pendingSizes > 0): ?>
+                <form method="post" class="media-sizes-form" id="media-sizes-form">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="_action" value="generate_sizes">
+                    <input type="hidden" name="continue" value="1">
+                    <p class="media-hint"><?= sprintf(__('media_sizes_pending', '%d image(s) uploaded earlier have no smaller copies yet. Each image gets up to 3 extra files.'), (int)$pendingSizes) ?></p>
+                    <button type="submit" class="btn btn-sm btn-primary"><?= __('media_generate_sizes', 'Generate sizes') ?></button>
+                </form>
+                <?php if ($continueSizes): ?><script>setTimeout(function () { var f = document.getElementById('media-sizes-form'); if (f) f.submit(); }, 400);</script><?php endif; ?>
+                <?php elseif ($sizesOn): ?>
+                <p class="media-hint"><?= __('media_sizes_done', 'Every image has its smaller copies.') ?></p>
+                <?php endif; ?>
+            </div>
+        </details>
     </div>
     <?php endif; ?>
 
@@ -462,7 +581,7 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
                 <a class="media-pick" href="<?= e($selUrl((int)$f['id'])) ?>" title="<?= e(__('media_show_details', 'Show details')) ?>">
                 <div class="media-thumb">
                     <?php if ($f['kind'] === 'image'): ?>
-                        <img src="<?= e($f['url']) ?>" alt="<?= e($f['original_name']) ?>" loading="lazy">
+                        <img src="<?= e($f['thumb_url']) ?>" alt="<?= e($f['original_name']) ?>" loading="lazy">
                     <?php elseif (Media::isVideo($f)): ?>
                         <video src="<?= e($f['url']) ?>" preload="metadata" muted playsinline aria-label="<?= e($f['original_name']) ?>"></video>
                     <?php else: ?>
@@ -527,7 +646,7 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
         </div>
         <div class="media-panel-prev">
             <?php if ($selIsImage): ?>
-                <img src="<?= e($sel['url']) ?>" alt="<?= e($sel['alt_text']) ?>">
+                <img src="<?= e(Media::versioned($sel['url'], $sel)) ?>" alt="<?= e($sel['alt_text']) ?>" data-crop-img>
             <?php elseif (Media::isVideo($sel)): ?>
                 <video src="<?= e($sel['url']) ?>" controls preload="metadata" playsinline></video>
             <?php else: ?>
@@ -542,7 +661,56 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
                 <dt><?= __('media_file_size', 'File size') ?></dt><dd><?= e($fmtSize($sel['size_bytes'])) ?></dd>
                 <dt><?= __('media_uploaded', 'Uploaded') ?></dt><dd><?= e($sel['uploaded_at']) ?></dd>
                 <dt><?= __('media_url', 'URL') ?></dt><dd><a href="<?= e($sel['url']) ?>" target="_blank" rel="noopener"><?= e($sel['path']) ?></a></dd>
+                <?php if ($selIsImage && $sel['variants']): ?>
+                <dt><?= __('media_sizes', 'Sizes') ?></dt><dd><?php foreach ($sel['variants'] as $vw => $vu): ?><a href="<?= e($vu) ?>" target="_blank" rel="noopener"><?= (int)$vw ?></a> <?php endforeach; ?><span class="media-hint">px · WebP</span></dd>
+                <?php endif; ?>
             </dl>
+
+            <?php if ($canUpload && $selIsImage && \Slate\Services\Media\ImageProcessor::supports($sel['mime'])): ?>
+            <div class="media-edit">
+                <h3><?= __('media_edit_image', 'Edit image') ?></h3>
+                <form method="post" class="media-edit-form" data-crop-form>
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="_action" value="edit_image">
+                    <input type="hidden" name="id" value="<?= (int)$sel['id'] ?>">
+                    <input type="hidden" name="x" value=""><input type="hidden" name="y" value=""><input type="hidden" name="w" value=""><input type="hidden" name="h" value="">
+                    <div class="media-edit-tools" data-tools>
+                        <button type="submit" name="op" value="rotate_left" class="media-ico-btn" title="<?= e(__('media_rotate_left', 'Rotate left')) ?>" aria-label="<?= e(__('media_rotate_left', 'Rotate left')) ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+                        <button type="submit" name="op" value="rotate_right" class="media-ico-btn" title="<?= e(__('media_rotate_right', 'Rotate right')) ?>" aria-label="<?= e(__('media_rotate_right', 'Rotate right')) ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
+                        <button type="submit" name="op" value="flip_h" class="media-ico-btn" title="<?= e(__('media_flip_h', 'Flip horizontally')) ?>" aria-label="<?= e(__('media_flip_h', 'Flip horizontally')) ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7 3 12l5 5V7z"/><path d="M16 7l5 5-5 5V7z"/></svg></button>
+                        <button type="submit" name="op" value="flip_v" class="media-ico-btn" title="<?= e(__('media_flip_v', 'Flip vertically')) ?>" aria-label="<?= e(__('media_flip_v', 'Flip vertically')) ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="M7 8l5-5 5 5H7z"/><path d="M7 16l5 5 5-5H7z"/></svg></button>
+                        <button type="button" class="btn btn-sm" data-crop-start><?= __('media_crop', 'Crop') ?></button>
+                    </div>
+                    <div class="media-crop-bar" data-crop-bar hidden>
+                        <select class="media-sort" data-crop-ratio aria-label="<?= e(__('media_crop_ratio', 'Shape')) ?>">
+                            <option value="0"><?= __('media_crop_free', 'Free') ?></option>
+                            <option value="1">1:1</option>
+                            <option value="1.3333">4:3</option>
+                            <option value="1.5">3:2</option>
+                            <option value="1.7778">16:9</option>
+                            <option value="0.8">4:5</option>
+                        </select>
+                        <span class="media-hint" data-crop-size></span>
+                        <button type="submit" name="op" value="crop" class="btn btn-sm btn-primary"><?= __('media_crop_apply', 'Apply crop') ?></button>
+                        <button type="button" class="btn btn-sm" data-crop-cancel><?= __('cancel', 'Cancel') ?></button>
+                    </div>
+                    <label class="media-keep"><input type="checkbox" name="as_copy" value="1" checked> <?= __('media_keep_original', 'Keep the original (save as a new file)') ?></label>
+                </form>
+            </div>
+
+            <?php endif; ?>
+
+            <?php if ($canUpload): ?>
+            <form method="post" enctype="multipart/form-data" class="media-replace">
+                <?= csrf_field() ?>
+                <input type="hidden" name="_action" value="replace">
+                <input type="hidden" name="id" value="<?= (int)$sel['id'] ?>">
+                <h3><?= __('media_replace', 'Replace file') ?></h3>
+                <input type="file" name="file" required accept=".<?= e(strtolower(pathinfo($sel['path'], PATHINFO_EXTENSION))) ?>">
+                <p class="media-hint"><?= sprintf(__('media_replace_hint', 'Same type (.%s). Keeps the ID, so every page using it shows the new file.'), e(strtolower(pathinfo($sel['path'], PATHINFO_EXTENSION)))) ?></p>
+                <button type="submit" class="btn btn-sm"><?= __('media_replace_btn', 'Upload replacement') ?></button>
+            </form>
+            <?php endif; ?>
 
             <?php if ($canUpload): ?>
             <form method="post">
@@ -606,6 +774,72 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
 </div>
 
 <script>
+// Crop: a box over the preview; its position in the image's own pixels goes into the form.
+(function () {
+    var form = document.querySelector('[data-crop-form]');
+    var img = document.querySelector('[data-crop-img]');
+    if (!form || !img) return;
+    var bar = form.querySelector('[data-crop-bar]'), tools = form.querySelector('[data-tools]');
+    var ratioSel = form.querySelector('[data-crop-ratio]'), sizeOut = form.querySelector('[data-crop-size]');
+    var wrap = img.parentNode, box = null, r = null, drag = null;
+    var field = function (n) { return form.querySelector('input[name="' + n + '"]'); };
+    var W = function () { return img.clientWidth; }, H = function () { return img.clientHeight; };
+    var ratio = function () { return parseFloat(ratioSel.value) || 0; };
+    function clamp() {
+        var min = 16;
+        r.w = Math.max(min, Math.min(r.w, W())); r.h = Math.max(min, Math.min(r.h, H()));
+        r.x = Math.max(0, Math.min(r.x, W() - r.w)); r.y = Math.max(0, Math.min(r.y, H() - r.h));
+    }
+    function draw() {
+        clamp();
+        box.style.left = (img.offsetLeft + r.x) + 'px'; box.style.top = (img.offsetTop + r.y) + 'px';
+        box.style.width = r.w + 'px'; box.style.height = r.h + 'px';
+        var k = img.naturalWidth / W();
+        var px = { x: Math.round(r.x * k), y: Math.round(r.y * k), w: Math.round(r.w * k), h: Math.round(r.h * k) };
+        field('x').value = px.x; field('y').value = px.y; field('w').value = px.w; field('h').value = px.h;
+        sizeOut.textContent = px.w + ' × ' + px.h + ' px';
+    }
+    function fitRatio() {
+        var q = ratio(); if (!q) return;
+        var cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+        r.h = r.w / q; if (r.h > H()) { r.h = H(); r.w = r.h * q; }
+        if (r.w > W()) { r.w = W(); r.h = r.w / q; }
+        r.x = cx - r.w / 2; r.y = cy - r.h / 2;
+    }
+    function start() {
+        if (box) return;
+        wrap.classList.add('is-cropping');
+        box = document.createElement('div'); box.className = 'media-crop-box';
+        ['nw', 'ne', 'sw', 'se'].forEach(function (h) { var d = document.createElement('span'); d.className = 'media-crop-h h-' + h; d.setAttribute('data-h', h); box.appendChild(d); });
+        wrap.appendChild(box);
+        r = { x: W() * 0.1, y: H() * 0.1, w: W() * 0.8, h: H() * 0.8 };
+        fitRatio(); draw();
+        bar.hidden = false; tools.hidden = true;
+        box.addEventListener('pointerdown', function (e) {
+            e.preventDefault(); box.setPointerCapture(e.pointerId);
+            drag = { h: e.target.getAttribute('data-h'), sx: e.clientX, sy: e.clientY, r: { x: r.x, y: r.y, w: r.w, h: r.h } };
+        });
+        box.addEventListener('pointermove', function (e) {
+            if (!drag) return;
+            var dx = e.clientX - drag.sx, dy = e.clientY - drag.sy, o = drag.r, q = ratio();
+            if (!drag.h) { r.x = o.x + dx; r.y = o.y + dy; draw(); return; }
+            var left = drag.h.indexOf('w') >= 0, top = drag.h.indexOf('n') >= 0;
+            r.w = o.w + (left ? -dx : dx); r.h = q ? r.w / q : o.h + (top ? -dy : dy);
+            r.x = left ? o.x + o.w - r.w : o.x; r.y = top ? o.y + o.h - r.h : o.y;
+            draw();
+        });
+        ['pointerup', 'pointercancel'].forEach(function (t) { box.addEventListener(t, function () { drag = null; }); });
+    }
+    function stop() {
+        if (box) box.remove(); box = null; drag = null;
+        wrap.classList.remove('is-cropping');
+        bar.hidden = true; tools.hidden = false;
+        ['x', 'y', 'w', 'h'].forEach(function (n) { field(n).value = ''; });
+    }
+    form.querySelector('[data-crop-start]').addEventListener('click', function () { if (img.complete) start(); else img.addEventListener('load', start, { once: true }); });
+    form.querySelector('[data-crop-cancel]').addEventListener('click', stop);
+    ratioSel.addEventListener('change', function () { if (box) { fitRatio(); draw(); } });
+})();
 // Escape closes the details panel (the bottom sheet on a phone).
 (function () {
     var backdrop = document.querySelector('.media-backdrop');

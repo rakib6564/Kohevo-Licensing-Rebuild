@@ -256,6 +256,114 @@ unit('media usage integration: a file a Studio page uses cannot be deleted; a pa
     }
 });
 
+/** A $w × $h JPEG or PNG, left half red, right half blue. */
+function sbmu_image(string $abs, int $w, int $h): void
+{
+    $im = imagecreatetruecolor($w, $h);
+    imagefilledrectangle($im, 0, 0, intdiv($w, 2) - 1, $h - 1, imagecolorallocate($im, 255, 0, 0));
+    imagefilledrectangle($im, intdiv($w, 2), 0, $w - 1, $h - 1, imagecolorallocate($im, 0, 0, 255));
+    str_ends_with($abs, '.png') ? imagepng($im, $abs) : imagejpeg($im, $abs, 90);
+}
+
+unit('media images integration: WebP sizes, srcset, rotate and crop, versioned URLs, cleanup on delete (real MySQL)', function (): void {
+    if (!\Slate\Services\Media\ImageProcessor::available()) {
+        return; // GD without WebP: the library keeps working, it just makes no copies
+    }
+    $dbName = 'slate_sbmi_' . slate_test_ns();
+    $dirRel = '/uploads/media/zz-sbmi-' . slate_test_ns();
+    $dirAbs = SLATE_ROOT . $dirRel;
+    $pdo = sbmu_pdo($dbName, true);
+    $uploadsExisted = is_dir(SLATE_ROOT . '/uploads');
+    @mkdir($dirAbs, 0775, true);
+    $copies = []; // files a copy-edit writes outside the test folder, removed even when an assertion fails
+    try {
+        sbmu_with_pdo($pdo, static function () use ($dirRel, $dirAbs, &$copies): void {
+            InstallationService::provisionCore();
+            Media::ensureSchema();
+            $tenants = new \Slate\Tenancy\TenantContext();
+            $tenants->runAs(SBMU_A, static function () use ($dirRel, $dirAbs, $tenants, &$copies): void {
+                sbmu_image($dirAbs . '/big.jpg', 2000, 1000);
+                sbmu_image($dirAbs . '/small.png', 300, 200);
+                $big   = Media::register($dirRel . '/big.jpg', ['mime' => 'image/jpeg', 'width' => 2000, 'height' => 1000]);
+                $small = Media::register($dirRel . '/small.png', ['mime' => 'image/png', 'width' => 300, 'height' => 200]);
+                assert_eq(2, Media::pendingVariantsCount(), 'both are unchecked');
+
+                $r = Media::generateMissing(10);
+                assert_eq(['done' => 2, 'files' => 3, 'left' => 0], $r, 'three copies for the big one, none needed for the small one');
+                $row = Media::get($big);
+                assert_eq([480, 960, 1600], array_keys($row['variants']));
+                foreach ([480, 960, 1600] as $w) {
+                    assert_true(is_file($dirAbs . '/big-' . $w . 'w.webp'), "the {$w} px copy is on disk");
+                }
+                assert_true(str_ends_with($row['thumb_url'], '/big-480w.webp'), 'the grid shows the smallest copy: ' . $row['thumb_url']);
+                assert_eq([], Media::get($small)['variants']);
+                assert_eq(0, Media::pendingVariantsCount(), 'the small one is marked checked, not offered again');
+
+                $resolved = (new \Slate\Module\StudioBuilder\Render\Media\CoreMediaResolver($tenants))->resolveImage($big);
+                assert_true($resolved !== null && !str_contains($resolved->url, '?v='), 'an untouched file keeps its plain URL');
+                assert_eq([480, 960, 1600], array_keys($resolved->srcset));
+                $attrs = \Slate\Module\StudioBuilder\Render\Block\CoreRenderers\ImageRenderer::srcsetAttrs($resolved->url, $resolved->width, $resolved->srcset);
+                assert_true(str_contains($attrs, 'big-960w.webp 960w') && str_contains($attrs, 'big.jpg 2000w') && str_contains($attrs, 'sizes="auto, 100vw"'), $attrs);
+
+                // Rotate in place: same id, new shape, copies rebuilt for the new width, URL versioned, listeners told.
+                $seen = [];
+                $listener = static function (mixed $id = 0) use (&$seen): void { $seen[] = $id; };
+                \Hook::addAction('media_updated', $listener);
+                $edit = Media::editImage($big, ['rotate' => 90]);
+                \Hook::removeAction('media_updated', $listener);
+                assert_true(!empty($edit['ok']), json_encode($edit));
+                $row = Media::get($big);
+                assert_eq([1000, 2000, 1], [$row['width'], $row['height'], $row['file_version']]);
+                assert_eq([480, 960], array_keys($row['variants']), 'a 1000 px wide image has no 1600 copy');
+                assert_false(is_file($dirAbs . '/big-1600w.webp'), 'the stale copy is gone');
+                assert_true(str_ends_with($row['variants'][480], '?v=1'), 'copies carry the version too: ' . $row['variants'][480]);
+                assert_eq([$big], $seen, 'Studio is told so pages using it rebuild');
+                $resolved = (new \Slate\Module\StudioBuilder\Render\Media\CoreMediaResolver($tenants))->resolveImage($big);
+                assert_true(str_ends_with($resolved->url, '/big.jpg?v=1'), $resolved->url);
+
+                // Crop as a copy: a new item, the original untouched.
+                $copy = Media::editImage($big, ['crop' => [0, 0, 1000, 1000]], true);
+                assert_true(!empty($copy['ok']), json_encode($copy));
+                $copyRow = $copy['item'];
+                $copies[] = SLATE_ROOT . $copyRow['path'];
+                assert_true($copyRow['id'] !== $big && $copyRow['original_name'] === 'big-edited.jpg', json_encode($copyRow));
+                assert_eq([1000, 1000, 0], [$copyRow['width'], $copyRow['height'], $copyRow['file_version']]);
+                assert_eq(1, Media::get($big)['file_version'], 'the original is not touched');
+                assert_false(!empty(Media::editImage($small, ['crop' => [0, 0, 300, 200]])['ok']), 'a whole-image crop changes nothing');
+                assert_eq(0, Media::get($small)['file_version'], 'and does not bump the version');
+
+                // The importer does not turn the copies into library items.
+                assert_true(Media::isVariantFile('big-480w.webp') && !Media::isVariantFile('big.webp') && !Media::isVariantFile('team-2024w.webp'));
+                $import = Media::importFolder(substr($dirRel, strlen('/uploads/')));
+                assert_eq(0, $import['added'], 'nothing new: ' . json_encode($import));
+
+                // Deleting the file removes its copies too.
+                $del = Media::delete($big);
+                assert_true(!empty($del['ok']), json_encode($del));
+                assert_false(is_file($dirAbs . '/big.jpg') || is_file($dirAbs . '/big-480w.webp') || is_file($dirAbs . '/big-960w.webp'), 'file and copies are gone');
+                Media::delete((int)$copyRow['id']);
+                Media::delete($small);
+            });
+        });
+    } finally {
+        foreach (glob($dirAbs . '/*') ?: [] as $f) {
+            @unlink($f);
+        }
+        @unlink($dirAbs . '/.htaccess');
+        @rmdir($dirAbs);
+        foreach ($copies as $abs) {
+            foreach (array_merge([$abs], glob(preg_replace('/\.[a-z]+$/i', '', $abs) . '-*w.webp') ?: []) as $f) {
+                @unlink($f);
+            }
+        }
+        if (!$uploadsExisted) {
+            // A checkout without an uploads folder gets none left behind.
+            exec('rm -rf ' . escapeshellarg(SLATE_ROOT . '/uploads'));
+        }
+        sbmu_pdo($dbName, false);
+    }
+});
+
 if (!empty($studioMediaUsageStandalone)) {
     exit(unit_summary());
 }

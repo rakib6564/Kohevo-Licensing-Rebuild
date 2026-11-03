@@ -69,8 +69,9 @@ final class CarouselRenderer implements BlockRendererInterface
         foreach ($slides as $index => $slide) {
             $track .= '<figure class="sb-carousel__slide" data-sb-slide>';
             if ($slide['image'] !== null) {
-                $track .= '<img class="sb-carousel__image" src="' . Html::e($slide['image']->url)
-                    . '" alt="' . Html::e($slide['alt']) . '" loading="lazy" decoding="async">';
+                $track .= '<img class="sb-carousel__image" src="' . Html::e($slide['image']->url) . '"'
+                    . ImageRenderer::srcsetAttrs($slide['image']->url, $slide['image']->width, $slide['image']->srcset)
+                    . ' alt="' . Html::e($slide['alt']) . '" loading="lazy" decoding="async">';
             }
             if ($slide['quote'] !== '') {
                 $track .= '<blockquote class="sb-carousel__quote"><p>' . Html::text($slide['quote']) . '</p>';

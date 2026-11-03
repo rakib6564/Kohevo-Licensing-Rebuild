@@ -42,7 +42,7 @@ final class HeroRenderer implements BlockRendererInterface
 
         if ($image !== null) {
             $alt = $scope->imageAlt($mediaRef, $image);
-            $html .= '<div class="sb-hero__media">' . ImageRenderer::img($image->url, $alt, $image->width, $image->height, $mediaRef, false) . '</div>';
+            $html .= '<div class="sb-hero__media">' . ImageRenderer::img($image->url, $alt, $image->width, $image->height, $mediaRef, false, $image->srcset) . '</div>';
         }
 
         return $html . '</div>';

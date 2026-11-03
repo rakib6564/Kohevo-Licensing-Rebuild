@@ -16,5 +16,7 @@ final class ResolvedMedia
         public readonly ?int $height = null,
         /** The library's alt text: what a block shows when its own alt is empty. */
         public readonly string $alt = '',
+        /** @var array<int, string> width => URL of the library's WebP copies, for srcset */
+        public readonly array $srcset = [],
     ) {}
 }
