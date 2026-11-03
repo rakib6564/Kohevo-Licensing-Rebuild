@@ -6,7 +6,7 @@
  *
  *   payment.button    -> no provider: an amount typed in the block (or a range the visitor picks within), one-time or
  *                        monthly, signed at render time (see Payment/PaymentOffer)
- *   payment.link      -> no provider: a Stripe-hosted link typed in the block (see Payment/PaymentLinkUrl)
+ *   payment.link      -> no provider: a Stripe- or PayPal-hosted link typed in the block (see Payment/PaymentLinkUrl)
  *
  * The module widgets (booking.*, membership.*, forms.*) belong to their plugins: each ships
  * `studio-widgets.php` (see PluginWidgetCatalog). A module widget declares its commercial entitlement
@@ -39,7 +39,7 @@ final class ModuleBlockDefinitions
                 version: 1,
                 label: 'Payment Button',
                 title: 'Payment Button',
-                description: 'A Stripe Checkout pay button: a set or visitor-chosen amount, once or monthly',
+                description: 'Pay with Stripe or PayPal: a set or visitor-chosen amount, once or monthly',
                 category: 'business',
                 icon: 'arrow-up-right',
                 schema: FieldSchema::define([
@@ -57,14 +57,14 @@ final class ModuleBlockDefinitions
             new DeclarativeBlockDefinition(
                 type: 'payment.link',
                 version: 1,
-                label: 'Stripe Payment Link',
+                label: 'Payment Link',
                 title: 'Payment link',
-                description: 'A button to a Stripe Payment Link or Buy Button page',
+                description: 'A button to a Stripe or PayPal payment link page',
                 category: 'business',
                 icon: 'link',
                 schema: FieldSchema::define([
                     ['key' => 'label', 'type' => 'string', 'label' => 'Button label', 'required' => false, 'default' => 'Pay now', 'max_length' => 80],
-                    ['key' => 'url', 'type' => 'string', 'label' => 'Stripe link', 'required' => false, 'default' => '', 'max_length' => 600, 'pattern' => PaymentLinkUrl::PATTERN],
+                    ['key' => 'url', 'type' => 'string', 'label' => 'Payment link', 'required' => false, 'default' => '', 'max_length' => 600, 'pattern' => PaymentLinkUrl::PATTERN],
                 ]),
             ),
         ];

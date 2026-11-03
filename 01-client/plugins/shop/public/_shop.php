@@ -211,6 +211,21 @@ function shop_view_checkout(array $totals, array $errors = [], array $old = [], 
         $summary .= '<li class="sb-shop-summary__line"><span>' . e(ShopStoreAPI::lineTitle($line['title'], $line['options_label'])) . ' × ' . (int) $line['qty'] . '</span> <span>' . shop_money((int) $line['line_cents'], (string) $line['currency']) . '</span></li>';
     }
     $shipping = ShopStoreAPI::shippingFor((int) $totals['subtotal_cents'], $delivery);
+    // Payment: a choice only when the site offers more than one gateway for the shop.
+    $gateways = class_exists('Payments') ? Payments::choices('shop') : [];
+    $payHtml = '';
+    if (count($gateways) > 1) {
+        $picked = isset($gateways[$old['payment_gateway'] ?? '']) ? (string) $old['payment_gateway'] : (string) array_key_first($gateways);
+        $payHtml = '<fieldset class="sb-shop-checkout__payment"><legend>' . e(__('shop_pay_with', 'Pay with')) . '</legend>';
+        foreach ($gateways as $id => $label) {
+            $payHtml .= '<label class="sb-shop-checkout__option"><input type="radio" name="payment_gateway" value="' . e($id) . '"' . ($id === $picked ? ' checked' : '') . '> ' . e($label) . '</label>';
+        }
+        $payHtml .= '</fieldset>';
+    }
+    $secure = $gateways
+        ? sprintf(__('shop_secure_note_gateway', 'You pay securely through %s. Your card details never reach this site.'), implode(' / ', array_map(
+            static fn (string $id): string => $id === 'stripe' ? 'Stripe' : ($id === 'paypal' ? 'PayPal' : $id), array_keys($gateways))))
+        : __('shop_secure_note_generic', 'Your card details never reach this site.');
     return '<div class="sb-shop-checkout">'
         . ($notice !== '' ? '<p class="sb-shop-notice" role="status">' . e($notice) . '</p>' : '')
         . (isset($errors['_']) ? '<p class="sb-shop-error sb-shop-checkout__error" role="alert">' . e($errors['_']) . '</p>' : '')
@@ -219,14 +234,14 @@ function shop_view_checkout(array $totals, array $errors = [], array $old = [], 
         . $field('name', __('shop_full_name', 'Full name'), 'text', true, 'name', (string) ($cust['name'] ?? ''))
         . $field('email', __('shop_email', 'Email'), 'email', true, 'email', (string) ($cust['email'] ?? ''))
         . $field('phone', __('shop_phone', 'Phone (optional)'), 'tel', false, 'tel')
-        . '</fieldset>' . $deliveryHtml . $address
+        . '</fieldset>' . $deliveryHtml . $address . $payHtml
         . '<p class="sb-shop-checkout__field"><label for="sb-shop-notes">' . e(__('shop_notes', 'Order notes (optional)')) . '</label><textarea id="sb-shop-notes" name="notes" rows="3" maxlength="2000">' . $val('notes') . '</textarea></p></div>'
         . '<aside class="sb-shop-summary" aria-label="' . e(__('shop_order_summary', 'Order summary')) . '"><h2 class="sb-shop-summary__title">' . e(__('shop_order_summary', 'Order summary')) . '</h2><ul class="sb-shop-summary__lines">' . $summary . '</ul>'
         . '<p class="sb-shop-summary__row"><span>' . e(__('shop_subtotal', 'Subtotal')) . '</span> <span>' . shop_money((int) $totals['subtotal_cents'], $cur) . '</span></p>'
         . '<p class="sb-shop-summary__row"><span>' . e(__('shop_shipping', 'Shipping')) . '</span> <span>' . ($shipping > 0 ? shop_money($shipping, $cur) : e(__('shop_free', 'free'))) . '</span></p>'
         . '<p class="sb-shop-summary__total"><span>' . e(__('shop_total_incl_vat', 'Total (incl. VAT)')) . '</span> <strong>' . shop_money((int) $totals['subtotal_cents'] + $shipping, $cur) . '</strong></p>'
         . '<p class="sb-button-row"><button type="submit" class="sb-button sb-button--primary sb-shop-checkout__pay">' . e(__('shop_pay_now', 'Continue to payment')) . '</button></p>'
-        . '<p class="sb-shop-checkout__secure">' . e(__('shop_secure_note', 'You pay securely with Stripe. Your card details never reach this site.')) . '</p></aside>'
+        . '<p class="sb-shop-checkout__secure">' . e($secure) . '</p></aside>'
         . '</form></div>';
 }
 

@@ -37,16 +37,16 @@ final class PaymentLinkRenderer implements BlockRendererInterface
 
         if ($scope->mode() === RenderMode::Editor) {
             return '<div class="sb-pay-card sb-embed-card">'
-                . '<p class="sb-embed-card__kind">' . Html::e(Html::t('studio_pay_link_kind', 'Stripe link')) . '</p>'
+                . '<p class="sb-embed-card__kind">' . Html::e(Html::t('studio_pay_link_kind_any', 'Payment link')) . '</p>'
                 . '<p class="sb-pay-card__button"><span class="sb-button sb-button--primary">' . Html::e($label) . '</span></p>'
                 . '<p class="sb-embed-card__note">' . Html::e($ok
-                    ? Html::t('studio_pay_link_ok', 'Visitors who click this go to your Stripe page.')
-                    : Html::t('studio_pay_link_missing', 'Paste a Stripe Payment Link (https://buy.stripe.com/...) in the Inspector.')) . '</p>'
+                    ? Html::t('studio_pay_link_ok_any', 'Visitors who click this go to your payment page.')
+                    : Html::t('studio_pay_link_missing_any', 'Paste a Stripe or PayPal payment link (https://buy.stripe.com/... or https://www.paypal.com/ncp/payment/...) in the Inspector.')) . '</p>'
                 . '</div>';
         }
         if (!$ok) {
             return $scope->showsDiagnostics()
-                ? '<div class="sb-unavailable" role="note">' . Html::e(Html::t('studio_pay_link_missing', 'Paste a Stripe Payment Link (https://buy.stripe.com/...) in the Inspector.')) . '</div>'
+                ? '<div class="sb-unavailable" role="note">' . Html::e(Html::t('studio_pay_link_missing_any', 'Paste a Stripe or PayPal payment link (https://buy.stripe.com/... or https://www.paypal.com/ncp/payment/...) in the Inspector.')) . '</div>'
                 : '';
         }
         return '<p class="sb-button-row"><a class="sb-button sb-button--primary" href="' . Html::e($url) . '" rel="noopener noreferrer">' . Html::e($label) . '</a></p>';

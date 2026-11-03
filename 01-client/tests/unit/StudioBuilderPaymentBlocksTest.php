@@ -30,6 +30,7 @@ use Slate\Module\StudioBuilder\Payment\PayThrottle;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
+use Slate\Module\StudioBuilder\Render\Block\ModuleRenderers\PaymentButtonRenderer;
 use Slate\Module\StudioBuilder\Render\DocumentRenderer;
 use Slate\Module\StudioBuilder\Render\Media\MediaResolverInterface;
 use Slate\Module\StudioBuilder\Render\Media\ResolvedMedia;
@@ -54,14 +55,20 @@ if (!defined('APP_SECRET')) {
     define('APP_SECRET', SBPB_SECRET);
 }
 
-if (!class_exists('StripePaymentAPI', false)) {
-    /** Stand-in for the Stripe plugin: `isConfigured` is switchable. */
-    final class StripePaymentAPI
-    {
-        public static bool $configured = true;
-        public static function isConfigured(): bool { return self::$configured; }
-    }
+/** Stand-in for the payment layer: which gateways the site offers (id => label), switchable per test. */
+final class SbpbGateways
+{
+    /** @var array<string, array{0: string, 1: bool}> id => [label, can charge monthly] */
+    public static array $on = ['stripe' => ['Card (Stripe)', true]];
 }
+PaymentButtonRenderer::$choices = static function (array $needs): array {
+    $out = [];
+    foreach (SbpbGateways::$on as $id => [$label, $recurring]) {
+        if (in_array('recurring', $needs, true) && !$recurring) continue;
+        $out[$id] = $label;
+    }
+    return $out;
+};
 if (!function_exists('slate_sign')) {
     function slate_sign(string $context, string $value, ?int $length = null): ?string
     {
@@ -200,7 +207,17 @@ unit('payment blocks: the pay request builds the Stripe session from the signed 
     $forged['a'] = '100';
     assert_eq(400, PayRequest::handle('POST', $forged, sbpb_env(), sbpb_verifier(), $checkout, $allow, sbpb_live())['status'], 'a changed amount');
     assert_eq(400, PayRequest::handle('POST', $post, sbpb_env(['tenantId' => 202]), sbpb_verifier(), $checkout, $allow, sbpb_live())['status'], 'an offer for another tenant');
-    assert_eq(502, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), static fn(): string => 'https://evil.test/pay', $allow, sbpb_live())['status'], 'a checkout URL that is not Stripe is never followed');
+    assert_eq(502, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), static fn(): string => 'https://evil.test/pay', $allow, sbpb_live())['status'], 'a checkout URL that is not a payment gateway is never followed');
+    assert_eq(502, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), static fn(): string => 'https://paypal.com.evil.test/x', $allow, sbpb_live())['status'], 'a look-alike host is not followed either');
+    $gotGateway = null;
+    $paypal = static function (int $c, string $cur, string $n, string $s, string $x, string $i, string $gw) use (&$gotGateway): string {
+        $gotGateway = $gw;
+        return 'https://www.sandbox.paypal.com/checkoutnow?token=ORD1';
+    };
+    $r = PayRequest::handle('POST', $post + ['gw' => 'paypal'], sbpb_env(), sbpb_verifier(), $paypal, $allow, sbpb_live());
+    assert_eq([303, 'https://www.sandbox.paypal.com/checkoutnow?token=ORD1', 'paypal'], [$r['status'], $r['location'], $gotGateway], 'the visitor\'s gateway is passed on and PayPal\'s page is followed');
+    PayRequest::handle('POST', $post + ['gw' => 'Pay Pal!'], sbpb_env(), sbpb_verifier(), $paypal, $allow, sbpb_live());
+    assert_eq('', $gotGateway, 'a malformed gateway choice is dropped, so the site\'s preferred gateway is used');
     assert_eq(502, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), static function (): string { throw new RuntimeException('Stripe down'); }, $allow, sbpb_live())['status'], 'Stripe failing');
 
     // The offer is only honoured while the published block still makes exactly these terms.
@@ -288,7 +305,7 @@ function sbpb_render(string $type, array $props, string $mode): string
 
 unit('payment blocks: the button renders a signed form publicly, a card in the editor, and nothing when it cannot work', function (): void {
     $props = ['label' => 'Buy <now>', 'amount' => 25, 'currency' => 'GBP', 'description' => 'A "quoted" thing', 'success_path' => 'thanks'];
-    StripePaymentAPI::$configured = true;
+    SbpbGateways::$on = ['stripe' => ['Card (Stripe)', true]];
 
     $public = sbpb_render('payment.button', $props, 'public');
     assert_true(str_contains($public, '<form class="sb-pay" method="post" action="https://acme.test/solaya/plugins/studio-builder/public/pay.php">'), 'posts to the endpoint under the site base');
@@ -329,19 +346,43 @@ unit('payment blocks: the button renders a signed form publicly, a card in the e
     assert_true(str_contains($editor, '25.00 GBP'), 'the card says what visitors will pay');
 
     assert_true(!str_contains(sbpb_render('payment.button', ['amount' => 0.1], 'public'), '<form'), 'an amount that cannot be charged renders no form publicly');
-    StripePaymentAPI::$configured = false;
-    assert_true(!str_contains(sbpb_render('payment.button', $props, 'public'), '<form'), 'Stripe not set up: no form publicly');
-    assert_true(str_contains(sbpb_render('payment.button', $props, 'editor'), 'Stripe is not set up'), 'the editor says why');
-    StripePaymentAPI::$configured = true;
+    $saved = SbpbGateways::$on;
+    SbpbGateways::$on = [];
+    assert_true(!str_contains(sbpb_render('payment.button', $props, 'public'), '<form'), 'no gateway set up: no form publicly');
+    assert_true(str_contains(sbpb_render('payment.button', $props, 'editor'), 'No payment gateway is set up'), 'the editor says why');
+    SbpbGateways::$on = $saved;
 });
 
-unit('payment blocks: the link block renders only a Stripe address, safely', function (): void {
+unit('payment blocks: with Stripe and PayPal both offered, each gets its own button; monthly offers only gateways that can', function (): void {
+    $saved = SbpbGateways::$on;
+    SbpbGateways::$on = ['stripe' => ['Card (Stripe)', true], 'paypal' => ['PayPal', false]];
+    try {
+        $props = ['label' => 'Pay', 'amount' => 20, 'currency' => 'EUR'];
+        $html = sbpb_render('payment.button', $props, 'public');
+        assert_true(str_contains($html, 'sb-pay--choice'), 'a choice layout');
+        assert_true(str_contains($html, 'name="gw" value="stripe" class="sb-button sb-button--primary sb-pay__button">Pay</button>'), 'the preferred gateway takes the button\'s label');
+        assert_true(str_contains($html, 'name="gw" value="paypal"') && str_contains($html, 'Pay with PayPal'), 'the other one says which it is');
+        assert_true(str_contains(sbpb_render('payment.button', $props, 'editor'), 'pay on Stripe / PayPal'), 'the editor card names both');
+        $monthly = sbpb_render('payment.button', $props + ['frequency' => 'month'], 'public');
+        assert_true(!str_contains($monthly, 'value="paypal"') && !str_contains($monthly, 'sb-pay--choice'), 'a gateway that cannot charge monthly is not offered for a monthly button');
+    } finally {
+        SbpbGateways::$on = $saved;
+    }
+});
+
+unit('payment blocks: the link block renders only a Stripe or PayPal address, safely', function (): void {
     $ok = sbpb_render('payment.link', ['label' => 'Donate', 'url' => 'https://buy.stripe.com/test_1?x=1&y=2'], 'public');
     assert_true(str_contains($ok, '<a class="sb-button sb-button--primary" href="https://buy.stripe.com/test_1?x=1&amp;y=2" rel="noopener noreferrer">Donate</a>'), $ok);
     assert_true(!str_contains(sbpb_render('payment.link', ['label' => 'x', 'url' => 'https://evil.test/'], 'public'), '<a '), 'a foreign address renders no link');
     assert_true(!str_contains(sbpb_render('payment.link', ['label' => 'x', 'url' => ''], 'public'), '<a '), 'no address renders no link publicly');
     $editor = sbpb_render('payment.link', ['label' => 'x', 'url' => ''], 'editor');
-    assert_true(str_contains($editor, 'Paste a Stripe Payment Link') && !str_contains($editor, '<a '), 'the editor asks for the address');
+    assert_true(str_contains($editor, 'Paste a Stripe or PayPal payment link') && !str_contains($editor, '<a '), 'the editor asks for the address');
+    foreach (['https://www.paypal.com/ncp/payment/ABC123', 'https://www.paypal.com/donate/?hosted_button_id=X1', 'https://paypal.me/club'] as $pp) {
+        assert_true(str_contains(sbpb_render('payment.link', ['label' => 'x', 'url' => $pp], 'public'), '<a '), "a PayPal link renders: $pp");
+    }
+    foreach (['https://www.paypal.com/signin', 'https://paypal.com.evil.test/ncp/payment/x', 'http://paypal.me/x'] as $bad) {
+        assert_true(!PaymentLinkUrl::isAllowed($bad), "refused: $bad");
+    }
 });
 
 unit('payment blocks: the definitions are in the registry and validate their props', function (): void {

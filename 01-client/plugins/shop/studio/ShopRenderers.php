@@ -367,7 +367,7 @@ final class ShopCartRenderer implements BlockRendererInterface
     }
 }
 
-/** `shop.checkout`: contact, delivery and the summary, then on to Stripe (the Checkout page). */
+/** `shop.checkout`: contact, delivery, the payment choice and the summary, then on to the gateway's payment page. */
 final class ShopCheckoutRenderer implements BlockRendererInterface
 {
     public function type(): string
