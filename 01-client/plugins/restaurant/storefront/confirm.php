@@ -1,15 +1,20 @@
 <?php
-/** Storefront — order confirmation / status. Settles a returning Stripe session. */
+/** Storefront — order confirmation / status. Settles a returning hosted checkout (any gateway). */
 if (!defined('SLATE_ROOT')) { http_response_code(404); exit; }
 
 $token = trim((string)($_GET['token'] ?? ''));
 $cs    = trim((string)($_GET['cs'] ?? ''));
 $piId  = trim((string)($_GET['payment_intent'] ?? ''));
+$gw    = preg_replace('/[^a-z0-9_-]/', '', strtolower((string)($_GET['gw'] ?? '')));
+$ref   = trim((string)($_GET['ref'] ?? ''));
 
 // A returning paid payment settles here (idempotent). The webhook is the
 // backstop; this synchronous path is what the customer sees immediately.
-if ($cs !== '' && strpos($cs, '{') === false) {
-    try { RestaurantAPI::settleOnlineFromSession($cs); } catch (\Throwable $e) { /* shown as unpaid below */ }
+// The checkout reference must be the one this order's payment was given.
+if ($gw !== '' && $ref !== '' && strpos($ref, '{') === false) {
+    try { RestaurantAPI::settleOnlineReturn($gw, $ref, $token); } catch (\Throwable $e) { /* shown as unpaid below */ }
+} elseif ($cs !== '' && strpos($cs, '{') === false) {   // a Stripe Checkout started before 0.7.0
+    try { RestaurantAPI::settleOnlineReturn('stripe', $cs, $token); } catch (\Throwable $e) { /* shown as unpaid below */ }
 }
 if ($piId !== '') {  // embedded Payment Element return
     try { RestaurantAPI::settleOnlineFromPaymentIntent($piId); } catch (\Throwable $e) { /* shown as unpaid below */ }

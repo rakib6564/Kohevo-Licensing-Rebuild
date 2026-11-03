@@ -326,6 +326,17 @@ final class PaymentLedger
     public static function createSession(array $args): int
     {
         self::ensureSchema();
+        // A gateway replays a repeated idempotency key with the same checkout
+        // (a second press of Pay): the session already exists, so it is
+        // reused as long as it routes to the same plugin record.
+        $existing = self::findSession((string) $args['gateway'], (string) $args['gateway_ref']);
+        if ($existing !== null) {
+            if ($existing['source_plugin'] === mb_substr((string) $args['source_plugin'], 0, 80)
+                && (string) ($existing['source_id'] ?? '') === (string) ($args['source_id'] ?? '')) {
+                return (int) $existing['id'];
+            }
+            throw new \RuntimeException('This payment reference already belongs to another checkout.');
+        }
         return \Database::insert('payment_sessions', [
             'tenant_id'      => current_tenant_id(),
             'gateway'        => (string) $args['gateway'],

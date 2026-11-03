@@ -48,6 +48,33 @@ class RestaurantAPI {
         } catch (\Throwable $e) {
             slate_log('Restaurant ensureSchema failed: ' . $e->getMessage(), 'error');
         }
+        self::ensurePaymentColumns();
+    }
+
+    private static bool $paymentColumnsChecked = false;
+
+    /**
+     * 0.7.0: which payment gateway took an online payment and its checkout
+     * reference there. Added here as well as in the upgrade so a database the
+     * upgrade never ran against still works.
+     */
+    public static function ensurePaymentColumns(): void {
+        if (self::$paymentColumnsChecked) return;
+        self::$paymentColumnsChecked = true;
+        try {
+            $have = array_column(Database::rows(
+                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurant_payments'"), 'COLUMN_NAME');
+            if ($have === []) return;
+            if (!in_array('payment_gateway', $have, true)) {
+                Database::query("ALTER TABLE `restaurant_payments` ADD COLUMN `payment_gateway` VARCHAR(40) NULL");
+            }
+            if (!in_array('payment_ref', $have, true)) {
+                Database::query("ALTER TABLE `restaurant_payments` ADD COLUMN `payment_ref` VARCHAR(190) NULL, ADD KEY `gateway_ref` (`payment_gateway`, `payment_ref`)");
+            }
+        } catch (\Throwable $e) {
+            slate_log('Restaurant payment columns failed: ' . $e->getMessage(), 'error');
+        }
     }
 
     // ── Settings ──────────────────────────────────────────────
@@ -542,17 +569,26 @@ class RestaurantAPI {
      * order's paid total and close it if fully covered. Safe to call from the
      * webhook or from the POS poll once the reader reports success.
      */
-    public static function markPaymentPaid(int $paymentId, array $pi = []): void {
+    public static function markPaymentPaid(int $paymentId, array $pi = [], ?int $chargeId = null): void {
         $payment = Database::row(
             "SELECT * FROM restaurant_payments WHERE id = ?", [$paymentId]);
         if (!$payment || in_array($payment['status'], ['paid', 'refunded'], true)) return;
 
+        // One caller wins (webhook, return page, POS poll): the status moves
+        // in a single statement, so the order is never settled twice.
+        $won = Database::query(
+            "UPDATE restaurant_payments SET status = 'paid'
+              WHERE id = ? AND tenant_id = ? AND status IN ('pending','failed')",
+            [$paymentId, (int)$payment['tenant_id']])->rowCount();
+        if ($won !== 1) return;
+
         // The central charge row is what a refund is later issued against.
-        $chargeId = self::recordCentralCharge($payment);
+        // A payment-layer event has already written it; Stripe Terminal and
+        // inline card payments record it here.
+        $chargeId = $chargeId ?: self::recordCentralCharge($payment);
 
         $charge = !empty($pi['latest_charge']) ? (string)$pi['latest_charge'] : ($payment['stripe_charge_id'] ?? null);
         Database::update('restaurant_payments', [
-            'status'            => 'paid',
             'stripe_charge_id'  => $charge,
             'central_charge_id' => $chargeId,
         ], 'id = ?', [$paymentId]);
@@ -1353,6 +1389,11 @@ class RestaurantAPI {
      * that never touched Stripe.
      */
     private static function recordCentralCharge(array $payment): ?int {
+        if (!empty($payment['payment_gateway']) && !empty($payment['payment_ref']) && class_exists('Payments')) {
+            // A hosted checkout: the payment layer recorded the charge when it settled.
+            $row = \Slate\Services\Payments\PaymentLedger::findByRef((string)$payment['payment_gateway'], (string)$payment['payment_ref']);
+            if ($row) return (int)$row['id'];
+        }
         if (!class_exists('StripePaymentAPI') || empty($payment['stripe_pi_id'])) return null;
         return StripePaymentAPI::recordCharge([
             'source_plugin'            => 'restaurant',
@@ -1384,6 +1425,17 @@ class RestaurantAPI {
         AuditLog::record('restaurant.channel_payment', (string)$orderId, ['cents' => (int)$order['total_cents'], 'tip' => max(0, $tipCents)]);
         self::syncOrderPayment($orderId);
         return $pid;
+    }
+
+    /**
+     * The payment gateway that took a payment, or null for money that never
+     * went through one (cash, a channel). Stripe Terminal and inline card
+     * payments predate the payment_gateway column and are Stripe's.
+     */
+    public static function paymentGatewayOf(array $payment): ?string {
+        if (!empty($payment['payment_gateway']) && !empty($payment['payment_ref'])) return (string)$payment['payment_gateway'];
+        if (!empty($payment['stripe_pi_id']) || !empty($payment['stripe_session_id'])) return 'stripe';
+        return null;
     }
 
     /** Amount of a payment that can still be refunded (amount + tip − refunded). */
@@ -1426,9 +1478,16 @@ class RestaurantAPI {
                 __('restaurant_refund_err_range', 'Refund between %1$s and %2$s.'), self::money(1), self::money($remaining))];
         }
 
-        $isCard = !empty($pay['stripe_pi_id']);
-        if ($isCard && !(class_exists('StripePaymentAPI') && StripePaymentAPI::isConfigured())) {
-            return ['ok' => false, 'error' => __('restaurant_refund_err_stripe', 'Card refunds need the Stripe plugin configured.')];
+        // Money taken through a payment gateway goes back through that gateway.
+        $gatewayId = self::paymentGatewayOf($pay);
+        $isCard    = $gatewayId !== null;
+        if ($isCard) {
+            $gw = class_exists('Payments') ? Payments::gateway($gatewayId) : null;
+            if ($gw === null || !$gw->isConfigured()) {
+                return ['ok' => false, 'error' => $gatewayId === 'stripe'
+                    ? __('restaurant_refund_err_stripe', 'Card refunds need the Stripe plugin configured.')
+                    : sprintf(__('restaurant_refund_err_gateway', 'Refunds of %s payments need its payment plugin set up.'), $gw ? $gw->label() : $gatewayId)];
+            }
         }
 
         // Claim the amount first, in one statement, so two refunds racing on
@@ -1468,10 +1527,8 @@ class RestaurantAPI {
                 "SELECT COUNT(*) FROM restaurant_refunds WHERE payment_id = ? AND tenant_id = ? AND status = 'failed'",
                 [$paymentId, $tid]);
             $res = $chargeId
-                ? StripePaymentAPI::refundCharge($chargeId, $amount, [
-                      'idempotency_key' => self::idempotencyKey('refund',
-                          $paymentId . '-' . $before . '-' . $amount . '-' . $refused),
-                  ])
+                ? Payments::refundCharge($chargeId, $amount, self::idempotencyKey('refund',
+                      $paymentId . '-' . $before . '-' . $amount . '-' . $refused))
                 : ['ok' => false, 'error' => __('restaurant_refund_err_no_charge', 'No Stripe charge is recorded for this payment.')];
             if (empty($res['ok'])) {
                 Database::query(
@@ -1479,11 +1536,10 @@ class RestaurantAPI {
                       WHERE id = ? AND tenant_id = ? AND refunded_cents >= ?",
                     [$amount, $paymentId, $tid, $amount]);
                 $err = (string)($res['error'] ?? 'Refund failed.');
-                // No answer from Stripe: the refund may have gone through. The
-                // row stays 'pending' (not a refusal), so a retry of the same
-                // amount sends the same key and Stripe replays what happened.
-                $unknown = str_starts_with($err, 'Stripe HTTP transport error')
-                        || str_starts_with($err, 'Stripe response was not JSON');
+                // No answer from the gateway: the refund may have gone through.
+                // The row stays 'pending' (not a refusal), so a retry of the
+                // same amount sends the same key and the gateway replays it.
+                $unknown = !empty($res['uncertain']);
                 Database::update('restaurant_refunds', [
                     'status' => $unknown ? 'pending' : 'failed',
                     'error'  => mb_substr($err, 0, 255),
@@ -1492,8 +1548,11 @@ class RestaurantAPI {
                     'order_id' => (int)$pay['order_id'], 'amount' => $amount, 'error' => $err, 'unknown' => $unknown,
                 ]);
                 if ($unknown) {
-                    $err = __('restaurant_refund_err_unknown',
-                        'Stripe did not answer, so the refund may or may not have gone through. Retry the same amount: Stripe will not refund it twice.');
+                    $err = $gatewayId === 'stripe'
+                        ? __('restaurant_refund_err_unknown',
+                            'Stripe did not answer, so the refund may or may not have gone through. Retry the same amount: Stripe will not refund it twice.')
+                        : sprintf(__('restaurant_refund_err_unknown_gw',
+                            '%s did not answer, so the refund may or may not have gone through. Retry the same amount: it will not be refunded twice.'), $gw->label());
                 }
                 return ['ok' => false, 'error' => $err];
             }
@@ -1596,11 +1655,31 @@ class RestaurantAPI {
         return (string) self::setting('online_enabled', '0') === '1';
     }
 
-    /** Can the storefront take card payment online (vs pay-at-pickup only)? */
+    /** Can the storefront take payment online (vs pay-at-pickup only)? */
     public static function onlinePayEnabled(): bool {
         return self::onlineOrderingEnabled()
             && (string) self::setting('online_pay', '1') === '1'
-            && class_exists('StripePaymentAPI') && StripePaymentAPI::isConfigured();
+            && self::onlineGateways() !== [];
+    }
+
+    /**
+     * The payment gateways offered for online orders (configured and switched
+     * on for Restaurant under Payments → Gateways), as id => gateway.
+     *
+     * @return array<string,\Slate\Contracts\Payments\PaymentGateway>
+     */
+    public static function onlineGateways(): array {
+        return class_exists('Payments') ? Payments::available('restaurant') : [];
+    }
+
+    /**
+     * Can the checkout take a card on the page (Stripe's Payment Element)?
+     * Only Stripe does this; any other gateway sends the customer to its own
+     * hosted page.
+     */
+    public static function inlineCardAvailable(): bool {
+        return class_exists('Payments') && class_exists('StripePaymentAPI')
+            && isset(Payments::available('restaurant', [\Slate\Contracts\Payments\PaymentGateway::INLINE_CARD])['stripe']);
     }
 
     /** Fetch a single online order by its unguessable public token. */
@@ -1674,13 +1753,17 @@ class RestaurantAPI {
     }
 
     /**
-     * Start a hosted Stripe Checkout for an online order. Creates a pending
-     * payment, builds line items from the order, and returns the redirect URL.
+     * Start a hosted checkout for an online order at $gateway (or the first
+     * gateway offered): creates a pending payment, builds line items from the
+     * order, and returns the redirect URL. $successUrl may carry
+     * {PAYMENT_REF}, filled with the checkout's reference.
      */
-    public static function beginOnlinePayment(int $orderId, string $successUrl, string $cancelUrl): array {
-        if (!class_exists('StripePaymentAPI') || !StripePaymentAPI::isConfigured()) {
-            return ['ok' => false, 'error' => 'Online card payment is not available.'];
+    public static function beginOnlinePayment(int $orderId, string $successUrl, string $cancelUrl, ?string $gateway = null): array {
+        $gw = class_exists('Payments') ? Payments::choose('restaurant', $gateway) : null;
+        if ($gw === null) {
+            return ['ok' => false, 'error' => 'Online payment is not available.'];
         }
+        self::ensureSchema();
         $order = self::getOrder($orderId);
         if (!$order) return ['ok' => false, 'error' => 'Order not found.'];
 
@@ -1703,59 +1786,131 @@ class RestaurantAPI {
         if (!$lineItems) return ['ok' => false, 'error' => 'Nothing to charge.'];
 
         $tid = current_tenant_id();
-        // A second press of Pay for the same order reuses the session still open.
+        $gwId = $gw->id();
+        // A second press of Pay for the same order reuses the pending payment.
+        // A Stripe session still open is sent again as it is; otherwise the
+        // checkout is asked for again with the same key, and the gateway
+        // answers with the checkout it already made.
         $pending = Database::row(
             "SELECT * FROM restaurant_payments
               WHERE tenant_id = ? AND order_id = ? AND method = 'other' AND status = 'pending'
-                AND stripe_session_id IS NOT NULL AND amount_cents = ?
-           ORDER BY id DESC LIMIT 1", [$tid, $orderId, (int)$order['total_cents']]);
-        if ($pending) {
-            $open = StripePaymentAPI::getSession((string)$pending['stripe_session_id']);
+                AND payment_gateway = ? AND payment_ref IS NOT NULL AND amount_cents = ?
+           ORDER BY id DESC LIMIT 1", [$tid, $orderId, $gwId, (int)$order['total_cents']]);
+        if ($pending && $gwId === 'stripe') {
+            $open = StripePaymentAPI::getSession((string)$pending['payment_ref']);
             if ($open && ($open['status'] ?? '') === 'open' && !empty($open['url'])) {
-                return ['ok' => true, 'url' => (string)$open['url'], 'payment_id' => (int)$pending['id']];
+                return ['ok' => true, 'url' => (string)$open['url'], 'payment_id' => (int)$pending['id'], 'gateway' => $gwId];
             }
+            $pending = null;   // expired: a new attempt
         }
 
-        $pid = Database::insert('restaurant_payments', [
-            'tenant_id'    => $tid,
-            'order_id'     => $orderId,
-            'method'       => 'other',
-            'amount_cents' => (int)$order['total_cents'],
-            'tip_cents'    => 0,
-            'status'       => 'pending',
+        $pid = $pending ? (int)$pending['id'] : Database::insert('restaurant_payments', [
+            'tenant_id'       => $tid,
+            'order_id'        => $orderId,
+            'method'          => 'other',
+            'amount_cents'    => (int)$order['total_cents'],
+            'tip_cents'       => 0,
+            'status'          => 'pending',
+            'payment_gateway' => $gwId,
         ]);
 
         try {
-            $sess = StripePaymentAPI::createCheckout($lineItems, [
+            $start = Payments::startCheckout($gwId, new CheckoutRequest($lineItems, [
+                'source_plugin'   => 'restaurant',
+                'source_id'       => (string)$orderId,
                 'currency'        => strtolower(self::currency()),
                 'success_url'     => $successUrl,
                 'cancel_url'      => $cancelUrl,
-                'customer_email'  => $order['customer_email'] ?? null,
-                'metadata'        => ['source' => 'restaurant', 'source_plugin' => 'restaurant',
-                                      'order_id' => (string)$orderId, 'payment_id' => (string)$pid],
+                'customer_email'  => (string)($order['customer_email'] ?? ''),
+                'metadata'        => ['source' => 'restaurant', 'order_id' => (string)$orderId, 'payment_id' => (string)$pid],
                 'idempotency_key' => self::idempotencyKey('checkout', (string)$pid),
-            ]);
+            ]));
         } catch (\Throwable $e) {
-            Database::update('restaurant_payments', ['status' => 'failed'], 'id = ?', [$pid]);
+            if (!$pending) Database::update('restaurant_payments', ['status' => 'failed'], 'id = ?', [$pid]);
+            slate_log('Restaurant: starting payment with ' . $gwId . ' failed: ' . $e->getMessage(), 'error');
             return ['ok' => false, 'error' => $e->getMessage()];
         }
 
-        Database::update('restaurant_payments', ['stripe_session_id' => $sess['session_id']], 'id = ?', [$pid]);
-        return ['ok' => true, 'url' => $sess['url'], 'payment_id' => $pid];
+        Database::update('restaurant_payments', [
+            'payment_ref'       => $start->ref,
+            'stripe_session_id' => $gwId === 'stripe' ? $start->ref : null,
+        ], 'id = ?', [$pid]);
+        return ['ok' => true, 'url' => $start->redirectUrl, 'payment_id' => $pid, 'gateway' => $gwId];
     }
 
     /**
-     * Settle an online order from its Stripe Checkout session on the return
-     * page. Idempotent — safe to call repeatedly. Returns the fresh order.
+     * The `payment_event` listener: an online order's hosted checkout, from
+     * any gateway. Only the checkout this restaurant started for that payment
+     * settles it (matched by gateway and reference); a failure marks a still
+     * pending payment failed. Stripe Terminal and inline card PaymentIntents
+     * settle through handleStripeEvent() instead.
      */
-    public static function settleOnlineFromSession(string $sessionId): ?array {
-        $sessionId = trim($sessionId);
-        if ($sessionId === '') return null;
+    public static function handlePaymentEvent(PaymentEvent $event): void {
+        if (!$event->isFor('restaurant') || $event->ref === '') return;
+        if (!in_array($event->type, [PaymentEvent::SUCCEEDED, PaymentEvent::FAILED], true)) return;
+        self::ensureSchema();
+        $pay = Database::row(
+            "SELECT * FROM restaurant_payments WHERE tenant_id = ? AND payment_gateway = ? AND payment_ref = ? LIMIT 1",
+            [current_tenant_id(), $event->gateway, $event->ref]);
+        if (!$pay || ($event->sourceId !== '' && (string)$pay['order_id'] !== $event->sourceId)) return;
+
+        if (!$event->isPaid()) {
+            Database::query(
+                "UPDATE restaurant_payments SET status = 'failed' WHERE id = ? AND tenant_id = ? AND status = 'pending'",
+                [(int)$pay['id'], current_tenant_id()]);
+            return;
+        }
+        if (in_array($pay['status'], ['paid', 'refunded'], true)) return;
+        if ($event->gateway === 'stripe' && $event->txnId !== '' && empty($pay['stripe_pi_id'])) {
+            Database::update('restaurant_payments', ['stripe_pi_id' => $event->txnId], 'id = ?', [(int)$pay['id']]);
+        }
+        self::markPaymentPaid((int)$pay['id'], [], $event->chargeId);
+    }
+
+    /**
+     * Settle an online order on the page the customer returns to after a
+     * hosted checkout. The reference comes from the browser, so it must be the
+     * one this restaurant gave that payment (and, with $token, belong to that
+     * order); the payment is then confirmed with the gateway, never trusted
+     * from the address. Idempotent. Returns the fresh order.
+     */
+    public static function settleOnlineReturn(string $gateway, string $ref, string $token = ''): ?array {
+        $ref = trim($ref);
+        if ($ref === '' || $gateway === '') return null;
+        self::ensureSchema();
         $tid = current_tenant_id();
         $pay = Database::row(
-            "SELECT * FROM restaurant_payments WHERE stripe_session_id = ? AND tenant_id = ?", [$sessionId, $tid]);
+            "SELECT * FROM restaurant_payments WHERE tenant_id = ? AND payment_gateway = ? AND payment_ref = ? LIMIT 1",
+            [$tid, $gateway, $ref]);
+        if (!$pay && $gateway === 'stripe') {
+            // A Stripe checkout started before 0.7.0 has only its session id.
+            $pay = Database::row("SELECT * FROM restaurant_payments WHERE stripe_session_id = ? AND tenant_id = ?", [$ref, $tid]);
+            if ($pay && empty($pay['payment_gateway'])) return self::settleLegacyStripeSession($pay, $ref, $token);
+        }
         if (!$pay) return null;
+        $order = self::getOrder((int)$pay['order_id']);
+        if (!$order || ($token !== '' && !hash_equals((string)($order['public_token'] ?? ''), $token))) return null;
 
+        if (!in_array($pay['status'], ['paid', 'refunded'], true)) {
+            try {
+                Payments::confirmReturn($gateway, $ref, 'restaurant', (string)$pay['order_id']);
+            } catch (\Throwable $e) {
+                slate_log('Restaurant: return payment check failed: ' . $e->getMessage(), 'warning');
+            }
+            $order = self::getOrder((int)$pay['order_id']);
+        }
+        return $order;
+    }
+
+    /** Back-compat: the Stripe Checkout return (?cs=). */
+    public static function settleOnlineFromSession(string $sessionId): ?array {
+        return self::settleOnlineReturn('stripe', $sessionId);
+    }
+
+    /** A Stripe Checkout started before the payment layer: settle it from Stripe directly. */
+    private static function settleLegacyStripeSession(array $pay, string $sessionId, string $token): ?array {
+        $order = self::getOrder((int)$pay['order_id']);
+        if (!$order || ($token !== '' && !hash_equals((string)($order['public_token'] ?? ''), $token))) return null;
         if ($pay['status'] !== 'paid' && class_exists('StripePaymentAPI')) {
             $sess = StripePaymentAPI::getSession($sessionId);
             if ($sess && (string)($sess['payment_status'] ?? '') === 'paid') {
@@ -1791,7 +1946,7 @@ class RestaurantAPI {
         $pending = Database::row(
             "SELECT * FROM restaurant_payments
               WHERE tenant_id = ? AND order_id = ? AND method = 'other' AND status = 'pending'
-                AND stripe_session_id IS NULL AND amount_cents = ?
+                AND stripe_session_id IS NULL AND payment_ref IS NULL AND amount_cents = ?
            ORDER BY id DESC LIMIT 1", [$tid, $orderId, $amount]);
         if ($pending && !empty($pending['stripe_pi_id'])) {
             $existing = StripePaymentAPI::getPaymentIntent((string)$pending['stripe_pi_id']);
@@ -1825,6 +1980,7 @@ class RestaurantAPI {
                 'receipt_email'        => $order['customer_email'] ?? null,
                 'payment_method_types' => ['card'],
                 'metadata'             => ['source' => 'restaurant', 'source_plugin' => 'restaurant',
+                                           'source_id' => (string)$orderId,
                                            'order_id' => (string)$orderId, 'payment_id' => (string)$pid],
                 'idempotency_key'      => self::idempotencyKey('online-pi', (string)$pid),
             ]);

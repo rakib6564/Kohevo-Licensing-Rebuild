@@ -32,7 +32,7 @@ class RestaurantReports {
     public const PERIODS = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'custom'];
 
     /** SQL for a payment's method class: cash, terminal, online or other. */
-    private const METHOD_SQL = "CASE WHEN p.method = 'other' AND (p.stripe_pi_id IS NOT NULL OR p.stripe_session_id IS NOT NULL)
+    private const METHOD_SQL = "CASE WHEN p.method = 'other' AND (p.stripe_pi_id IS NOT NULL OR p.stripe_session_id IS NOT NULL OR p.payment_ref IS NOT NULL)
                                      THEN 'online' ELSE p.method END";
 
     /**

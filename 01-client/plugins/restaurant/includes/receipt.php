@@ -13,7 +13,12 @@ function restaurant_receipt_method(array $p): string {
     if ($p['method'] === 'cash')     return __('restaurant_rcpt_cash', 'Cash');
     if ($p['method'] === 'terminal') return __('restaurant_rcpt_card', 'Card');
     if ($p['method'] === 'channel')  return __('restaurant_rcpt_channel', 'Paid via ordering channel');
-    return !empty($p['stripe_pi_id']) || !empty($p['stripe_session_id'])
+    $gw = RestaurantAPI::paymentGatewayOf($p);
+    if ($gw !== null && $gw !== 'stripe') {
+        $g = class_exists('Payments') ? Payments::gateway($gw) : null;
+        return sprintf(__('restaurant_rcpt_online_via', 'Online (%s)'), $g ? $g->label() : ucfirst($gw));
+    }
+    return $gw !== null
         ? __('restaurant_rcpt_card_online', 'Card (online)')
         : __('restaurant_rcpt_other', 'Other');
 }

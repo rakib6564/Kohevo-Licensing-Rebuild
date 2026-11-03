@@ -349,6 +349,26 @@ try {
         assert_true($creates[0]['idempotency_key'] !== '', 'keyed');
     });
 
+    unit('hosted Stripe Checkout settles from its checkout.session.completed event through the payment layer, once', function () use ($rmtOrder, $rmtPay, $rmtOrd): void {
+        $order = $rmtOrder();
+        $a = RestaurantAPI::beginOnlinePayment($order, 'https://example.test/ok?gw=stripe&ref={PAYMENT_REF}', 'https://example.test/cancel', 'stripe');
+        assert_true($a['ok'], $a['error'] ?? '');
+        $p = $rmtPay($a['payment_id']);
+        assert_eq(['stripe', $p['stripe_session_id']], [$p['payment_gateway'], $p['payment_ref']], 'the session is the payment ref');
+        $session = ['id' => $p['payment_ref'], 'payment_status' => 'paid', 'payment_intent' => 'pi_rmt_hosted_' . bin2hex(random_bytes(3)),
+                    'amount_total' => 2200, 'currency' => 'usd', 'metadata' => []];
+        $event = ['type' => 'checkout.session.completed', 'data' => ['object' => $session]];
+        Payments::emit(StripeGateway::normalize($event));
+        Payments::emit(StripeGateway::normalize($event));
+        $p = $rmtPay($a['payment_id']);
+        assert_eq(['paid', $session['payment_intent']], [$p['status'], $p['stripe_pi_id']]);
+        assert_eq(2200, (int) $rmtOrd($order)['paid_cents']);
+        $charge = Payments::getCharge((int) $p['central_charge_id']);
+        assert_eq(['stripe', 'restaurant', (string) $order], [$charge['gateway'], $charge['source_plugin'], $charge['source_id']]);
+        assert_eq(1, (int) Database::value("SELECT COUNT(*) FROM audit_log WHERE action = 'restaurant.payment_paid' AND target = ?",
+            [(string) $a['payment_id']]), 'settled once');
+    });
+
     unit('receipt: header, footer, business, lines with modifiers, money breakdown, payments and refunds', function () use (&$card, $rmtSet, $rmtOrder): void {
         $rmtSet('restaurant.receipt_header', "RMT HEADER LINE\nSecond line");
         $rmtSet('restaurant.receipt_footer', 'RMT FOOTER thanks');
@@ -388,6 +408,11 @@ try {
     if ($run !== '') {
         Database::query("DELETE FROM stripepayment_charges WHERE source_plugin = 'restaurant' AND stripe_payment_intent_id LIKE ?",
             ['pi_fake' . $run . '\_%']);
+    }
+    Database::query("DELETE FROM stripepayment_charges WHERE tenant_id = ? AND source_plugin = 'restaurant' AND stripe_payment_intent_id LIKE 'pi\_rmt\_hosted\_%'", [current_tenant_id()]);
+    if ($run !== '') {
+        Database::query("DELETE FROM payment_sessions WHERE tenant_id = ? AND gateway = 'stripe' AND source_plugin = 'restaurant' AND gateway_ref LIKE ?",
+            [current_tenant_id(), 'cs_fake' . $run . '\_%']);
     }
     foreach ($rmt['settings'] as $key => $orig) {
         if ($orig === null) {

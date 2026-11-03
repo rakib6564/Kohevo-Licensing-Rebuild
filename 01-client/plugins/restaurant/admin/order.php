@@ -195,7 +195,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     $partial  = $p['status'] === 'paid' && (int)$p['refunded_cents'] > 0;
                     $charged  = (int)$p['amount_cents'] + (int)$p['tip_cents'];
                     $left     = RestaurantAPI::refundableCents($p);
-                    $isCard   = !empty($p['stripe_pi_id']) || !empty($p['stripe_session_id']) || $p['method'] === 'terminal';
+                    $payGw    = RestaurantAPI::paymentGatewayOf($p);
+                    $isCard   = $payGw !== null || $p['method'] === 'terminal';
+                    $payGwObj = $payGw !== null && $payGw !== 'stripe' && class_exists('Payments') ? Payments::gateway($payGw) : null;
 
                     $detail = [
                         ['label' => __('restaurant_refund_amount', 'Amount'), 'value' => RestaurantAPI::money((int)$p['amount_cents'])],
@@ -207,6 +209,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     ];
                     if (in_array($p['status'], ['paid', 'refunded'], true) && $p['method'] !== 'channel') {
                         $detail[] = ['label' => __('restaurant_pay_refundable', 'Left to refund'), 'value' => RestaurantAPI::money($left)];
+                    }
+                    if ($payGw !== null && $payGw !== 'stripe' && !empty($p['payment_ref'])) {
+                        $detail[] = ['label' => sprintf(__('restaurant_pay_gateway_ref', '%s payment'), $payGwObj ? $payGwObj->label() : ucfirst($payGw)),
+                                     'html'  => '<code style="font-size:11.5px;">' . e((string)$p['payment_ref']) . '</code>'];
                     }
                     if (!empty($p['stripe_pi_id'])) {
                         $detail[] = ['label' => __('restaurant_pay_stripe', 'Stripe payment'),
@@ -228,7 +234,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
                                  . '<button type="submit" class="btn btn-sm btn-danger">' . e(__('restaurant_refund_submit', 'Issue refund')) . '</button>'
                                  . '<span class="text-xs text-muted" style="flex-basis:100%;">' . e(sprintf(__('restaurant_refund_hint', 'Up to %s. %s'),
                                        RestaurantAPI::money($left), $isCard
-                                           ? __('restaurant_refund_hint_card', 'Goes back to the card through Stripe.')
+                                           ? ($payGw !== null && $payGw !== 'stripe'
+                                               ? sprintf(__('restaurant_refund_hint_gateway', 'Goes back to the customer through %s.'), $payGwObj ? $payGwObj->label() : ucfirst($payGw))
+                                               : __('restaurant_refund_hint_card', 'Goes back to the card through Stripe.'))
                                            : __('restaurant_refund_hint_cash', 'Recorded only: hand the cash back from the drawer.'))) . '</span>'
                                  . '</form>';
                     } elseif ($p['method'] === 'channel') {

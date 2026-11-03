@@ -7,6 +7,12 @@ $cart = sf_cart();
 if (!$cart) { header('Location: ' . sf_url('cart')); exit; }
 
 $payOnline   = RestaurantAPI::onlinePayEnabled();
+// Each gateway offered for online orders. Stripe takes the card on the page
+// (Payment Element); any other gateway sends the customer to its own page.
+$gateways    = $payOnline ? RestaurantAPI::onlineGateways() : [];
+$inlineCard  = $payOnline && RestaurantAPI::inlineCardAvailable();
+$hostedOther = array_values(array_filter(array_keys($gateways), fn ($id) => $id !== 'stripe' || !$inlineCard));
+$payMethods  = array_merge($inlineCard ? ['card'] : [], $hostedOther);
 $payPickup   = (string) RestaurantAPI::setting('online_pay_pickup', '1') === '1';
 $allowDeliv  = (string) RestaurantAPI::setting('online_delivery', '0') === '1';
 if (!$payOnline && !$payPickup) sf_closed('No payment method is configured for online orders.');
@@ -24,14 +30,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ajax     = (stripos((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''), 'fetch') !== false);
     $cardInit = ($_POST['_action'] ?? '') === 'card_init';   // on-page card flow asks for a PaymentIntent
     foreach ($old as $k => $_) $old[$k] = trim((string)($_POST[$k] ?? $old[$k]));
-    $method = $cardInit ? 'card' : (string)($_POST['pay_method'] ?? ($payOnline ? 'card' : 'pickup'));
+    $method = $cardInit ? 'card' : (string)($_POST['pay_method'] ?? ($payMethods[0] ?? 'pickup'));
 
     if (!csrf_verify())                         $flash = 'Session expired — please try again.';
     elseif ($old['name'] === '')                $flash = 'Please enter your name.';
     elseif ($old['phone'] === '')               $flash = 'Please enter a phone number so we can reach you.';
     elseif ($old['type'] === 'delivery' && !$allowDeliv) $flash = 'Delivery is not available.';
     elseif ($old['type'] === 'delivery' && $old['address'] === '') $flash = 'Please enter a delivery address.';
-    elseif ($method === 'card' && !$payOnline)  $flash = 'Online card payment is unavailable.';
+    elseif ($method === 'card' && !$inlineCard && !in_array('stripe', $hostedOther, true)) $flash = 'Online card payment is unavailable.';
+    elseif ($method !== 'card' && $method !== 'pickup' && !in_array($method, $hostedOther, true)) $flash = 'That payment method is unavailable.';
     elseif ($method === 'pickup' && !$payPickup) $flash = 'Pay at pickup is unavailable.';
 
     if ($flash === null) {
@@ -66,13 +73,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
-        // ── No-JS / pay-at-pickup ──
-        if ($method === 'card') {
-            // JS disabled but card chosen: fall back to hosted Stripe Checkout.
+        // ── Hosted checkout (another gateway, or card with JS disabled) / pay-at-pickup ──
+        if ($method !== 'pickup') {
+            // 'card' without JS falls back to Stripe's hosted Checkout.
+            $gw  = $method === 'card' ? 'stripe' : $method;
             $pay = RestaurantAPI::beginOnlinePayment(
                 (int)$res['order_id'],
-                sf_url('confirm') . '?token=' . $token . '&cs={CHECKOUT_SESSION_ID}',
-                sf_url('confirm') . '?token=' . $token . '&cancelled=1'
+                sf_url('confirm') . '?token=' . $token . '&gw=' . rawurlencode($gw) . '&ref={PAYMENT_REF}',
+                sf_url('confirm') . '?token=' . $token . '&cancelled=1',
+                $gw
             );
             if (!empty($pay['ok']) && !empty($pay['url'])) { header('Location: ' . $pay['url']); exit; }
             header('Location: ' . sf_url('confirm') . '?token=' . $token . '&payerr=1'); exit;
@@ -123,17 +132,18 @@ if ($flash) echo '<div class="sf-flash sf-flash-err">' . sf_icon('alert', 15) . 
 
     <div class="sf-card" style="margin-bottom:0">
         <div class="sf-card-title"><?= sf_icon('bag', 16) ?> Payment</div>
-        <?php if ($payOnline): ?>
-            <label class="sf-mopt"><input type="radio" name="pay_method" value="card" checked> <span>Pay now by card</span></label>
-        <?php endif; ?>
+        <?php foreach ($payMethods as $i => $pm):
+            $pmLabel = $pm === 'card' || $pm === 'stripe' ? 'Pay now by card' : 'Pay now with ' . $gateways[$pm]->label(); ?>
+            <label class="sf-mopt"><input type="radio" name="pay_method" value="<?= e($pm) ?>" <?= $i === 0 ? 'checked' : '' ?>> <span><?= e($pmLabel) ?></span></label>
+        <?php endforeach; ?>
         <?php if ($payPickup): ?>
-            <label class="sf-mopt"><input type="radio" name="pay_method" value="pickup" <?= $payOnline ? '' : 'checked' ?>> <span>Pay at pickup</span></label>
+            <label class="sf-mopt"><input type="radio" name="pay_method" value="pickup" <?= $payMethods ? '' : 'checked' ?>> <span>Pay at pickup</span></label>
         <?php endif; ?>
-        <?php if ($payOnline): ?>
+        <?php if ($inlineCard): ?>
             <div id="sf-pay-element" style="display:none;margin-top:14px"></div>
             <div id="sf-pay-msg" class="sf-flash sf-flash-err" style="display:none;margin:12px 0 0"></div>
         <?php endif; ?>
-        <p class="sf-muted" style="font-size:.85rem;margin:12px 0 0">Tax<?= RestaurantAPI::serviceChargeAuto() ? ' and service charge' : '' ?> is added to your total. Card payments are processed securely by Stripe — we never see your card details.</p>
+        <p class="sf-muted" style="font-size:.85rem;margin:12px 0 0">Tax<?= RestaurantAPI::serviceChargeAuto() ? ' and service charge' : '' ?> is added to your total. <?php if ($gateways): ?>Online payments are processed securely by <?= e(implode(' or ', array_map(fn ($g) => $g->label(), $gateways))) ?> — we never see your card details.<?php endif; ?></p>
     </div>
   </form>
 
@@ -161,7 +171,7 @@ if ($flash) echo '<div class="sf-flash sf-flash-err">' . sf_icon('alert', 15) . 
   </aside>
 
 </div>
-<?php if ($payOnline): ?>
+<?php if ($inlineCard): ?>
 <script src="https://js.stripe.com/v3"></script>
 <script>
 (function(){
@@ -173,11 +183,11 @@ if ($flash) echo '<div class="sf-flash sf-flash-err">' . sf_icon('alert', 15) . 
   var INIT_URL = <?= json_encode(sf_url('checkout')) ?>;
   var stripe = null, elements = null, ready = false, returnUrl = '';
 
-  function method(){ var r = form.querySelector('input[name=pay_method]:checked'); return r ? r.value : 'card'; }
+  function method(){ var r = form.querySelector('input[name=pay_method]:checked'); return r ? r.value : 'pickup'; }
   function showMsg(t){ if(msg){ msg.textContent = t; msg.style.display = t ? 'block' : 'none'; } }
   function busy(b, label){ btn.disabled = b; if (label) btn.innerHTML = label; }
   function resetCard(){ ready = false; if (elements){ elements = null; } if (wrap){ wrap.style.display='none'; wrap.innerHTML=''; } showMsg(''); relabel(); }
-  function relabel(){ if (!ready) btn.innerHTML = (method()==='card') ? 'Continue to payment' : 'Place order'; }
+  function relabel(){ if (!ready) btn.innerHTML = (method()==='card') ? 'Continue to payment' : (method()==='pickup' ? 'Place order' : 'Continue to payment'); }
 
   form.addEventListener('change', function(e){ if (e.target.name === 'pay_method') resetCard(); });
   relabel();
