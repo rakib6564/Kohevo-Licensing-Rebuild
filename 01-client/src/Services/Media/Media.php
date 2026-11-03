@@ -37,7 +37,10 @@ namespace Slate\Services\Media;
 class Media {
 
     /** Bumped when the schema changes so ensureSchema() re-runs. */
-    public const SCHEMA_V = '3';
+    public const SCHEMA_V = '4';
+
+    /** Days a trashed file stays restorable before the daily job removes it. */
+    public const TRASH_DAYS = 30;
 
     /** Central folder (under /uploads/) for new uploads. */
     public const FOLDER = 'media';
@@ -160,13 +163,19 @@ class Media {
                     `description`   TEXT NULL,
                     `variants`      TEXT NULL,
                     `file_version`  INT UNSIGNED NOT NULL DEFAULT 0,
+                    `folder_id`     INT UNSIGNED NULL,
+                    `file_hash`     CHAR(64) NULL,
+                    `deleted_at`    DATETIME NULL,
                     `uploaded_by`   INT UNSIGNED NULL,
                     `uploaded_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     `updated_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     PRIMARY KEY (`id`),
                     UNIQUE KEY `tenant_path` (`tenant_id`, `path`),
                     KEY `tenant_kind` (`tenant_id`, `kind`),
-                    KEY `tenant_uploaded_at` (`tenant_id`, `uploaded_at`)
+                    KEY `tenant_uploaded_at` (`tenant_id`, `uploaded_at`),
+                    KEY `tenant_folder` (`tenant_id`, `folder_id`),
+                    KEY `tenant_hash` (`tenant_id`, `file_hash`),
+                    KEY `tenant_deleted` (`tenant_id`, `deleted_at`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
             );
             \Database::query(
@@ -183,6 +192,37 @@ class Media {
                     UNIQUE KEY `usage_unique` (`tenant_id`, `media_id`, `context`, `object_type`, `object_id`, `field`),
                     KEY `media` (`media_id`),
                     CONSTRAINT `fk_media_usage_media` FOREIGN KEY (`media_id`) REFERENCES `media_files`(`id`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
+
+            \Database::query(
+                "CREATE TABLE IF NOT EXISTS `media_folders` (
+                    `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    `tenant_id`   INT UNSIGNED NOT NULL DEFAULT 1,
+                    `parent_id`   INT UNSIGNED NULL,
+                    `name`        VARCHAR(120) NOT NULL,
+                    `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `tenant_parent` (`tenant_id`, `parent_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
+            \Database::query(
+                "CREATE TABLE IF NOT EXISTS `media_tags` (
+                    `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    `tenant_id`   INT UNSIGNED NOT NULL DEFAULT 1,
+                    `name`        VARCHAR(60) NOT NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `tenant_name` (`tenant_id`, `name`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
+            \Database::query(
+                "CREATE TABLE IF NOT EXISTS `media_file_tags` (
+                    `media_id`    INT UNSIGNED NOT NULL,
+                    `tag_id`      INT UNSIGNED NOT NULL,
+                    PRIMARY KEY (`media_id`, `tag_id`),
+                    KEY `tag` (`tag_id`),
+                    CONSTRAINT `fk_media_file_tags_media` FOREIGN KEY (`media_id`) REFERENCES `media_files`(`id`) ON DELETE CASCADE,
+                    CONSTRAINT `fk_media_file_tags_tag` FOREIGN KEY (`tag_id`) REFERENCES `media_tags`(`id`) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
             );
 
@@ -205,6 +245,16 @@ class Media {
                 }
                 if (!in_array('file_version', $cols, true)) {
                     \Database::query("ALTER TABLE `media_files` ADD COLUMN `file_version` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `variants`");
+                }
+                // v4: library folders (labels, files never move on disk), duplicate detection, trash.
+                if (!in_array('folder_id', $cols, true)) {
+                    \Database::query("ALTER TABLE `media_files` ADD COLUMN `folder_id` INT UNSIGNED NULL AFTER `file_version`, ADD KEY `tenant_folder` (`tenant_id`, `folder_id`)");
+                }
+                if (!in_array('file_hash', $cols, true)) {
+                    \Database::query("ALTER TABLE `media_files` ADD COLUMN `file_hash` CHAR(64) NULL AFTER `folder_id`, ADD KEY `tenant_hash` (`tenant_id`, `file_hash`)");
+                }
+                if (!in_array('deleted_at', $cols, true)) {
+                    \Database::query("ALTER TABLE `media_files` ADD COLUMN `deleted_at` DATETIME NULL AFTER `file_hash`, ADD KEY `tenant_deleted` (`tenant_id`, `deleted_at`)");
                 }
             } catch (\Throwable $e) { /* ignore */ }
 
@@ -259,7 +309,7 @@ class Media {
             );
         } catch (\Throwable $e) { return null; }
         if (!$row) return null;
-        return self::decorate($row, self::usageMap());
+        return self::withTags([self::decorate($row, self::usageMap())])[0];
     }
 
     /** One media record by path (tenant-scoped), decorated, or null. */
@@ -272,7 +322,7 @@ class Media {
             );
         } catch (\Throwable $e) { return null; }
         if (!$row) return null;
-        return self::decorate($row, self::usageMap());
+        return self::withTags([self::decorate($row, self::usageMap())])[0];
     }
 
     /**
@@ -281,6 +331,10 @@ class Media {
      *   usage   'all' | 'in_use' | 'unused'
      *   search  matches original_name / path / alt_text / title
      *   sort    'newest' (default) | 'oldest' | 'name' | 'size'
+     *   folder  'all' (default) | 'none' (unfiled) | a folder id
+     *   tag     a tag id
+     *   alt     'missing': images with no alt text
+     *   trash   true: only trashed files (default: only files not in the trash)
      *   page, per_page  (pagination; per_page default 24)
      *
      * Filtering, sorting and paging run in SQL; the usage map is built once
@@ -305,6 +359,21 @@ class Media {
             $like = '%' . addcslashes($search, '\\%_') . '%';
             $where[] = '(original_name LIKE ? OR path LIKE ? OR alt_text LIKE ? OR title LIKE ?)';
             array_push($params, $like, $like, $like, $like);
+        }
+        $where[] = !empty($filters['trash']) ? 'deleted_at IS NOT NULL' : 'deleted_at IS NULL';
+        $folder = $filters['folder'] ?? 'all';
+        if ($folder === 'none') {
+            $where[] = 'folder_id IS NULL';
+        } elseif ((is_int($folder) || (is_string($folder) && ctype_digit($folder))) && (int)$folder > 0) {
+            $where[] = 'folder_id = ?';
+            $params[] = (int)$folder;
+        }
+        if ((int)($filters['tag'] ?? 0) > 0) {
+            $where[] = 'id IN (SELECT media_id FROM media_file_tags WHERE tag_id = ?)';
+            $params[] = (int)$filters['tag'];
+        }
+        if (($filters['alt'] ?? '') === 'missing') {
+            $where[] = "kind = 'image' AND (alt_text IS NULL OR alt_text = '')";
         }
 
         $usageMap = self::usageMap();
@@ -340,7 +409,7 @@ class Media {
         $items = [];
         foreach ($rows as $r) $items[] = self::decorate($r, $usageMap);
 
-        return ['items' => $items, 'total' => $total, 'page' => $page, 'pages' => $pages];
+        return ['items' => self::withTags($items), 'total' => $total, 'page' => $page, 'pages' => $pages];
     }
 
     /**
@@ -366,23 +435,24 @@ class Media {
         foreach ($ids as $id) {
             if (isset($byId[$id])) $out[] = self::decorate($byId[$id], $usageMap);
         }
-        return $out;
+        return self::withTags($out);
     }
 
     /**
      * Tab/badge counts for the admin UI:
-     *   ['all','image','video','document','in_use','unused'].
+     *   ['all','image','video','document','in_use','unused','missing_alt','trash'].
+     * Everything but 'trash' leaves trashed files out.
      */
     public static function counts(): array {
         $tid = current_tenant_id();
-        $c = ['all' => 0, 'image' => 0, 'video' => 0, 'document' => 0, 'in_use' => 0, 'unused' => 0];
+        $c = ['all' => 0, 'image' => 0, 'video' => 0, 'document' => 0, 'in_use' => 0, 'unused' => 0, 'missing_alt' => 0, 'trash' => 0];
         try {
             $video = implode(',', array_fill(0, count(self::VIDEO_MIMES), '?'));
             $rows = \Database::rows(
                 "SELECT CASE WHEN kind = 'image' THEN 'image'
                              WHEN kind = 'other' AND mime IN ($video) THEN 'video'
                              ELSE 'document' END AS t, COUNT(*) AS n
-                   FROM media_files WHERE tenant_id = ? GROUP BY t",
+                   FROM media_files WHERE tenant_id = ? AND deleted_at IS NULL GROUP BY t",
                 array_merge(self::VIDEO_MIMES, [$tid])
             );
             foreach ($rows as $r) {
@@ -392,10 +462,15 @@ class Media {
             $used = self::usedPaths(self::usageMap());
             if ($used !== []) {
                 $c['in_use'] = (int)\Database::value(
-                    'SELECT COUNT(*) FROM media_files WHERE tenant_id = ? AND path IN (' . implode(',', array_fill(0, count($used), '?')) . ')',
+                    'SELECT COUNT(*) FROM media_files WHERE tenant_id = ? AND deleted_at IS NULL AND path IN (' . implode(',', array_fill(0, count($used), '?')) . ')',
                     array_merge([$tid], $used)
                 );
             }
+            $c['missing_alt'] = (int)\Database::value(
+                "SELECT COUNT(*) FROM media_files WHERE tenant_id = ? AND deleted_at IS NULL AND kind = 'image' AND (alt_text IS NULL OR alt_text = '')",
+                [$tid]
+            );
+            $c['trash'] = (int)\Database::value("SELECT COUNT(*) FROM media_files WHERE tenant_id = ? AND deleted_at IS NOT NULL", [$tid]);
         } catch (\Throwable $e) { return $c; }
         $c['unused'] = $c['all'] - $c['in_use'];
         return $c;
@@ -446,6 +521,9 @@ class Media {
             'variants'      => self::variantUrls($row),
             'thumb_url'     => self::thumbUrl($row),
             'file_version'  => (int)($row['file_version'] ?? 0),
+            'folder_id'     => isset($row['folder_id']) && $row['folder_id'] !== null ? (int)$row['folder_id'] : null,
+            'deleted_at'    => isset($row['deleted_at']) && $row['deleted_at'] !== null ? (string)$row['deleted_at'] : null,
+            'tags'          => [],
             'uploaded_at'   => (string)($row['uploaded_at'] ?? ''),
             'in_use'        => ($usageMap[$path] ?? 0) > 0,
             'usage_count'   => (int)($usageMap[$path] ?? 0),
@@ -516,6 +594,14 @@ class Media {
         $mime = (string)($res['mime'] ?? '');
         $ext  = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
+        // The same bytes already in the library: hand back that item instead of a second copy.
+        $hash = (string)@hash_file('sha256', SLATE_ROOT . $path);
+        $existing = $hash !== '' && empty($opts['allow_duplicate']) ? self::findByHash($hash) : null;
+        if ($existing) {
+            Uploads::remove($path);
+            return $existing + ['duplicate' => true];
+        }
+
         // Harden SVG: as XML it can carry <script>, event handlers, and
         // javascript: URLs that run in this origin when the file URL is
         // opened directly — stored XSS. Sanitize in place; if it can't be
@@ -548,6 +634,15 @@ class Media {
             'original_name' => $res['original'] ?? basename($path),
         ]);
 
+        if ($id > 0) {
+            $folderId = (int)($opts['folder_id'] ?? 0);
+            try {
+                \Database::query(
+                    "UPDATE media_files SET file_hash = ?, folder_id = ? WHERE tenant_id = ? AND id = ?",
+                    [$hash !== '' ? $hash : null, $folderId > 0 && self::folderExists($folderId) ? $folderId : null, current_tenant_id(), $id]
+                );
+            } catch (\Throwable $e) { /* optional */ }
+        }
         if ($id > 0 && $isImage && self::sizesEnabled()) {
             self::generateVariants($id);
         }
@@ -628,7 +723,7 @@ class Media {
     public static function pendingVariantsCount(): int {
         try {
             return (int)\Database::value(
-                "SELECT COUNT(*) FROM media_files WHERE tenant_id = ? AND kind = 'image' AND variants IS NULL",
+                "SELECT COUNT(*) FROM media_files WHERE tenant_id = ? AND kind = 'image' AND variants IS NULL AND deleted_at IS NULL",
                 [current_tenant_id()]
             );
         } catch (\Throwable $e) { return 0; }
@@ -643,7 +738,7 @@ class Media {
         $done = 0; $files = 0;
         try {
             $ids = array_column(\Database::rows(
-                "SELECT id FROM media_files WHERE tenant_id = ? AND kind = 'image' AND variants IS NULL ORDER BY id LIMIT " . max(1, min(100, $limit)),
+                "SELECT id FROM media_files WHERE tenant_id = ? AND kind = 'image' AND variants IS NULL AND deleted_at IS NULL ORDER BY id LIMIT " . max(1, min(100, $limit)),
                 [current_tenant_id()]
             ), 'id');
         } catch (\Throwable $e) { $ids = []; }
@@ -687,9 +782,13 @@ class Media {
             Uploads::remove((string)$res['path']);
             return ['ok' => false, 'error' => __('core_err_could_not_save_uploaded_file', 'Could not save uploaded file.')];
         }
+        $hash = (string)@hash_file('sha256', SLATE_ROOT . $path);
         if ($row['kind'] === 'image' && self::stripMetadataEnabled()) {
             ImageProcessor::normalize(SLATE_ROOT . $path, $mime);
         }
+        try {
+            \Database::query("UPDATE media_files SET file_hash = ? WHERE tenant_id = ? AND id = ?", [$hash !== '' ? $hash : null, current_tenant_id(), $id]);
+        } catch (\Throwable $e) { /* optional */ }
         self::fileChanged($id, $path, $mime);
         \AuditLog::record('media.replaced', $path, ['id' => $id]);
         return ['ok' => true, 'item' => self::get($id)];
@@ -773,6 +872,309 @@ class Media {
         foreach (is_array($map) ? $map : [] as $rel) {
             if (is_string($rel) && self::isManagedPath($rel)) Uploads::remove($rel);
         }
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Folders, tags, trash
+    // ──────────────────────────────────────────────────────────
+
+    /**
+     * Every folder of the tenant, ordered for a tree (parents first, then by
+     * name), each with 'count' = files directly in it (not trashed) and
+     * 'depth' (0 for top level).
+     *
+     * @return list<array{id: int, parent_id: ?int, name: string, count: int, depth: int}>
+     */
+    public static function folders(): array {
+        $tid = current_tenant_id();
+        try {
+            $rows = \Database::rows("SELECT id, parent_id, name FROM media_folders WHERE tenant_id = ? ORDER BY name, id", [$tid]);
+            $counts = [];
+            foreach (\Database::rows(
+                "SELECT folder_id, COUNT(*) AS n FROM media_files WHERE tenant_id = ? AND deleted_at IS NULL AND folder_id IS NOT NULL GROUP BY folder_id",
+                [$tid]
+            ) as $r) $counts[(int)$r['folder_id']] = (int)$r['n'];
+        } catch (\Throwable $e) { return []; }
+        $children = [];
+        $ids = [];
+        foreach ($rows as $r) $ids[(int)$r['id']] = true;
+        foreach ($rows as $r) {
+            // A parent that no longer exists puts the folder at the top level.
+            $parent = $r['parent_id'] !== null && isset($ids[(int)$r['parent_id']]) ? (int)$r['parent_id'] : 0;
+            $children[$parent][] = $r;
+        }
+        $out = [];
+        $walk = static function (int $parent, int $depth) use (&$walk, &$out, $children, $counts): void {
+            foreach ($children[$parent] ?? [] as $r) {
+                $id = (int)$r['id'];
+                $out[] = ['id' => $id, 'parent_id' => $parent ?: null, 'name' => (string)$r['name'], 'count' => $counts[$id] ?? 0, 'depth' => $depth];
+                if ($depth < 8) $walk($id, $depth + 1);
+            }
+        };
+        $walk(0, 0);
+        return $out;
+    }
+
+    /** Create a folder (optionally inside another). Returns its id, or 0. */
+    public static function createFolder(string $name, ?int $parentId = null): int {
+        $name = self::cleanName($name, 120);
+        if ($name === '') return 0;
+        $tid = current_tenant_id();
+        if ($parentId !== null && $parentId > 0 && !self::folderExists($parentId)) return 0;
+        try {
+            \Database::query(
+                "INSERT INTO media_folders (tenant_id, parent_id, name) VALUES (?, ?, ?)",
+                [$tid, $parentId && $parentId > 0 ? $parentId : null, $name]
+            );
+            return (int)\Database::value("SELECT MAX(id) FROM media_folders WHERE tenant_id = ? AND name = ?", [$tid, $name]);
+        } catch (\Throwable $e) { return 0; }
+    }
+
+    public static function renameFolder(int $id, string $name): bool {
+        $name = self::cleanName($name, 120);
+        if ($name === '' || !self::folderExists($id)) return false;
+        try {
+            \Database::query("UPDATE media_folders SET name = ? WHERE tenant_id = ? AND id = ?", [$name, current_tenant_id(), $id]);
+            return true;
+        } catch (\Throwable $e) { return false; }
+    }
+
+    /**
+     * Remove a folder. Its files and sub-folders move up to its parent (or
+     * the top level); no file is deleted.
+     */
+    public static function deleteFolder(int $id): bool {
+        $tid = current_tenant_id();
+        try {
+            $row = \Database::row("SELECT parent_id FROM media_folders WHERE tenant_id = ? AND id = ?", [$tid, $id]);
+            if (!$row) return false;
+            $parent = $row['parent_id'] !== null ? (int)$row['parent_id'] : null;
+            \Database::query("UPDATE media_files SET folder_id = ? WHERE tenant_id = ? AND folder_id = ?", [$parent, $tid, $id]);
+            \Database::query("UPDATE media_folders SET parent_id = ? WHERE tenant_id = ? AND parent_id = ?", [$parent, $tid, $id]);
+            \Database::delete('media_folders', 'tenant_id = ? AND id = ?', [$tid, $id]);
+            return true;
+        } catch (\Throwable $e) { return false; }
+    }
+
+    public static function folderExists(int $id): bool {
+        try {
+            return $id > 0 && (bool)\Database::value("SELECT 1 FROM media_folders WHERE tenant_id = ? AND id = ?", [current_tenant_id(), $id]);
+        } catch (\Throwable $e) { return false; }
+    }
+
+    /**
+     * Put files in a folder (null = no folder). Only a label: nothing moves
+     * on disk, so every page and link keeps working. Returns rows changed.
+     *
+     * @param list<int> $ids
+     */
+    public static function moveToFolder(array $ids, ?int $folderId): int {
+        $ids = self::cleanIds($ids);
+        if ($ids === [] || ($folderId !== null && !self::folderExists($folderId))) return 0;
+        try {
+            return \Database::query(
+                'UPDATE media_files SET folder_id = ? WHERE tenant_id = ? AND id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')',
+                array_merge([$folderId, current_tenant_id()], $ids)
+            )->rowCount();
+        } catch (\Throwable $e) { return 0; }
+    }
+
+    /**
+     * Every tag with the number of files (not trashed) that carry it.
+     *
+     * @return list<array{id: int, name: string, count: int}>
+     */
+    public static function tags(): array {
+        try {
+            $rows = \Database::rows(
+                "SELECT t.id, t.name, COUNT(f.id) AS n
+                   FROM media_tags t
+                   LEFT JOIN media_file_tags ft ON ft.tag_id = t.id
+                   LEFT JOIN media_files f ON f.id = ft.media_id AND f.deleted_at IS NULL
+                  WHERE t.tenant_id = ?
+                  GROUP BY t.id, t.name
+                  ORDER BY t.name",
+                [current_tenant_id()]
+            );
+        } catch (\Throwable $e) { return []; }
+        return array_map(static fn($r) => ['id' => (int)$r['id'], 'name' => (string)$r['name'], 'count' => (int)$r['n']], $rows);
+    }
+
+    /**
+     * Replace a file's tags with $names (comma-separated string or list).
+     * New names become tags; tags no file uses any more are removed.
+     */
+    public static function setTags(int $id, array|string $names): bool {
+        if (!self::rawRow($id)) return false;
+        $tagIds = self::tagIds(self::splitTags($names));
+        try {
+            \Database::delete('media_file_tags', 'media_id = ?', [$id]);
+            foreach ($tagIds as $tagId) {
+                \Database::query("INSERT IGNORE INTO media_file_tags (media_id, tag_id) VALUES (?, ?)", [$id, $tagId]);
+            }
+        } catch (\Throwable $e) { return false; }
+        self::pruneTags();
+        return true;
+    }
+
+    /**
+     * Add one or more tags to several files, keeping the tags they have.
+     *
+     * @param list<int> $ids
+     */
+    public static function addTags(array $ids, array|string $names): int {
+        $ids = array_values(array_filter(self::cleanIds($ids), static fn(int $i) => self::rawRow($i) !== null));
+        $tagIds = self::tagIds(self::splitTags($names));
+        if ($ids === [] || $tagIds === []) return 0;
+        try {
+            foreach ($ids as $id) {
+                foreach ($tagIds as $tagId) {
+                    \Database::query("INSERT IGNORE INTO media_file_tags (media_id, tag_id) VALUES (?, ?)", [$id, $tagId]);
+                }
+            }
+        } catch (\Throwable $e) { return 0; }
+        return count($ids);
+    }
+
+    /**
+     * Move files to the trash. A file still in use is refused, as on delete.
+     * Returns ['trashed' => n, 'refused' => n].
+     *
+     * @param list<int> $ids
+     */
+    public static function trash(array $ids): array {
+        $out = ['trashed' => 0, 'refused' => 0];
+        $map = self::buildUsageMapByPath();
+        foreach (self::cleanIds($ids) as $id) {
+            $row = self::rawRow($id);
+            if (!$row || $row['deleted_at'] !== null) continue;
+            if (($map[(string)$row['path']] ?? 0) > 0) { $out['refused']++; continue; }
+            try {
+                \Database::query("UPDATE media_files SET deleted_at = NOW() WHERE tenant_id = ? AND id = ?", [current_tenant_id(), $id]);
+                \AuditLog::record('media.trashed', (string)$row['path'], ['id' => $id]);
+                $out['trashed']++;
+            } catch (\Throwable $e) { /* skip */ }
+        }
+        return $out;
+    }
+
+    /** @param list<int> $ids */
+    public static function restore(array $ids): int {
+        $ids = self::cleanIds($ids);
+        if ($ids === []) return 0;
+        try {
+            $n = \Database::query(
+                'UPDATE media_files SET deleted_at = NULL WHERE tenant_id = ? AND deleted_at IS NOT NULL AND id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')',
+                array_merge([current_tenant_id()], $ids)
+            )->rowCount();
+        } catch (\Throwable $e) { return 0; }
+        if ($n > 0) \AuditLog::record('media.restored', '', ['ids' => $ids]);
+        return $n;
+    }
+
+    /**
+     * Delete for good files trashed more than $days ago (the daily job), or
+     * every trashed file with $days = 0 ("Empty trash"). A file that became
+     * used again while in the trash is kept. Returns files removed.
+     */
+    public static function purgeTrash(int $days = self::TRASH_DAYS): int {
+        try {
+            $ids = array_column(\Database::rows(
+                "SELECT id FROM media_files WHERE tenant_id = ? AND deleted_at IS NOT NULL AND deleted_at <= NOW() - INTERVAL ? DAY",
+                [current_tenant_id(), max(0, $days)]
+            ), 'id');
+        } catch (\Throwable $e) { return 0; }
+        $n = 0;
+        foreach ($ids as $id) {
+            if (!empty(self::delete((int)$id)['ok'])) $n++;
+        }
+        return $n;
+    }
+
+    /** daily_cron listener: the trash keeps files for TRASH_DAYS days. */
+    public static function dailyCron(): void {
+        self::ensureSchema();
+        $n = self::purgeTrash();
+        if ($n > 0 && function_exists('slate_log')) slate_log("Media: removed $n file(s) from the trash", 'info');
+    }
+
+    /**
+     * A file already in the library with exactly these bytes (not trashed), or null.
+     */
+    public static function findByHash(string $hash): ?array {
+        if (!preg_match('/^[a-f0-9]{64}$/', $hash)) return null;
+        try {
+            $id = (int)\Database::value(
+                "SELECT id FROM media_files WHERE tenant_id = ? AND file_hash = ? AND deleted_at IS NULL ORDER BY id LIMIT 1",
+                [current_tenant_id(), $hash]
+            );
+        } catch (\Throwable $e) { return null; }
+        return $id > 0 ? self::get($id) : null;
+    }
+
+    /**
+     * Attach each record's tags ([['id'=>…,'name'=>…], …]) in one query.
+     *
+     * @param list<array<string, mixed>> $items decorated records
+     * @return list<array<string, mixed>>
+     */
+    private static function withTags(array $items): array {
+        $ids = array_values(array_filter(array_map(static fn($i) => (int)($i['id'] ?? 0), $items)));
+        if ($ids === []) return $items;
+        $by = [];
+        try {
+            foreach (\Database::rows(
+                'SELECT ft.media_id, t.id, t.name FROM media_file_tags ft JOIN media_tags t ON t.id = ft.tag_id
+                  WHERE ft.media_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY t.name',
+                $ids
+            ) as $r) $by[(int)$r['media_id']][] = ['id' => (int)$r['id'], 'name' => (string)$r['name']];
+        } catch (\Throwable $e) { return $items; }
+        foreach ($items as &$item) $item['tags'] = $by[(int)$item['id']] ?? [];
+        return $items;
+    }
+
+    /** @return list<string> unique (case-insensitive), trimmed, at most 60 characters each, at most 20 */
+    private static function splitTags(array|string $names): array {
+        $list = is_array($names) ? $names : explode(',', $names);
+        $out = [];
+        foreach ($list as $n) {
+            $n = self::cleanName((string)$n, 60);
+            if ($n !== '' && !isset($out[mb_strtolower($n)])) $out[mb_strtolower($n)] = $n;
+        }
+        return array_slice(array_values($out), 0, 20);
+    }
+
+    /** @return list<int> ids of these tag names, creating the missing ones */
+    private static function tagIds(array $names): array {
+        $tid = current_tenant_id();
+        $ids = [];
+        foreach ($names as $name) {
+            try {
+                \Database::query("INSERT IGNORE INTO media_tags (tenant_id, name) VALUES (?, ?)", [$tid, $name]);
+                $id = (int)\Database::value("SELECT id FROM media_tags WHERE tenant_id = ? AND name = ?", [$tid, $name]);
+                if ($id > 0) $ids[] = $id;
+            } catch (\Throwable $e) { /* skip */ }
+        }
+        return array_values(array_unique($ids));
+    }
+
+    private static function pruneTags(): void {
+        try {
+            \Database::query(
+                "DELETE t FROM media_tags t LEFT JOIN media_file_tags ft ON ft.tag_id = t.id WHERE t.tenant_id = ? AND ft.tag_id IS NULL",
+                [current_tenant_id()]
+            );
+        } catch (\Throwable $e) { /* optional */ }
+    }
+
+    private static function cleanName(string $name, int $max): string {
+        $name = trim(preg_replace('/\s+/u', ' ', strip_tags($name)) ?? '');
+        return function_exists('mb_substr') ? mb_substr($name, 0, $max) : substr($name, 0, $max);
+    }
+
+    /** @return list<int> */
+    private static function cleanIds(array $ids): array {
+        return array_values(array_unique(array_filter(array_map('intval', $ids), static fn(int $i) => $i > 0)));
     }
 
     /** Is this file name one of the WebP copies (<name>-<width>w.webp)? */

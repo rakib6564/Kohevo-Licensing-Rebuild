@@ -39,6 +39,8 @@ class MediaLibrary extends Plugin {
         // files referenced by products/variants/logo show as "in use".
         Hook::addFilter('media_usage', [self::class, 'legacyUsageFilter']);
         Hook::addFilter('media_usage_details', [self::class, 'legacyUsageDetails'], 10, 2);
+        // Trashed files are removed for good after Media::TRASH_DAYS days.
+        Hook::addAction('daily_cron', [\Slate\Services\Media\Media::class, 'dailyCron']);
         Hook::addFilter('i18n_lang_paths', [$this, 'addLangPath']);
 
         // Dashboard widget intentionally disabled — the dashboard surfaces the

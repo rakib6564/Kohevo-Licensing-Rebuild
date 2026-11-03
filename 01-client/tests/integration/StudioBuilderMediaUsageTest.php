@@ -364,6 +364,112 @@ unit('media images integration: WebP sizes, srcset, rotate and crop, versioned U
     }
 });
 
+unit('media organising integration: folders, tags, missing alt, trash and restore, purge, duplicate lookup (real MySQL)', function (): void {
+    $dbName = 'slate_sbmo_' . slate_test_ns();
+    $dirRel = '/uploads/media/zz-sbmo-' . slate_test_ns();
+    $dirAbs = SLATE_ROOT . $dirRel;
+    $pdo = sbmu_pdo($dbName, true);
+    $uploadsExisted = is_dir(SLATE_ROOT . '/uploads');
+    @mkdir($dirAbs, 0775, true);
+    try {
+        sbmu_with_pdo($pdo, static function () use ($dirRel, $dirAbs): void {
+            InstallationService::provisionCore();
+            Media::ensureSchema();
+            (new \Slate\Tenancy\TenantContext())->runAs(SBMU_A, static function () use ($dirRel, $dirAbs): void {
+                $ids = [];
+                foreach (['a', 'b', 'c', 'd'] as $n) {
+                    file_put_contents($dirAbs . "/{$n}.png", "png-{$n}");
+                    $ids[$n] = Media::register("{$dirRel}/{$n}.png", ['mime' => 'image/png']);
+                }
+
+                // Folders: a tree with counts; files are labels only.
+                $events = Media::createFolder('  Events  ');
+                $summer = Media::createFolder('Summer', $events);
+                assert_true($events > 0 && $summer > 0);
+                assert_eq(0, Media::createFolder('   '), 'a blank name is refused');
+                assert_eq(0, Media::createFolder('Orphan', 999999), 'an unknown parent is refused');
+                assert_eq(2, Media::moveToFolder([$ids['a'], $ids['b']], $summer));
+                assert_eq(1, Media::moveToFolder([$ids['c']], $events));
+                assert_eq(0, Media::moveToFolder([$ids['d']], 999999), 'an unknown folder moves nothing');
+                $tree = Media::folders();
+                assert_eq([['Events', 0, 1], ['Summer', 1, 2]], array_map(fn($f) => [$f['name'], $f['depth'], $f['count']], $tree), json_encode($tree));
+                assert_true(is_file($dirAbs . '/a.png'), 'nothing moved on disk');
+                assert_eq([$ids['b'], $ids['a']], array_column(Media::listAll(['folder' => $summer])['items'], 'id'));
+                assert_eq([$ids['d']], array_column(Media::listAll(['folder' => 'none'])['items'], 'id'));
+                assert_true(Media::renameFolder($summer, 'Summer 2026'));
+                assert_true(Media::deleteFolder($events), 'remove the parent');
+                $tree = Media::folders();
+                assert_eq([['Summer 2026', 0, 2]], array_map(fn($f) => [$f['name'], $f['depth'], $f['count']], $tree), 'the sub-folder moved up');
+                assert_eq(null, Media::get($ids['c'])['folder_id'], 'its file moved up to no folder');
+
+                // Tags: set, add in bulk, filter, counts, unused tags pruned.
+                assert_true(Media::setTags($ids['a'], 'Beach, beach , Sunset'));
+                assert_eq(['Beach', 'Sunset'], array_column(Media::get($ids['a'])['tags'], 'name'), 'case-insensitive duplicates collapse');
+                assert_eq(2, Media::addTags([$ids['b'], $ids['c']], 'beach'));
+                $tags = array_column(Media::tags(), 'count', 'name');
+                assert_eq(['Beach' => 3, 'Sunset' => 1], $tags, json_encode($tags));
+                $beach = (int)array_values(array_filter(Media::tags(), fn($t) => $t['name'] === 'Beach'))[0]['id'];
+                $tagged = array_column(Media::listAll(['tag' => $beach])['items'], 'id');
+                sort($tagged);
+                assert_eq([$ids['a'], $ids['b'], $ids['c']], $tagged);
+                Media::setTags($ids['a'], '');
+                assert_eq(['Beach'], array_column(Media::tags(), 'name'), 'Sunset was on no file any more');
+
+                // Missing alt text.
+                Media::updateMeta($ids['a'], ['alt_text' => 'Sea at dusk']);
+                assert_eq(3, Media::counts()['missing_alt']);
+                assert_false(in_array($ids['a'], array_column(Media::listAll(['alt' => 'missing'])['items'], 'id'), true));
+
+                // Trash: in-use files are refused; trashed files leave the lists and counts; restore brings them back.
+                Media::attach($ids['b'], ['context' => 'test', 'object_type' => 'page', 'object_id' => '1']);
+                assert_eq(['trashed' => 2, 'refused' => 1], Media::trash([$ids['b'], $ids['c'], $ids['d']]));
+                $c = Media::counts();
+                assert_eq([2, 2], [$c['all'], $c['trash']], json_encode($c));
+                assert_false(in_array($ids['c'], array_column(Media::listAll()['items'], 'id'), true), 'not in the normal list');
+                $inTrash = array_column(Media::listAll(['trash' => true])['items'], 'id');
+                sort($inTrash);
+                assert_eq([$ids['c'], $ids['d']], $inTrash);
+                assert_eq(['Beach' => 1], array_column(Media::tags(), 'count', 'name'), 'b keeps the tag; trashed c no longer counts');
+                assert_eq(1, Media::restore([$ids['c']]));
+                assert_eq(1, Media::counts()['trash']);
+
+                // Purge: the daily job keeps recent ones; "Empty trash" removes the file from disk.
+                assert_eq(0, Media::purgeTrash(), 'trashed today: kept for 30 days');
+                Database::query('UPDATE media_files SET deleted_at = NOW() - INTERVAL 31 DAY WHERE id = ?', [$ids['d']]);
+                assert_eq(1, Media::purgeTrash(), 'older than 30 days: removed');
+                assert_eq(null, Media::get($ids['d']));
+                assert_false(is_file($dirAbs . '/d.png'));
+                Media::trash([$ids['c']]);
+                assert_eq(1, Media::purgeTrash(0), 'Empty trash');
+                assert_false(is_file($dirAbs . '/c.png'));
+
+                // Duplicates are found by content hash, never in the trash.
+                $hash = hash('sha256', 'png-a');
+                Database::query('UPDATE media_files SET file_hash = ? WHERE id = ?', [$hash, $ids['a']]);
+                assert_eq($ids['a'], Media::findByHash($hash)['id'] ?? null);
+                assert_eq(null, Media::findByHash('not-a-hash'));
+                Media::trash([$ids['a']]);
+                assert_eq(null, Media::findByHash($hash), 'a trashed file is not handed out again');
+                Media::restore([$ids['a']]);
+                Media::detach($ids['b']);
+                foreach ([$ids['a'], $ids['b']] as $id) {
+                    Media::delete($id);
+                }
+            });
+        });
+    } finally {
+        foreach (glob($dirAbs . '/*') ?: [] as $f) {
+            @unlink($f);
+        }
+        @unlink($dirAbs . '/.htaccess');
+        @rmdir($dirAbs);
+        if (!$uploadsExisted) {
+            exec('rm -rf ' . escapeshellarg(SLATE_ROOT . '/uploads'));
+        }
+        sbmu_pdo($dbName, false);
+    }
+});
+
 if (!empty($studioMediaUsageStandalone)) {
     exit(unit_summary());
 }
