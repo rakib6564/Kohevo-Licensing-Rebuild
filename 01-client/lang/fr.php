@@ -1410,4 +1410,10 @@ return array (
     'media_used_unlisted' => 'Utilisé à %d endroit(s) qui ne peuvent pas être listés ici.',
     'media_used_nowhere' => 'Utilisé nulle part pour l\'instant.',
     'media_delete_file' => 'Supprimer le fichier',
+    'media_view' => 'Affichage',
+    'media_view_grid' => 'Grille',
+    'media_view_large' => 'Grandes vignettes',
+    'media_view_small' => 'Petites vignettes',
+    'media_view_list' => 'Liste',
+    'media_col_name' => 'Nom',
 );

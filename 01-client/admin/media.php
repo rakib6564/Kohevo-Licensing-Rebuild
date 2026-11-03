@@ -16,6 +16,7 @@
  * Query:
  *   ?type=all|image|video|document   ?usage=all|in_use|unused   ?q=…
  *   ?sort=newest|oldest|name|size    ?page=N    ?id=N (opens the details panel)
+ *   ?view=grid|large|small|list      (remembered in the media_view cookie)
  */
 require __DIR__ . '/../config.php';
 Auth::require();
@@ -131,7 +132,16 @@ if (!in_array($type,  ['all', 'image', 'video', 'document'], true)) $type  = 'al
 if (!in_array($usage, ['all', 'in_use', 'unused'],  true)) $usage = 'all';
 if (!in_array($sort,  ['newest', 'oldest', 'name', 'size'], true)) $sort = 'newest';
 
-$res    = Media::listAll(['type' => $type, 'usage' => $usage, 'search' => $q, 'sort' => $sort, 'page' => $page, 'per_page' => 24]);
+// View: grid (default), large tiles, small tiles or a list. A chosen view is remembered per browser.
+$views = ['grid', 'large', 'small', 'list'];
+$view  = (string)($_GET['view'] ?? $_COOKIE['media_view'] ?? 'grid');
+if (!in_array($view, $views, true)) $view = 'grid';
+if (isset($_GET['view']) && ($_COOKIE['media_view'] ?? '') !== $view) {
+    setcookie('media_view', $view, ['expires' => time() + 31536000, 'path' => '/', 'samesite' => 'Lax', 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'httponly' => true]);
+}
+$perPage = ['grid' => 24, 'large' => 24, 'small' => 48, 'list' => 50][$view];
+
+$res    = Media::listAll(['type' => $type, 'usage' => $usage, 'search' => $q, 'sort' => $sort, 'page' => $page, 'per_page' => $perPage]);
 $counts = Media::counts();
 $items  = $res['items'];
 
@@ -202,6 +212,8 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
 .media-doc-ext { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); }
 .media-meta { padding: 8px 10px; }
 .media-name { font-size: 12px; font-weight: 600; word-break: break-all; line-height: 1.3; }
+.media-name a { color: inherit; text-decoration: none; }
+.media-name a:hover { color: var(--accent); }
 .media-sub { color: var(--muted); font-size: 10.5px; margin-top: 3px; }
 .media-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
 .media-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; padding: 2px 7px 2px 6px; border-radius: 999px; }
@@ -247,6 +259,43 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
 .media-used li { display: flex; gap: 6px; align-items: baseline; }
 .media-used-src { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; color: var(--muted); flex: none; }
 .media-panel-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.media-views { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); background: var(--surface-2); border-radius: var(--radius-full); flex: none; }
+.media-view { display: grid; place-items: center; width: 28px; height: 26px; border-radius: var(--radius-full); color: var(--muted); }
+.media-view:hover { color: var(--text); }
+.media-view.is-on { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.media-view svg { width: 15px; height: 15px; }
+
+/* Large and small tiles */
+.media-grid.view-large { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.media-grid.view-large .media-thumb { aspect-ratio: 4 / 3; }
+.media-grid.view-small { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.media-grid.view-small .media-meta { padding: 5px 7px 6px; }
+.media-grid.view-small .media-name { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; }
+.media-grid.view-small .media-sub, .media-grid.view-small .media-row { display: none; }
+
+/* List: one row per file with its facts in columns */
+.media-grid.view-list { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; }
+.media-list-head, .view-list .media-card { display: grid; grid-template-columns: 56px minmax(0, 1fr) 64px 96px 76px 92px 150px; align-items: center; gap: 12px; padding: 0 12px; }
+.media-list-head { padding-top: 8px; padding-bottom: 8px; background: var(--surface-2); border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.view-list .media-card { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; box-shadow: none; transform: none; min-height: 58px; }
+.view-list .media-card:last-child { border-bottom: 0; }
+.view-list .media-card:hover { background: var(--surface-2); box-shadow: none; transform: none; }
+.view-list .media-card.is-sel { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.view-list .media-thumb { width: 44px; height: 44px; aspect-ratio: auto; border-radius: var(--radius-sm); overflow: hidden; }
+.view-list .media-thumb img, .view-list .media-thumb video { width: 100%; height: 100%; object-fit: cover; }
+.view-list .media-doc svg { width: 18px; height: 18px; }
+.view-list .media-doc { gap: 0; }
+.view-list .media-doc-ext { font-size: 8.5px; }
+.view-list .media-meta { display: contents; }
+.view-list .media-sub { display: none; }
+.view-list .media-name { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; }
+.view-list .media-col { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.view-list .media-col-type { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); }
+.view-list .media-row { margin: 0; justify-content: flex-end; }
+.view-list .media-row .media-spacer { display: none; }
+.media-layout.has-panel .media-list-head, .media-layout.has-panel .view-list .media-card { grid-template-columns: 56px minmax(0, 1fr) 76px 150px; }
+.media-layout.has-panel .view-list .media-col-type, .media-layout.has-panel .view-list .media-col-dim, .media-layout.has-panel .view-list .media-col-date { display: none; }
+
 .media-backdrop { display: none; }
 /* Narrow screens: the grid stays in view and the details open as a bottom sheet over it. */
 @media (max-width: 960px) {
@@ -274,7 +323,8 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
     .media-sortform { flex: none; }
     /* The admin's phone form styles reset select padding; keep room for the arrow. */
     .media-toolbar .media-sortform select.media-sort { padding: 6px 30px 6px 12px; font-size: 14px; }
-    .media-search { flex: 1; margin-left: 0; min-width: 0; padding: 5px 10px; }
+    .media-search { flex: 1 1 100%; order: 5; margin-left: 0; min-width: 0; padding: 5px 10px; }
+    .media-views { margin-left: auto; }
     .media-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
     .media-card { border-radius: var(--radius-md, 8px); }
     .media-card:hover { transform: none; }
@@ -286,6 +336,18 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
     .media-ico-btn { width: 22px; height: 22px; }
     .media-ico-btn svg { width: 12px; height: 12px; }
     .media-row .media-copy { display: none; }
+    .media-views { padding: 2px; }
+    .media-view { width: 26px; height: 24px; }
+    .media-grid.view-large { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .media-grid.view-small { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+    .media-grid.view-small .media-meta { display: none; }
+    .media-grid.view-list { display: flex; }
+    .media-list-head { display: none; }
+    .media-list-head, .view-list .media-card, .media-layout.has-panel .view-list .media-card { grid-template-columns: 44px minmax(0, 1fr) auto auto; gap: 8px; padding: 0 8px; }
+    .view-list .media-thumb { width: 40px; height: 40px; }
+    .view-list .media-col-type, .view-list .media-col-dim, .view-list .media-col-date { display: none; }
+    .view-list .media-name { font-size: 12px; }
+    .view-list .media-row .media-copy { display: grid; }
 }
 </style>
 
@@ -353,6 +415,20 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
             </select>
             <noscript><button type="submit" class="btn btn-sm"><?= __('apply', 'Apply') ?></button></noscript>
         </form>
+        <nav class="media-views" aria-label="<?= e(__('media_view', 'View')) ?>">
+            <?php
+            $viewIcons = [
+                'grid'  => ['media_view_grid', 'Grid', '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'],
+                'large' => ['media_view_large', 'Large tiles', '<rect x="3" y="3" width="18" height="8" rx="1"/><rect x="3" y="13" width="18" height="8" rx="1"/>'],
+                'small' => ['media_view_small', 'Small tiles', '<rect x="3" y="3" width="4" height="4"/><rect x="10" y="3" width="4" height="4"/><rect x="17" y="3" width="4" height="4"/><rect x="3" y="10" width="4" height="4"/><rect x="10" y="10" width="4" height="4"/><rect x="17" y="10" width="4" height="4"/><rect x="3" y="17" width="4" height="4"/><rect x="10" y="17" width="4" height="4"/><rect x="17" y="17" width="4" height="4"/>'],
+                'list'  => ['media_view_list', 'List', '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>'],
+            ];
+            foreach ($viewIcons as $v => [$key, $fallback, $paths]): $label = __($key, $fallback); ?>
+                <a class="media-view <?= $view === $v ? 'is-on' : '' ?>" href="<?= e($tabUrl(['view' => $v, 'id' => $selId ?: null])) ?>" title="<?= e($label) ?>" aria-label="<?= e($label) ?>" <?= $view === $v ? 'aria-current="true"' : '' ?>>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><?= $paths ?></svg>
+                </a>
+            <?php endforeach; ?>
+        </nav>
         <form class="media-search" method="get">
             <input type="hidden" name="type" value="<?= e($type) ?>">
             <input type="hidden" name="usage" value="<?= e($usage) ?>">
@@ -370,7 +446,14 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
             <p><?php if ($q !== '' || $type !== 'all' || $usage !== 'all'): ?><?= __('no_media_filter', 'Nothing matches this filter.') ?><?php else: ?><?= __('no_media_yet', 'Upload your first file above, or import what is already on disk.') ?><?php endif; ?></p>
         </div>
     <?php else: ?>
-        <div class="media-grid">
+        <div class="media-grid view-<?= e($view) ?>">
+            <?php if ($view === 'list'): ?>
+                <div class="media-list-head" aria-hidden="true">
+                    <span></span><span><?= __('media_col_name', 'Name') ?></span><span class="media-col-type"><?= __('media_type', 'Type') ?></span>
+                    <span class="media-col-dim"><?= __('media_dimensions', 'Size') ?></span><span class="media-col-size"><?= __('media_file_size', 'File size') ?></span>
+                    <span class="media-col-date"><?= __('media_uploaded', 'Uploaded') ?></span><span></span>
+                </div>
+            <?php endif; ?>
             <?php foreach ($items as $f):
                 $ext = strtoupper(pathinfo($f['original_name'] ?: $f['path'], PATHINFO_EXTENSION) ?: '?');
                 $dim = ($f['width'] && $f['height']) ? $f['width'] . '×' . $f['height'] : '';
@@ -391,8 +474,14 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
                 </div>
                 </a>
                 <div class="media-meta">
-                    <div class="media-name" title="<?= e($f['original_name']) ?>"><?= e(mb_strimwidth($f['original_name'], 0, 26, '…')) ?></div>
+                    <div class="media-name" title="<?= e($f['original_name']) ?>"><a href="<?= e($selUrl((int)$f['id'])) ?>"><?= e($view === 'list' ? $f['original_name'] : mb_strimwidth($f['original_name'], 0, 26, '…')) ?></a></div>
                     <div class="media-sub"><?= e($dim ? $dim . ' · ' : '') ?><?= e($fmtSize($f['size_bytes'])) ?></div>
+                    <?php if ($view === 'list'): ?>
+                        <span class="media-col media-col-type"><?= e($ext) ?></span>
+                        <span class="media-col media-col-dim"><?= e($dim ?: '—') ?></span>
+                        <span class="media-col media-col-size"><?= e($fmtSize($f['size_bytes'])) ?></span>
+                        <span class="media-col media-col-date"><?= e(substr($f['uploaded_at'], 0, 10)) ?></span>
+                    <?php endif; ?>
                     <div class="media-row">
                         <?php if ($f['in_use']): ?>
                             <span class="media-badge is-on"><?= sprintf(__('used_n', 'Used (%d)'), $f['usage_count']) ?></span>
@@ -420,7 +509,7 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
         </div>
 
         <?php slate_pagination($res['page'], $res['pages'], ['type' => $type, 'usage' => $usage, 'q' => $q, 'sort' => $sort],
-            ['total' => $res['total'], 'per_page' => 24, 'label' => __('files', 'files')]); ?>
+            ['total' => $res['total'], 'per_page' => $perPage, 'label' => __('files', 'files')]); ?>
     <?php endif; ?>
     </div>
 
