@@ -56,7 +56,6 @@ Fired via `Hook::doAction` / `Hook::applyFilters`; consumed via
 |---|---|---|
 | `shop_shipping_rate` | filter | contribute a shipping rate (⚠︎ two plugins register this — run one) |
 | `shop_cart_shipping_breakdown` | filter | shipping line breakdown |
-| `shop_payment_providers` | filter | register a checkout payment provider |
 | `shop_order_created` / `shop_order_status_changed` | action | order lifecycle |
 | `shop_product_db_row` | filter | augment a product row |
 | `shop_product_edit_shipping_fields` | action | product-editor shipping fields |
@@ -106,7 +105,7 @@ surfaced via the `admin_nav_items` filter.
 | `/forms/<slug>` | forms | + iframe embed |
 | `/p/<slug>`, `/<type>/<slug>` | content-builder | pages + custom post types (draft preview) |
 | storefront (index/category/product/cart/checkout/order) | shop | registered via filter |
-| webhook / return / success / create-intent | stripe-payment | Stripe completion endpoints |
+| webhook | stripe-payment | Stripe webhook (feeds the shared payment layer); the old Shop return/success/create-intent pages were removed in 1.3.0 |
 
 `route.php` is a rewrite **trampoline** keeping `/includes/` 403 under a subdir
 deploy. Exact prefixes are declared in each plugin's `public_routes` handler

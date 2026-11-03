@@ -38,7 +38,7 @@ on global classes. Versions/status from the `plugins` registry.
   ledger w/ refunds, test/live toggle.
 - **Tables (2):** `stripepayment_sessions`, `stripepayment_charges` *(prefix ≠ slug)*.
 - **Permissions:** `stripe.manage_settings`.
-- **Surface:** 2 admin pages; public `webhook`/`return`/`success`/`create-intent`.
+- **Surface:** 2 admin pages; public `webhook` (the Shop `return`/`success`/`create-intent` pages and the `shop_payment_providers` providers were removed in 1.3.0; payments now go through the shared payment layer).
 - **Hooks:** fires `stripe_webhook_event`.
 - **API:** `StripePaymentAPI` (+ `StripeTerminalAPI` for restaurant).
 - **Deps:** consumed by shop, booking, membership, restaurant, clientdesk.

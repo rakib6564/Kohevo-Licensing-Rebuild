@@ -353,6 +353,50 @@ unit('stripe adapter: a verified webhook emits payment_event before stripe_webho
     }
 });
 
+unit('stripe webhook endpoint over HTTP: unsigned is refused; a signed delivery is recorded once and answered ok', function (): void {
+    $tid  = current_tenant_id();
+    $saved = Database::rows(
+        "SELECT setting_key, setting_value FROM settings WHERE tenant_id = ?
+            AND (setting_key IN ('stripe-payment.mode', 'stripe-payment.test_webhook_secret') OR setting_key LIKE 'stripe-payment.wh\\_%')",
+        [$tid]);
+    $sock = stream_socket_server('tcp://127.0.0.1:0');
+    $port = (int) substr(strrchr(stream_socket_get_name($sock, false), ':'), 1);
+    fclose($sock);
+    $srv = proc_open([PHP_BINARY, '-S', '127.0.0.1:' . $port, '-t', SLATE_ROOT, SLATE_ROOT . '/tests/fixtures/testing-router.php'],
+        [0 => ['pipe', 'r'], 1 => ['file', '/dev/null', 'a'], 2 => ['file', '/dev/null', 'a']], $pipes, SLATE_ROOT,
+        ['PATH' => (string) getenv('PATH')]);
+    for ($i = 0; $i < 50 && !@fsockopen('127.0.0.1', $port); $i++) usleep(100000);
+    $post = function (string $body, string $sig) use ($port): array {
+        $ch = curl_init('http://127.0.0.1:' . $port . '/plugins/stripe-payment/public/webhook.php');
+        curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 20,
+            CURLOPT_HTTPHEADER => array_filter(['Content-Type: application/json', $sig !== '' ? 'Stripe-Signature: ' . $sig : ''])]);
+        $out = (string) curl_exec($ch);
+        return [(int) curl_getinfo($ch, CURLINFO_HTTP_CODE), $out];
+    };
+    try {
+        Database::setSetting('stripe-payment.mode', 'test');
+        Database::setSetting('stripe-payment.test_webhook_secret', 'whsec_plhttp');
+        $cs = 'cs_plhttp_' . bin2hex(random_bytes(4));
+        $payload = json_encode(['id' => 'evt_plhttp', 'type' => 'checkout.session.completed', 'data' => ['object' => [
+            'id' => $cs, 'payment_status' => 'paid', 'payment_intent' => 'pi_' . substr($cs, 3), 'amount_total' => 900,
+            'currency' => 'usd', 'metadata' => ['source_plugin' => 'plhttp-hook', 'source_id' => '4'],
+        ]]]);
+        assert_eq(400, $post($payload, '')[0], 'unsigned is refused');
+        $t = time();
+        $sig = 't=' . $t . ',v1=' . hash_hmac('sha256', $t . '.' . $payload, 'whsec_plhttp');
+        assert_eq([200, 'ok'], $post($payload, $sig), 'signed is accepted');
+        assert_eq([200, 'ok'], $post($payload, $sig), 'a redelivery too');
+        assert_eq(1, (int) Database::value("SELECT COUNT(*) FROM stripepayment_charges WHERE stripe_session_id = ? AND tenant_id = ?", [$cs, $tid]),
+            'one ledger row');
+    } finally {
+        proc_terminate($srv);
+        Database::query("DELETE FROM settings WHERE tenant_id = ?
+            AND (setting_key IN ('stripe-payment.mode', 'stripe-payment.test_webhook_secret') OR setting_key LIKE 'stripe-payment.wh\\_%')", [$tid]);
+        foreach ($saved as $row) Database::setSetting($row['setting_key'], $row['setting_value'], $tid);
+        Database::query("DELETE FROM stripepayment_charges WHERE tenant_id = ? AND source_plugin = 'plhttp-hook'", [$tid]);
+    }
+});
+
 } finally {
     Payments::unregister('pltest');
     pltest_cleanup();
