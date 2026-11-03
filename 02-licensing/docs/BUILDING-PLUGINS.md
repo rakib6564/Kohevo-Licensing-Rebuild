@@ -1226,6 +1226,16 @@ Gateways are plugins (`stripe-payment`, `paypal-payment`) that implement
 `Slate\Contracts\Payments\PaymentGateway` and call
 `Payments::register()`.
 
+| Gateway | Checkout | Recurring | Refunds | Extra |
+|---|---|---|---|---|
+| `stripe` | Stripe Checkout | yes | full / partial | inline card form, card readers |
+| `paypal` | PayPal (Orders v2) | yes (Subscriptions; a plan per amount, reused) | full / partial | — |
+
+A gateway may return the customer to its own page first (PayPal returns
+to `plugins/paypal-payment/public/return.php`, which captures the order)
+and then forwards them to your `success_url`. Your return page still
+calls `confirmReturn()`; settling twice is safe.
+
 ### 12.1 Offer a gateway and start a checkout
 
 ```php

@@ -1,0 +1,14 @@
+{
+    "slug": "paypal-payment",
+    "name": "PayPal Payment Gateway",
+    "version": "1.0.0",
+    "description": "PayPal checkout for every Kohevo module that takes payments (Shop, Booking, Membership, website payment buttons, …) through the shared Payments layer. One-time payments (PayPal Orders) and monthly / yearly payments (PayPal Subscriptions), refunds from Payments → Transactions, and signed webhooks so a payment is recorded even when the customer never comes back.",
+    "author": "Kohevo",
+    "requires_core": ">=1.0.0",
+    "permissions": [
+        {
+            "key": "paypal.manage_settings",
+            "label": "Manage PayPal gateway settings and API credentials"
+        }
+    ]
+}
