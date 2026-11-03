@@ -1,0 +1,93 @@
+/* The little native style cannot say yet. */
+body { background: #ead9b9; }
+/* The whole header sticks: the black strip scrolls away, the menu bar stays. */
+.sb-site-header--partial { position: sticky; top: -40px; z-index: 50; }
+.gq-pic { overflow: hidden; }
+.gq-pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.gq-framed img { border: 4px solid #151311; box-sizing: border-box; }
+.gq-tilt { transform: rotate(1.6deg); box-shadow: 12px 12px 0 #151311; }
+.gq-logo-white img { filter: invert(1) brightness(2); mix-blend-mode: screen; }
+.gq-logo-paper img { mix-blend-mode: multiply; }
+.gq-link a:hover, a.gq-link:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+.gq-btn a, a.gq-btn { transition: transform .12s ease, box-shadow .12s ease; box-shadow: 4px 4px 0 #151311; }
+.gq-btn:hover a, a.gq-btn:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #151311; }
+@media (max-width: 1100px) { .gq-head-cta { display: none; } }
+@media (max-width: 767px) { .gq-strip-mid { display: none; } }
+/* The strip that runs under the hero. */
+.gq-run { background: #f2b418; border-block: 4px solid #151311; }
+/* A size ticket: the notch sides of a butcher's tag. */
+.gq-ticket { background: #f6ecd8; border: 4px solid #151311; }
+.gq-chips .sb-repeater { display: flex; flex-wrap: wrap; gap: 6px; }
+.gq-chip { display: flex; align-items: baseline; gap: 6px; padding: 4px 9px; border: 2px solid #151311; background: #fff8ea; }
+.gq-chip .sb-field-value { line-height: 1.2; }
+.gq-chips--big .sb-repeater { flex-direction: column; gap: 0; }
+.gq-chips--big .gq-chip { justify-content: flex-start; padding: 12px 14px; border-width: 0 0 2px; background: none; }
+.gq-chips--big .gq-chip:last-child { border-bottom: 0; }
+.gq-chips--big .gq-price { margin-left: auto; }
+/* A Loop Item fills its grid cell, and its title keeps the template's colour. */
+.sb-block--core-query-loop, .sb-query-loop { width: 100%; }
+.sb-query-loop__item > .sb-block { width: 100%; max-width: none; }
+.sb-block--theme-post-title a { color: inherit; text-decoration: none; }
+.gq-row { height: 100%; box-sizing: border-box; }
+.gq-row-main { flex: 1 1 auto; min-width: 0; }
+.sb-query-loop__item:last-child .gq-row { border-bottom: 0; }
+/* Menu lines share one grid: names start on one edge, and Piglet, Porker and Whole Hog keep their own columns all the way down. */
+.gq-list .sb-query-loop__grid { gap: 0; }
+.sb-query-loop__item:first-child .gq-row { padding-top: 0; }
+.gq-row .gq-chips { flex: 0 0 312px; width: 312px; }
+.gq-row .gq-chips .sb-repeater { display: grid; grid-template-columns: repeat(3, 100px); gap: 6px; }
+.gq-row .gq-chip { box-sizing: border-box; flex-direction: column; align-items: center; justify-content: center; gap: 0; width: 100%; min-height: 84px; padding: 5px 4px; text-align: center; }
+.gq-row .gq-chip .gq-price { margin-top: 2px; font-size: 23px; }
+.gq-row .gq-chip .sb-field-value { line-height: 1.1; }
+.gq-row .gq-chip > .sb-block { width: 100%; text-align: center; }
+/* Drinks have long names, so their prices read as rows of name and price. */
+.gq-list--rows .gq-row .gq-chips .sb-repeater { grid-template-columns: 1fr; gap: 0; border: 2px solid #151311; background: #fff8ea; }
+.gq-list--rows .gq-chip { flex-direction: row; justify-content: flex-start; gap: 8px; min-height: 0; padding: 8px 12px; border-width: 0 0 2px; background: none; }
+.gq-list--rows .gq-chip:last-child { border-bottom: 0; }
+.gq-list--rows .gq-chip > .sb-block { width: auto; text-align: left; }
+.gq-list--rows .gq-chip > .gq-price { margin: 0 0 0 auto; }
+@media (max-width: 767px) {
+  .gq-row .gq-chips { flex: none; width: 100%; }
+  .gq-row .gq-chips .sb-repeater { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.gq-card > :last-child { flex: 1 1 auto; }
+.gq-card .gq-chips { margin-top: auto; }
+.gq-card .gq-chips .sb-repeater { display: grid; grid-template-columns: 1fr; }
+.gq-card .gq-chip { justify-content: flex-start; }
+.gq-card .gq-chip .gq-price { margin-left: auto; }
+.gq-card { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; background: #f6ecd8; border: 4px solid #151311; transition: transform .15s ease, box-shadow .15s ease; }
+.gq-card:hover { transform: translate(-3px, -3px); box-shadow: 7px 7px 0 #b81d1a; }
+.gq-card a { color: inherit; text-decoration: none; }
+/* No photo yet: the logo stands in, on mustard. */
+.gq-card-img { height: 250px; overflow: hidden; border-bottom: 4px solid #151311; background: #f2b418; }
+.gq-card-img img[src*="gq-logo"] { object-fit: contain; padding: 22px; box-sizing: border-box; mix-blend-mode: multiply; }
+.gq-card-img img { display: block; width: 100%; height: 250px; object-fit: cover; }
+.gq-item-img .sb-field-value img, .gq-item-img img { display: block; width: 100%; height: 480px; object-fit: cover; border: 4px solid #151311; box-sizing: border-box; }
+@media (max-width: 767px) { .gq-item-img .sb-field-value img, .gq-item-img img { height: 280px; } .gq-tilt { transform: none; box-shadow: 8px 8px 0 #151311; } }
+/* The chalkboard. */
+.gq-board { background: #1c1f1c; border: 10px solid #6b4a2b; box-shadow: inset 0 0 60px rgba(0, 0, 0, .55); }
+body .gq-boardline .sb-block--theme-post-title a { color: #f2b418 !important; }
+.gq-qr { margin-inline: auto; }
+/* Hours. */
+.gq-hours .sb-repeater { display: flex; flex-direction: column; }
+.gq-hour { display: flex; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 2px solid currentColor; }
+.gq-hour:last-child { border-bottom: 0; }
+.gq-hour-times { text-align: right; }
+.gq-prose p { margin: 0 0 1em; }
+.gq-prose p:last-child { margin-bottom: 0; }
+/* The menu jump list wraps instead of running off a phone. */
+.gq-jump a { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
+.gq-jump { position: sticky; top: 76px; z-index: 20; }
+@media (max-width: 1024px) { .gq-jump { position: static; } }
+@media (min-width: 768px) { .gq-sticky { position: sticky; top: 150px; } [id] { scroll-margin-top: 140px; } }
+/* The enquiry form. */
+.gq-form .sb-form { row-gap: 16px; }
+.gq-form input, .gq-form select, .gq-form textarea { width: 100%; box-sizing: border-box; background: #fff8ea; border: 3px solid #151311; border-radius: 0; padding: 13px 14px; font: inherit; color: #151311; }
+.gq-form input:focus, .gq-form select:focus, .gq-form textarea:focus { outline: 3px solid #b81d1a; outline-offset: 0; }
+.gq-form .sb-form-group > label { display: block; margin-bottom: 5px; font-family: 'Barlow Condensed', sans-serif; font-size: 19px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: #151311; }
+.gq-form button[type="submit"] { background: #b81d1a; color: #fff; border: 3px solid #151311; border-radius: 0; box-shadow: 4px 4px 0 #151311; padding: 14px 28px; font-family: 'Barlow Condensed', sans-serif; font-size: 21px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; cursor: pointer; }
+.gq-acc .sb-accordion, .gq-acc .sb-accordion__item { border-radius: 0; }
+.gq-acc .sb-accordion__item { border-bottom: 3px solid #151311; }
+.gq-map .sb-map { margin: 0; border-radius: 0; background: #f6ecd8; }
+/* Keep the chef's head in frame when a phone crops his photo. */
+img[src*="gq-chef"] { object-position: 50% 0 !important; }
