@@ -16,11 +16,17 @@
  *   POST _action=edit_image      → rotate, flip or crop an image, in place or as a new file
  *   POST _action=generate_sizes  → make WebP sizes for images uploaded before sizes existed (one batch)
  *   POST _action=image_settings  → turn image sizes / photo clean-up on or off
+ *   POST _action=delete          → move one file to the trash (refused if in use)
+ *   POST _action=restore|purge   → take one file out of the trash / delete it for good
+ *   POST _action=empty_trash     → delete every trashed file for good
+ *   POST _action=bulk            → bulk_op move|tag|trash|restore|purge on ids[]
+ *   POST _action=new_folder|rename_folder|delete_folder → library folders (labels; files never move on disk)
  *
  * Query:
  *   ?type=all|image|video|document   ?usage=all|in_use|unused   ?q=…
  *   ?sort=newest|oldest|name|size    ?page=N    ?id=N (opens the details panel)
  *   ?view=grid|large|small|list      (remembered in the media_view cookie)
+ *   ?folder=none|N   ?tag=N   ?status=noalt|trash
  */
 require __DIR__ . '/../config.php';
 Auth::require();
@@ -48,7 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$canUpload) {
                 $flash = ['type' => 'error', 'msg' => __('no_permission', 'You do not have permission to upload.')];
             } else {
-                $ok = 0; $errors = [];
+                $ok = 0; $dupes = 0; $errors = [];
+                $uploadFolder = max(0, (int)($_POST['folder_id'] ?? 0));
                 if (!empty($_FILES['files']) && is_array($_FILES['files']['name'] ?? null)) {
                     $n = count($_FILES['files']['name']);
                     for ($i = 0; $i < $n; $i++) {
@@ -64,8 +71,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'size'     => $_FILES['files']['size'][$i],
                         ];
                         try {
-                            $r = Media::upload('__media_one');
-                            if (!empty($r['id']) || !empty($r['path'])) $ok++;
+                            $r = Media::upload('__media_one', ['folder_id' => $uploadFolder]);
+                            if (!empty($r['duplicate'])) $dupes++;
+                            elseif (!empty($r['id']) || !empty($r['path'])) $ok++;
                             else $errors[] = $label . ': ' . ($r['error'] ?? 'unknown error');
                         } catch (\Throwable $e) {
                             $errors[] = $label . ': ' . $e->getMessage();
@@ -73,8 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         unset($_FILES['__media_one']);
                     }
                 }
-                if ($ok > 0) {
-                    $msg = sprintf(__('uploaded_n', '%d file(s) uploaded.'), $ok);
+                if ($ok > 0 || $dupes > 0) {
+                    $msg = $ok > 0 ? sprintf(__('uploaded_n', '%d file(s) uploaded.'), $ok) : '';
+                    if ($dupes > 0) $msg = trim($msg . ' ' . sprintf(__('media_dupes_n', '%d file(s) were already in the library, so the existing copy was kept.'), $dupes));
                     if ($errors) { $msg .= ' ' . sprintf(__('with_errors', 'With %d error(s).'), count($errors)); $GLOBALS['_upload_errors'] = $errors; }
                     $flash = ['type' => 'success', 'msg' => $msg];
                 } elseif ($errors) {
@@ -86,14 +95,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        elseif (in_array($action, ['delete', 'restore', 'purge', 'empty_trash', 'bulk'], true) && !$canDelete && !($action === 'bulk' && in_array($_POST['bulk_op'] ?? '', ['move', 'tag'], true) && $canUpload)) {
+            $flash = ['type' => 'error', 'msg' => __('no_permission', 'You do not have permission to delete.')];
+        }
+
         elseif ($action === 'delete') {
-            if (!$canDelete) {
-                $flash = ['type' => 'error', 'msg' => __('no_permission', 'You do not have permission to delete.')];
+            // Delete moves to the trash; files stay restorable for Media::TRASH_DAYS days.
+            $r = Media::trash([(int)($_POST['id'] ?? 0)]);
+            $flash = $r['trashed'] > 0
+                ? ['type' => 'success', 'msg' => sprintf(__('media_trashed_one', 'Moved to the trash. It is deleted for good after %d days.'), Media::TRASH_DAYS)]
+                : ['type' => 'error', 'msg' => __('media_trash_refused', 'This file is in use, so it cannot be deleted. Remove it from those pages first.')];
+        }
+
+        elseif ($action === 'restore') {
+            $flash = Media::restore([(int)($_POST['id'] ?? 0)]) > 0
+                ? ['type' => 'success', 'msg' => __('media_restored', 'Restored from the trash.')]
+                : ['type' => 'error', 'msg' => __('media_restore_failed', 'The file could not be restored.')];
+        }
+
+        elseif ($action === 'purge') {
+            $id = (int)($_POST['id'] ?? 0);
+            $rec = Media::get($id);
+            $r = $rec && $rec['deleted_at'] !== null ? Media::delete($id) : ['ok' => false, 'error' => __('media_purge_not_trashed', 'Only files in the trash can be deleted for good.')];
+            $flash = !empty($r['ok'])
+                ? ['type' => 'success', 'msg' => __('file_deleted', 'File deleted.')]
+                : ['type' => 'error', 'msg' => (string)($r['error'] ?? '')];
+        }
+
+        elseif ($action === 'empty_trash') {
+            $n = Media::purgeTrash(0);
+            $flash = ['type' => 'success', 'msg' => sprintf(__('media_trash_emptied', '%d file(s) deleted for good.'), $n)];
+        }
+
+        elseif ($action === 'bulk') {
+            $ids = array_map('intval', (array)($_POST['ids'] ?? []));
+            $op  = (string)($_POST['bulk_op'] ?? '');
+            if ($ids === []) {
+                $flash = ['type' => 'error', 'msg' => __('media_bulk_none', 'Select at least one file.')];
+            } elseif ($op === 'move') {
+                $target = (string)($_POST['target_folder'] ?? '');
+                $n = Media::moveToFolder($ids, $target === '' || $target === 'none' ? null : (int)$target);
+                $flash = ['type' => 'success', 'msg' => sprintf(__('media_moved_n', '%d file(s) moved.'), $n)];
+            } elseif ($op === 'tag') {
+                $n = Media::addTags($ids, (string)($_POST['bulk_tags'] ?? ''));
+                $flash = $n > 0
+                    ? ['type' => 'success', 'msg' => sprintf(__('media_tagged_n', 'Tags added to %d file(s).'), $n)]
+                    : ['type' => 'error', 'msg' => __('media_tag_none', 'Type a tag to add.')];
+            } elseif ($op === 'trash') {
+                $r = Media::trash($ids);
+                $msg = sprintf(__('media_trashed_n', '%d file(s) moved to the trash.'), $r['trashed']);
+                if ($r['refused'] > 0) $msg .= ' ' . sprintf(__('media_trash_refused_n', '%d in use, so kept.'), $r['refused']);
+                $flash = ['type' => $r['trashed'] > 0 ? 'success' : 'error', 'msg' => $msg];
+            } elseif ($op === 'restore') {
+                $flash = ['type' => 'success', 'msg' => sprintf(__('media_restored_n', '%d file(s) restored.'), Media::restore($ids))];
+            } elseif ($op === 'purge') {
+                $n = 0;
+                foreach ($ids as $id) {
+                    $rec = Media::get($id);
+                    if ($rec && $rec['deleted_at'] !== null && !empty(Media::delete($id)['ok'])) $n++;
+                }
+                $flash = ['type' => 'success', 'msg' => sprintf(__('media_trash_emptied', '%d file(s) deleted for good.'), $n)];
+            }
+        }
+
+        elseif (in_array($action, ['new_folder', 'rename_folder', 'delete_folder'], true) && !$canUpload) {
+            $flash = ['type' => 'error', 'msg' => __('no_permission', 'You do not have permission to edit media.')];
+        }
+
+        elseif ($action === 'new_folder') {
+            $parent = (int)($_POST['parent_id'] ?? 0);
+            $newId = Media::createFolder((string)($_POST['name'] ?? ''), $parent > 0 ? $parent : null);
+            if ($newId > 0) {
+                $_GET['folder'] = (string)$newId;
+                $flash = ['type' => 'success', 'msg' => __('media_folder_created', 'Folder created.')];
             } else {
-                $r = Media::delete((int)($_POST['id'] ?? 0));
-                $flash = $r['ok']
-                    ? ['type' => 'success', 'msg' => __('file_deleted', 'File deleted.')]
-                    : ['type' => 'error', 'msg' => $r['error']];
+                $flash = ['type' => 'error', 'msg' => __('media_folder_name', 'Give the folder a name.')];
+            }
+        }
+
+        elseif ($action === 'rename_folder') {
+            $flash = Media::renameFolder((int)($_POST['folder_id'] ?? 0), (string)($_POST['name'] ?? ''))
+                ? ['type' => 'success', 'msg' => __('media_folder_renamed', 'Folder renamed.')]
+                : ['type' => 'error', 'msg' => __('media_folder_name', 'Give the folder a name.')];
+        }
+
+        elseif ($action === 'delete_folder') {
+            if (Media::deleteFolder((int)($_POST['folder_id'] ?? 0))) {
+                $_GET['folder'] = 'all';
+                $flash = ['type' => 'success', 'msg' => __('media_folder_deleted', 'Folder removed. Its files moved up one level; none were deleted.')];
+            } else {
+                $flash = ['type' => 'error', 'msg' => __('media_folder_missing', 'That folder no longer exists.')];
             }
         }
 
@@ -106,7 +197,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'title'       => mb_substr((string)($_POST['title'] ?? ''), 0, 255),
                     'description' => mb_substr((string)($_POST['description'] ?? ''), 0, 5000),
                 ]);
-                if (!empty($r['ok'])) AuditLog::record('media.updated', (string)($r['item']['path'] ?? ''), ['id' => (int)($_POST['id'] ?? 0)]);
+                if (!empty($r['ok'])) {
+                    $metaId = (int)($_POST['id'] ?? 0);
+                    if (array_key_exists('tags', $_POST)) Media::setTags($metaId, (string)$_POST['tags']);
+                    if (array_key_exists('folder_id', $_POST)) {
+                        $f = (string)$_POST['folder_id'];
+                        Media::moveToFolder([$metaId], $f === '' ? null : (int)$f);
+                    }
+                    AuditLog::record('media.updated', (string)($r['item']['path'] ?? ''), ['id' => $metaId]);
+                }
                 $flash = !empty($r['ok'])
                     ? ['type' => 'success', 'msg' => __('media_details_saved', 'Details saved.')]
                     : ['type' => 'error', 'msg' => __('media_details_not_saved', 'The details could not be saved.')];
@@ -196,6 +295,16 @@ $selId = max(0, (int)($_GET['id'] ?? 0));
 if (!in_array($type,  ['all', 'image', 'video', 'document'], true)) $type  = 'all';
 if (!in_array($usage, ['all', 'in_use', 'unused'],  true)) $usage = 'all';
 if (!in_array($sort,  ['newest', 'oldest', 'name', 'size'], true)) $sort = 'newest';
+$status = (string)($_GET['status'] ?? '');
+if (!in_array($status, ['noalt', 'trash'], true)) $status = '';
+$folders  = Media::folders();
+$folderIds = array_column($folders, 'id');
+$folderParam = (string)($_GET['folder'] ?? 'all');
+$folder = $folderParam === 'none' ? 'none' : (in_array((int)$folderParam, $folderIds, true) ? (int)$folderParam : 'all');
+$tags  = Media::tags();
+$tagId = (int)($_GET['tag'] ?? 0);
+if (!in_array($tagId, array_column($tags, 'id'), true)) $tagId = 0;
+$folderName = is_int($folder) ? (string)(array_values(array_filter($folders, fn($f) => $f['id'] === $folder))[0]['name'] ?? '') : '';
 
 // View: grid (default), large tiles, small tiles or a list. A chosen view is remembered per browser.
 $views = ['grid', 'large', 'small', 'list'];
@@ -206,7 +315,10 @@ if (isset($_GET['view']) && ($_COOKIE['media_view'] ?? '') !== $view) {
 }
 $perPage = ['grid' => 24, 'large' => 24, 'small' => 48, 'list' => 50][$view];
 
-$res    = Media::listAll(['type' => $type, 'usage' => $usage, 'search' => $q, 'sort' => $sort, 'page' => $page, 'per_page' => $perPage]);
+$res    = Media::listAll([
+    'type' => $type, 'usage' => $usage, 'search' => $q, 'sort' => $sort, 'page' => $page, 'per_page' => $perPage,
+    'folder' => $folder, 'tag' => $tagId, 'alt' => $status === 'noalt' ? 'missing' : '', 'trash' => $status === 'trash',
+]);
 $counts = Media::counts();
 $items  = $res['items'];
 
@@ -223,8 +335,8 @@ $fmtSize = static function (int $b): string {
     while ($s >= 1024 && $i < count($u) - 1) { $s /= 1024; $i++; }
     return ($i === 0 ? (string)(int)$s : number_format($s, 1)) . ' ' . $u[$i];
 };
-$tabUrl = static function (array $over) use ($type, $usage, $q, $sort): string {
-    $p = array_merge(['type' => $type, 'usage' => $usage, 'q' => $q, 'sort' => $sort], $over);
+$tabUrl = static function (array $over) use ($type, $usage, $q, $sort, $folder, $tagId, $status): string {
+    $p = array_merge(['folder' => $folder, 'tag' => $tagId ?: null, 'status' => $status, 'type' => $type, 'usage' => $usage, 'q' => $q, 'sort' => $sort], $over);
     $p = array_filter($p, fn($v) => $v !== '' && $v !== 'all' && $v !== 'newest' && $v !== 0 && $v !== null);
     return '?' . http_build_query($p);
 };
@@ -383,9 +495,54 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
 .media-crop-h.h-se { right: -8px; bottom: -8px; cursor: nwse-resize; }
 .media-panel-prev.is-cropping { overflow: hidden; }
 
+/* Folders and tags beside the files */
+.media-shell { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 14px; align-items: start; }
+.media-content { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.media-side { position: sticky; top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.media-side-box { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); padding: 8px; }
+.media-side-box summary { cursor: pointer; font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 4px 6px; }
+.media-side-current { text-transform: none; letter-spacing: 0; font-family: inherit; font-size: 11px; color: var(--text-2); }
+.media-folders { display: flex; flex-direction: column; gap: 1px; margin: 4px 0; }
+.media-folder { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--radius-sm); color: var(--text-2); text-decoration: none; font-size: 12.5px; }
+.media-folder > span:first-child { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.media-folder svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
+.media-folder:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.media-folder.is-on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.media-side-form { display: flex; gap: 6px; margin: 6px 0 0; }
+.media-side-form input[type=text] { flex: 1; min-width: 0; font: inherit; font-size: 12px; padding: 5px 8px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); }
+.media-link-danger { color: var(--danger) !important; padding-left: 4px !important; }
+.media-tagcloud { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; }
+.media-tagchip { font-size: 11.5px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-2); text-decoration: none; background: var(--surface); }
+.media-tagchip span { color: var(--muted); font-size: 10px; }
+.media-tagchip:hover { border-color: var(--border-stronger); text-decoration: none; }
+.media-tagchip.is-on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+/* Bulk select */
+.media-card { position: relative; }
+.media-check { position: absolute; top: 6px; left: 6px; z-index: 2; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: rgba(255,255,255,.92); box-shadow: 0 1px 3px rgba(0,0,0,.18); opacity: 0; transition: opacity .12s ease; cursor: pointer; }
+.media-check input { margin: 0; width: 15px; height: 15px; cursor: pointer; }
+.media-card:hover .media-check, .media-check:has(input:checked), .media-grid.is-selecting .media-check, .media-check:focus-within { opacity: 1; }
+.media-card:has(.media-check input:checked) { border-color: var(--accent); box-shadow: 0 0 0 2px var(--ring); }
+.view-list .media-check { position: static; opacity: 1; box-shadow: none; background: none; width: auto; }
+.view-list .media-card { grid-template-columns: 24px 56px minmax(0, 1fr) 64px 96px 76px 92px 150px; }
+.view-list .media-list-head { grid-template-columns: 24px 56px minmax(0, 1fr) 64px 96px 76px 92px 150px; }
+.media-layout.has-panel .view-list .media-card, .media-layout.has-panel .media-list-head { grid-template-columns: 24px 56px minmax(0, 1fr) 76px 150px; }
+.media-bulk { position: sticky; top: 8px; z-index: 5; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--accent); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-md); margin: 0; }
+.media-bulk[hidden] { display: none; }
+.media-bulk-all { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; margin-right: 4px; }
+.media-bulk-group { display: inline-flex; gap: 6px; align-items: center; }
+.media-bulk input[type=text] { font: inherit; font-size: 12px; padding: 5px 8px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); width: 150px; background: var(--surface); color: var(--text); }
+.media-note { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-2); font-size: 12.5px; color: var(--text-2); }
+.media-note form { margin: 0; }
+.media-note.is-panel { flex-direction: column; align-items: flex-start; }
+
 .media-backdrop { display: none; }
 /* Narrow screens: the grid stays in view and the details open as a bottom sheet over it. */
 @media (max-width: 960px) {
+    .media-shell { grid-template-columns: minmax(0, 1fr); }
+    .media-side { position: static; flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+    .media-side-box { flex: 1 1 150px; min-width: 0; }
+    .media-side-box[open] { flex-basis: 100%; }
+    .media-side-box:not([open]) { padding: 4px 8px; }
     .media-layout.has-panel { grid-template-columns: minmax(0, 1fr); }
     .media-backdrop { display: block; position: fixed; inset: 0; z-index: 1000; background: rgba(15, 17, 23, 0.45); }
     .media-panel { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 1001; max-height: 82vh; overflow-y: auto; overscroll-behavior: contain;
@@ -435,6 +592,10 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
     .view-list .media-col-type, .view-list .media-col-dim, .view-list .media-col-date { display: none; }
     .view-list .media-name { font-size: 12px; }
     .view-list .media-row .media-copy { display: grid; }
+    .media-check { opacity: 1; width: 22px; height: 22px; top: 4px; left: 4px; }
+    .view-list .media-card, .media-layout.has-panel .view-list .media-card { grid-template-columns: 22px 44px minmax(0, 1fr) auto auto; }
+    .media-bulk { top: 4px; }
+    .media-bulk input[type=text] { width: 110px; }
 }
 </style>
 
@@ -469,6 +630,7 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
         <form method="post" enctype="multipart/form-data">
             <?= csrf_field() ?>
             <input type="hidden" name="_action" value="upload">
+            <input type="hidden" name="folder_id" value="<?= is_int($folder) ? (int)$folder : 0 ?>">
             <input type="file" name="files[]" multiple
                    accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,application/pdf,.doc,.docx,.xls,.xlsx,video/mp4,video/webm,video/ogg,video/quicktime,.mp4,.m4v,.webm,.ogv,.mov">
             <button type="submit" class="btn btn-sm btn-primary"><?= __('upload', 'Upload') ?></button>
@@ -514,16 +676,73 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
     </div>
     <?php endif; ?>
 
+    <div class="media-shell">
+    <aside class="media-side" aria-label="<?= e(__('media_folders', 'Folders')) ?>">
+        <details class="media-side-box" open>
+            <summary><?= __('media_folders', 'Folders') ?><?php if ($folderName !== ''): ?><span class="media-side-current"> · <?= e($folderName) ?></span><?php endif; ?></summary>
+            <nav class="media-folders">
+                <a class="media-folder <?= $folder === 'all' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['folder' => 'all', 'page' => null, 'id' => null])) ?>"><span><?= __('media_all_files', 'All files') ?></span><span class="media-tab-n"><?= (int)$counts['all'] ?></span></a>
+                <a class="media-folder <?= $folder === 'none' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['folder' => 'none', 'page' => null, 'id' => null])) ?>"><span><?= __('media_unfiled', 'Not in a folder') ?></span></a>
+                <?php foreach ($folders as $fd): ?>
+                    <a class="media-folder <?= $folder === $fd['id'] ? 'is-on' : '' ?>" style="padding-left:<?= 10 + 14 * (int)$fd['depth'] ?>px" href="<?= e($tabUrl(['folder' => $fd['id'], 'page' => null, 'id' => null])) ?>">
+                        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><?= e($fd['name']) ?></span>
+                        <span class="media-tab-n"><?= (int)$fd['count'] ?></span>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+            <?php if ($canUpload): ?>
+            <form method="post" class="media-side-form">
+                <?= csrf_field() ?>
+                <input type="hidden" name="_action" value="new_folder">
+                <input type="hidden" name="parent_id" value="<?= is_int($folder) ? (int)$folder : 0 ?>">
+                <input type="text" name="name" maxlength="120" required placeholder="<?= e(is_int($folder) ? __('media_new_subfolder', 'New folder inside this one') : __('media_new_folder', 'New folder')) ?>" aria-label="<?= e(__('media_new_folder', 'New folder')) ?>">
+                <button type="submit" class="btn btn-sm"><?= __('add', 'Add') ?></button>
+            </form>
+            <?php if (is_int($folder)): ?>
+            <form method="post" class="media-side-form">
+                <?= csrf_field() ?>
+                <input type="hidden" name="_action" value="rename_folder">
+                <input type="hidden" name="folder_id" value="<?= (int)$folder ?>">
+                <input type="text" name="name" maxlength="120" required value="<?= e($folderName) ?>" aria-label="<?= e(__('media_folder_rename', 'Rename folder')) ?>">
+                <button type="submit" class="btn btn-sm"><?= __('media_rename', 'Rename') ?></button>
+            </form>
+            <form method="post" class="media-side-form" onsubmit="return confirm(<?= e(json_encode(__('media_folder_delete_confirm', 'Remove this folder? Its files move up one level; none are deleted.'))) ?>);">
+                <?= csrf_field() ?>
+                <input type="hidden" name="_action" value="delete_folder">
+                <input type="hidden" name="folder_id" value="<?= (int)$folder ?>">
+                <button type="submit" class="btn btn-sm btn-ghost media-link-danger"><?= __('media_folder_remove', 'Remove folder') ?></button>
+            </form>
+            <?php endif; ?>
+            <?php endif; ?>
+        </details>
+        <?php if ($tags): ?>
+        <details class="media-side-box" open>
+            <summary><?= __('media_tags', 'Tags') ?></summary>
+            <div class="media-tagcloud">
+                <?php foreach ($tags as $tg): ?>
+                    <a class="media-tagchip <?= $tagId === $tg['id'] ? 'is-on' : '' ?>" href="<?= e($tabUrl(['tag' => $tagId === $tg['id'] ? null : $tg['id'], 'page' => null, 'id' => null])) ?>"><?= e($tg['name']) ?> <span><?= (int)$tg['count'] ?></span></a>
+                <?php endforeach; ?>
+            </div>
+        </details>
+        <?php endif; ?>
+    </aside>
+    <div class="media-content">
+
     <div class="media-toolbar">
         <div class="media-tabs" role="tablist">
-            <a class="media-tab <?= $type === 'all' && $usage === 'all' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'all', 'usage' => 'all'])) ?>"><?= __('all', 'All') ?> <span class="media-tab-n"><?= (int)$counts['all'] ?></span></a>
-            <a class="media-tab <?= $type === 'image' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'image', 'usage' => 'all'])) ?>"><?= __('images', 'Images') ?> <span class="media-tab-n"><?= (int)$counts['image'] ?></span></a>
-            <a class="media-tab <?= $type === 'video' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'video', 'usage' => 'all'])) ?>"><?= __('videos', 'Videos') ?> <span class="media-tab-n"><?= (int)$counts['video'] ?></span></a>
-            <a class="media-tab <?= $type === 'document' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'document', 'usage' => 'all'])) ?>"><?= __('documents', 'Documents') ?> <span class="media-tab-n"><?= (int)$counts['document'] ?></span></a>
-            <a class="media-tab <?= $usage === 'in_use' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['usage' => 'in_use', 'type' => 'all'])) ?>"><?= __('in_use', 'In use') ?> <span class="media-tab-n"><?= (int)$counts['in_use'] ?></span></a>
-            <a class="media-tab <?= $usage === 'unused' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['usage' => 'unused', 'type' => 'all'])) ?>"><?= __('unused', 'Unused') ?> <span class="media-tab-n"><?= (int)$counts['unused'] ?></span></a>
+            <a class="media-tab <?= $status === '' && $type === 'all' && $usage === 'all' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'all', 'usage' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('all', 'All') ?> <span class="media-tab-n"><?= (int)$counts['all'] ?></span></a>
+            <a class="media-tab <?= $status === '' && $type === 'image' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'image', 'usage' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('images', 'Images') ?> <span class="media-tab-n"><?= (int)$counts['image'] ?></span></a>
+            <a class="media-tab <?= $status === '' && $type === 'video' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'video', 'usage' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('videos', 'Videos') ?> <span class="media-tab-n"><?= (int)$counts['video'] ?></span></a>
+            <a class="media-tab <?= $status === '' && $type === 'document' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'document', 'usage' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('documents', 'Documents') ?> <span class="media-tab-n"><?= (int)$counts['document'] ?></span></a>
+            <a class="media-tab <?= $status === '' && $usage === 'in_use' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['usage' => 'in_use', 'type' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('in_use', 'In use') ?> <span class="media-tab-n"><?= (int)$counts['in_use'] ?></span></a>
+            <a class="media-tab <?= $status === '' && $usage === 'unused' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['usage' => 'unused', 'type' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('unused', 'Unused') ?> <span class="media-tab-n"><?= (int)$counts['unused'] ?></span></a>
+            <a class="media-tab <?= $status === 'noalt' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['status' => 'noalt', 'type' => 'all', 'usage' => 'all', 'id' => null])) ?>"><?= __('media_missing_alt', 'Missing alt') ?> <span class="media-tab-n"><?= (int)$counts['missing_alt'] ?></span></a>
+            <a class="media-tab <?= $status === 'trash' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['status' => 'trash', 'type' => 'all', 'usage' => 'all', 'id' => null])) ?>"><?= __('media_trash', 'Trash') ?> <span class="media-tab-n"><?= (int)$counts['trash'] ?></span></a>
         </div>
         <form class="media-sortform" method="get">
+            <input type="hidden" name="folder" value="<?= e((string)$folder) ?>">
+            <input type="hidden" name="tag" value="<?= (int)$tagId ?>">
+            <input type="hidden" name="status" value="<?= e($status) ?>">
             <input type="hidden" name="type" value="<?= e($type) ?>">
             <input type="hidden" name="usage" value="<?= e($usage) ?>">
             <input type="hidden" name="q" value="<?= e($q) ?>">
@@ -549,6 +768,9 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
             <?php endforeach; ?>
         </nav>
         <form class="media-search" method="get">
+            <input type="hidden" name="folder" value="<?= e((string)$folder) ?>">
+            <input type="hidden" name="tag" value="<?= (int)$tagId ?>">
+            <input type="hidden" name="status" value="<?= e($status) ?>">
             <input type="hidden" name="type" value="<?= e($type) ?>">
             <input type="hidden" name="usage" value="<?= e($usage) ?>">
             <input type="hidden" name="sort" value="<?= e($sort) ?>">
@@ -556,6 +778,51 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
             <input type="search" name="q" value="<?= e($q) ?>" placeholder="<?= e(__('search_media', 'Search media…')) ?>" autocomplete="off">
         </form>
     </div>
+
+    <?php if ($status === 'trash'): ?>
+    <div class="media-note">
+        <span><?= sprintf(__('media_trash_note', 'Files in the trash are deleted for good after %d days. Restore one to use it again.'), Media::TRASH_DAYS) ?></span>
+        <?php if ($canDelete && $counts['trash'] > 0): ?>
+        <form method="post" onsubmit="return confirm(<?= e(json_encode(__('media_empty_trash_confirm', 'Delete every file in the trash for good? This cannot be undone.'))) ?>);">
+            <?= csrf_field() ?>
+            <input type="hidden" name="_action" value="empty_trash">
+            <button type="submit" class="btn btn-sm btn-danger"><?= __('media_empty_trash', 'Empty trash') ?></button>
+        </form>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php if (($canUpload || $canDelete) && $items): ?>
+    <form method="post" id="media-bulk" class="media-bulk" data-bulk hidden>
+        <?= csrf_field() ?>
+        <input type="hidden" name="_action" value="bulk">
+        <label class="media-bulk-all"><input type="checkbox" data-bulk-all> <span data-bulk-count>0</span> <?= __('media_selected', 'selected') ?></label>
+        <?php if ($status === 'trash'): ?>
+            <?php if ($canDelete): ?>
+            <button type="submit" name="bulk_op" value="restore" class="btn btn-sm"><?= __('media_restore', 'Restore') ?></button>
+            <button type="submit" name="bulk_op" value="purge" class="btn btn-sm btn-danger" data-confirm="<?= e(__('media_purge_confirm', 'Delete the selected files for good? This cannot be undone.')) ?>"><?= __('media_delete_forever', 'Delete for good') ?></button>
+            <?php endif; ?>
+        <?php else: ?>
+            <?php if ($canUpload): ?>
+            <span class="media-bulk-group">
+                <select name="target_folder" class="media-sort" aria-label="<?= e(__('media_move_to', 'Move to')) ?>">
+                    <option value="none"><?= __('media_unfiled', 'Not in a folder') ?></option>
+                    <?php foreach ($folders as $fd): ?><option value="<?= (int)$fd['id'] ?>"><?= str_repeat('— ', (int)$fd['depth']) . e($fd['name']) ?></option><?php endforeach; ?>
+                </select>
+                <button type="submit" name="bulk_op" value="move" class="btn btn-sm"><?= __('media_move', 'Move') ?></button>
+            </span>
+            <span class="media-bulk-group">
+                <input type="text" name="bulk_tags" maxlength="200" placeholder="<?= e(__('media_tags_placeholder', 'tag, another tag')) ?>" aria-label="<?= e(__('media_tags', 'Tags')) ?>">
+                <button type="submit" name="bulk_op" value="tag" class="btn btn-sm"><?= __('media_add_tags', 'Add tags') ?></button>
+            </span>
+            <?php endif; ?>
+            <?php if ($canDelete): ?>
+            <button type="submit" name="bulk_op" value="trash" class="btn btn-sm btn-danger"><?= __('media_move_to_trash', 'Move to trash') ?></button>
+            <?php endif; ?>
+        <?php endif; ?>
+        <button type="button" class="btn btn-sm btn-ghost" data-bulk-clear><?= __('media_clear_selection', 'Clear') ?></button>
+    </form>
+    <?php endif; ?>
 
     <div class="media-layout <?= $sel ? 'has-panel' : '' ?>">
     <div class="media-main">
@@ -568,7 +835,7 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
         <div class="media-grid view-<?= e($view) ?>">
             <?php if ($view === 'list'): ?>
                 <div class="media-list-head" aria-hidden="true">
-                    <span></span><span><?= __('media_col_name', 'Name') ?></span><span class="media-col-type"><?= __('media_type', 'Type') ?></span>
+                    <span></span><span></span><span><?= __('media_col_name', 'Name') ?></span><span class="media-col-type"><?= __('media_type', 'Type') ?></span>
                     <span class="media-col-dim"><?= __('media_dimensions', 'Size') ?></span><span class="media-col-size"><?= __('media_file_size', 'File size') ?></span>
                     <span class="media-col-date"><?= __('media_uploaded', 'Uploaded') ?></span><span></span>
                 </div>
@@ -578,6 +845,11 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
                 $dim = ($f['width'] && $f['height']) ? $f['width'] . '×' . $f['height'] : '';
             ?>
             <article class="media-card <?= $sel && (int)$sel['id'] === (int)$f['id'] ? 'is-sel' : '' ?>">
+                <?php if ($canUpload || $canDelete): ?>
+                <label class="media-check" title="<?= e(__('media_select', 'Select')) ?>"><input type="checkbox" name="ids[]" value="<?= (int)$f['id'] ?>" form="media-bulk" data-bulk-item aria-label="<?= e(sprintf(__('media_select_file', 'Select %s'), $f['original_name'])) ?>"></label>
+                <?php elseif ($view === 'list'): ?>
+                <span class="media-check" aria-hidden="true"></span>
+                <?php endif; ?>
                 <a class="media-pick" href="<?= e($selUrl((int)$f['id'])) ?>" title="<?= e(__('media_show_details', 'Show details')) ?>">
                 <div class="media-thumb">
                     <?php if ($f['kind'] === 'image'): ?>
@@ -611,12 +883,12 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
                         <button type="button" class="media-ico-btn media-copy" data-url="<?= e($f['url']) ?>" title="<?= e(__('copy_url', 'Copy URL')) ?>" aria-label="<?= e(__('copy_url', 'Copy URL')) ?>">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                         </button>
-                        <?php if ($canDelete && !$f['in_use']): ?>
-                            <form method="post" onsubmit="return confirm(<?= e(json_encode(sprintf(__('confirm_delete', 'Delete \"%s\"? This removes the file from disk.'), $f['original_name']))) ?>);">
+                        <?php if ($canDelete && !$f['in_use'] && $status !== 'trash'): ?>
+                            <form method="post">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="_action" value="delete">
                                 <input type="hidden" name="id" value="<?= (int)$f['id'] ?>">
-                                <button type="submit" class="media-ico-btn is-danger" title="<?= e(__('delete', 'Delete')) ?>" aria-label="<?= e(__('delete', 'Delete')) ?>">
+                                <button type="submit" class="media-ico-btn is-danger" title="<?= e(__('media_move_to_trash', 'Move to trash')) ?>" aria-label="<?= e(__('media_move_to_trash', 'Move to trash')) ?>">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                 </button>
                             </form>
@@ -627,13 +899,14 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
             <?php endforeach; ?>
         </div>
 
-        <?php slate_pagination($res['page'], $res['pages'], ['type' => $type, 'usage' => $usage, 'q' => $q, 'sort' => $sort],
+        <?php slate_pagination($res['page'], $res['pages'], array_filter(['folder' => $folder, 'tag' => $tagId ?: null, 'status' => $status, 'type' => $type, 'usage' => $usage, 'q' => $q, 'sort' => $sort], fn($v) => $v !== null && $v !== '' && $v !== 'all'),
             ['total' => $res['total'], 'per_page' => $perPage, 'label' => __('files', 'files')]); ?>
     <?php endif; ?>
     </div>
 
     <?php if ($sel):
         $selIsImage = $sel['kind'] === 'image';
+        $selTrashed = $sel['deleted_at'] !== null;
         $selDim = ($sel['width'] && $sel['height']) ? $sel['width'] . ' × ' . $sel['height'] . ' px' : '';
     ?>
     <a class="media-backdrop" href="<?= e($closeUrl) ?>" aria-hidden="true" tabindex="-1"></a>
@@ -666,7 +939,27 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
                 <?php endif; ?>
             </dl>
 
-            <?php if ($canUpload && $selIsImage && \Slate\Services\Media\ImageProcessor::supports($sel['mime'])): ?>
+            <?php if ($selTrashed): ?>
+            <div class="media-note is-panel">
+                <span><?= sprintf(__('media_in_trash', 'In the trash since %1$s. Deleted for good after %2$d days.'), e(substr((string)$sel['deleted_at'], 0, 10)), Media::TRASH_DAYS) ?></span>
+                <?php if ($canDelete): ?>
+                <form method="post">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="_action" value="restore">
+                    <input type="hidden" name="id" value="<?= (int)$sel['id'] ?>">
+                    <button type="submit" class="btn btn-sm btn-primary"><?= __('media_restore', 'Restore') ?></button>
+                </form>
+                <form method="post" action="<?= e($closeUrl) ?>" onsubmit="return confirm(<?= e(json_encode(__('media_purge_one_confirm', 'Delete this file for good? This cannot be undone.'))) ?>);">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="_action" value="purge">
+                    <input type="hidden" name="id" value="<?= (int)$sel['id'] ?>">
+                    <button type="submit" class="btn btn-sm btn-danger"><?= __('media_delete_forever', 'Delete for good') ?></button>
+                </form>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($canUpload && !$selTrashed && $selIsImage && \Slate\Services\Media\ImageProcessor::supports($sel['mime'])): ?>
             <div class="media-edit">
                 <h3><?= __('media_edit_image', 'Edit image') ?></h3>
                 <form method="post" class="media-edit-form" data-crop-form>
@@ -700,7 +993,7 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
 
             <?php endif; ?>
 
-            <?php if ($canUpload): ?>
+            <?php if ($canUpload && !$selTrashed): ?>
             <form method="post" enctype="multipart/form-data" class="media-replace">
                 <?= csrf_field() ?>
                 <input type="hidden" name="_action" value="replace">
@@ -712,7 +1005,7 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
             </form>
             <?php endif; ?>
 
-            <?php if ($canUpload): ?>
+            <?php if ($canUpload && !$selTrashed): ?>
             <form method="post">
                 <?= csrf_field() ?>
                 <input type="hidden" name="_action" value="update_meta">
@@ -733,6 +1026,19 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
                 <div style="margin-top:10px">
                     <label for="media-desc"><?= __('media_description', 'Description') ?></label>
                     <textarea id="media-desc" name="description" maxlength="5000"><?= e($sel['description']) ?></textarea>
+                </div>
+                <div style="margin-top:10px">
+                    <label for="media-tags"><?= __('media_tags', 'Tags') ?></label>
+                    <input type="text" id="media-tags" name="tags" maxlength="400" value="<?= e(implode(', ', array_column($sel['tags'], 'name'))) ?>" placeholder="<?= e(__('media_tags_placeholder', 'tag, another tag')) ?>" list="media-tag-list">
+                    <datalist id="media-tag-list"><?php foreach ($tags as $tg): ?><option value="<?= e($tg['name']) ?>"><?php endforeach; ?></datalist>
+                    <div class="media-hint"><?= __('media_tags_hint', 'Separate tags with commas.') ?></div>
+                </div>
+                <div style="margin-top:10px">
+                    <label for="media-folder"><?= __('media_folder', 'Folder') ?></label>
+                    <select id="media-folder" name="folder_id" class="media-sort">
+                        <option value=""><?= __('media_unfiled', 'Not in a folder') ?></option>
+                        <?php foreach ($folders as $fd): ?><option value="<?= (int)$fd['id'] ?>" <?= $sel['folder_id'] === $fd['id'] ? 'selected' : '' ?>><?= str_repeat('— ', (int)$fd['depth']) . e($fd['name']) ?></option><?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="media-panel-actions" style="margin-top:10px">
                     <button type="submit" class="btn btn-sm btn-primary"><?= __('save', 'Save') ?></button>
@@ -758,22 +1064,50 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
                 <?php endif; ?>
             </div>
 
-            <?php if ($canDelete && !$sel['in_use']): ?>
-            <form method="post" action="<?= e($closeUrl) ?>" onsubmit="return confirm(<?= e(json_encode(sprintf(__('confirm_delete', 'Delete \"%s\"? This removes the file from disk.'), $sel['original_name']))) ?>);">
+            <?php if ($canDelete && !$sel['in_use'] && !$selTrashed): ?>
+            <form method="post" action="<?= e($closeUrl) ?>">
                 <?= csrf_field() ?>
                 <input type="hidden" name="_action" value="delete">
                 <input type="hidden" name="id" value="<?= (int)$sel['id'] ?>">
-                <button type="submit" class="btn btn-sm btn-danger"><?= __('media_delete_file', 'Delete file') ?></button>
+                <button type="submit" class="btn btn-sm btn-danger"><?= __('media_move_to_trash', 'Move to trash') ?></button>
             </form>
             <?php endif; ?>
         </div>
     </aside>
     <?php endif; ?>
     </div>
+    </div><!-- .media-content -->
+    </div><!-- .media-shell -->
 
 </div>
 
 <script>
+// Narrow screens: folders and tags start folded so the files stay in view (the summary names the open folder).
+if (window.matchMedia && window.matchMedia('(max-width: 960px)').matches) {
+    document.querySelectorAll('.media-side-box[open]').forEach(function (d) { d.removeAttribute('open'); });
+}
+// Bulk select: the bar appears once a file is ticked.
+(function () {
+    var bar = document.querySelector('[data-bulk]');
+    if (!bar) return;
+    var items = Array.prototype.slice.call(document.querySelectorAll('[data-bulk-item]'));
+    var all = bar.querySelector('[data-bulk-all]'), count = bar.querySelector('[data-bulk-count]');
+    var grid = document.querySelector('.media-grid');
+    function sync() {
+        var n = items.filter(function (i) { return i.checked; }).length;
+        bar.hidden = n === 0; count.textContent = n;
+        all.checked = n > 0 && n === items.length; all.indeterminate = n > 0 && n < items.length;
+        if (grid) grid.classList.toggle('is-selecting', n > 0);
+    }
+    items.forEach(function (i) { i.addEventListener('change', sync); });
+    all.addEventListener('change', function () { items.forEach(function (i) { i.checked = all.checked; }); sync(); });
+    bar.querySelector('[data-bulk-clear]').addEventListener('click', function () { items.forEach(function (i) { i.checked = false; }); sync(); });
+    bar.addEventListener('submit', function (e) {
+        var btn = e.submitter; var msg = btn && btn.getAttribute('data-confirm');
+        if (msg && !window.confirm(msg)) e.preventDefault();
+    });
+    sync();
+})();
 // Crop: a box over the preview; its position in the image's own pixels goes into the form.
 (function () {
     var form = document.querySelector('[data-crop-form]');
