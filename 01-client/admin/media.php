@@ -21,9 +21,13 @@
  *   POST _action=empty_trash     → delete every trashed file for good
  *   POST _action=bulk            → bulk_op move|tag|trash|restore|purge on ids[]
  *   POST _action=new_folder|rename_folder|delete_folder → library folders (labels; files never move on disk)
+ *   POST _action=import_url      → download one file from a public web address into the library
+ *
+ * With JavaScript the upload bar sends files in pieces through admin/media-upload.php (no server upload limit),
+ * then reloads with ?uploaded=N&dupes=N; the plain form above is the fallback.
  *
  * Query:
- *   ?type=all|image|video|document   ?usage=all|in_use|unused   ?q=…
+ *   ?type=all|image|video|audio|document   ?usage=all|in_use|unused   ?q=…
  *   ?sort=newest|oldest|name|size    ?page=N    ?id=N (opens the details panel)
  *   ?view=grid|large|small|list      (remembered in the media_view cookie)
  *   ?folder=none|N   ?tag=N   ?status=noalt|trash
@@ -271,6 +275,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        elseif ($action === 'import_url') {
+            if (!$canUpload) {
+                $flash = ['type' => 'error', 'msg' => __('no_permission', 'You do not have permission to upload.')];
+            } else {
+                $r = Media::importUrl(trim((string)($_POST['url'] ?? '')), ['folder_id' => max(0, (int)($_POST['folder_id'] ?? 0))]);
+                if (!empty($r['id'])) {
+                    $flash = ['type' => 'success', 'msg' => !empty($r['duplicate'])
+                        ? __('media_url_dupe', 'That file was already in the library, so the existing copy was kept.')
+                        : sprintf(__('media_url_done', 'Imported %s.'), (string)$r['original_name'])];
+                    $_GET['id'] = (string)(int)$r['id'];
+                } else {
+                    $flash = ['type' => 'error', 'msg' => (string)($r['error'] ?? __('media_url_err_fetch', 'The file could not be downloaded.'))];
+                }
+            }
+        }
+
         elseif ($action === 'import') {
             if (!$canUpload) {
                 $flash = ['type' => 'error', 'msg' => __('no_permission', 'You do not have permission to import.')];
@@ -292,7 +312,14 @@ $q     = trim((string)($_GET['q'] ?? ''));
 $page  = max(1, (int)($_GET['page'] ?? 1));
 $sort  = (string)($_GET['sort'] ?? 'newest');
 $selId = max(0, (int)($_GET['id'] ?? 0));
-if (!in_array($type,  ['all', 'image', 'video', 'document'], true)) $type  = 'all';
+if (!in_array($type,  ['all', 'image', 'video', 'audio', 'document'], true)) $type  = 'all';
+// After a piece-by-piece upload (JavaScript) the page reloads with what happened.
+if ($flash === null && isset($_GET['uploaded'])) {
+    $upN = max(0, (int)$_GET['uploaded']); $dupN = max(0, (int)($_GET['dupes'] ?? 0));
+    $msg = $upN > 0 ? sprintf(__('uploaded_n', '%d file(s) uploaded.'), $upN) : '';
+    if ($dupN > 0) $msg = trim($msg . ' ' . sprintf(__('media_dupes_n', '%d file(s) were already in the library, so the existing copy was kept.'), $dupN));
+    if ($msg !== '') $flash = ['type' => 'success', 'msg' => $msg];
+}
 if (!in_array($usage, ['all', 'in_use', 'unused'],  true)) $usage = 'all';
 if (!in_array($sort,  ['newest', 'oldest', 'name', 'size'], true)) $sort = 'newest';
 $status = (string)($_GET['status'] ?? '');
@@ -478,6 +505,31 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
 .media-settings-body { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
 .media-settings-form { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; margin: 0; }
 .media-settings-form label { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; line-height: 1.35; }
+.media-progress { display: flex; align-items: center; gap: 8px; min-width: 200px; flex: 1 1 200px; font-size: 12px; color: var(--text-2); }
+.media-progress[hidden] { display: none; }
+.media-progress-bar { flex: 1; height: 6px; border-radius: 99px; background: var(--surface-2, rgba(0,0,0,.08)); overflow: hidden; }
+.media-progress-bar span { display: block; height: 100%; width: 0; background: var(--primary, #4f46e5); transition: width .15s; }
+.media-progress-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.media-urlimport { position: relative; }
+.media-urlimport summary { list-style: none; }
+.media-urlimport summary::-webkit-details-marker { display: none; }
+.media-urlimport-form { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; display: flex; gap: 6px; padding: 10px; width: min(420px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: 0 8px 24px rgba(0,0,0,.12); margin: 0; }
+.media-urlimport-form .input { flex: 1; min-width: 0; }
+.media-storage-bar { display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: var(--surface-2, rgba(0,0,0,.08)); max-width: 520px; }
+.media-storage-bar span { height: 100%; }
+.media-storage-list { display: grid; grid-template-columns: max-content max-content; gap: 4px 18px; margin: 0; }
+.media-storage-list dt { display: flex; align-items: center; gap: 6px; color: var(--text-2); }
+.media-storage-list dd { margin: 0; font-variant-numeric: tabular-nums; }
+.media-storage-list i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+.media-storage .is-image { background: #4f7fe0; } .media-storage .is-video { background: #9b59d0; } .media-storage .is-audio { background: #e0912f; }
+.media-storage .is-doc { background: #3aa57a; } .media-storage .is-sizes { background: #9aa6b8; } .media-storage .is-trash { background: #d65b5b; }
+.media-storage-big { display: flex; flex-direction: column; gap: 2px; max-width: 520px; }
+.media-storage-big a { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-bottom: 1px dashed var(--border); color: inherit; text-decoration: none; }
+.media-storage-big a span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.media-storage-big a span:last-child { white-space: nowrap; color: var(--text-2); }
+.media-storage-big a:hover span:first-child { text-decoration: underline; }
+.media-panel-prev audio { width: 100%; }
+.media-progress.is-error .media-progress-text { color: var(--danger, #c0392b); white-space: normal; max-width: none; }
 .media-sizes-form { margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .media-edit-form { margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .media-edit-tools, .media-crop-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
@@ -627,15 +679,29 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
 
     <?php if ($canUpload): ?>
     <div class="media-uploadbar">
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data" data-media-upload="<?= e(SLATE_URL . '/admin/media-upload.php') ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="_action" value="upload">
             <input type="hidden" name="folder_id" value="<?= is_int($folder) ? (int)$folder : 0 ?>">
             <input type="file" name="files[]" multiple
-                   accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,application/pdf,.doc,.docx,.xls,.xlsx,video/mp4,video/webm,video/ogg,video/quicktime,.mp4,.m4v,.webm,.ogv,.mov">
+                   accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,application/pdf,.doc,.docx,.xls,.xlsx,video/mp4,video/webm,video/ogg,video/quicktime,.mp4,.m4v,.webm,.ogv,.mov,audio/*,.mp3,.m4a,.aac,.ogg,.oga,.opus,.wav">
             <button type="submit" class="btn btn-sm btn-primary"><?= __('upload', 'Upload') ?></button>
         </form>
+        <div class="media-progress" data-media-progress hidden>
+            <div class="media-progress-bar"><span data-media-progress-fill></span></div>
+            <span class="media-progress-text" data-media-progress-text></span>
+        </div>
         <span class="media-spacer"></span>
+        <details class="media-urlimport" <?= ($_POST['_action'] ?? '') === 'import_url' && $flash && $flash['type'] === 'error' ? 'open' : '' ?>>
+            <summary class="btn btn-sm"><?= __('media_import_url', 'Import from URL') ?></summary>
+            <form method="post" class="media-urlimport-form">
+                <?= csrf_field() ?>
+                <input type="hidden" name="_action" value="import_url">
+                <input type="hidden" name="folder_id" value="<?= is_int($folder) ? (int)$folder : 0 ?>">
+                <input type="url" name="url" class="input" required maxlength="2000" placeholder="https://…" value="<?= e(($_POST['_action'] ?? '') === 'import_url' && $flash && $flash['type'] === 'error' ? (string)($_POST['url'] ?? '') : '') ?>" aria-label="<?= e(__('media_import_url_label', 'Web address of the file')) ?>">
+                <button type="submit" class="btn btn-sm btn-primary"><?= __('media_import_btn', 'Import') ?></button>
+            </form>
+        </details>
         <form method="post" title="<?= e(__('media_import_hint', 'Scan upload folders for files added outside the library')) ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="_action" value="import">
@@ -670,6 +736,38 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
                 <?php if ($continueSizes): ?><script>setTimeout(function () { var f = document.getElementById('media-sizes-form'); if (f) f.submit(); }, 400);</script><?php endif; ?>
                 <?php elseif ($sizesOn): ?>
                 <p class="media-hint"><?= __('media_sizes_done', 'Every image has its smaller copies.') ?></p>
+                <?php endif; ?>
+            </div>
+        </details>
+        <?php $stats = Media::storageStats(); ?>
+        <details class="media-settings media-storage">
+            <summary><?= __('media_storage', 'Storage') ?> <span class="media-tab-n"><?= e($fmtSize($stats['total_bytes'])) ?></span></summary>
+            <div class="media-settings-body">
+                <div class="media-storage-bar" role="img" aria-label="<?= e(__('media_storage_by_type', 'Space by file type')) ?>">
+                    <?php foreach (['image' => 'is-image', 'video' => 'is-video', 'audio' => 'is-audio', 'document' => 'is-doc'] as $tk => $tc):
+                        $pct = $stats['total_bytes'] > 0 ? $stats['types'][$tk]['bytes'] / $stats['total_bytes'] * 100 : 0; ?>
+                        <?php if ($pct > 0): ?><span class="<?= $tc ?>" style="width: <?= number_format(max(0.5, $pct), 2, '.', '') ?>%"></span><?php endif; ?>
+                    <?php endforeach; ?>
+                    <?php foreach (['sizes' => 'is-sizes', 'trash' => 'is-trash'] as $tk => $tc):
+                        $pct = $stats['total_bytes'] > 0 ? $stats[$tk]['bytes'] / $stats['total_bytes'] * 100 : 0; ?>
+                        <?php if ($pct > 0): ?><span class="<?= $tc ?>" style="width: <?= number_format(max(0.5, $pct), 2, '.', '') ?>%"></span><?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+                <dl class="media-storage-list">
+                    <?php foreach (['image' => [__('images', 'Images'), 'is-image'], 'video' => [__('videos', 'Videos'), 'is-video'], 'audio' => [__('media_audio', 'Audio'), 'is-audio'], 'document' => [__('documents', 'Documents'), 'is-doc']] as $tk => [$tl, $tc]): ?>
+                    <dt><i class="<?= $tc ?>"></i><?= e($tl) ?></dt><dd><?= e($fmtSize($stats['types'][$tk]['bytes'])) ?> · <?= (int)$stats['types'][$tk]['count'] ?></dd>
+                    <?php endforeach; ?>
+                    <dt><i class="is-sizes"></i><?= __('media_storage_sizes', 'Smaller image copies') ?></dt><dd><?= e($fmtSize($stats['sizes']['bytes'])) ?> · <?= (int)$stats['sizes']['count'] ?></dd>
+                    <dt><i class="is-trash"></i><?= __('media_trash', 'Trash') ?></dt><dd><?= e($fmtSize($stats['trash']['bytes'])) ?> · <?= (int)$stats['trash']['count'] ?></dd>
+                </dl>
+                <p class="media-hint"><?= sprintf(__('media_storage_files', '%d files on disk. Not used anywhere: %s in %d file(s).'), (int)$stats['files_on_disk'], e($fmtSize($stats['unused']['bytes'])), (int)$stats['unused']['count']) ?></p>
+                <?php if ($stats['largest']): ?>
+                <div class="media-storage-big">
+                    <strong><?= __('media_storage_largest', 'Largest files') ?></strong>
+                    <?php foreach ($stats['largest'] as $big): ?>
+                    <a href="<?= e($selUrl((int)$big['id'])) ?>"><span><?= e($big['original_name']) ?></span><span><?= e($fmtSize($big['size_bytes'])) ?><?= $big['in_use'] ? '' : ' · ' . e(__('unused', 'Unused')) ?></span></a>
+                    <?php endforeach; ?>
+                </div>
                 <?php endif; ?>
             </div>
         </details>
@@ -733,6 +831,7 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
             <a class="media-tab <?= $status === '' && $type === 'all' && $usage === 'all' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'all', 'usage' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('all', 'All') ?> <span class="media-tab-n"><?= (int)$counts['all'] ?></span></a>
             <a class="media-tab <?= $status === '' && $type === 'image' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'image', 'usage' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('images', 'Images') ?> <span class="media-tab-n"><?= (int)$counts['image'] ?></span></a>
             <a class="media-tab <?= $status === '' && $type === 'video' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'video', 'usage' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('videos', 'Videos') ?> <span class="media-tab-n"><?= (int)$counts['video'] ?></span></a>
+            <a class="media-tab <?= $status === '' && $type === 'audio' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'audio', 'usage' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('media_audio', 'Audio') ?> <span class="media-tab-n"><?= (int)$counts['audio'] ?></span></a>
             <a class="media-tab <?= $status === '' && $type === 'document' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['type' => 'document', 'usage' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('documents', 'Documents') ?> <span class="media-tab-n"><?= (int)$counts['document'] ?></span></a>
             <a class="media-tab <?= $status === '' && $usage === 'in_use' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['usage' => 'in_use', 'type' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('in_use', 'In use') ?> <span class="media-tab-n"><?= (int)$counts['in_use'] ?></span></a>
             <a class="media-tab <?= $status === '' && $usage === 'unused' ? 'is-on' : '' ?>" href="<?= e($tabUrl(['usage' => 'unused', 'type' => 'all', 'status' => '', 'id' => null])) ?>"><?= __('unused', 'Unused') ?> <span class="media-tab-n"><?= (int)$counts['unused'] ?></span></a>
@@ -856,6 +955,11 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
                         <img src="<?= e($f['thumb_url']) ?>" alt="<?= e($f['original_name']) ?>" loading="lazy">
                     <?php elseif (Media::isVideo($f)): ?>
                         <video src="<?= e($f['url']) ?>" preload="metadata" muted playsinline aria-label="<?= e($f['original_name']) ?>"></video>
+                    <?php elseif (Media::isAudio($f)): ?>
+                        <div class="media-doc is-audio">
+                            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                            <span class="media-doc-ext"><?= e($ext) ?></span>
+                        </div>
                     <?php else: ?>
                         <div class="media-doc">
                             <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
@@ -922,6 +1026,8 @@ $closeUrl = $tabUrl(['page' => $page > 1 ? $page : null]);
                 <img src="<?= e(Media::versioned($sel['url'], $sel)) ?>" alt="<?= e($sel['alt_text']) ?>" data-crop-img>
             <?php elseif (Media::isVideo($sel)): ?>
                 <video src="<?= e($sel['url']) ?>" controls preload="metadata" playsinline></video>
+            <?php elseif (Media::isAudio($sel)): ?>
+                <audio src="<?= e($sel['url']) ?>" controls preload="metadata"></audio>
             <?php else: ?>
                 <div class="media-doc"><span class="media-doc-ext"><?= e(strtoupper(pathinfo($sel['path'], PATHINFO_EXTENSION))) ?></span></div>
             <?php endif; ?>
@@ -1173,6 +1279,92 @@ if (window.matchMedia && window.matchMedia('(max-width: 960px)').matches) {
     form.querySelector('[data-crop-start]').addEventListener('click', function () { if (img.complete) start(); else img.addEventListener('load', start, { once: true }); });
     form.querySelector('[data-crop-cancel]').addEventListener('click', stop);
     ratioSel.addEventListener('change', function () { if (box) { fitRatio(); draw(); } });
+})();
+// Upload in pieces: a file larger than the server's upload limit still gets through, with a progress bar.
+// Without fetch/Blob.slice the plain form posts as before.
+(function () {
+    var form = document.querySelector('form[data-media-upload]');
+    if (!form || !window.fetch || !window.FormData || !Blob.prototype.slice) return;
+    var endpoint = form.getAttribute('data-media-upload');
+    var input = form.querySelector('input[type=file]');
+    var csrf = (form.querySelector('input[name=_csrf]') || {}).value || '';
+    var folderId = (form.querySelector('input[name=folder_id]') || {}).value || '0';
+    var box = document.querySelector('[data-media-progress]');
+    var fill = box && box.querySelector('[data-media-progress-fill]');
+    var text = box && box.querySelector('[data-media-progress-text]');
+    var T = <?= json_encode([
+        'uploading' => __('media_uploading', 'Uploading %1$s (%2$d of %3$d)…'),
+        'failed'    => __('media_upload_failed_one', '%1$s: %2$s'),
+        'network'   => __('media_upload_network', 'The connection dropped. Please try again.'),
+        'leave'     => __('media_upload_leave', 'An upload is still running. Leave anyway?'),
+    ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+    var busy = false;
+    function fmt(s) { var a = arguments, i = 0; return s.replace(/%(\d)\$[sd]/g, function (_, n) { return a[+n]; }); }
+    function post(data) {
+        data.append('_csrf', csrf);
+        return fetch(endpoint, { method: 'POST', body: data, credentials: 'same-origin', headers: { 'X-CSRF-Token': csrf } })
+            .then(function (r) { return r.json().catch(function () { return { ok: false, error: T.network }; }); });
+    }
+    function field(o) { var d = new FormData(); Object.keys(o).forEach(function (k) { d.append(k, o[k]); }); return d; }
+    function send(file, onBytes) {
+        return post(field({ op: 'start', name: file.name, size: file.size })).then(function (st) {
+            if (!st.ok) throw new Error(st.error || T.network);
+            var size = st.chunk_size, offset = 0, tries = 0;
+            function next() {
+                if (offset >= file.size) return post(field({ op: 'finish', token: st.token, folder_id: folderId }));
+                var d = field({ op: 'chunk', token: st.token, offset: offset });
+                d.append('file', file.slice(offset, offset + size), 'piece');
+                return post(d).then(function (r) {
+                    if (r.ok) { offset = r.received; tries = 0; onBytes(offset); return next(); }
+                    // A piece that arrived but whose answer was lost: carry on from where the server is.
+                    if (typeof r.received === 'number' && r.received > offset) { offset = r.received; onBytes(offset); return next(); }
+                    throw new Error(r.error || T.network);
+                }, function (err) {
+                    if (++tries <= 3) return new Promise(function (res) { setTimeout(res, 1000 * tries); }).then(next);
+                    throw err;
+                });
+            }
+            return next().then(function (fin) {
+                if (!fin.ok) throw new Error(fin.error || T.network);
+                return fin;
+            }).catch(function (err) { post(field({ op: 'abort', token: st.token })); throw err; });
+        });
+    }
+    window.addEventListener('beforeunload', function (e) { if (busy) { e.preventDefault(); e.returnValue = T.leave; } });
+    form.addEventListener('submit', function (ev) {
+        var files = Array.prototype.slice.call(input.files || []);
+        if (!files.length) return; // the server answers "Please select at least one file."
+        ev.preventDefault();
+        busy = true;
+        var btn = form.querySelector('button[type=submit]'); if (btn) btn.disabled = true;
+        var total = files.reduce(function (n, f) { return n + f.size; }, 0) || 1, done = 0, uploaded = 0, dupes = 0, errors = [];
+        box.hidden = false;
+        var i = 0;
+        function one() {
+            if (i >= files.length) return Promise.resolve();
+            var f = files[i++];
+            text.textContent = fmt(T.uploading, f.name, i, files.length);
+            var base = done;
+            return send(f, function (bytes) { fill.style.width = Math.min(100, (base + bytes) / total * 100) + '%'; })
+                .then(function (r) { if (r.duplicate) dupes++; else uploaded++; }, function (err) { errors.push(fmt(T.failed, f.name, err.message || T.network)); })
+                .then(function () { done = base + f.size; fill.style.width = Math.min(100, done / total * 100) + '%'; return one(); });
+        }
+        one().then(function () {
+            busy = false;
+            if (!errors.length) {
+                var u = new URL(window.location.href);
+                u.searchParams.set('uploaded', uploaded); u.searchParams.set('dupes', dupes); u.searchParams.delete('page'); u.searchParams.delete('id');
+                window.location.href = u.toString();
+                return;
+            }
+            if (btn) btn.disabled = false;
+            text.textContent = errors.join(' · ');
+            box.classList.add('is-error');
+            if (uploaded || dupes) setTimeout(function () {
+                var u = new URL(window.location.href); u.searchParams.set('uploaded', uploaded); u.searchParams.set('dupes', dupes); window.location.href = u.toString();
+            }, 4000);
+        });
+    });
 })();
 // Escape closes the details panel (the bottom sheet on a phone).
 (function () {

@@ -71,6 +71,13 @@ class Media {
     public const VIDEO_MIMES = ['video/mp4', 'video/x-m4v', 'video/webm', 'video/ogg', 'video/quicktime'];
     /** A video is bigger than an image or a document: its own upload ceiling. */
     public const VIDEO_MAX_BYTES = 256 * 1024 * 1024;
+    /** Audio files a page can play in an <audio> element (podcasts, music). Stored with kind 'other', told apart by MIME. */
+    public const AUDIO_EXTS = ['mp3', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'wav'];
+    public const AUDIO_MIMES = [
+        'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a', 'audio/aac', 'audio/x-aac', 'audio/aacp',
+        'audio/ogg', 'audio/opus', 'audio/wav', 'audio/x-wav', 'audio/wave', 'audio/vnd.wave',
+    ];
+    public const AUDIO_MAX_BYTES = 128 * 1024 * 1024;
 
     // ──────────────────────────────────────────────────────────
     // Config helpers
@@ -89,11 +96,34 @@ class Media {
     }
 
     public static function allowedMimes(): array {
-        return array_values(array_unique(array_merge(self::imageMimes(), self::docMimes(), self::videoMimes())));
+        return array_values(array_unique(array_merge(self::imageMimes(), self::docMimes(), self::videoMimes(), self::AUDIO_MIMES)));
     }
 
     public static function allowedExts(): array {
-        return array_values(array_unique(array_merge(self::IMAGE_EXTS, self::DOC_EXTS, self::VIDEO_EXTS)));
+        return array_values(array_unique(array_merge(self::IMAGE_EXTS, self::DOC_EXTS, self::VIDEO_EXTS, self::AUDIO_EXTS)));
+    }
+
+    /** The upload ceiling for a file of this name: video and audio files are allowed to be bigger. */
+    public static function maxBytesFor(string $name): int {
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if (in_array($ext, self::VIDEO_EXTS, true)) return self::VIDEO_MAX_BYTES;
+        if (in_array($ext, self::AUDIO_EXTS, true)) return self::AUDIO_MAX_BYTES;
+        return Uploads::DEFAULT_MAX_BYTES;
+    }
+
+    /**
+     * Is this media record (or MIME + extension) a playable audio file? An .m4a is often reported as video/mp4
+     * (same container), so that pair counts as audio too.
+     */
+    public static function isAudio(array|string $rowOrMime, string $ext = ''): bool {
+        if (is_array($rowOrMime)) {
+            $ext = strtolower(pathinfo((string)($rowOrMime['path'] ?? ''), PATHINFO_EXTENSION));
+            $rowOrMime = (string)($rowOrMime['mime'] ?? '');
+        }
+        $mime = strtolower(trim($rowOrMime));
+        $ext = strtolower(ltrim($ext, '.'));
+        return in_array($ext, self::AUDIO_EXTS, true)
+            && (in_array($mime, self::AUDIO_MIMES, true) || ($ext === 'm4a' && $mime === 'video/mp4'));
     }
 
     /** Is this media record (or MIME + extension) a playable video file? */
@@ -440,20 +470,21 @@ class Media {
 
     /**
      * Tab/badge counts for the admin UI:
-     *   ['all','image','video','document','in_use','unused','missing_alt','trash'].
+     *   ['all','image','video','audio','document','in_use','unused','missing_alt','trash'].
      * Everything but 'trash' leaves trashed files out.
      */
     public static function counts(): array {
         $tid = current_tenant_id();
-        $c = ['all' => 0, 'image' => 0, 'video' => 0, 'document' => 0, 'in_use' => 0, 'unused' => 0, 'missing_alt' => 0, 'trash' => 0];
+        $c = ['all' => 0, 'image' => 0, 'video' => 0, 'audio' => 0, 'document' => 0, 'in_use' => 0, 'unused' => 0, 'missing_alt' => 0, 'trash' => 0];
         try {
-            $video = implode(',', array_fill(0, count(self::VIDEO_MIMES), '?'));
+            [$videoSql, $audioSql] = self::mediaTypeSql();
             $rows = \Database::rows(
                 "SELECT CASE WHEN kind = 'image' THEN 'image'
-                             WHEN kind = 'other' AND mime IN ($video) THEN 'video'
+                             WHEN $videoSql THEN 'video'
+                             WHEN $audioSql THEN 'audio'
                              ELSE 'document' END AS t, COUNT(*) AS n
                    FROM media_files WHERE tenant_id = ? AND deleted_at IS NULL GROUP BY t",
-                array_merge(self::VIDEO_MIMES, [$tid])
+                array_merge(self::VIDEO_MIMES, self::AUDIO_MIMES, [$tid])
             );
             foreach ($rows as $r) {
                 $c[(string)$r['t']] = (int)$r['n'];
@@ -483,13 +514,29 @@ class Media {
      * @return array{0: list<string>, 1: list<string>}
      */
     private static function typeWhere(string $type): array {
-        $video = implode(',', array_fill(0, count(self::VIDEO_MIMES), '?'));
+        [$videoSql, $audioSql] = self::mediaTypeSql();
         return match ($type) {
             'image'    => [["kind = 'image'"], []],
-            'video'    => [["kind = 'other' AND mime IN ($video)"], self::VIDEO_MIMES],
-            'document' => [["kind <> 'image' AND NOT (kind = 'other' AND mime IN ($video))"], self::VIDEO_MIMES],
+            'video'    => [[$videoSql], self::VIDEO_MIMES],
+            'audio'    => [[$audioSql], self::AUDIO_MIMES],
+            'document' => [["kind <> 'image' AND NOT ($videoSql) AND NOT ($audioSql)"], array_merge(self::VIDEO_MIMES, self::AUDIO_MIMES)],
             default    => [[], []],
         };
+    }
+
+    /**
+     * SQL conditions for "a playable video" and "a playable audio file" (the first binds VIDEO_MIMES, the second
+     * AUDIO_MIMES). An .m4a reported as video/mp4 is audio, not video.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private static function mediaTypeSql(): array {
+        $video = implode(',', array_fill(0, count(self::VIDEO_MIMES), '?'));
+        $audio = implode(',', array_fill(0, count(self::AUDIO_MIMES), '?'));
+        return [
+            "kind = 'other' AND mime IN ($video) AND LOWER(path) NOT LIKE '%.m4a'",
+            "kind = 'other' AND (mime IN ($audio) OR (mime = 'video/mp4' AND LOWER(path) LIKE '%.m4a'))",
+        ];
     }
 
     /** Paths with at least one reference. @return list<string> */
@@ -580,18 +627,123 @@ class Media {
      */
     public static function upload(string $field, array $opts = []): array {
         $folder = self::FOLDER . '/' . date('Y/m');
-        // A video file gets the video ceiling unless the caller set one; everything else keeps the default.
+        // A video or audio file gets its own ceiling unless the caller set one; everything else keeps the default.
         $name = is_array($_FILES[$field] ?? null) && is_string($_FILES[$field]['name'] ?? null) ? $_FILES[$field]['name'] : '';
-        $isVideoName = in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), self::VIDEO_EXTS, true);
         $res = Uploads::handle($field, $folder, [
             'allowed_mimes' => $opts['allowed_mimes'] ?? self::allowedMimes(),
             'allowed_exts'  => $opts['allowed_exts']  ?? self::allowedExts(),
-            'max_bytes'     => (int)($opts['max_bytes'] ?? ($isVideoName ? self::VIDEO_MAX_BYTES : Uploads::DEFAULT_MAX_BYTES)),
+            'max_bytes'     => (int)($opts['max_bytes'] ?? self::maxBytesFor($name)),
         ]);
         if (empty($res['ok'])) return $res;
+        return self::finishIngest((string)$res['path'], (string)($res['mime'] ?? ''), (string)($res['original'] ?? ''), (int)($res['size'] ?? 0), $opts);
+    }
 
-        $path = (string)$res['path'];
-        $mime = (string)($res['mime'] ?? '');
+    /**
+     * Add a file that is already on this server (a finished chunked upload, a download, bytes sent over MCP) to
+     * the library, with the same checks as a browser upload: allowed extension and type, size limit, then
+     * duplicate check, SVG clean-up, photo clean-up and image sizes. The file at $absPath is moved or copied in;
+     * the caller still owns (and should delete) whatever is left at $absPath.
+     *
+     * @param array<string, mixed> $opts allowed_mimes, allowed_exts, max_bytes, folder_id, allow_duplicate, via
+     * @return array<string, mixed> the media record (with 'duplicate' => true when the bytes were already there), or ['ok' => false, 'error' => …]
+     */
+    public static function ingestLocal(string $absPath, string $originalName, array $opts = []): array {
+        $originalName = basename(str_replace('\\', '/', $originalName));
+        clearstatcache(true, $absPath);
+        if (!is_file($absPath) || ($size = (int)@filesize($absPath)) <= 0) {
+            return ['ok' => false, 'error' => __('core_err_no_file_submitted', 'No file submitted.')];
+        }
+        $max = (int)($opts['max_bytes'] ?? self::maxBytesFor($originalName));
+        if ($size > $max) {
+            return ['ok' => false, 'error' => 'File too large (max ' . round($max / 1024 / 1024) . ' MB).'];
+        }
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        if (!in_array($ext, $opts['allowed_exts'] ?? self::allowedExts(), true)) {
+            return ['ok' => false, 'error' => __('core_err_file_extension_not_allowed', 'File extension not allowed.')];
+        }
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($absPath) ?: 'application/octet-stream';
+        if (!in_array($mime, $opts['allowed_mimes'] ?? self::allowedMimes(), true)) {
+            return ['ok' => false, 'error' => __('core_err_file_type_not_allowed', 'File type not allowed.')];
+        }
+        $folder  = self::FOLDER . '/' . date('Y/m');
+        $dir     = Uploads::publicUploadDir($folder);
+        $newName = bin2hex(random_bytes(12)) . '.' . $ext;
+        if (!@rename($absPath, $dir . '/' . $newName) && !@copy($absPath, $dir . '/' . $newName)) {
+            return ['ok' => false, 'error' => __('core_err_could_not_save_uploaded_file', 'Could not save uploaded file.')];
+        }
+        @chmod($dir . '/' . $newName, 0644);
+        return self::finishIngest('/uploads/' . $folder . '/' . $newName, $mime, $originalName, $size, $opts);
+    }
+
+    /**
+     * Download a file from a public web address into the library ("Import from URL"). Only http(s) addresses that
+     * resolve to public hosts are fetched (see RemoteFile); the file then goes through ingestLocal() like any upload.
+     * A name without a usable extension gets one from the file's type.
+     *
+     * @param array<string, mixed> $opts as ingestLocal(), plus 'resolve' (a host => IPs callable, for tests)
+     * @return array<string, mixed>
+     */
+    public static function importUrl(string $url, array $opts = []): array {
+        $maxAll = max(self::VIDEO_MAX_BYTES, self::AUDIO_MAX_BYTES, Uploads::DEFAULT_MAX_BYTES);
+        $res = RemoteFile::download($url, (int)($opts['max_bytes'] ?? $maxAll), $opts['resolve'] ?? null);
+        if (empty($res['ok'])) {
+            return ['ok' => false, 'error' => self::remoteError((string)($res['error'] ?? ''))];
+        }
+        $file = (string)$res['file'];
+        try {
+            $name = trim((string)$res['name']);
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            if ($name === '' || !in_array($ext, self::allowedExts(), true)) {
+                $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file) ?: '';
+                $guess = self::extForMime($mime);
+                if ($guess === '') {
+                    return ['ok' => false, 'error' => __('core_err_file_type_not_allowed', 'File type not allowed.')];
+                }
+                $stem = $name !== '' ? pathinfo($name, PATHINFO_FILENAME) : '';
+                $name = ($stem !== '' ? $stem : 'download') . '.' . $guess;
+            }
+            $item = self::ingestLocal($file, $name, $opts + ['via' => 'url']);
+            if (!empty($item['id'])) \AuditLog::record('media.imported_url', (string)($item['path'] ?? ''), ['id' => (int)$item['id'], 'url' => mb_substr((string)$res['url'], 0, 500)]);
+            return $item;
+        } finally {
+            @unlink($file);
+        }
+    }
+
+    /** A file extension for a type the library accepts, or ''. */
+    public static function extForMime(string $mime): string {
+        return match (strtolower($mime)) {
+            'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', 'image/svg+xml' => 'svg',
+            'application/pdf' => 'pdf',
+            'video/mp4' => 'mp4', 'video/webm' => 'webm', 'video/ogg' => 'ogv', 'video/quicktime' => 'mov', 'video/x-m4v' => 'm4v',
+            'audio/mpeg', 'audio/mp3' => 'mp3', 'audio/mp4', 'audio/x-m4a' => 'm4a', 'audio/aac', 'audio/x-aac', 'audio/aacp' => 'aac',
+            'audio/ogg' => 'ogg', 'audio/opus' => 'opus', 'audio/wav', 'audio/x-wav', 'audio/wave', 'audio/vnd.wave' => 'wav',
+            default => '',
+        };
+    }
+
+    private static function remoteError(string $code): string {
+        return match (true) {
+            $code === 'http_only', $code === 'invalid_url', $code === 'host_missing', $code === 'credentials_in_url'
+                => __('media_url_err_invalid', 'Enter a full web address that starts with http:// or https://.'),
+            $code === 'private_address', $code === 'port_not_allowed'
+                => __('media_url_err_private', 'That address is not a public website, so it cannot be imported.'),
+            $code === 'host_unresolvable' => __('media_url_err_host', 'That website could not be found.'),
+            $code === 'too_large' => __('media_url_err_large', 'That file is too large to import.'),
+            $code === 'too_many_redirects' => __('media_url_err_redirects', 'That address redirects too many times.'),
+            str_starts_with($code, 'http_') => sprintf(__('media_url_err_http', 'The website answered with an error (%s).'), substr($code, 5)),
+            default => __('media_url_err_fetch', 'The file could not be downloaded.'),
+        };
+    }
+
+    /**
+     * The steps every new file goes through once it sits in /uploads: duplicate check, SVG and photo clean-up,
+     * register, folder and hash, image sizes.
+     *
+     * @param array<string, mixed> $opts
+     * @return array<string, mixed>
+     */
+    private static function finishIngest(string $path, string $mime, string $originalName, int $size, array $opts): array {
         $ext  = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
         // The same bytes already in the library: hand back that item instead of a second copy.
@@ -628,10 +780,10 @@ class Media {
         clearstatcache(true, SLATE_ROOT . $path);
         $id = self::register($path, [
             'mime'          => $mime,
-            'size_bytes'    => (int)(@filesize(SLATE_ROOT . $path) ?: ($res['size'] ?? 0)),
+            'size_bytes'    => (int)(@filesize(SLATE_ROOT . $path) ?: $size),
             'width'         => $w,
             'height'        => $h,
-            'original_name' => $res['original'] ?? basename($path),
+            'original_name' => $originalName !== '' ? $originalName : basename($path),
         ]);
 
         if ($id > 0) {
@@ -647,8 +799,8 @@ class Media {
             self::generateVariants($id);
         }
 
-        \AuditLog::record('media.uploaded', $path, ['id' => $id]);
-        return self::get($id) ?? ($res + ['id' => $id]);
+        \AuditLog::record('media.uploaded', $path, ['id' => $id] + (isset($opts['via']) ? ['via' => (string)$opts['via']] : []));
+        return self::get($id) ?? ['ok' => true, 'id' => $id, 'path' => $path];
     }
 
     // ──────────────────────────────────────────────────────────
@@ -1096,6 +1248,75 @@ class Media {
         self::ensureSchema();
         $n = self::purgeTrash();
         if ($n > 0 && function_exists('slate_log')) slate_log("Media: removed $n file(s) from the trash", 'info');
+        ChunkedUpload::cleanup();
+    }
+
+    /**
+     * What the library takes up on disk, for the Storage box and the MCP stats tool.
+     *
+     * 'types' has count and bytes per type (originals only, trash left out); 'sizes' is the WebP copies (bytes read
+     * from disk); 'trash' and 'unused' are what could be freed; 'files_on_disk' counts originals plus copies (each
+     * one is an inode on shared hosting); 'largest' lists the biggest files.
+     *
+     * @return array{total_bytes: int, files_on_disk: int, types: array<string, array{count: int, bytes: int}>, sizes: array{count: int, bytes: int}, trash: array{count: int, bytes: int}, unused: array{count: int, bytes: int}, largest: list<array<string, mixed>>}
+     */
+    public static function storageStats(int $largest = 8): array {
+        $tid = current_tenant_id();
+        $out = [
+            'total_bytes' => 0, 'files_on_disk' => 0,
+            'types' => ['image' => ['count' => 0, 'bytes' => 0], 'video' => ['count' => 0, 'bytes' => 0], 'audio' => ['count' => 0, 'bytes' => 0], 'document' => ['count' => 0, 'bytes' => 0]],
+            'sizes' => ['count' => 0, 'bytes' => 0], 'trash' => ['count' => 0, 'bytes' => 0], 'unused' => ['count' => 0, 'bytes' => 0],
+            'largest' => [],
+        ];
+        try {
+            [$videoSql, $audioSql] = self::mediaTypeSql();
+            $rows = \Database::rows(
+                "SELECT CASE WHEN kind = 'image' THEN 'image'
+                             WHEN $videoSql THEN 'video'
+                             WHEN $audioSql THEN 'audio'
+                             ELSE 'document' END AS t, COUNT(*) AS n, COALESCE(SUM(size_bytes), 0) AS b
+                   FROM media_files WHERE tenant_id = ? AND deleted_at IS NULL GROUP BY t",
+                array_merge(self::VIDEO_MIMES, self::AUDIO_MIMES, [$tid])
+            );
+            foreach ($rows as $r) {
+                $out['types'][(string)$r['t']] = ['count' => (int)$r['n'], 'bytes' => (int)$r['b']];
+            }
+            $t = \Database::row("SELECT COUNT(*) AS n, COALESCE(SUM(size_bytes), 0) AS b FROM media_files WHERE tenant_id = ? AND deleted_at IS NOT NULL", [$tid]);
+            $out['trash'] = ['count' => (int)($t['n'] ?? 0), 'bytes' => (int)($t['b'] ?? 0)];
+
+            foreach (\Database::rows("SELECT variants FROM media_files WHERE tenant_id = ? AND variants IS NOT NULL AND variants <> ''", [$tid]) as $r) {
+                $v = json_decode((string)$r['variants'], true);
+                foreach (is_array($v) ? $v : [] as $rel) {
+                    if (!is_string($rel) || !is_file(SLATE_ROOT . $rel)) continue;
+                    $out['sizes']['count']++;
+                    $out['sizes']['bytes'] += (int)@filesize(SLATE_ROOT . $rel);
+                }
+            }
+
+            $used = self::usedPaths(self::usageMap());
+            $notUsed = $used === [] ? '' : ' AND path NOT IN (' . implode(',', array_fill(0, count($used), '?')) . ')';
+            $u = \Database::row("SELECT COUNT(*) AS n, COALESCE(SUM(size_bytes), 0) AS b FROM media_files WHERE tenant_id = ? AND deleted_at IS NULL$notUsed", array_merge([$tid], $used));
+            $out['unused'] = ['count' => (int)($u['n'] ?? 0), 'bytes' => (int)($u['b'] ?? 0)];
+
+            $big = \Database::rows(
+                "SELECT * FROM media_files WHERE tenant_id = ? AND deleted_at IS NULL ORDER BY size_bytes DESC, id DESC LIMIT " . max(1, min(50, $largest)),
+                [$tid]
+            );
+            $map = self::usageMap();
+            foreach ($big as $r) {
+                $d = self::decorate($r, $map);
+                $out['largest'][] = ['id' => $d['id'], 'original_name' => $d['original_name'], 'size_bytes' => $d['size_bytes'], 'mime' => $d['mime'], 'in_use' => $d['in_use']];
+            }
+        } catch (\Throwable $e) { return $out; }
+
+        $originals = 0;
+        foreach ($out['types'] as $tp) {
+            $out['total_bytes'] += $tp['bytes'];
+            $originals += $tp['count'];
+        }
+        $out['total_bytes'] += $out['trash']['bytes'] + $out['sizes']['bytes'];
+        $out['files_on_disk'] = $originals + $out['trash']['count'] + $out['sizes']['count'];
+        return $out;
     }
 
     /**
