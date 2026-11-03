@@ -37,7 +37,7 @@ namespace Slate\Services\Media;
 class Media {
 
     /** Bumped when the schema changes so ensureSchema() re-runs. */
-    public const SCHEMA_V = '2';
+    public const SCHEMA_V = '3';
 
     /** Central folder (under /uploads/) for new uploads. */
     public const FOLDER = 'media';
@@ -158,6 +158,8 @@ class Media {
                     `alt_text`      VARCHAR(255) NULL DEFAULT '',
                     `title`         VARCHAR(255) NULL DEFAULT '',
                     `description`   TEXT NULL,
+                    `variants`      TEXT NULL,
+                    `file_version`  INT UNSIGNED NOT NULL DEFAULT 0,
                     `uploaded_by`   INT UNSIGNED NULL,
                     `uploaded_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     `updated_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -195,6 +197,14 @@ class Media {
                 }
                 if (!in_array('description', $cols, true)) {
                     \Database::query("ALTER TABLE `media_files` ADD COLUMN `description` TEXT NULL AFTER `title`");
+                }
+                // v3: the WebP copies of an image (JSON width => path; '{}' once checked) and a counter
+                // bumped whenever the file itself changes, so its URL changes too.
+                if (!in_array('variants', $cols, true)) {
+                    \Database::query("ALTER TABLE `media_files` ADD COLUMN `variants` TEXT NULL AFTER `description`");
+                }
+                if (!in_array('file_version', $cols, true)) {
+                    \Database::query("ALTER TABLE `media_files` ADD COLUMN `file_version` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `variants`");
                 }
             } catch (\Throwable $e) { /* ignore */ }
 
@@ -433,6 +443,9 @@ class Media {
             'alt_text'      => (string)($row['alt_text'] ?? ''),
             'title'         => (string)($row['title'] ?? ''),
             'description'   => (string)($row['description'] ?? ''),
+            'variants'      => self::variantUrls($row),
+            'thumb_url'     => self::thumbUrl($row),
+            'file_version'  => (int)($row['file_version'] ?? 0),
             'uploaded_at'   => (string)($row['uploaded_at'] ?? ''),
             'in_use'        => ($usageMap[$path] ?? 0) > 0,
             'usage_count'   => (int)($usageMap[$path] ?? 0),
@@ -514,22 +527,265 @@ class Media {
             }
         }
 
+        $isImage = self::kindForMime($mime, $ext) === 'image';
+        // A phone photo: turn it upright and drop its EXIF (GPS position) before anyone can download it.
+        if ($isImage && self::stripMetadataEnabled()) {
+            ImageProcessor::normalize(SLATE_ROOT . $path, $mime);
+        }
+
         $w = null; $h = null;
-        if (self::kindForMime($mime, $ext) === 'image') {
+        if ($isImage) {
             $info = @getimagesize(SLATE_ROOT . $path);
             if (is_array($info)) { $w = $info[0] ?? null; $h = $info[1] ?? null; }
         }
 
+        clearstatcache(true, SLATE_ROOT . $path);
         $id = self::register($path, [
             'mime'          => $mime,
-            'size_bytes'    => (int)($res['size'] ?? 0),
+            'size_bytes'    => (int)(@filesize(SLATE_ROOT . $path) ?: ($res['size'] ?? 0)),
             'width'         => $w,
             'height'        => $h,
             'original_name' => $res['original'] ?? basename($path),
         ]);
 
+        if ($id > 0 && $isImage && self::sizesEnabled()) {
+            self::generateVariants($id);
+        }
+
         \AuditLog::record('media.uploaded', $path, ['id' => $id]);
         return self::get($id) ?? ($res + ['id' => $id]);
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Image sizes, replace and edit
+    // ──────────────────────────────────────────────────────────
+
+    /** Make WebP copies of new images (setting media_image_sizes, on unless set to '0'). */
+    public static function sizesEnabled(): bool {
+        try { return \Database::setting('media_image_sizes') !== '0'; } catch (\Throwable $e) { return true; }
+    }
+
+    /** Upright photos and strip their EXIF on upload (setting media_strip_metadata, on unless '0'). */
+    public static function stripMetadataEnabled(): bool {
+        try { return \Database::setting('media_strip_metadata') !== '0'; } catch (\Throwable $e) { return true; }
+    }
+
+    /**
+     * width => URL of each WebP copy of a row, narrowest first.
+     *
+     * @return array<int, string>
+     */
+    public static function variantUrls(array $row): array {
+        $map = json_decode((string)($row['variants'] ?? ''), true);
+        if (!is_array($map)) return [];
+        $out = [];
+        foreach ($map as $w => $rel) {
+            if ((int)$w > 0 && is_string($rel) && self::isManagedPath($rel)) {
+                $out[(int)$w] = self::versioned(self::url($rel), $row);
+            }
+        }
+        ksort($out);
+        return $out;
+    }
+
+    /** The smallest copy for a grid thumbnail, or the file itself. */
+    public static function thumbUrl(array $row): string {
+        $v = self::variantUrls($row);
+        return $v !== [] ? reset($v) : self::versioned(self::url((string)($row['path'] ?? '')), $row);
+    }
+
+    /** A file's URL with ?v=N once the file has been replaced or edited, so caches fetch the new one. */
+    public static function versioned(string $url, array $row): string {
+        $v = (int)($row['file_version'] ?? 0);
+        return $url !== '' && $v > 0 ? $url . (str_contains($url, '?') ? '&' : '?') . 'v=' . $v : $url;
+    }
+
+    /**
+     * (Re)build the WebP copies of one image and record them. A row with no
+     * copies needed (small image, GIF, SVG) is marked '{}' so it is not
+     * offered again. Returns the number of copies written. With $notify, pages
+     * that use the image are told (media_updated) so they pick up the srcset.
+     */
+    public static function generateVariants(int $id, bool $notify = true): int {
+        $row = self::rawRow($id);
+        if (!$row || ($row['kind'] ?? '') !== 'image' || !self::isManagedPath((string)$row['path'])) return 0;
+        self::removeVariantFiles($row);
+        $made = ImageProcessor::makeVariants(SLATE_ROOT, (string)$row['path'], (string)$row['mime']);
+        try {
+            \Database::query(
+                "UPDATE media_files SET variants = ? WHERE tenant_id = ? AND id = ?",
+                [json_encode((object)$made, JSON_UNESCAPED_SLASHES), current_tenant_id(), $id]
+            );
+        } catch (\Throwable $e) { return 0; }
+        if ($notify && $made !== [] && class_exists('Hook')) {
+            $item = self::get($id);
+            if ($item) \Hook::doAction('media_updated', $id, $item);
+        }
+        return count($made);
+    }
+
+    /** Images that have not been checked for copies yet (uploaded before sizes existed). */
+    public static function pendingVariantsCount(): int {
+        try {
+            return (int)\Database::value(
+                "SELECT COUNT(*) FROM media_files WHERE tenant_id = ? AND kind = 'image' AND variants IS NULL",
+                [current_tenant_id()]
+            );
+        } catch (\Throwable $e) { return 0; }
+    }
+
+    /**
+     * Build copies for up to $limit unchecked images (one batch per request,
+     * so a slow host never times out). Returns ['done' => images checked,
+     * 'files' => copies written, 'left' => still unchecked].
+     */
+    public static function generateMissing(int $limit = 20): array {
+        $done = 0; $files = 0;
+        try {
+            $ids = array_column(\Database::rows(
+                "SELECT id FROM media_files WHERE tenant_id = ? AND kind = 'image' AND variants IS NULL ORDER BY id LIMIT " . max(1, min(100, $limit)),
+                [current_tenant_id()]
+            ), 'id');
+        } catch (\Throwable $e) { $ids = []; }
+        foreach ($ids as $id) {
+            $files += self::generateVariants((int)$id);
+            $done++;
+        }
+        return ['done' => $done, 'files' => $files, 'left' => self::pendingVariantsCount()];
+    }
+
+    /**
+     * Swap the file behind a media item for a new upload of the same type,
+     * keeping its id, path and every reference. The new file is written to
+     * the same path; its copies are rebuilt and its URL gets a new ?v=.
+     */
+    public static function replaceFile(int $id, string $field): array {
+        $row = self::rawRow($id);
+        if (!$row || !self::isManagedPath((string)$row['path'])) {
+            return ['ok' => false, 'error' => __('core_err_media_not_found', 'Media not found.')];
+        }
+        $path = (string)$row['path'];
+        $ext  = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $res = Uploads::handle($field, trim(dirname(substr($path, strlen('/uploads/'))), '/'), [
+            'allowed_exts'  => $ext === 'jpeg' || $ext === 'jpg' ? ['jpg', 'jpeg'] : [$ext],
+            // The same format as the file it replaces: a PNG renamed .jpg is refused.
+            'allowed_mimes' => (string)$row['mime'] !== ''
+                ? [(string)$row['mime']]
+                : array_values(array_filter(self::allowedMimes(), static fn($m) => self::kindForMime((string)$m, $ext) === (string)$row['kind'])),
+            'max_bytes'     => self::isVideo($row) ? self::VIDEO_MAX_BYTES : Uploads::DEFAULT_MAX_BYTES,
+        ]);
+        if (empty($res['ok'])) {
+            return ['ok' => false, 'error' => (string)($res['error'] ?? __('media_replace_type', 'Choose a file of the same type.'))];
+        }
+        $newAbs = SLATE_ROOT . (string)$res['path'];
+        $mime = (string)($res['mime'] ?? $row['mime']);
+        if ($ext === 'svg' && !self::sanitizeSvgFile($newAbs)) {
+            Uploads::remove((string)$res['path']);
+            return ['ok' => false, 'error' => __('core_err_could_not_process_svg_file', 'Could not process SVG file.')];
+        }
+        if (!@rename($newAbs, SLATE_ROOT . $path)) {
+            Uploads::remove((string)$res['path']);
+            return ['ok' => false, 'error' => __('core_err_could_not_save_uploaded_file', 'Could not save uploaded file.')];
+        }
+        if ($row['kind'] === 'image' && self::stripMetadataEnabled()) {
+            ImageProcessor::normalize(SLATE_ROOT . $path, $mime);
+        }
+        self::fileChanged($id, $path, $mime);
+        \AuditLog::record('media.replaced', $path, ['id' => $id]);
+        return ['ok' => true, 'item' => self::get($id)];
+    }
+
+    /**
+     * Rotate, flip or crop an image (see ImageProcessor::transform for $ops).
+     * In place, the item keeps its id and references and gets a new ?v=;
+     * with $asCopy a new library item is made and the original is untouched.
+     */
+    public static function editImage(int $id, array $ops, bool $asCopy = false): array {
+        $row = self::rawRow($id);
+        if (!$row || $row['kind'] !== 'image' || !self::isManagedPath((string)$row['path']) || !ImageProcessor::supports((string)$row['mime'])) {
+            return ['ok' => false, 'error' => __('media_edit_unsupported', 'This file cannot be edited here.')];
+        }
+        $path = (string)$row['path'];
+        if ($asCopy) {
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $dir = Uploads::publicUploadDir(self::FOLDER . '/' . date('Y/m'));
+            $newRel = '/uploads/' . self::FOLDER . '/' . date('Y/m') . '/' . bin2hex(random_bytes(12)) . '.' . $ext;
+            if (!@copy(SLATE_ROOT . $path, $dir . '/' . basename($newRel))) {
+                return ['ok' => false, 'error' => __('core_err_could_not_save_uploaded_file', 'Could not save uploaded file.')];
+            }
+            if (ImageProcessor::transform(SLATE_ROOT . $newRel, (string)$row['mime'], $ops) === null) {
+                Uploads::remove($newRel);
+                return ['ok' => false, 'error' => __('media_edit_failed', 'The image could not be edited.')];
+            }
+            $name = (string)($row['original_name'] ?: basename($path));
+            $newId = self::register($newRel, [
+                'mime'          => (string)$row['mime'],
+                'original_name' => pathinfo($name, PATHINFO_FILENAME) . '-edited.' . pathinfo($name, PATHINFO_EXTENSION),
+            ]);
+            if ($newId <= 0) {
+                Uploads::remove($newRel);
+                return ['ok' => false, 'error' => __('media_edit_failed', 'The image could not be edited.')];
+            }
+            try {
+                \Database::query("UPDATE media_files SET alt_text = ?, title = ? WHERE tenant_id = ? AND id = ?",
+                    [(string)($row['alt_text'] ?? ''), (string)($row['title'] ?? ''), current_tenant_id(), $newId]);
+            } catch (\Throwable $e) { /* optional */ }
+            self::fileChanged($newId, $newRel, (string)$row['mime'], false);
+            \AuditLog::record('media.edited', $newRel, ['id' => $newId, 'from' => $id]);
+            return ['ok' => true, 'item' => self::get($newId)];
+        }
+        if (ImageProcessor::transform(SLATE_ROOT . $path, (string)$row['mime'], $ops) === null) {
+            return ['ok' => false, 'error' => __('media_edit_failed', 'The image could not be edited.')];
+        }
+        self::fileChanged($id, $path, (string)$row['mime']);
+        \AuditLog::record('media.edited', $path, ['id' => $id]);
+        return ['ok' => true, 'item' => self::get($id)];
+    }
+
+    /** After the bytes of a file changed: new size and dimensions, new copies, new ?v=, and tell listeners. */
+    private static function fileChanged(int $id, string $path, string $mime, bool $bump = true): void {
+        $abs = SLATE_ROOT . $path;
+        clearstatcache(true, $abs);
+        $info = @getimagesize($abs);
+        try {
+            \Database::query(
+                "UPDATE media_files SET mime = ?, size_bytes = ?, width = ?, height = ?"
+                . ($bump ? ", file_version = file_version + 1" : '') . " WHERE tenant_id = ? AND id = ?",
+                [$mime, (int)(@filesize($abs) ?: 0), is_array($info) ? (int)$info[0] : null, is_array($info) ? (int)$info[1] : null, current_tenant_id(), $id]
+            );
+        } catch (\Throwable $e) { /* best effort */ }
+        $row = self::rawRow($id);
+        if ($row && $row['kind'] === 'image') {
+            if (self::sizesEnabled()) {
+                self::generateVariants($id, false);
+            } else {
+                self::removeVariantFiles($row);
+                try { \Database::query("UPDATE media_files SET variants = NULL WHERE tenant_id = ? AND id = ?", [current_tenant_id(), $id]); } catch (\Throwable $e) {}
+            }
+        }
+        $item = self::get($id);
+        if ($item && class_exists('Hook')) \Hook::doAction('media_updated', $id, $item);
+    }
+
+    /** Delete the WebP copy files recorded on a row. */
+    private static function removeVariantFiles(array $row): void {
+        $map = json_decode((string)($row['variants'] ?? ''), true);
+        foreach (is_array($map) ? $map : [] as $rel) {
+            if (is_string($rel) && self::isManagedPath($rel)) Uploads::remove($rel);
+        }
+    }
+
+    /** Is this file name one of the WebP copies (<name>-<width>w.webp)? */
+    public static function isVariantFile(string $name): bool {
+        return preg_match('/-(' . implode('|', ImageProcessor::WIDTHS) . ')w\.webp$/i', $name) === 1;
+    }
+
+    /** The undecorated row (tenant-scoped). */
+    private static function rawRow(int $id): ?array {
+        try {
+            $row = \Database::row("SELECT * FROM media_files WHERE tenant_id = ? AND id = ?", [current_tenant_id(), $id]);
+        } catch (\Throwable $e) { return null; }
+        return $row ?: null;
     }
 
     /**
@@ -860,9 +1116,13 @@ class Media {
                 ),
             ];
         }
+        try {
+            $row = \Database::row("SELECT variants FROM media_files WHERE tenant_id = ? AND path = ?", [current_tenant_id(), $path]);
+        } catch (\Throwable $e) { $row = null; }
         if (!Uploads::remove($path)) {
             return ['ok' => false, 'error' => __('core_err_file_could_not_be_deleted_may_already_be_gone', 'File could not be deleted (may already be gone).')];
         }
+        if ($row) self::removeVariantFiles($row);
         self::unregister($path);
         \AuditLog::record('media.deleted', $path);
         return ['ok' => true, 'error' => null, 'usage_count' => 0];
@@ -952,6 +1212,8 @@ class Media {
             if ($name === '' || $name[0] === '.') continue;
             $ext = strtolower($entry->getExtension());
             if (!in_array($ext, $allowed, true)) continue;
+            // The WebP copies of an image belong to it, not to the library on their own.
+            if (self::isVariantFile($name)) continue;
 
             $stats['scanned']++;
             $full = $entry->getPathname();

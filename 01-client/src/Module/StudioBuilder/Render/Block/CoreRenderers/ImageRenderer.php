@@ -43,7 +43,7 @@ final class ImageRenderer implements BlockRendererInterface
         $ratio   = self::RATIOS[$scope->string('aspect_ratio', 'auto')] ?? 'auto';
         $caption = $scope->string('caption');
 
-        $img = self::img($image->url, $alt, $image->width, $image->height, $ref);
+        $img = self::img($image->url, $alt, $image->width, $image->height, $ref, true, $image->srcset);
         // Link: none, the image file itself, or a custom address (after the URL allowlist).
         $linkTo = $scope->string('link_to', 'none');
         $href = match ($linkTo) {
@@ -63,8 +63,9 @@ final class ImageRenderer implements BlockRendererInterface
 
     /**
      * @param mixed $ref normalized media_ref (focal point used for object-position)
+     * @param array<int, string> $srcset width => URL of smaller copies (the library's WebP sizes)
      */
-    public static function img(string $url, string $alt, ?int $width, ?int $height, mixed $ref, bool $lazy = true): string
+    public static function img(string $url, string $alt, ?int $width, ?int $height, mixed $ref, bool $lazy = true, array $srcset = []): string
     {
         $position = '';
         if (is_array($ref) && is_array($ref['focal_point'] ?? null) && count($ref['focal_point']) === 2) {
@@ -76,9 +77,35 @@ final class ImageRenderer implements BlockRendererInterface
                 $position = sprintf(' style="object-position:%s%% %s%%"', rtrim(rtrim(number_format($x * 100, 2, '.', ''), '0'), '.'), rtrim(rtrim(number_format($y * 100, 2, '.', ''), '0'), '.'));
             }
         }
-        return '<img src="' . Html::e($url) . '" alt="' . Html::e($alt) . '"'
+        return '<img src="' . Html::e($url) . '"' . self::srcsetAttrs($url, $width, $srcset, $lazy) . ' alt="' . Html::e($alt) . '"'
             . ($width !== null ? ' width="' . $width . '"' : '')
             . ($height !== null ? ' height="' . $height . '"' : '')
             . ($lazy ? ' loading="lazy"' : '') . ' decoding="async"' . $position . '>';
+    }
+
+    /**
+     * ` srcset="…" sizes="…"` for an image with smaller copies, or ''. The original closes the list at its own
+     * width. A lazy image lets the browser size it from its layout (`sizes="auto"`), with the viewport as the
+     * fallback for browsers that do not know `auto`.
+     *
+     * @param array<int, string> $srcset
+     */
+    public static function srcsetAttrs(string $url, ?int $width, array $srcset, bool $lazy = true): string
+    {
+        if ($srcset === [] || $width === null || $width <= 0) {
+            return '';
+        }
+        ksort($srcset);
+        $parts = [];
+        foreach ($srcset as $w => $u) {
+            if (is_int($w) && $w > 0 && $w < $width && is_string($u) && $u !== '') {
+                $parts[] = Html::e($u) . ' ' . $w . 'w';
+            }
+        }
+        if ($parts === []) {
+            return '';
+        }
+        $parts[] = Html::e($url) . ' ' . $width . 'w';
+        return ' srcset="' . implode(', ', $parts) . '" sizes="' . ($lazy ? 'auto, 100vw' : '100vw') . '"';
     }
 }

@@ -220,6 +220,8 @@ CREATE TABLE IF NOT EXISTS `media_files` (
     `alt_text`      VARCHAR(255) NULL DEFAULT '',
     `title`         VARCHAR(255) NULL DEFAULT '',
     `description`   TEXT NULL,
+    `variants`      TEXT NULL,
+    `file_version`  INT UNSIGNED NOT NULL DEFAULT 0,
     `uploaded_by`   INT UNSIGNED NULL,
     `uploaded_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
