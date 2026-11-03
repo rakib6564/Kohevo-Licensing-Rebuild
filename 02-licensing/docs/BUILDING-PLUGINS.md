@@ -744,7 +744,9 @@ for the customer-facing filters in particular.
 | `customer_registered` | After `Auth::registerCustomer` succeeds | `(int $customerId)` |
 | `customer_logged_in` | Successful customer login | `(int $customerId)` |
 | `customer_email_verified` | After a customer clicks their verify link | `(int $customerId)` |
-| `stripe_webhook_event` | Signature-verified Stripe webhook arrived (any event type) | `(array $event)` |
+| `payment_event` | A payment succeeded, renewed, failed or was refunded, from any gateway (§12.3) | `(PaymentEvent $event)` |
+| `payment_charge_recorded` | A new row was written to the payment ledger | `(int $chargeId, array $charge)` |
+| `stripe_webhook_event` | Signature-verified Stripe webhook arrived (any event type) — legacy, prefer `payment_event` | `(array $event)` |
 
 ```php
 Hook::addAction('user_logged_in', function (int $userId) {
@@ -1205,126 +1207,137 @@ deliveries show up in the audit log.
 
 ## 12. Taking payments
 
-Slate has a generic Stripe checkout API. If your plugin needs to
-charge money, you call into the Stripe Payment plugin instead of
-owning your own Stripe wiring.
+Slate has one gateway-neutral payment API in core: `Payments`
+(`src/Services/Payments`). Your plugin never talks to Stripe or PayPal
+directly. It asks `Payments` for a checkout, sends the customer there,
+and reacts to one `payment_event` action. Which gateway took the money
+is the site owner's choice, made on **Payments → Gateways**.
 
 This means:
 
-- No copies of cURL + HMAC logic in your plugin
-- The `stripepayment_charges` admin page sees your charges alongside
-  everyone else's (with refund button)
-- The site-wide test/live mode toggle controls your charges too
-- One webhook endpoint receives Stripe events; you subscribe via a
-  hook
+- No gateway code (cURL, signatures, webhooks) in your plugin
+- Every charge lands in one ledger, listed on **Payments → Transactions**
+  with a refund button, whichever gateway took it
+- A new gateway plugin works for your plugin with no change to it
+- The same event arrives from the customer's return and from the
+  gateway's webhook, so a payment is never missed
 
-### 12.1 Trigger a hosted checkout
+Gateways are plugins (`stripe-payment`, `paypal-payment`) that implement
+`Slate\Contracts\Payments\PaymentGateway` and call
+`Payments::register()`.
+
+### 12.1 Offer a gateway and start a checkout
 
 ```php
-require_once plugin_dir('stripe-payment') . '/StripePaymentAPI.php';
+// Gateways configured, and switched on for your plugin. First = preferred.
+$gateways = Payments::available('booking');          // [id => PaymentGateway]
+if (!$gateways) { /* show "payments are not set up" */ }
 
-$session = StripePaymentAPI::createCheckout(
-    lineItems: [
-        ['name' => 'Strategy session',  'amount_cents' => 15000, 'quantity' => 1],
-        ['name' => 'Booking deposit',   'amount_cents' =>  5000, 'quantity' => 1],
+// The customer's pick from your form, or the first available one.
+$gw = Payments::choose('booking', $_POST['gateway'] ?? null);
+
+$start = Payments::startCheckout($gw->id(), new CheckoutRequest(
+    [
+        ['name' => 'Strategy session', 'amount_cents' => 15000, 'quantity' => 1],
+        ['name' => 'Booking deposit',  'amount_cents' =>  5000],
     ],
-    opts: [
+    [
+        'source_plugin'  => 'booking',                 // your plugin slug — required
+        'source_id'      => (string) $appointmentId,   // your record — routes the payment back
         'currency'       => 'usd',
         'customer_email' => $customer['email'],
-        'success_url'    => SLATE_URL . '/book/thanks?ref=' . $ref,
+        // {PAYMENT_REF} is replaced with the gateway's checkout reference.
+        'success_url'    => SLATE_URL . '/book/paid?id=' . $appointmentId . '&gw=' . $gw->id() . '&ref={PAYMENT_REF}',
         'cancel_url'     => SLATE_URL . '/book?cancelled=1',
-        'metadata'       => [
-            'source_plugin' => 'booking',           // your plugin slug
-            'source_id'     => (string)$appointmentId,
-            'ref'           => $ref,
-        ],
+        'idempotency_key' => 'booking-' . $appointmentId,
+        // 'interval' => 'month',  // recurring; needs Payments::available('x', ['hosted', 'recurring'])
     ]
-);
-// $session === ['session_id' => 'cs_test_…', 'url' => 'https://checkout.stripe.com/…']
-
-header('Location: ' . $session['url']);
+));
+header('Location: ' . $start->redirectUrl);
 exit;
 ```
 
 `amount_cents` is the integer amount in the currency's smallest unit
-(cents for USD, yen for JPY — Stripe lists 16 zero-decimal currencies).
-Anything you put in `metadata` comes back on the webhook event.
+(cents for USD, yen for JPY). `Payments::toMinor('12.50', 'EUR')` and
+`Payments::toMajor(1250, 'EUR')` convert typed amounts.
 
-### 12.2 React to a successful charge
+`startCheckout()` stores a `payment_sessions` row (gateway reference →
+your plugin and record) before the redirect. That row, not gateway
+metadata, is how the payment finds its way back to you.
 
-Stripe POSTs to `/plugins/stripe-payment/public/webhook.php`. After
-verifying the signature, that endpoint fires the
-`stripe_webhook_event` action with the parsed event payload.
+### 12.2 Confirm on the return page
 
 ```php
-Hook::addAction('stripe_webhook_event', function (array $event) {
-    if ($event['type'] !== 'checkout.session.completed') return;
-    $session = $event['data']['object'] ?? [];
-    $meta    = $session['metadata'] ?? [];
+$event = Payments::confirmReturn($_GET['gw'], $_GET['ref'], 'booking', (string) $appointmentId);
+if ($event?->isPaid()) { /* show "paid" */ }
+elseif ($event?->type === PaymentEvent::FAILED) { /* show the error */ }
+else { /* still processing — the webhook will settle it */ }
+```
 
-    // Only act on events your plugin initiated.
-    if (($meta['source_plugin'] ?? '') !== 'booking') return;
+The reference comes from the browser, so `confirmReturn()` only acts
+when the session it names was started by your plugin for that record.
+It also fires `payment_event` (below), so put your "mark as paid" logic
+in the listener, not here.
 
-    $appointmentId = (int)($meta['source_id'] ?? 0);
-    if ($appointmentId <= 0) return;
+### 12.3 React to payments
 
-    Database::update('booking_appointments',
-        ['status' => 'confirmed', 'paid_at' => date('Y-m-d H:i:s')],
-        'id = ?', [$appointmentId]);
+```php
+Hook::addAction('payment_event', function (PaymentEvent $e): void {
+    if (!$e->isFor('booking')) return;
+    $id = (int) $e->sourceId;
+
+    if ($e->isPaid()) {
+        // Idempotent: the return page and the webhook both deliver this.
+        Database::update('booking_appointments',
+            ['status' => 'confirmed', 'charge_id' => $e->chargeId],
+            "id = ? AND tenant_id = ? AND status <> 'confirmed'", [$id, current_tenant_id()]);
+    } elseif ($e->type === PaymentEvent::FAILED) {
+        // $e->failureMessage
+    }
 });
 ```
 
-The shared webhook endpoint also auto-inserts a
-`stripepayment_charges` row for every paid event, so the Charges
-admin page surfaces your transactions without extra wiring.
+`PaymentEvent` types: `succeeded`, `renewed` (a recurring period),
+`failed`, `refunded`. The ledger row is already written when the event
+fires: `$e->chargeId` is its id and `$e->isNewCharge` is true only for
+the delivery that created it.
 
-### 12.3 Programmatic refunds
-
-Refunding from your plugin:
-
-```php
-$result = StripePaymentAPI::refundCharge($chargeId, /* cents, null = remainder */ null);
-if ($result['ok']) {
-    // $result['refund_id'] is the Stripe refund id
-}
-```
-
-The Charges admin page has a refund button that does the same thing
-visually.
-
-### 12.4 Useful primitives
+### 12.4 Refunds and the ledger
 
 ```php
-StripePaymentAPI::mode()                     // 'test' | 'live'
-StripePaymentAPI::isConfigured()             // both keys set?
-StripePaymentAPI::createPaymentIntent($amountCents, $opts)
-StripePaymentAPI::getSession($sessionId)
-StripePaymentAPI::getPaymentIntent($piId)
-StripePaymentAPI::listCharges($filters)      // for your own admin pages
-StripePaymentAPI::getCharge($id)
-StripePaymentAPI::recordCharge($args)        // idempotent on session/intent id
+$r = Payments::refundCharge($chargeId, /* cents, null = the rest */ null, 'refund-' . $chargeId);
+// ['ok' => true, 'refund_id' => …, 'refunded_cents' => new total]
+// ['ok' => false, 'error' => …, 'uncertain' => bool]  — uncertain: the gateway
+//   may have refunded anyway (network error); do not assume either way.
+
+Payments::listCharges(['source_plugin' => 'booking', 'days' => 30]);
+Payments::getCharge($chargeId);
 ```
 
-### 12.5 Plugin contract
+### 12.5 Gateway-specific features
 
-If your plugin depends on Stripe Payment:
-
-```json
-{
-    "works_better_with": ["stripe-payment"]
-}
-```
-
-— and check at runtime before calling:
+Some features exist on one gateway only and stay on its own API:
+Stripe's inline card form (`StripePaymentAPI::createPaymentIntent`) and
+card readers (`StripeTerminalAPI`). Check before offering them:
 
 ```php
-if (!class_exists('StripePaymentAPI') || !StripePaymentAPI::isConfigured()) {
-    // Render a "configure Stripe first" notice or fall back to manual payment.
-}
+$stripe = Payments::available('restaurant', ['inline_card'])['stripe'] ?? null;
 ```
 
-Never hard-`require` the plugin; the user might intentionally not
-install it (free-tier flows, alt-processor builds).
+Stripe's older `StripePaymentAPI::createCheckout()` and the
+`stripe_webhook_event` action still work for plugins not yet moved, and
+`StripePaymentAPI::recordCharge/refundCharge/listCharges` now read and
+write the shared ledger.
+
+### 12.6 Plugin contract
+
+Never hard-`require` a gateway plugin. Check at runtime instead:
+
+```php
+if (!Payments::canCharge('booking')) {
+    // Render a "set up a payment gateway" notice or fall back to manual payment.
+}
+```
 
 ---
 

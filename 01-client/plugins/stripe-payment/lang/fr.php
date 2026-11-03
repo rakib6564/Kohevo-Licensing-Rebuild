@@ -14,6 +14,7 @@ return [
     'stripe_guest' => 'Invité',
     'stripe_no_charges' => 'Aucun paiement pour le moment',
     'stripe_settings' => 'Passerelle de paiement',
+    'stripe_nav_settings' => 'Stripe',
     'stripe_total_charges' => 'Total des paiements',
     'stripe_volume_today' => 'Volume aujourd\'hui',
     'view_all' => 'Tout afficher',

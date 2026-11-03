@@ -40,3 +40,9 @@ class_alias(\Slate\Services\Notifications\BrandedEmail::class, 'BrandedEmail'); 
 // Module entitlement guard, aliased so the bundled Forms/Booking plugins can
 // call it unqualified exactly as they do in 01-client (see that tree's note).
 class_alias(\Slate\Services\Licensing\ModuleGuard::class, 'ModuleGuard');
+
+// Gateway-neutral payments (Stripe, PayPal, …) — the facade every paying
+// plugin calls, and the event object its `payment_event` listeners receive.
+class_alias(\Slate\Services\Payments\Payments::class, 'Payments');
+class_alias(\Slate\Services\Payments\PaymentEvent::class, 'PaymentEvent');
+class_alias(\Slate\Services\Payments\CheckoutRequest::class, 'CheckoutRequest');

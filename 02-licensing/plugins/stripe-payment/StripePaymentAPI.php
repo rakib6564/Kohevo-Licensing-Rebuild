@@ -49,6 +49,9 @@
  *   are honoured as fallbacks so existing installs keep working.
  */
 
+use Slate\Services\Payments\PaymentLedger;
+use Slate\Services\Payments\Payments;
+
 class StripePaymentAPI {
 
     private const API_BASE    = 'https://api.stripe.com';
@@ -116,6 +119,12 @@ class StripePaymentAPI {
      *   'metadata'       array<string,string>
      *   'collect_shipping_address' bool (default false)
      *   'allowed_countries' array<string> (only if collect_shipping_address)
+     *   'interval'       'month' or 'year' for a subscription that charges
+     *                    every line item again each period ('' = one-time).
+     *                    The metadata is also copied onto the subscription,
+     *                    so its renewals (invoice.paid) can be attributed.
+     *   'idempotency_key' string — a retried call with the same key returns the
+     *                    same session instead of creating a second one.
      *
      * Returns ['session_id' => 'cs_…', 'url' => '…'] or throws.
      */
@@ -131,9 +140,10 @@ class StripePaymentAPI {
         }
 
         $currency = strtolower((string)($opts['currency'] ?? 'usd'));
+        $interval = in_array(($opts['interval'] ?? ''), ['month', 'year'], true) ? (string)$opts['interval'] : '';
 
         $params = [
-            'mode'        => 'payment',
+            'mode'        => $interval !== '' ? 'subscription' : 'payment',
             'success_url' => (string)$opts['success_url'],
             'cancel_url'  => (string)$opts['cancel_url'],
         ];
@@ -144,7 +154,7 @@ class StripePaymentAPI {
         // When the admin expressly enables Bancontact, pin the compatible
         // method pair for EUR checkouts. The card fallback keeps Checkout
         // usable for customers who do not select Bancontact.
-        if ($currency === 'eur'
+        if ($currency === 'eur' && $interval === ''
             && (Database::setting('stripe-payment.method_bancontact') ?? '0') === '1') {
             $params['payment_method_types[0]'] = 'card';
             $params['payment_method_types[1]'] = 'bancontact';
@@ -161,6 +171,9 @@ class StripePaymentAPI {
             $params["line_items[$i][price_data][currency]"]          = $currency;
             $params["line_items[$i][price_data][unit_amount]"]       = $amount;
             $params["line_items[$i][price_data][product_data][name]"] = $name;
+            if ($interval !== '') {
+                $params["line_items[$i][price_data][recurring][interval]"] = $interval;
+            }
             if (!empty($li['description'])) {
                 $params["line_items[$i][price_data][product_data][description]"]
                     = mb_substr((string)$li['description'], 0, 500);
@@ -177,6 +190,9 @@ class StripePaymentAPI {
         if (!empty($opts['metadata']) && is_array($opts['metadata'])) {
             foreach ($opts['metadata'] as $mk => $mv) {
                 $params["metadata[$mk]"] = (string)$mv;
+                if ($interval !== '') {
+                    $params["subscription_data[metadata][$mk]"] = (string)$mv;
+                }
             }
         }
 
@@ -189,7 +205,7 @@ class StripePaymentAPI {
             }
         }
 
-        $resp = self::httpRequest('POST', '/v1/checkout/sessions', $params);
+        $resp = self::httpRequest('POST', '/v1/checkout/sessions', $params, (string)($opts['idempotency_key'] ?? ''));
         if (empty($resp['id']) || empty($resp['url'])) {
             throw new \RuntimeException('Stripe response missing id/url.');
         }
@@ -207,6 +223,8 @@ class StripePaymentAPI {
      *                          intent to exactly these methods instead of
      *                          using automatic_payment_methods. Use e.g.
      *                          ['card'] to suppress Link/redirect methods.
+     *   'idempotency_key'      string — a retried call with the same key returns
+     *                          the same PaymentIntent instead of a second one.
      *
      * Returns the raw PaymentIntent payload (id, client_secret, …).
      */
@@ -240,7 +258,7 @@ class StripePaymentAPI {
                 $params["metadata[$mk]"] = (string)$mv;
             }
         }
-        $resp = self::httpRequest('POST', '/v1/payment_intents', $params);
+        $resp = self::httpRequest('POST', '/v1/payment_intents', $params, (string)($opts['idempotency_key'] ?? ''));
         if (empty($resp['id']) || empty($resp['client_secret'])) {
             throw new \RuntimeException('Stripe PaymentIntent response missing fields.');
         }
@@ -336,6 +354,17 @@ class StripePaymentAPI {
         }
 
         self::recordWebhookHealth('ok', (string) $event['type']);
+
+        // The gateway-neutral `payment_event` first: it records the ledger
+        // row, so the legacy listeners below find it rather than racing it.
+        // A failing payment_event listener must not stop the legacy ones.
+        try {
+            $normalized = class_exists('StripeGateway') ? StripeGateway::normalize($event) : null;
+            if ($normalized !== null) Payments::emit($normalized);
+        } catch (\Throwable $e) {
+            slate_log('Stripe webhook: payment_event dispatch failed: ' . $e->getMessage(), 'error');
+        }
+
         Hook::doAction('stripe_webhook_event', $event);
         return $event;
     }
@@ -407,16 +436,23 @@ class StripePaymentAPI {
     public static function ensureChargesSchema(): void {
         if (self::$chargesSchemaChecked) return;
         self::$chargesSchemaChecked = true;
+        // Gateway columns on an older table, and payment_sessions, belong to
+        // the shared layer (it creates this same table when it runs first).
+        PaymentLedger::resetSchemaCheck();
+        PaymentLedger::ensureSchema();
         try {
             Database::get()->exec(
                 "CREATE TABLE IF NOT EXISTS `stripepayment_charges` (
                     `id`                       INT UNSIGNED NOT NULL AUTO_INCREMENT,
                     `tenant_id`                INT UNSIGNED NOT NULL DEFAULT 1,
                     `mode`                     ENUM('test','live') NOT NULL DEFAULT 'test',
+                    `gateway`                  VARCHAR(32) NOT NULL DEFAULT 'stripe',
                     `source_plugin`            VARCHAR(80) NOT NULL,
                     `source_id`                VARCHAR(190) NULL,
                     `stripe_payment_intent_id` VARCHAR(255) NULL,
                     `stripe_session_id`        VARCHAR(255) NULL,
+                    `gateway_txn_id`           VARCHAR(255) NULL,
+                    `gateway_ref`              VARCHAR(255) NULL,
                     `customer_email`           VARCHAR(200) NULL,
                     `amount_cents`             INT UNSIGNED NOT NULL DEFAULT 0,
                     `refunded_cents`           INT UNSIGNED NOT NULL DEFAULT 0,
@@ -429,7 +465,9 @@ class StripePaymentAPI {
                     KEY `idx_tenant_created`   (`tenant_id`, `created_at`),
                     KEY `idx_source`           (`tenant_id`, `source_plugin`, `source_id`),
                     UNIQUE KEY `uniq_pi`       (`tenant_id`, `stripe_payment_intent_id`),
-                    UNIQUE KEY `uniq_session`  (`tenant_id`, `stripe_session_id`)
+                    UNIQUE KEY `uniq_session`  (`tenant_id`, `stripe_session_id`),
+                    UNIQUE KEY `uniq_gateway_txn` (`tenant_id`, `gateway`, `gateway_txn_id`),
+                    UNIQUE KEY `uniq_gateway_ref` (`tenant_id`, `gateway`, `gateway_ref`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
             );
         } catch (\Throwable $e) {
@@ -470,188 +508,101 @@ class StripePaymentAPI {
     }
 
     /**
-     * Insert a row in stripepayment_charges. Idempotent on
+     * Insert a Stripe row in the shared charges ledger. Idempotent on
      * (stripe_payment_intent_id) OR (stripe_session_id) — a repeated
      * webhook delivery won't double-insert.
      *
      * Required keys: source_plugin, amount_cents.
      * One of stripe_payment_intent_id or stripe_session_id should be set.
+     *
+     * Kept for plugins not yet on the gateway-neutral layer; the row lives
+     * in \Slate\Services\Payments\PaymentLedger like every other gateway's.
      */
     public static function recordCharge(array $args): ?int {
         self::ensureChargesSchema();
-        $tid = current_tenant_id();
-
-        $piId  = trim((string)($args['stripe_payment_intent_id'] ?? ''));
-        $csId  = trim((string)($args['stripe_session_id']        ?? ''));
-
-        // Idempotency
-        if ($piId !== '') {
-            $existing = Database::row(
-                "SELECT id FROM stripepayment_charges WHERE stripe_payment_intent_id = ? AND tenant_id = ?",
-                [$piId, $tid]
-            );
-            if ($existing) return (int)$existing['id'];
-        }
-        if ($csId !== '') {
-            $existing = Database::row(
-                "SELECT id FROM stripepayment_charges WHERE stripe_session_id = ? AND tenant_id = ?",
-                [$csId, $tid]
-            );
-            if ($existing) return (int)$existing['id'];
-        }
-
-        $meta = $args['meta'] ?? null;
-        try {
-            return Database::insert('stripepayment_charges', [
-                'tenant_id'                => $tid,
-                'mode'                     => self::mode(),
-                'source_plugin'            => mb_substr((string)($args['source_plugin'] ?? 'unknown'), 0, 80),
-                'source_id'                => isset($args['source_id']) ? mb_substr((string)$args['source_id'], 0, 190) : null,
-                'stripe_payment_intent_id' => $piId !== '' ? $piId : null,
-                'stripe_session_id'        => $csId !== '' ? $csId : null,
-                'customer_email'           => isset($args['customer_email']) ? mb_substr((string)$args['customer_email'], 0, 200) : null,
-                'amount_cents'             => max(0, (int)($args['amount_cents'] ?? 0)),
-                'currency'                 => strtoupper(mb_substr((string)($args['currency'] ?? 'USD'), 0, 8)),
-                'status'                   => in_array(($args['status'] ?? 'succeeded'), ['succeeded','refunded','partial_refund','failed'], true)
-                                              ? $args['status'] : 'succeeded',
-                'meta_json'                => $meta !== null ? json_encode($meta, JSON_UNESCAPED_UNICODE) : null,
-            ]);
-        } catch (\PDOException $e) {
-            // A concurrent webhook won the race on the unique key. Re-read
-            // and return the row it inserted instead of erroring.
-            if ($e->getCode() === '23000') {
-                if ($piId !== '') {
-                    $row = Database::row(
-                        "SELECT id FROM stripepayment_charges WHERE stripe_payment_intent_id = ? AND tenant_id = ?",
-                        [$piId, $tid]);
-                    if ($row) return (int)$row['id'];
-                }
-                if ($csId !== '') {
-                    $row = Database::row(
-                        "SELECT id FROM stripepayment_charges WHERE stripe_session_id = ? AND tenant_id = ?",
-                        [$csId, $tid]);
-                    if ($row) return (int)$row['id'];
-                }
-            }
-            slate_log('StripePaymentAPI::recordCharge failed: ' . $e->getMessage(), 'error');
-            return null;
-        } catch (\Throwable $e) {
-            slate_log('StripePaymentAPI::recordCharge failed: ' . $e->getMessage(), 'error');
-            return null;
-        }
+        return PaymentLedger::record([
+            'gateway'        => 'stripe',
+            'mode'           => self::mode(),
+            'source_plugin'  => $args['source_plugin'] ?? 'unknown',
+            'source_id'      => $args['source_id'] ?? '',
+            'txn_id'         => $args['stripe_payment_intent_id'] ?? '',
+            'ref'            => $args['stripe_session_id'] ?? '',
+            'customer_email' => $args['customer_email'] ?? '',
+            'amount_cents'   => $args['amount_cents'] ?? 0,
+            'currency'       => $args['currency'] ?? 'USD',
+            'status'         => $args['status'] ?? 'succeeded',
+            'meta'           => $args['meta'] ?? null,
+        ])['id'];
     }
 
     public static function getCharge(int $id): ?array {
         self::ensureChargesSchema();
-        return Database::row(
-            "SELECT * FROM stripepayment_charges WHERE id = ? AND tenant_id = ?",
-            [$id, current_tenant_id()]
-        );
+        return PaymentLedger::get($id);
     }
 
     /**
-     * Fetch a paginated list of charges with optional filters.
-     * $filters: source_plugin, mode, status, email_like, days
+     * Fetch a list of charges (every gateway) with optional filters.
+     * $filters: gateway, source_plugin, mode, status, email_like, days
      */
     public static function listCharges(array $filters = [], int $limit = 100): array {
         self::ensureChargesSchema();
-        $where  = ['tenant_id = ?'];
-        $params = [current_tenant_id()];
-
-        if (!empty($filters['source_plugin'])) { $where[]='source_plugin = ?'; $params[]=$filters['source_plugin']; }
-        if (!empty($filters['mode']) && in_array($filters['mode'], ['test','live'], true)) {
-            $where[] = 'mode = ?'; $params[] = $filters['mode'];
-        }
-        if (!empty($filters['status'])) { $where[]='status = ?'; $params[]=$filters['status']; }
-        if (!empty($filters['email_like'])) {
-            $where[] = 'customer_email LIKE ?'; $params[] = '%' . $filters['email_like'] . '%';
-        }
-        if (!empty($filters['days']) && (int)$filters['days'] > 0) {
-            $where[] = 'created_at >= NOW() - INTERVAL ' . (int)$filters['days'] . ' DAY';
-        }
-        $sql = "SELECT * FROM stripepayment_charges
-                 WHERE " . implode(' AND ', $where) . "
-              ORDER BY created_at DESC LIMIT " . max(1, min(500, $limit));
-        return Database::rows($sql, $params);
+        return PaymentLedger::list($filters, $limit);
     }
 
     /**
-     * Refund a charge via Stripe + update local row.
+     * Refund a charge through the gateway that took it, and update the row.
      * If $amountCents is null, refunds the remaining un-refunded amount.
+     * $opts: 'idempotency_key' — sent to the gateway so a retried refund is not issued twice.
      *
      * Returns ['ok'=>true, 'refund_id'=>'re_…', 'refunded_cents'=>int]
-     *      or ['ok'=>false, 'error'=>string].
+     *      or ['ok'=>false, 'error'=>string]. A Stripe transport error keeps
+     * its original message ("Stripe HTTP transport error: …") so callers that
+     * treat it as an unknown outcome still recognise it.
      */
-    public static function refundCharge(int $chargeId, ?int $amountCents = null): array {
+    public static function refundCharge(int $chargeId, ?int $amountCents = null, array $opts = []): array {
         self::ensureChargesSchema();
-        $row = self::getCharge($chargeId);
-        if (!$row) return ['ok' => false, 'error' => __('sp_err_charge_not_found', 'Charge not found.')];
-
-        $piId = (string)($row['stripe_payment_intent_id'] ?? '');
-        if ($piId === '') {
-            // Best-effort: look up the PaymentIntent from the session.
-            $csId = (string)($row['stripe_session_id'] ?? '');
-            if ($csId !== '') {
-                $sess = self::getSession($csId);
-                if (!empty($sess['payment_intent'])) {
-                    $piId = (string)$sess['payment_intent'];
-                }
-            }
-        }
-        if ($piId === '') return ['ok' => false, 'error' => __('sp_err_no_paymentintent_to_refund_against', 'No PaymentIntent to refund against.')];
-
-        $remaining = max(0, (int)$row['amount_cents'] - (int)$row['refunded_cents']);
-        if ($remaining <= 0) return ['ok' => false, 'error' => __('sp_err_already_fully_refunded', 'Already fully refunded.')];
-        $refundAmount = ($amountCents === null) ? $remaining : (int)$amountCents;
-        if ($refundAmount <= 0 || $refundAmount > $remaining) {
-            return ['ok' => false, 'error' => __('sp_err_refund_amount_out_of_range', 'Refund amount out of range.')];
-        }
-
-        $params = ['payment_intent' => $piId];
-        if ($refundAmount < $remaining) {
-            $params['amount'] = $refundAmount;
-        }
-        try {
-            $resp = self::httpRequest('POST', '/v1/refunds', $params);
-        } catch (\Throwable $e) {
-            return ['ok' => false, 'error' => $e->getMessage()];
-        }
-        if (empty($resp['id']) || ($resp['status'] ?? '') === 'failed') {
-            return ['ok' => false, 'error' => 'Stripe refund failed: ' . ($resp['failure_reason'] ?? 'unknown')];
-        }
-
-        $newRefunded = (int)$row['refunded_cents'] + $refundAmount;
-        $newStatus   = ($newRefunded >= (int)$row['amount_cents']) ? 'refunded' : 'partial_refund';
-
-        Database::update('stripepayment_charges', [
-            'refunded_cents' => $newRefunded,
-            'status'         => $newStatus,
-        ], 'id = ?', [$chargeId]);
-
-        AuditLog::record('stripe.refunded', (string)$chargeId, [
-            'refund_id' => $resp['id'],
-            'amount'    => $refundAmount,
-        ]);
-        return ['ok' => true, 'refund_id' => (string)$resp['id'], 'refunded_cents' => $newRefunded];
+        $res = Payments::refundCharge($chargeId, $amountCents, (string)($opts['idempotency_key'] ?? ''));
+        if (!$res['ok']) return ['ok' => false, 'error' => $res['error']];
+        return ['ok' => true, 'refund_id' => $res['refund_id'], 'refunded_cents' => $res['refunded_cents']];
     }
 
     // ── HTTP transport ───────────────────────────────────────
 
-    public static function httpRequest(string $method, string $path, array $params = []): array {
+    /**
+     * api.stripe.com, or a local stand-in (a stripe-mock, the Studio e2e sandbox's fake) named by STRIPE_API_BASE.
+     * Only a plain-http loopback address is honoured, so the setting can never send keys or payments to another host.
+     */
+    public static function apiBase(): string {
+        $override = function_exists('env') ? trim((string) env('STRIPE_API_BASE', '')) : '';
+        if ($override !== '' && preg_match('#^http://(127\.0\.0\.1|localhost)(:\d{1,5})?$#', $override) === 1) {
+            return $override;
+        }
+        return self::API_BASE;
+    }
+
+    /**
+     * $idempotencyKey, when given, is sent as Stripe's Idempotency-Key header so a retried
+     * POST replays the first response instead of creating a second object.
+     */
+    public static function httpRequest(string $method, string $path, array $params = [], string $idempotencyKey = ''): array {
         $secret = self::secretKey();
         if ($secret === '') throw new \RuntimeException('Stripe secret key not configured.');
         if (!function_exists('curl_init')) throw new \RuntimeException('PHP cURL extension is required.');
 
-        $url = self::API_BASE . $path;
+        $url = self::apiBase() . $path;
+        $headers = [
+            'Authorization: Bearer ' . $secret,
+            'Stripe-Version: ' . self::API_VERSION,
+        ];
+        if ($idempotencyKey !== '' && strtoupper($method) === 'POST') {
+            $headers[] = 'Idempotency-Key: ' . substr(preg_replace('/[^A-Za-z0-9_.:-]/', '', $idempotencyKey), 0, 255);
+        }
         $ch  = curl_init();
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_HTTPHEADER     => [
-                'Authorization: Bearer ' . $secret,
-                'Stripe-Version: ' . self::API_VERSION,
-            ],
+            CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_USERAGENT      => 'Slate-Stripe-Payment/1.2',
         ]);
 
@@ -663,6 +614,8 @@ class StripePaymentAPI {
         } else {
             $qs = $params ? '?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986) : '';
             curl_setopt($ch, CURLOPT_URL, $url . $qs);
+            // Without this a DELETE went out as a GET and deleted nothing.
+            if (strtoupper($method) !== 'GET') curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
         }
 
         $body = curl_exec($ch);
@@ -685,3 +638,9 @@ class StripePaymentAPI {
         return $json;
     }
 }
+
+// Register Stripe with the shared payment layer as soon as this API is
+// loaded — by the plugin's boot() or by a public endpoint that requires it
+// directly — so refunds and payment_event routing always find it.
+require_once __DIR__ . '/StripeGateway.php';
+Payments::register(new StripeGateway());

@@ -82,13 +82,17 @@ class StripePayment extends Plugin {
 
         $items[] = [
             'slug'   => 'shop-stripe',
-            'label'  => __('stripe_settings', 'Payment Gateway'),
+            // Named for the gateway now that core has a "Payment gateways" page.
+            'label'  => __('stripe_nav_settings', 'Stripe'),
             'href'   => $this->url('admin/settings.php'),
             'icon'   => 'credit-card',
             'perm'   => 'stripe.manage_settings',
             'order'  => $shopActive ? 519 : 720,
             'group'  => $shopActive ? 'shop' : 'system',
         ];
+        // admin/charges.php renders core's cross-gateway Transactions page
+        // behind this plugin's own permission; header.php shows only one of
+        // the two entries.
         $items[] = [
             'slug'   => 'shop-stripe-charges',
             'label'  => __('stripe_charges', 'Transaction history'),

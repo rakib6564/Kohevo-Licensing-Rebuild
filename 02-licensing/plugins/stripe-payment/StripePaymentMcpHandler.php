@@ -30,6 +30,7 @@ class StripePaymentMcpHandler {
         if (self::has($context, 'stripe.read')) {
             $tools[] = [
                 'name' => 'slate_stripe_list_charges',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'List recent payment charges.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'status' => ['type' => 'string'],
@@ -38,6 +39,7 @@ class StripePaymentMcpHandler {
             ];
             $tools[] = [
                 'name' => 'slate_stripe_get_charge',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'Read one charge by id.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'id' => ['type' => 'integer'],
@@ -45,6 +47,7 @@ class StripePaymentMcpHandler {
             ];
             $tools[] = [
                 'name' => 'slate_stripe_webhook_health',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'Recent Stripe webhook delivery health (last outcomes, failure counts).',
                 'inputSchema' => ['type' => 'object', 'properties' => (object)[]],
             ];
