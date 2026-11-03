@@ -470,6 +470,171 @@ unit('media organising integration: folders, tags, missing alt, trash and restor
     }
 });
 
+/** A tiny MP3 (ID3 tag and three silent frames) that finfo reads as audio/mpeg; $salt makes the bytes unique. */
+function sbmu_mp3(string $salt = ''): string
+{
+    return "ID3\x03\x00\x00\x00\x00\x00\x00" . str_repeat("\xFF\xFB\x90\x00" . str_repeat("\x00", 413), 3) . $salt;
+}
+
+unit('media import integration: shared ingest, audio type, chunked upload, storage stats, MCP media tools (real MySQL)', function (): void {
+    $dbName = 'slate_sbmi_' . slate_test_ns();
+    $pdo = sbmu_pdo($dbName, true);
+    $uploadsExisted = is_dir(SLATE_ROOT . '/uploads');
+    $chunksExisted = is_dir(SLATE_ROOT . '/data/media-chunks');
+    $made = [];
+    try {
+        require_once SLATE_ROOT . '/plugins/mcp-gateway/CoreMcpTools.php';
+        sbmu_with_pdo($pdo, static function () use (&$made): void {
+            InstallationService::provisionCore();
+            Media::ensureSchema();
+            (new \Slate\Tenancy\TenantContext())->runAs(SBMU_A, static function () use (&$made): void {
+                $tmp = static function (string $bytes): string {
+                    $f = (string) tempnam(sys_get_temp_dir(), 'sbmi');
+                    file_put_contents($f, $bytes);
+                    return $f;
+                };
+
+                // ingestLocal: the same checks as an upload, file moved into /uploads/media/<Y>/<m>/.
+                $src = $tmp(sbmu_mp3('a'));
+                $mp3 = Media::ingestLocal($src, 'Episode 1.mp3');
+                assert_true(!empty($mp3['id']), json_encode($mp3));
+                $made[] = (int) $mp3['id'];
+                assert_eq(['audio/mpeg', 'Episode 1.mp3', 'other'], [$mp3['mime'], $mp3['original_name'], $mp3['kind']]);
+                assert_true(str_starts_with($mp3['path'], '/uploads/media/' . date('Y/m') . '/') && is_file(SLATE_ROOT . $mp3['path']));
+                assert_false(is_file($src), 'moved, not copied');
+
+                $again = $tmp(sbmu_mp3('a'));
+                $dup = Media::ingestLocal($again, 'copy.mp3');
+                assert_eq([true, (int) $mp3['id']], [!empty($dup['duplicate']), (int) $dup['id']], 'same bytes: the existing item');
+                @unlink($again);
+
+                $bad = $tmp('<?php echo 1;');
+                assert_eq(false, Media::ingestLocal($bad, 'x.mp3')['ok'] ?? null, 'content that is not audio is refused');
+                assert_eq(false, Media::ingestLocal($bad, 'x.php')['ok'] ?? null, 'a .php name is refused');
+                @unlink($bad);
+                $big = $tmp(str_repeat('a', 2048));
+                assert_eq(false, Media::ingestLocal($big, 'a.mp3', ['max_bytes' => 1024])['ok'] ?? null, 'over the size limit');
+                @unlink($big);
+
+                // Audio counts and filters on its own; documents and videos leave it out.
+                $pdf = Media::ingestLocal($tmp("%PDF-1.4\n%sbmi\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"), 'notes.pdf');
+                $made[] = (int) $pdf['id'];
+                $c = Media::counts();
+                assert_eq([1, 1, 0, 2], [$c['audio'], $c['document'], $c['video'], $c['all']], json_encode($c));
+                assert_eq([(int) $mp3['id']], array_column(Media::listAll(['type' => 'audio'])['items'], 'id'));
+                assert_eq([(int) $pdf['id']], array_column(Media::listAll(['type' => 'document'])['items'], 'id'));
+
+                // Chunked upload: pieces in order, owned by one user, checked again on finish.
+                $bytes = sbmu_mp3(str_repeat('z', 3000));
+                $st = \Slate\Services\Media\ChunkedUpload::start('Long show.mp3', strlen($bytes), 7);
+                assert_true($st['ok'], json_encode($st));
+                assert_false(\Slate\Services\Media\ChunkedUpload::start('evil.php', 10, 7)['ok']);
+                assert_false(\Slate\Services\Media\ChunkedUpload::start('huge.mp3', Media::AUDIO_MAX_BYTES + 1, 7)['ok']);
+                $pieces = str_split($bytes, 1000);
+                $p0 = $tmp($pieces[0]);
+                assert_false(\Slate\Services\Media\ChunkedUpload::append($st['token'], 8, 0, $p0)['ok'], 'another user cannot add to it');
+                assert_true(\Slate\Services\Media\ChunkedUpload::append($st['token'], 7, 0, $p0)['ok']);
+                $r = \Slate\Services\Media\ChunkedUpload::append($st['token'], 7, 0, $p0);
+                assert_eq([false, 1000], [$r['ok'], $r['received'] ?? null], 'a resent piece is refused and says where the file is');
+                assert_false(\Slate\Services\Media\ChunkedUpload::finish($st['token'], 7)['ok'] ?? true, 'not complete yet');
+                $offset = 1000;
+                foreach (array_slice($pieces, 1) as $piece) {
+                    $pf = $tmp($piece);
+                    $r = \Slate\Services\Media\ChunkedUpload::append($st['token'], 7, $offset, $pf);
+                    assert_true($r['ok'], json_encode($r));
+                    $offset = $r['received'];
+                    @unlink($pf);
+                }
+                @unlink($p0);
+                $done = \Slate\Services\Media\ChunkedUpload::finish($st['token'], 7);
+                assert_true(!empty($done['id']), json_encode($done));
+                $made[] = (int) $done['id'];
+                assert_eq([strlen($bytes), 'Long show.mp3'], [(int) $done['size_bytes'], $done['original_name']]);
+                assert_eq($bytes, file_get_contents(SLATE_ROOT . $done['path']));
+                assert_eq([], glob(SLATE_ROOT . '/data/media-chunks/' . SBMU_A . '/' . $st['token'] . '.*') ?: [], 'the part is gone');
+                $old = \Slate\Services\Media\ChunkedUpload::start('old.mp3', 10, 7);
+                touch(SLATE_ROOT . '/data/media-chunks/' . SBMU_A . '/' . $old['token'] . '.json', time() - 2 * 86400);
+                assert_eq(1, \Slate\Services\Media\ChunkedUpload::cleanup(), 'an upload left for two days is cleared');
+
+                // Storage stats.
+                $stats = Media::storageStats();
+                assert_eq(2, $stats['types']['audio']['count']);
+                assert_eq((int) $mp3['size_bytes'] + strlen($bytes), $stats['types']['audio']['bytes']);
+                assert_eq(3, $stats['files_on_disk']);
+                assert_eq(3, $stats['unused']['count']);
+                assert_eq((int) $done['id'], $stats['largest'][0]['id'], 'biggest first');
+
+                // URL import refuses a private address before sending anything.
+                $r = Media::importUrl('http://127.0.0.1/secret.jpg');
+                assert_eq(false, $r['ok'] ?? null);
+                assert_true(str_contains((string) $r['error'], 'public'), (string) $r['error']);
+
+                // MCP tools.
+                $ctx = ['scopes' => ['mcp-gateway.media.read', 'mcp-gateway.media.write']];
+                $names = array_column(\CoreMcpTools::filterTools([], $ctx), 'name');
+                foreach (['slate_media_list', 'slate_media_get', 'slate_media_folders', 'slate_media_stats', 'slate_media_upload', 'slate_media_import_url', 'slate_media_update', 'slate_media_delete', 'slate_media_restore'] as $n) {
+                    assert_true(in_array($n, $names, true), $n);
+                }
+                $call = static fn(string $n, array $a) => \CoreMcpTools::callTool(null, $n, $a, $ctx);
+                $folder = Media::createFolder('Podcasts');
+                $u = $call('slate_media_update', ['id' => (int) $mp3['id'], 'title' => 'Episode one', 'tags' => ['Show', 'S1'], 'folder_id' => $folder]);
+                assert_eq(['Episode one', $folder, ['S1', 'Show']], [$u['item']['title'], $u['item']['folder_id'], array_column($u['item']['tags'], 'name')]);
+                $list = $call('slate_media_list', ['type' => 'audio', 'folder' => (string) $folder]);
+                assert_eq([(int) $mp3['id']], array_column($list['items'], 'id'));
+                assert_eq([(int) $pdf['id']], array_column($call('slate_media_list', ['type' => 'document'])['items'], 'id'));
+                assert_true(array_key_exists('used_in', $call('slate_media_get', ['id' => (int) $mp3['id']])));
+                assert_eq('Podcasts', $call('slate_media_folders', [])['folders'][0]['name']);
+                assert_eq(1, $call('slate_media_stats', [])['counts']['document']);
+                $up = $call('slate_media_upload', ['filename' => 'clip.mp3', 'content_base64' => base64_encode(sbmu_mp3('mcp')), 'folder_id' => $folder]);
+                $made[] = (int) $up['id'];
+                assert_eq([$folder, 'audio/mpeg'], [$up['folder_id'], $up['mime']], 'MCP upload goes through the same ingest path');
+                assert_eq(['trashed' => 1, 'refused' => 0], $call('slate_media_delete', ['id' => (int) $up['id']]), 'delete moves to the trash');
+                assert_eq(['restored' => 1], $call('slate_media_restore', ['ids' => [(int) $up['id']]]));
+                $threw = false;
+                try {
+                    $call('slate_media_update', ['id' => (int) $mp3['id'], 'folder_id' => 999999]);
+                } catch (\InvalidArgumentException $e) {
+                    $threw = true;
+                }
+                assert_true($threw, 'an unknown folder is refused');
+                $threw = false;
+                try {
+                    \CoreMcpTools::callTool(null, 'slate_media_update', ['id' => (int) $mp3['id'], 'title' => 'x'], ['scopes' => ['mcp-gateway.media.read']]);
+                } catch (\RuntimeException $e) {
+                    $threw = true;
+                }
+                assert_true($threw, 'writing needs the write scope');
+            });
+        });
+    } finally {
+        sbmu_with_pdo($pdo, static function () use ($made): void {
+            (new \Slate\Tenancy\TenantContext())->runAs(SBMU_A, static function () use ($made): void {
+                foreach ($made as $id) {
+                    $row = Media::get($id);
+                    if ($row) {
+                        @unlink(SLATE_ROOT . $row['path']);
+                    }
+                }
+            });
+        });
+        // The month folder ingest created, if nothing else is in it.
+        $month = SLATE_ROOT . '/uploads/media/' . date('Y/m');
+        if ((glob($month . '/*') ?: []) === []) {
+            @unlink($month . '/.htaccess');
+            @rmdir($month);
+            @rmdir(dirname($month));
+            @rmdir(dirname($month, 2));
+        }
+        if (!$chunksExisted) {
+            exec('rm -rf ' . escapeshellarg(SLATE_ROOT . '/data/media-chunks'));
+        }
+        if (!$uploadsExisted) {
+            exec('rm -rf ' . escapeshellarg(SLATE_ROOT . '/uploads'));
+        }
+        sbmu_pdo($dbName, false);
+    }
+});
+
 if (!empty($studioMediaUsageStandalone)) {
     exit(unit_summary());
 }
