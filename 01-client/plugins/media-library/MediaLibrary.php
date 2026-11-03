@@ -38,6 +38,7 @@ class MediaLibrary extends Plugin {
         // Report legacy shop/branding references to the core library so
         // files referenced by products/variants/logo show as "in use".
         Hook::addFilter('media_usage', [self::class, 'legacyUsageFilter']);
+        Hook::addFilter('media_usage_details', [self::class, 'legacyUsageDetails'], 10, 2);
         Hook::addFilter('i18n_lang_paths', [$this, 'addLangPath']);
 
         // Dashboard widget intentionally disabled — the dashboard surfaces the
@@ -61,6 +62,65 @@ class MediaLibrary extends Plugin {
             }
         } catch (\Throwable $e) { /* never break the listing */ }
         return $map;
+    }
+
+    /**
+     * Hook: the shop products, variants and site logo behind one file's
+     * legacy count, for the media details panel. Same matching rules as
+     * collectReferences(): exact path, gallery entries decoded from JSON.
+     */
+    public static function legacyUsageDetails(array $list, array $record = []): array {
+        $path = (string)($record['path'] ?? '');
+        if ($path === '') return $list;
+        $tid = current_tenant_id();
+        $productUrl = static fn(int $id): string => function_exists('plugin_url') ? plugin_url('shop', 'admin/products.php?edit=' . $id) : '';
+        $same = static function ($p) use ($path): bool {
+            $p = trim((string)$p);
+            if ($p !== '' && $p[0] !== '/' && !preg_match('#^https?://#i', $p)) $p = '/' . $p;
+            return $p === $path;
+        };
+        try {
+            $like = '%' . addcslashes(basename($path), '\\%_') . '%';
+            $rows = Database::rows(
+                "SELECT id, name, image_url, gallery_urls FROM shop_products
+                  WHERE tenant_id = ? AND (image_url LIKE ? OR gallery_urls LIKE ?)",
+                [$tid, $like, $like]
+            );
+            foreach ($rows as $r) {
+                if ($same($r['image_url'] ?? '')) {
+                    $list[] = ['source' => 'Shop', 'label' => (string)$r['name'], 'url' => $productUrl((int)$r['id'])];
+                }
+                $gallery = json_decode((string)($r['gallery_urls'] ?? ''), true);
+                foreach (is_array($gallery) ? $gallery : [] as $g) {
+                    if (is_string($g) && $same($g)) {
+                        $list[] = ['source' => 'Shop', 'label' => (string)$r['name'] . ' · gallery', 'url' => $productUrl((int)$r['id'])];
+                    }
+                }
+            }
+        } catch (\Throwable $e) { /* shop_products may not exist */ }
+        try {
+            $rows = Database::rows(
+                "SELECT v.image_url, v.attribute, v.value, p.id AS product_id, p.name AS product_name
+                   FROM shop_product_variants v
+                   JOIN shop_products p ON p.id = v.product_id
+                  WHERE p.tenant_id = ? AND v.image_url LIKE ?",
+                [$tid, '%' . addcslashes(basename($path), '\\%_') . '%']
+            );
+            foreach ($rows as $r) {
+                if (!$same($r['image_url'] ?? '')) continue;
+                $list[] = [
+                    'source' => 'Shop',
+                    'label'  => $r['product_name'] . ' [' . $r['attribute'] . ': ' . $r['value'] . ']',
+                    'url'    => $productUrl((int)$r['product_id']),
+                ];
+            }
+        } catch (\Throwable $e) { /* may not exist */ }
+        try {
+            if ($same(Database::setting('brand_logo_path') ?? '')) {
+                $list[] = ['source' => 'Branding', 'label' => 'Site logo', 'url' => ''];
+            }
+        } catch (\Throwable $e) { /* unlikely */ }
+        return $list;
     }
 
     /** Dashboard widget — library size + recent uploads (reads media_files). */

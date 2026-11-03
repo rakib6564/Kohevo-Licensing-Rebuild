@@ -182,6 +182,52 @@ unit('media usage integration: a file a Studio page uses cannot be deleted; a pa
                 assert_eq(0, Media::usageCountByPath('/uploads/media/2026/10/mu-photo.png'), 'tenant B sees none of tenant A\'s usage');
             });
 
+            // The media screen: SQL filters, counts, details and the change event (media library Phase 1).
+            $inA(static function () use ($photo, $hero, $spare, $clip): void {
+                Media::flushUsageCache();
+                $inUse = array_column(Media::listAll(['usage' => 'in_use'])['items'], 'id');
+                sort($inUse);
+                $want = [$photo, $hero];
+                sort($want);
+                assert_eq($want, $inUse, 'in use: the two files the page uses');
+                $unused = array_column(Media::listAll(['usage' => 'unused'])['items'], 'id');
+                assert_true(in_array($spare, $unused, true) && in_array($clip, $unused, true) && !in_array($photo, $unused, true), 'unused: everything else');
+
+                $c = Media::counts();
+                assert_eq(4, $c['all'], json_encode($c));
+                assert_eq(3, $c['image']);
+                assert_eq(1, $c['video']);
+                assert_eq(0, $c['document'], 'a video is not a document');
+                assert_eq(2, $c['in_use']);
+                assert_eq(2, $c['unused']);
+
+                $paged = Media::listAll(['type' => 'image', 'sort' => 'name', 'per_page' => 2, 'page' => 2]);
+                assert_eq(3, $paged['total']);
+                assert_eq(2, $paged['pages']);
+                assert_eq(['mu-spare.png'], array_column($paged['items'], 'original_name'), 'page 2 of the A–Z list');
+
+                $saved = Media::updateMeta($spare, ['alt_text' => 'A red bicycle', 'title' => 'Bike']);
+                assert_true(!empty($saved['ok']), 'details save (the schema has alt_text and title): ' . json_encode($saved));
+                assert_eq([$spare], array_column(Media::listAll(['search' => 'red bicycle'])['items'], 'id'), 'search reads alt text');
+                assert_eq([$spare], array_column(Media::listAll(['search' => 'Bike'])['items'], 'id'), 'and the title');
+                assert_eq([], Media::listAll(['search' => '%'])['items'], 'a % is a character, not a wildcard');
+
+                assert_eq([$spare, $photo], array_column(Media::getMany([$spare, 999999, $photo, $spare]), 'id'), 'getMany: asked order, unknown and repeated ids left out');
+
+                $details = Media::usageDetails($photo);
+                assert_eq(1, count($details), json_encode($details));
+                assert_eq('Studio', $details[0]['source']);
+                assert_true(str_starts_with($details[0]['label'], 'Uses media'), $details[0]['label']);
+                assert_true(str_contains($details[0]['url'], 'admin/builder.php?page='), $details[0]['url']);
+                assert_eq([], Media::usageDetails($spare), 'an unused file is used nowhere');
+            });
+            $seen = [];
+            $listener = static function (mixed $id = 0) use (&$seen): void { $seen[] = $id; };
+            \Hook::addAction('media_updated', $listener);
+            $inA(static fn() => Media::updateMeta($photo, ['alt_text' => 'Photo of the team']));
+            \Hook::removeAction('media_updated', $listener);
+            assert_eq([$photo], $seen, 'saving details announces the change, so Studio drops the pages that bake it');
+
             // The file was deleted before this guard existed: the page must stay editable.
             Database::query('DELETE FROM media_files WHERE tenant_id = ? AND id = ?', [SBMU_A, $photo]);
             $r = sbmu_ok(sbmu_call($rt, SBMU_A, $editor, 'operations', ['page_id' => $pageId, 'expected_revision_id' => $rev, 'operations' => [

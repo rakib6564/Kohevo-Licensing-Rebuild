@@ -249,7 +249,7 @@ class Media {
             );
         } catch (\Throwable $e) { return null; }
         if (!$row) return null;
-        return self::decorate($row, self::buildUsageMapByPath());
+        return self::decorate($row, self::usageMap());
     }
 
     /** One media record by path (tenant-scoped), decorated, or null. */
@@ -262,15 +262,19 @@ class Media {
             );
         } catch (\Throwable $e) { return null; }
         if (!$row) return null;
-        return self::decorate($row, self::buildUsageMapByPath());
+        return self::decorate($row, self::usageMap());
     }
 
     /**
      * List media. Filters:
-     *   type    'all' | 'image' | 'document'
+     *   type    'all' | 'image' | 'video' | 'document' (anything that is neither)
      *   usage   'all' | 'in_use' | 'unused'
-     *   search  matches original_name / path
+     *   search  matches original_name / path / alt_text / title
+     *   sort    'newest' (default) | 'oldest' | 'name' | 'size'
      *   page, per_page  (pagination; per_page default 24)
+     *
+     * Filtering, sorting and paging run in SQL; the usage map is built once
+     * and turned into a path list for the usage filter.
      *
      * Returns ['items'=>[...decorated...], 'total'=>int, 'page'=>int, 'pages'=>int].
      */
@@ -279,77 +283,137 @@ class Media {
         $type    = (string)($filters['type']   ?? 'all');
         $usage   = (string)($filters['usage']  ?? 'all');
         $search  = trim((string)($filters['search'] ?? ''));
+        $sort    = (string)($filters['sort']   ?? 'newest');
         $perPage = max(1, (int)($filters['per_page'] ?? 24));
         $page    = max(1, (int)($filters['page'] ?? 1));
+        $empty   = ['items' => [], 'total' => 0, 'page' => 1, 'pages' => 1];
 
-        $where  = ['tenant_id = ?'];
-        $params = [$tid];
-        if ($type === 'image') { $where[] = "kind = 'image'"; }
-        elseif ($type === 'document') { $where[] = "kind <> 'image'"; }
-        elseif ($type === 'video') {
-            $where[] = "kind = 'other' AND mime IN (" . implode(',', array_fill(0, count(self::VIDEO_MIMES), '?')) . ')';
-            array_push($params, ...self::VIDEO_MIMES);
-        }
+        [$where, $params] = self::typeWhere($type);
+        array_unshift($where, 'tenant_id = ?');
+        array_unshift($params, $tid);
         if ($search !== '') {
-            $where[] = '(original_name LIKE ? OR path LIKE ?)';
-            $params[] = '%' . $search . '%';
-            $params[] = '%' . $search . '%';
+            $like = '%' . addcslashes($search, '\\%_') . '%';
+            $where[] = '(original_name LIKE ? OR path LIKE ? OR alt_text LIKE ? OR title LIKE ?)';
+            array_push($params, $like, $like, $like, $like);
+        }
+
+        $usageMap = self::usageMap();
+        if ($usage === 'in_use' || $usage === 'unused') {
+            $used = self::usedPaths($usageMap);
+            if ($usage === 'in_use' && $used === []) return $empty;
+            if ($used !== []) {
+                $where[] = 'path ' . ($usage === 'in_use' ? 'IN' : 'NOT IN') . ' (' . implode(',', array_fill(0, count($used), '?')) . ')';
+                array_push($params, ...$used);
+            }
         }
         $whereSql = implode(' AND ', $where);
-
-        $usageMap = self::buildUsageMapByPath();
+        $orderSql = match ($sort) {
+            'oldest' => 'uploaded_at ASC, id ASC',
+            'name'   => 'original_name ASC, id ASC',
+            'size'   => 'size_bytes DESC, id DESC',
+            default  => 'uploaded_at DESC, id DESC',
+        };
 
         try {
+            $total = (int)\Database::value("SELECT COUNT(*) FROM media_files WHERE $whereSql", $params);
+            $pages = max(1, (int)ceil($total / $perPage));
+            if ($page > $pages) $page = $pages;
+            $offset = ($page - 1) * $perPage;
             $rows = \Database::rows(
-                "SELECT * FROM media_files WHERE $whereSql ORDER BY uploaded_at DESC, id DESC",
+                "SELECT * FROM media_files WHERE $whereSql ORDER BY $orderSql LIMIT " . (int)$perPage . ' OFFSET ' . (int)$offset,
                 $params
             );
         } catch (\Throwable $e) {
-            return ['items' => [], 'total' => 0, 'page' => 1, 'pages' => 1];
+            return $empty;
         }
 
-        // Decorate, then apply the usage filter (needs the merged map).
         $items = [];
-        foreach ($rows as $r) {
-            $d = self::decorate($r, $usageMap);
-            if ($usage === 'in_use'  && !$d['in_use']) continue;
-            if ($usage === 'unused'  &&  $d['in_use']) continue;
-            $items[] = $d;
+        foreach ($rows as $r) $items[] = self::decorate($r, $usageMap);
+
+        return ['items' => $items, 'total' => $total, 'page' => $page, 'pages' => $pages];
+    }
+
+    /**
+     * Several records by id in one query (tenant-scoped), decorated, in the
+     * order asked. Unknown or foreign ids are left out.
+     *
+     * @param list<int> $ids
+     * @return list<array<string, mixed>>
+     */
+    public static function getMany(array $ids): array {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn(int $i) => $i > 0)));
+        if ($ids === []) return [];
+        try {
+            $rows = \Database::rows(
+                'SELECT * FROM media_files WHERE tenant_id = ? AND id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')',
+                array_merge([current_tenant_id()], $ids)
+            );
+        } catch (\Throwable $e) { return []; }
+        $byId = [];
+        foreach ($rows as $r) $byId[(int)$r['id']] = $r;
+        $usageMap = self::usageMap();
+        $out = [];
+        foreach ($ids as $id) {
+            if (isset($byId[$id])) $out[] = self::decorate($byId[$id], $usageMap);
         }
-
-        $total = count($items);
-        $pages = max(1, (int)ceil($total / $perPage));
-        if ($page > $pages) $page = $pages;
-        $offset = ($page - 1) * $perPage;
-
-        return [
-            'items' => array_slice($items, $offset, $perPage),
-            'total' => $total,
-            'page'  => $page,
-            'pages' => $pages,
-        ];
+        return $out;
     }
 
     /**
      * Tab/badge counts for the admin UI:
-     *   ['all','image','document','in_use','unused'].
+     *   ['all','image','video','document','in_use','unused'].
      */
     public static function counts(): array {
         $tid = current_tenant_id();
-        $c = ['all' => 0, 'image' => 0, 'document' => 0, 'in_use' => 0, 'unused' => 0];
+        $c = ['all' => 0, 'image' => 0, 'video' => 0, 'document' => 0, 'in_use' => 0, 'unused' => 0];
         try {
+            $video = implode(',', array_fill(0, count(self::VIDEO_MIMES), '?'));
             $rows = \Database::rows(
-                "SELECT path, kind FROM media_files WHERE tenant_id = ?",
-                [$tid]
+                "SELECT CASE WHEN kind = 'image' THEN 'image'
+                             WHEN kind = 'other' AND mime IN ($video) THEN 'video'
+                             ELSE 'document' END AS t, COUNT(*) AS n
+                   FROM media_files WHERE tenant_id = ? GROUP BY t",
+                array_merge(self::VIDEO_MIMES, [$tid])
             );
+            foreach ($rows as $r) {
+                $c[(string)$r['t']] = (int)$r['n'];
+                $c['all'] += (int)$r['n'];
+            }
+            $used = self::usedPaths(self::usageMap());
+            if ($used !== []) {
+                $c['in_use'] = (int)\Database::value(
+                    'SELECT COUNT(*) FROM media_files WHERE tenant_id = ? AND path IN (' . implode(',', array_fill(0, count($used), '?')) . ')',
+                    array_merge([$tid], $used)
+                );
+            }
         } catch (\Throwable $e) { return $c; }
-        $usageMap = self::buildUsageMapByPath();
-        foreach ($rows as $r) {
-            $c['all']++;
-            if (($r['kind'] ?? 'image') === 'image') $c['image']++; else $c['document']++;
-            if (($usageMap[$r['path']] ?? 0) > 0) $c['in_use']++; else $c['unused']++;
-        }
+        $c['unused'] = $c['all'] - $c['in_use'];
         return $c;
+    }
+
+    /**
+     * WHERE parts for a type filter. 'document' is everything that is
+     * neither an image nor a playable video.
+     *
+     * @return array{0: list<string>, 1: list<string>}
+     */
+    private static function typeWhere(string $type): array {
+        $video = implode(',', array_fill(0, count(self::VIDEO_MIMES), '?'));
+        return match ($type) {
+            'image'    => [["kind = 'image'"], []],
+            'video'    => [["kind = 'other' AND mime IN ($video)"], self::VIDEO_MIMES],
+            'document' => [["kind <> 'image' AND NOT (kind = 'other' AND mime IN ($video))"], self::VIDEO_MIMES],
+            default    => [[], []],
+        };
+    }
+
+    /** Paths with at least one reference. @return list<string> */
+    private static function usedPaths(array $usageMap): array {
+        $used = [];
+        foreach ($usageMap as $path => $n) {
+            if ((int)$n > 0) $used[] = (string)$path;
+        }
+        return $used;
     }
 
     /** Shape a raw row for callers: add url, in_use, usage_count, int casts. */
@@ -406,6 +470,8 @@ class Media {
                 $params
             );
             $item = self::get($id);
+            // Pages that bake this file's alt text into cached HTML rebuild on their next view.
+            if ($item && class_exists('Hook')) \Hook::doAction('media_updated', $id, $item);
             return ['ok' => true, 'item' => $item];
         } catch (\Throwable $e) {
             return ['ok' => false, 'error' => $e->getMessage()];
@@ -565,6 +631,7 @@ class Media {
             return 0;
         }
 
+        self::flushUsageCache();
         $row = \Database::row("SELECT id FROM media_files WHERE tenant_id = ? AND path = ?", [$tid, $path]);
         return (int)($row['id'] ?? 0);
     }
@@ -575,6 +642,7 @@ class Media {
         try {
             \Database::delete('media_files', 'tenant_id = ? AND path = ?', [$tid, $path]);
         } catch (\Throwable $e) { /* ignore */ }
+        self::flushUsageCache();
     }
 
     // ──────────────────────────────────────────────────────────
@@ -603,6 +671,7 @@ class Media {
                 ]
             );
         } catch (\Throwable $e) { /* ignore */ }
+        self::flushUsageCache();
     }
 
     /** Convenience: resolve/register a path to an id, then attach(). */
@@ -628,6 +697,7 @@ class Media {
         try {
             \Database::delete('media_usage', implode(' AND ', $where), $params);
         } catch (\Throwable $e) { /* ignore */ }
+        self::flushUsageCache();
     }
 
     /** Clear all usage rows for a given object (call before re-attaching). */
@@ -638,6 +708,7 @@ class Media {
                 'tenant_id = ? AND context = ? AND object_type = ? AND object_id = ?',
                 [$tid, $context, $objectType, (string)$objectId]);
         } catch (\Throwable $e) { /* ignore */ }
+        self::flushUsageCache();
     }
 
     /** Precise usage rows for a media id (from the media_usage table). */
@@ -650,6 +721,44 @@ class Media {
                 [$tid, $mediaId]
             );
         } catch (\Throwable $e) { return []; }
+    }
+
+    /**
+     * Where a file is used, for the details panel. One entry per place:
+     *   ['source' => area (e.g. 'Studio', 'shop'), 'label' => what uses it,
+     *    'url' => an admin link to it, or ''].
+     * `media_usage` rows come first; plugins that count usage through the
+     * `media_usage` filter list their places through the
+     * `media_usage_details` filter (args: the list, the media record).
+     *
+     * @return list<array{source: string, label: string, url: string}>
+     */
+    public static function usageDetails(int $mediaId): array {
+        $rec = self::get($mediaId);
+        if (!$rec) return [];
+        $list = [];
+        foreach (self::usageFor($mediaId) as $u) {
+            $what = trim((string)$u['object_type'] . ' ' . ((string)$u['object_id'] !== '' ? '#' . $u['object_id'] : ''));
+            $list[] = [
+                'source' => (string)$u['context'],
+                'label'  => $what . ((string)$u['field'] !== '' ? ' · ' . $u['field'] : ''),
+                'url'    => '',
+            ];
+        }
+        if (class_exists('Hook')) {
+            $filtered = \Hook::applyFilters('media_usage_details', $list, $rec);
+            if (is_array($filtered)) $list = $filtered;
+        }
+        $out = [];
+        foreach ($list as $e) {
+            if (!is_array($e) || trim((string)($e['label'] ?? '')) === '') continue;
+            $out[] = [
+                'source' => (string)($e['source'] ?? ''),
+                'label'  => (string)$e['label'],
+                'url'    => (string)($e['url'] ?? ''),
+            ];
+        }
+        return $out;
     }
 
     /**
@@ -681,6 +790,25 @@ class Media {
             if (is_array($filtered)) $map = $filtered;
         }
         return $map;
+    }
+
+    /** Per-request copy of buildUsageMapByPath(), keyed by tenant. */
+    private static array $usageMapCache = [];
+
+    /**
+     * The usage map for listing and decorating, built once per request.
+     * Writes through this class drop it; a plugin's own writes (a Studio
+     * save, a product edit) happen in other requests. Safe delete never
+     * reads it: deletePath() asks buildUsageMapByPath() fresh.
+     */
+    private static function usageMap(): array {
+        $tid = (int)current_tenant_id();
+        return self::$usageMapCache[$tid] ??= self::buildUsageMapByPath();
+    }
+
+    /** Forget the cached usage map (after a write, or in long-running processes). */
+    public static function flushUsageCache(): void {
+        self::$usageMapCache = [];
     }
 
     /** media_id => count (table only; no hook). For diagnostics. */

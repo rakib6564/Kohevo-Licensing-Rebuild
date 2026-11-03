@@ -39,7 +39,7 @@ final class ImageRenderer implements BlockRendererInterface
                 : '';
         }
 
-        $alt     = is_array($ref) && is_string($ref['alt'] ?? null) ? $ref['alt'] : '';
+        $alt     = $scope->imageAlt($ref, $image);
         $ratio   = self::RATIOS[$scope->string('aspect_ratio', 'auto')] ?? 'auto';
         $caption = $scope->string('caption');
 

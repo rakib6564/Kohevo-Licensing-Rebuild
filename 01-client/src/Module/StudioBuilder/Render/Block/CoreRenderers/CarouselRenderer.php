@@ -45,7 +45,7 @@ final class CarouselRenderer implements BlockRendererInterface
             }
             $caption = is_string($slide['caption'] ?? null) ? trim($slide['caption']) : '';
             $image   = $scope->image($slide['image'] ?? null);
-            $alt     = is_array($slide['image'] ?? null) && is_string($slide['image']['alt'] ?? null) ? $slide['image']['alt'] : '';
+            $alt     = $scope->imageAlt($slide['image'] ?? null, $image);
             $quote   = is_string($slide['quote'] ?? null) ? trim($slide['quote']) : '';
             $author  = is_string($slide['author'] ?? null) ? trim($slide['author']) : '';
             if ($image === null && $quote === '' && $caption === '') {
