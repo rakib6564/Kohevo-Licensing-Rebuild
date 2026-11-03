@@ -206,7 +206,8 @@ unit('media usage integration: a file a Studio page uses cannot be deleted; a pa
                 assert_eq(2, $paged['pages']);
                 assert_eq(['mu-spare.png'], array_column($paged['items'], 'original_name'), 'page 2 of the A–Z list');
 
-                assert_true(Media::updateMeta($spare, ['alt_text' => 'A red bicycle', 'title' => 'Bike'])['ok']);
+                $saved = Media::updateMeta($spare, ['alt_text' => 'A red bicycle', 'title' => 'Bike']);
+                assert_true(!empty($saved['ok']), 'details save (the schema has alt_text and title): ' . json_encode($saved));
                 assert_eq([$spare], array_column(Media::listAll(['search' => 'red bicycle'])['items'], 'id'), 'search reads alt text');
                 assert_eq([$spare], array_column(Media::listAll(['search' => 'Bike'])['items'], 'id'), 'and the title');
                 assert_eq([], Media::listAll(['search' => '%'])['items'], 'a % is a character, not a wildcard');
