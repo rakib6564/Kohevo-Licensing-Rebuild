@@ -44,9 +44,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $set('online_pay_pickup',  !empty($_POST['online_pay_pickup'])  ? '1' : '0');
         $set('online_delivery',    !empty($_POST['online_delivery'])    ? '1' : '0');
         AuditLog::record('restaurant.settings_saved', 'settings');
-        $flash = ['type' => 'success', 'msg' => 'Settings saved.'];
+        // Back to the tab that was open, so a save never loses the operator's place.
+        $tab = preg_replace('/[^a-z]/', '', (string)($_POST['tab'] ?? ''));
+        header('Location: ' . plugin_url('restaurant', 'admin/settings.php') . '?saved=1' . ($tab !== '' ? '&tab=' . $tab : ''));
+        exit;
     }
 }
+if (!$flash && !empty($_GET['saved'])) $flash = ['type' => 'success', 'msg' => __('restaurant_settings_saved', 'Settings saved.')];
+$TABS = ['general' => __('restaurant_settings_tab_general', 'Money & tax'), 'receipt' => __('restaurant_settings_tab_receipt', 'Tips & receipt'),
+         'business' => __('restaurant_settings_tab_business', 'Business'), 'online' => __('restaurant_settings_tab_online', 'Online ordering')];
+$tab = array_key_exists($_GET['tab'] ?? '', $TABS) ? (string)$_GET['tab'] : 'general';
 
 $g = fn(string $k, $d = '') => RestaurantAPI::setting($k, $d);
 
@@ -66,8 +73,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <a href="<?= e(plugin_url('restaurant', 'admin/help.php')) ?>" class="btn btn-ghost">Help &amp; docs</a>
 </div>
 
-<form method="post">
+<form method="post" id="rsForm">
     <?= csrf_field() ?>
+    <input type="hidden" name="tab" id="rsTab" value="<?= e($tab) ?>">
+    <nav class="settings-tabs" role="tablist" aria-label="<?= e(__('restaurant_settings', 'Restaurant settings')) ?>">
+        <?php foreach ($TABS as $k => $label): ?>
+            <a href="?tab=<?= e($k) ?>" class="settings-tab<?= $tab === $k ? ' is-active' : '' ?>" role="tab" data-tab="<?= e($k) ?>" aria-selected="<?= $tab === $k ? 'true' : 'false' ?>"><?= e($label) ?></a>
+        <?php endforeach; ?>
+    </nav>
+
+    <div class="rs-panel" data-panel="general"<?= $tab === 'general' ? '' : ' hidden' ?>>
 
     <div class="card">
         <div class="card-header"><h2>Money &amp; tax</h2></div>
@@ -99,6 +114,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
     </div>
 
+    </div>
+
+    <div class="rs-panel" data-panel="receipt"<?= $tab === 'receipt' ? '' : ' hidden' ?>>
+    <div class="rs-split">
     <div class="card">
         <div class="card-header"><h2>Tipping &amp; receipt</h2></div>
         <div class="card-body">
@@ -118,6 +137,15 @@ require SLATE_ROOT . '/admin/partials/header.php';
             </div>
         </div>
     </div>
+    <aside class="card rs-preview" aria-label="<?= e(__('restaurant_settings_preview', 'Receipt preview')) ?>">
+        <div class="card-header"><h2><?= e(__('restaurant_settings_preview', 'Receipt preview')) ?></h2>
+            <span class="text-xs text-muted"><?= e(__('restaurant_settings_preview_hint', 'Updates as you type. Sample items.')) ?></span></div>
+        <div class="rs-paper" id="rsPaper"></div>
+    </aside>
+    </div>
+    </div>
+
+    <div class="rs-panel" data-panel="business"<?= $tab === 'business' ? '' : ' hidden' ?>>
 
     <div class="card">
         <div class="card-header"><h2>Business address</h2></div>
@@ -146,6 +174,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
     </div>
 
+    </div>
+
+    <div class="rs-panel" data-panel="online"<?= $tab === 'online' ? '' : ' hidden' ?>>
     <div class="card">
         <div class="card-header"><h2>Online ordering</h2></div>
         <div class="card-body">
@@ -171,9 +202,80 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
     </div>
 
-    <div class="form-actions" style="display:flex;gap:10px;">
+    </div>
+
+    <div class="form-actions rs-actions">
         <button type="submit" class="btn btn-primary">Save settings</button>
+        <span class="text-sm text-muted"><?= e(__('restaurant_settings_all_tabs', 'Saves every tab at once.')) ?></span>
     </div>
 </form>
+
+<style>
+.settings-tabs { margin-bottom: 14px; }
+.rs-split { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; }
+.rs-preview { position: sticky; top: 12px; }
+.rs-paper { margin: 0 16px 16px; padding: 16px 14px; background: #fff; color: #111; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm);
+    font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.rs-paper .c { text-align: center; }
+.rs-paper .b { font-size: 15px; font-weight: 700; }
+.rs-paper .r { display: flex; justify-content: space-between; gap: 8px; }
+.rs-paper hr { border: 0; border-top: 1px dashed #999; margin: 8px 0; }
+.rs-paper .m { color: #555; padding-left: 2em; }
+.rs-paper .t { font-weight: 700; }
+.rs-paper .ph { color: #999; font-style: italic; }
+.rs-actions { display: flex; align-items: center; gap: 12px; position: sticky; bottom: 0; padding: 12px 0; background: var(--bg); }
+@media (max-width: 960px) { .rs-split { grid-template-columns: 1fr; } .rs-preview { position: static; } }
+</style>
+<script>
+(function () {
+    const tabs = document.querySelectorAll('.settings-tabs [data-tab]');
+    tabs.forEach((a) => a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const k = a.dataset.tab;
+        tabs.forEach((x) => { x.classList.toggle('is-active', x === a); x.setAttribute('aria-selected', x === a ? 'true' : 'false'); });
+        document.querySelectorAll('.rs-panel').forEach((p) => { p.hidden = p.dataset.panel !== k; });
+        document.getElementById('rsTab').value = k;
+        history.replaceState(null, '', '?tab=' + k);
+    }));
+    const L = <?= json_encode(__js([
+        'restaurant_settings_ph_name'   => 'Your business name',
+        'restaurant_rcpt_order'         => 'Order',
+        'restaurant_rcpt_subtotal'      => 'Subtotal',
+        'restaurant_rcpt_tax'           => 'Tax',
+        'restaurant_rcpt_tip'           => 'Tip',
+        'restaurant_rcpt_total'         => 'Total',
+        'restaurant_rcpt_card'          => 'Card',
+        'restaurant_settings_sample_1'  => 'House special',
+        'restaurant_settings_sample_2'  => 'Side salad',
+        'restaurant_settings_sample_mod'=> 'Extra sauce',
+    ]), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    const v = (id) => (document.getElementById(id) || { value: '' }).value.trim();
+    const sym = <?= json_encode(trim(preg_replace('/[0-9.,\s-]/u', '', RestaurantAPI::money(0))) ?: '$') ?>;
+    const money = (c) => sym + (c / 100).toFixed(2);
+    function paint() {
+        const rate = parseFloat(v('default_tax_rate')) || 0, sub = 1850 + 650, tax = Math.round(1850 * rate / 100) + Math.round(650 * rate / 100);
+        const tips = v('tip_presets').split(',').map((x) => parseInt(x, 10)).filter((x) => x > 0), tip = tips.length ? Math.round((sub + tax) * tips[0] / 100) : 0;
+        const place = [v('addr_city'), v('addr_state'), v('addr_postal')].filter(Boolean).join(' ');
+        document.getElementById('rsPaper').innerHTML =
+            '<div class="c b">' + (v('biz_name') ? esc(v('biz_name')) : '<span class="ph">' + esc(L.restaurant_settings_ph_name) + '</span>') + '</div>'
+            + [v('addr_line1'), v('addr_line2'), place].filter(Boolean).map((x) => '<div class="c">' + esc(x) + '</div>').join('')
+            + (v('receipt_header') ? '<div class="c" style="margin-top:6px">' + esc(v('receipt_header')).replace(/
+/g, '<br>') + '</div>' : '')
+            + '<hr><div class="r"><span>' + esc(L.restaurant_rcpt_order) + '</span><span>#0000-001</span></div><hr>'
+            + '<div class="r"><span>1 ' + esc(L.restaurant_settings_sample_1) + '</span><span>' + money(1850) + '</span></div><div class="m">+ ' + esc(L.restaurant_settings_sample_mod) + '</div>'
+            + '<div class="r"><span>1 ' + esc(L.restaurant_settings_sample_2) + '</span><span>' + money(650) + '</span></div><hr>'
+            + '<div class="r"><span>' + esc(L.restaurant_rcpt_subtotal) + '</span><span>' + money(sub) + '</span></div>'
+            + '<div class="r"><span>' + esc(L.restaurant_rcpt_tax) + ' (' + rate + '%)</span><span>' + money(tax) + '</span></div>'
+            + (tip ? '<div class="r"><span>' + esc(L.restaurant_rcpt_tip) + ' (' + tips[0] + '%)</span><span>' + money(tip) + '</span></div>' : '')
+            + '<div class="r t"><span>' + esc(L.restaurant_rcpt_total) + '</span><span>' + money(sub + tax + tip) + '</span></div>'
+            + '<hr><div class="r"><span>' + esc(L.restaurant_rcpt_card) + '</span><span>' + money(sub + tax + tip) + '</span></div>'
+            + (v('receipt_footer') ? '<hr><div class="c">' + esc(v('receipt_footer')).replace(/
+/g, '<br>') + '</div>' : '');
+    }
+    document.getElementById('rsForm').addEventListener('input', paint);
+    paint();
+})();
+</script>
 
 <?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>

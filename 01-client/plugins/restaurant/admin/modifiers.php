@@ -87,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 AuditLog::record('restaurant.modifier_group_saved', (string)$id);
+                RestaurantAPI::menuChanged('modifier_group', $id);
                 header('Location: ' . plugin_url('restaurant', 'admin/modifiers.php'));
                 exit;
             }
@@ -97,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 Database::delete('restaurant_item_modifier_groups', 'group_id = ? AND tenant_id = ?', [$id, $tid]);
                 Database::delete('restaurant_modifier_groups', 'id = ? AND tenant_id = ?', [$id, $tid]);
                 AuditLog::record('restaurant.modifier_group_deleted', (string)$id);
+                RestaurantAPI::menuChanged('modifier_group', $id);
                 header('Location: ' . plugin_url('restaurant', 'admin/modifiers.php'));
                 exit;
             }

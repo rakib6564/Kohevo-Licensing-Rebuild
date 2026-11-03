@@ -1,0 +1,41 @@
+/* Restaurant — kitchen display. Sits on pos.css (shared top bar, buttons, tokens). */
+.kds-body { display: flex; flex-direction: column; height: 100dvh; }
+.kds-body .pos-top { flex: none; height: 56px; }
+.pos-tab span { font-variant-numeric: tabular-nums; opacity: .7; margin-left: 4px; }
+.kds-status { font-size: 13px; color: rgba(255,255,255,.7); }
+.kds-status.is-bad { color: #fca5a5; }
+.kds-sound { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: rgba(255,255,255,.8); cursor: pointer; }
+.kds-board { flex: 1; overflow: auto; padding: 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; align-content: start; }
+.kds-empty { grid-column: 1 / -1; padding: 80px 20px; text-align: center; color: var(--muted); font-size: 18px; }
+.kds-ticket { display: flex; flex-direction: column; background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.kds-ticket > header { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; color: #fff; }
+.kds-ticket > header div { display: flex; flex-direction: column; }
+.kds-ticket > header b { font-size: 20px; }
+.kds-ticket > header span { font-size: 13px; opacity: .9; }
+.kds-ticket > header time { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.kds-ticket.is-ok > header { background: var(--success); }
+.kds-ticket.is-warn > header { background: var(--warning); }
+.kds-ticket.is-late > header { background: var(--danger); }
+.kds-ticket.is-late { border-color: var(--danger); }
+.kds-ticket.is-ready { border-color: var(--success); opacity: .85; }
+.kds-when, .kds-note { padding: 8px 14px; font-weight: 600; border-bottom: 1px solid var(--border); background: var(--warning-soft); color: var(--text); }
+.kds-ticket ul { list-style: none; margin: 0; padding: 0; flex: 1; }
+.kds-line { display: flex; align-items: flex-start; gap: 10px; width: 100%; min-height: 52px; padding: 10px 14px; border: 0; border-bottom: 1px solid var(--border); background: transparent; text-align: left; cursor: pointer; }
+.kds-line:hover { background: var(--surface-2); }
+.kds-qty { flex: none; min-width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--text); color: var(--surface); font-weight: 800; }
+.kds-item { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.kds-item b { font-size: 16px; }
+.kds-item em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--info); }
+.kds-item small { color: var(--text-2); font-size: 13px; }
+.kds-line-note { color: var(--danger) !important; font-weight: 600; }
+.kds-state { flex: none; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--warning); }
+.kds-line.is-ready { background: var(--success-soft); }
+.kds-line.is-ready .kds-item b { text-decoration: line-through; text-decoration-thickness: 2px; }
+.kds-line.is-ready .kds-state { color: var(--success); }
+.kds-ticket footer { display: flex; gap: 8px; padding: 10px 12px; }
+.kds-ticket footer .pos-btn { flex: 1; min-height: 52px; font-size: 16px; }
+@media (max-width: 700px) {
+    .kds-board { grid-template-columns: 1fr; padding: 10px; }
+    .kds-sound, .kds-body .pos-clock { display: none; }
+    .kds-body .pos-tabs { overflow-x: auto; }
+}

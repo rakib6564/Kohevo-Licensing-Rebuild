@@ -37,30 +37,85 @@ function sf_item(int $id): ?array {
         [$id, current_tenant_id()]) ?: null;
 }
 
-/** Per-unit price of a cart line (item + chosen modifier deltas), in cents. */
+/**
+ * Per-unit price of a cart line (item + chosen modifier and combo-pick
+ * deltas), in cents, priced by the same rule the order engine uses. A line
+ * that no longer validates (a pick sold out since it was added) shows the
+ * item price; checkout refuses it with the reason.
+ */
 function sf_line_unit_cents(array $line): int {
     $item = sf_item((int)($line['item_id'] ?? 0));
     if (!$item) return 0;
-    $cents = (int)$item['price_cents'];
+    try {
+        return RestaurantAPI::lineUnitCents((int)$item['id'], (array)($line['modifiers'] ?? []), (array)($line['combo'] ?? []));
+    } catch (\RuntimeException $e) {
+        return (int)$item['price_cents'];
+    }
+}
+
+/** Names of a line's combo picks ("Sides: Slaw") and chosen modifiers, for display. */
+function sf_line_mod_names(array $line): array {
+    $tid   = current_tenant_id();
+    $names = [];
+    $picks = array_map('intval', (array)($line['combo'] ?? []));
+    if ($picks) {
+        $in = implode(',', array_fill(0, count($picks), '?'));
+        foreach (Database::rows(
+            "SELECT s.label, i.name FROM restaurant_combo_choices ch
+               JOIN restaurant_combo_slots s ON s.id = ch.slot_id AND s.tenant_id = ch.tenant_id
+               JOIN restaurant_items i ON i.id = ch.item_id AND i.tenant_id = ch.tenant_id
+              WHERE ch.id IN ($in) AND ch.tenant_id = ? ORDER BY s.sort_order, ch.sort_order",
+            array_merge($picks, [$tid])) as $r) {
+            $names[] = $r['label'] . ': ' . $r['name'];
+        }
+    }
     $modIds = array_map('intval', (array)($line['modifiers'] ?? []));
     if ($modIds) {
         $in = implode(',', array_fill(0, count($modIds), '?'));
-        $rows = Database::rows(
-            "SELECT price_delta_cents FROM restaurant_modifiers WHERE id IN ($in) AND tenant_id = ?",
-            array_merge($modIds, [current_tenant_id()]));
-        foreach ($rows as $r) $cents += (int)$r['price_delta_cents'];
+        $names = array_merge($names, array_column(Database::rows(
+            "SELECT name FROM restaurant_modifiers WHERE id IN ($in) AND tenant_id = ?",
+            array_merge($modIds, [$tid])), 'name'));
     }
-    return $cents;
+    return $names;
 }
 
-/** Names of a line's chosen modifiers, for display. */
-function sf_line_mod_names(array $line): array {
-    $modIds = array_map('intval', (array)($line['modifiers'] ?? []));
-    if (!$modIds) return [];
-    $in = implode(',', array_fill(0, count($modIds), '?'));
-    return array_column(Database::rows(
-        "SELECT name FROM restaurant_modifiers WHERE id IN ($in) AND tenant_id = ?",
-        array_merge($modIds, [current_tenant_id()])), 'name');
+/**
+ * The choice blocks of an item's option panel: combo slots, then modifier
+ * groups. Each block carries data-min / data-max / data-required / data-name
+ * for the panel's own check; the server checks again on add.
+ */
+function sf_choice_groups_html(int $itemId, array $groups): string {
+    $html = '';
+    $block = function (string $name, int $min, int $max, bool $req, string $chips) {
+        $hint = $req ? ($min > 1 ? sprintf(__('restaurant_sf_choose_n', 'choose %d'), $min) . ($max > $min ? sprintf(__('restaurant_sf_up_to', ', up to %d'), $max) : '') : __('restaurant_sf_required', 'required') . ($max > 1 ? sprintf(__('restaurant_sf_up_to', ', up to %d'), $max) : ''))
+                     : ($max > 1 ? sprintf(__('restaurant_sf_up_to_only', 'up to %d'), $max) : '');
+        return '<div class="sf-opts-grp" data-min="' . $min . '" data-max="' . $max . '" data-required="' . ($req ? '1' : '0') . '" data-name="' . e($name) . '">'
+             . '<div class="sf-opts-glabel">' . e($name) . ($req ? ' <span class="rq">*</span>' : '')
+             . ($hint ? ' <span style="font-weight:500;text-transform:none;letter-spacing:0">(' . e($hint) . ')</span>' : '') . '</div>'
+             . '<div class="sf-opts-chips">' . $chips . '</div></div>';
+    };
+    foreach (RestaurantAPI::getComboSlots($itemId) as $sl) {
+        $chips = '';
+        foreach ($sl['choices'] as $c) {
+            if (empty($c['is_active'])) continue;
+            $d = (int)$c['price_delta_cents']; $off = !empty($c['is_86']);
+            $chips .= '<label class="sf-chip' . ($off ? ' is-off' : '') . '"><input type="checkbox" name="combo[]" value="' . (int)$c['id'] . '" data-delta="' . $d . '"' . ($off ? ' disabled' : '') . '>'
+                    . '<span>' . e($c['name']) . '</span>'
+                    . ($off ? '<em>' . e(__('restaurant_sf_sold_out', 'Sold out')) . '</em>' : ($d !== 0 ? '<em>' . ($d > 0 ? '+' : '') . sf_money($d) . '</em>' : '')) . '</label>';
+        }
+        $html .= $block((string)$sl['label'], (int)$sl['min_pick'], (int)$sl['max_pick'], (int)$sl['min_pick'] > 0, $chips);
+    }
+    foreach ($groups as $g) {
+        $chips = '';
+        foreach ($g['modifiers'] as $m) {
+            $d = (int)$m['price_delta_cents'];
+            $chips .= '<label class="sf-chip"><input type="checkbox" name="modifiers[]" value="' . (int)$m['id'] . '" data-delta="' . $d . '">'
+                    . '<span>' . e($m['name']) . '</span>' . ($d !== 0 ? '<em>' . ($d > 0 ? '+' : '') . sf_money($d) . '</em>' : '') . '</label>';
+        }
+        if (!$g['modifiers']) $chips = '<span class="sf-muted" style="font-size:12px">' . e(__('restaurant_sf_no_options', 'No options.')) . '</span>';
+        $html .= $block((string)$g['name'], (int)$g['min_select'], (int)$g['max_select'], !empty($g['is_required']), $chips);
+    }
+    return $html;
 }
 
 /** Cart subtotal in cents (display only; the order engine is authoritative). */
@@ -310,6 +365,7 @@ img{max-width:100%;display:block}
 .sf-chip{position:relative;border:1.5px solid var(--tan2);border-radius:var(--r-pill);padding:6px 14px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;background:#fff;transition:border-color .12s,background .12s;user-select:none}
 .sf-chip:hover{border-color:var(--ember)}
 .sf-chip.sel{border-color:var(--ember);background:rgba(192,56,10,.08);color:var(--ember-d)}
+.sf-chip.is-off{opacity:.5;cursor:not-allowed}
 .sf-chip em{font-style:normal;font-size:11px;color:var(--muted);margin-left:4px}
 .sf-chip.sel em{color:var(--ember)}
 .sf-chip input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}

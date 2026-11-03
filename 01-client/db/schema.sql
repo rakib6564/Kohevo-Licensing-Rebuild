@@ -217,13 +217,24 @@ CREATE TABLE IF NOT EXISTS `media_files` (
     `height`        INT UNSIGNED NULL,
     `original_name` VARCHAR(255) NULL,
     `folder`        VARCHAR(190) NOT NULL DEFAULT '',
+    `alt_text`      VARCHAR(255) NULL DEFAULT '',
+    `title`         VARCHAR(255) NULL DEFAULT '',
+    `description`   TEXT NULL,
+    `variants`      TEXT NULL,
+    `file_version`  INT UNSIGNED NOT NULL DEFAULT 0,
+    `folder_id`     INT UNSIGNED NULL,
+    `file_hash`     CHAR(64) NULL,
+    `deleted_at`    DATETIME NULL,
     `uploaded_by`   INT UNSIGNED NULL,
     `uploaded_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     UNIQUE KEY `tenant_path` (`tenant_id`, `path`),
     KEY `tenant_kind` (`tenant_id`, `kind`),
-    KEY `tenant_uploaded_at` (`tenant_id`, `uploaded_at`)
+    KEY `tenant_uploaded_at` (`tenant_id`, `uploaded_at`),
+    KEY `tenant_folder` (`tenant_id`, `folder_id`),
+    KEY `tenant_hash` (`tenant_id`, `file_hash`),
+    KEY `tenant_deleted` (`tenant_id`, `deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── 12. Media usage (pluggable reference tracking) ───────────
@@ -244,6 +255,33 @@ CREATE TABLE IF NOT EXISTS `media_usage` (
     UNIQUE KEY `usage_unique` (`tenant_id`, `media_id`, `context`, `object_type`, `object_id`, `field`),
     KEY `media` (`media_id`),
     CONSTRAINT `fk_media_usage_media` FOREIGN KEY (`media_id`) REFERENCES `media_files`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `media_folders` (
+    `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`   INT UNSIGNED NOT NULL DEFAULT 1,
+    `parent_id`   INT UNSIGNED NULL,
+    `name`        VARCHAR(120) NOT NULL,
+    `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `tenant_parent` (`tenant_id`, `parent_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `media_tags` (
+    `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`   INT UNSIGNED NOT NULL DEFAULT 1,
+    `name`        VARCHAR(60) NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `tenant_name` (`tenant_id`, `name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `media_file_tags` (
+    `media_id`    INT UNSIGNED NOT NULL,
+    `tag_id`      INT UNSIGNED NOT NULL,
+    PRIMARY KEY (`media_id`, `tag_id`),
+    KEY `tag` (`tag_id`),
+    CONSTRAINT `fk_media_file_tags_media` FOREIGN KEY (`media_id`) REFERENCES `media_files`(`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_media_file_tags_tag` FOREIGN KEY (`tag_id`) REFERENCES `media_tags`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Seed: default tenant ─────────────────────────────────────

@@ -120,6 +120,8 @@ class StripePaymentAPI {
      *                    every line item again each period ('' = one-time).
      *                    The metadata is also copied onto the subscription,
      *                    so its renewals (invoice.paid) can be attributed.
+     *   'idempotency_key' string — a retried call with the same key returns the
+     *                    same session instead of creating a second one.
      *
      * Returns ['session_id' => 'cs_…', 'url' => '…'] or throws.
      */
@@ -200,7 +202,7 @@ class StripePaymentAPI {
             }
         }
 
-        $resp = self::httpRequest('POST', '/v1/checkout/sessions', $params);
+        $resp = self::httpRequest('POST', '/v1/checkout/sessions', $params, (string)($opts['idempotency_key'] ?? ''));
         if (empty($resp['id']) || empty($resp['url'])) {
             throw new \RuntimeException('Stripe response missing id/url.');
         }
@@ -218,6 +220,8 @@ class StripePaymentAPI {
      *                          intent to exactly these methods instead of
      *                          using automatic_payment_methods. Use e.g.
      *                          ['card'] to suppress Link/redirect methods.
+     *   'idempotency_key'      string — a retried call with the same key returns
+     *                          the same PaymentIntent instead of a second one.
      *
      * Returns the raw PaymentIntent payload (id, client_secret, …).
      */
@@ -251,7 +255,7 @@ class StripePaymentAPI {
                 $params["metadata[$mk]"] = (string)$mv;
             }
         }
-        $resp = self::httpRequest('POST', '/v1/payment_intents', $params);
+        $resp = self::httpRequest('POST', '/v1/payment_intents', $params, (string)($opts['idempotency_key'] ?? ''));
         if (empty($resp['id']) || empty($resp['client_secret'])) {
             throw new \RuntimeException('Stripe PaymentIntent response missing fields.');
         }
@@ -589,11 +593,12 @@ class StripePaymentAPI {
     /**
      * Refund a charge via Stripe + update local row.
      * If $amountCents is null, refunds the remaining un-refunded amount.
+     * $opts: 'idempotency_key' — sent to Stripe so a retried refund is not issued twice.
      *
      * Returns ['ok'=>true, 'refund_id'=>'re_…', 'refunded_cents'=>int]
      *      or ['ok'=>false, 'error'=>string].
      */
-    public static function refundCharge(int $chargeId, ?int $amountCents = null): array {
+    public static function refundCharge(int $chargeId, ?int $amountCents = null, array $opts = []): array {
         self::ensureChargesSchema();
         $row = self::getCharge($chargeId);
         if (!$row) return ['ok' => false, 'error' => __('sp_err_charge_not_found', 'Charge not found.')];
@@ -623,7 +628,7 @@ class StripePaymentAPI {
             $params['amount'] = $refundAmount;
         }
         try {
-            $resp = self::httpRequest('POST', '/v1/refunds', $params);
+            $resp = self::httpRequest('POST', '/v1/refunds', $params, (string)($opts['idempotency_key'] ?? ''));
         } catch (\Throwable $e) {
             return ['ok' => false, 'error' => $e->getMessage()];
         }
@@ -660,21 +665,29 @@ class StripePaymentAPI {
         return self::API_BASE;
     }
 
-    public static function httpRequest(string $method, string $path, array $params = []): array {
+    /**
+     * $idempotencyKey, when given, is sent as Stripe's Idempotency-Key header so a retried
+     * POST replays the first response instead of creating a second object.
+     */
+    public static function httpRequest(string $method, string $path, array $params = [], string $idempotencyKey = ''): array {
         $secret = self::secretKey();
         if ($secret === '') throw new \RuntimeException('Stripe secret key not configured.');
         if (!function_exists('curl_init')) throw new \RuntimeException('PHP cURL extension is required.');
 
         $url = self::apiBase() . $path;
+        $headers = [
+            'Authorization: Bearer ' . $secret,
+            'Stripe-Version: ' . self::API_VERSION,
+        ];
+        if ($idempotencyKey !== '' && strtoupper($method) === 'POST') {
+            $headers[] = 'Idempotency-Key: ' . substr(preg_replace('/[^A-Za-z0-9_.:-]/', '', $idempotencyKey), 0, 255);
+        }
         $ch  = curl_init();
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_HTTPHEADER     => [
-                'Authorization: Bearer ' . $secret,
-                'Stripe-Version: ' . self::API_VERSION,
-            ],
+            CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_USERAGENT      => 'Slate-Stripe-Payment/1.2',
         ]);
 
@@ -686,6 +699,8 @@ class StripePaymentAPI {
         } else {
             $qs = $params ? '?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986) : '';
             curl_setopt($ch, CURLOPT_URL, $url . $qs);
+            // Without this a DELETE went out as a GET and deleted nothing.
+            if (strtoupper($method) !== 'GET') curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
         }
 
         $body = curl_exec($ch);

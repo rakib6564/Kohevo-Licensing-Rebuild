@@ -2,17 +2,20 @@
 /**
  * Restaurant plugin — bootstrap.
  *
- * Phase 1: menu (categories, items, modifier groups), floor (sections,
- * tables), standalone customers, a browser POS register, and card-present
- * (Stripe Terminal) + cash tender. Registers admin nav, a dashboard widget,
+ * Menu (categories, items, modifier groups, combos), floor (sections,
+ * tables), customers with history and CSV import / export, reports and a
+ * payments reconciliation list, a browser POS register, card-present (Stripe
+ * Terminal) + cash tender with refunds and printable receipts, and the
+ * public /order storefront. Registers admin nav, a dashboard widget,
  * versioned schema migrations, and the Stripe webhook bridge so Terminal
  * PaymentIntent events settle local payments.
  *
- * Later phases (KDS, online ordering, reservations, loyalty, labor,
- * reporting) hang additive migrations + nav items off this same class.
+ * Later features hang additive migrations + nav items off this same class.
  */
 
 require_once __DIR__ . '/RestaurantAPI.php';
+require_once __DIR__ . '/includes/channels.php';
+require_once __DIR__ . '/includes/delivery.php';
 
 class Restaurant extends Plugin {
 
@@ -41,6 +44,15 @@ class Restaurant extends Plugin {
         // the core PublicRouter — no .htaccess change needed.
         Hook::addFilter('public_routes', [$this, 'addPublicRoutes']);
 
+        // Order channels: tell a channel when its order's fulfilment moves.
+        // Once per process: Hook keeps every registration, and a second boot would call the channel twice.
+        static $channelsWired = false;
+        if (!$channelsWired) {
+            $channelsWired = true;
+            Hook::addAction('restaurant_fulfillment_changed', [RestaurantChannels::class, 'fulfillmentChanged'], 10, 3);
+            Hook::addAction('restaurant_order_paid', [RestaurantDelivery::class, 'onOrderPaid'], 10, 1);
+        }
+
         // Settle Terminal/card payments routed through the stripe-payment plugin.
         Hook::addAction('stripe_webhook_event', [$this, 'onStripeEvent']);
     }
@@ -58,6 +70,11 @@ class Restaurant extends Plugin {
             'handler' => __DIR__ . '/storefront/router.php',
             'methods' => ['GET', 'POST'],
         ];
+        // Channel order intake (signed POST) and the token-protected menu feed.
+        $routes['order-channel'] = ['handler' => __DIR__ . '/channels/intake.php', 'methods' => ['POST']];
+        $routes['menu-feed']     = ['handler' => __DIR__ . '/channels/feed.php', 'methods' => ['GET']];
+        // Courier provider webhooks: /courier-webhook/<provider>/<token>.
+        $routes['courier-webhook'] = ['handler' => __DIR__ . '/channels/courier-webhook.php', 'methods' => ['POST']];
         return $routes;
     }
 
@@ -81,15 +98,27 @@ class Restaurant extends Plugin {
         $items[] = ['slug' => 'restaurant-pos',        'label' => __('restaurant_pos', 'POS register'),
                     'href' => $this->url('admin/pos.php'),
                     'icon' => 'clipboard', 'perm' => 'restaurant.pos', 'order' => 700, 'group' => 'restaurant'];
+        $items[] = ['slug' => 'restaurant-kds',        'label' => __('restaurant_kds_title', 'Kitchen display'),
+                    'href' => $this->url('admin/kds.php'),
+                    'icon' => 'clock', 'perm' => 'restaurant.kitchen', 'order' => 700, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-orders',     'label' => __('restaurant_orders', 'Orders'),
-                    'href' => $this->url('admin/index.php'),
+                    'href' => $this->url('admin/orders.php'),
                     'icon' => 'list', 'perm' => 'restaurant.view', 'order' => 701, 'group' => 'restaurant'];
+        $items[] = ['slug' => 'restaurant-reports',    'label' => __('restaurant_reports', 'Reports'),
+                    'href' => $this->url('admin/reports.php'),
+                    'icon' => 'bar-chart-2', 'perm' => 'restaurant.reports', 'order' => 701, 'group' => 'restaurant'];
+        $items[] = ['slug' => 'restaurant-payments',   'label' => __('restaurant_payments', 'Payments'),
+                    'href' => $this->url('admin/payments.php'),
+                    'icon' => 'credit-card', 'perm' => 'restaurant.reports', 'order' => 701, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-online',     'label' => __('restaurant_online', 'Online orders'),
                     'href' => $this->url('admin/online.php'),
                     'icon' => 'shopping-bag', 'perm' => 'restaurant.view', 'order' => 702, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-items',      'label' => __('restaurant_items', 'Menu items'),
                     'href' => $this->url('admin/items.php'),
                     'icon' => 'tag', 'perm' => 'restaurant.manage_menu', 'order' => 702, 'group' => 'restaurant'];
+        $items[] = ['slug' => 'restaurant-combos',     'label' => __('restaurant_combos', 'Combos'),
+                    'href' => $this->url('admin/combos.php'),
+                    'icon' => 'box', 'perm' => 'restaurant.manage_menu', 'order' => 702, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-categories', 'label' => __('restaurant_categories', 'Categories'),
                     'href' => $this->url('admin/categories.php'),
                     'icon' => 'folder', 'perm' => 'restaurant.manage_menu', 'order' => 703, 'group' => 'restaurant'];
@@ -99,6 +128,12 @@ class Restaurant extends Plugin {
         $items[] = ['slug' => 'restaurant-floor',      'label' => __('restaurant_floor', 'Floor & tables'),
                     'href' => $this->url('admin/floor.php'),
                     'icon' => 'box', 'perm' => 'restaurant.manage_floor', 'order' => 705, 'group' => 'restaurant'];
+        $items[] = ['slug' => 'restaurant-channels',   'label' => __('restaurant_channels', 'Channels'),
+                    'href' => $this->url('admin/channels.php'),
+                    'icon' => 'link', 'perm' => 'restaurant.channels', 'order' => 706, 'group' => 'restaurant'];
+        $items[] = ['slug' => 'restaurant-couriers',   'label' => __('restaurant_couriers', 'Couriers'),
+                    'href' => $this->url('admin/couriers.php'),
+                    'icon' => 'truck', 'perm' => 'restaurant.channels', 'order' => 706, 'group' => 'restaurant'];
         $items[] = ['slug' => 'restaurant-customers',  'label' => __('restaurant_customers', 'Customers'),
                     'href' => $this->url('admin/customers.php'),
                     'icon' => 'user', 'perm' => 'restaurant.manage_customers', 'order' => 706, 'group' => 'restaurant'];
@@ -217,6 +252,107 @@ class Restaurant extends Plugin {
         $this->ensureColumn('restaurant_orders', 'requested_time', "VARCHAR(40) NULL");
         $this->ensureColumn('restaurant_payments', 'stripe_session_id', "VARCHAR(120) NULL");
         $this->ensureIndex('restaurant_orders', 'public_token', '(`public_token`)');
+
+        // 0.3.0 — refunds. The restaurant_refunds table comes from install.sql
+        // through ensureSchema() above; these are the columns it leans on.
+        $this->ensureColumn('restaurant_payments', 'refunded_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_payments', 'central_charge_id', "INT UNSIGNED NULL");
+        $this->ensureColumn('restaurant_orders', 'refunded_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+
+        // 0.4.0 — POS completeness: line and percentage discounts with a
+        // reason, comp, kitchen timestamps, cash tendered and change.
+        $hadFixed = $this->hasColumn('restaurant_orders', 'discount_fixed_cents');
+        $this->ensureColumn('restaurant_orders', 'discount_fixed_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_orders', 'discount_pct', "DECIMAL(6,3) NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_orders', 'discount_reason', "VARCHAR(160) NULL");
+        $this->ensureColumn('restaurant_orders', 'comp_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_orders', 'comp_reason', "VARCHAR(160) NULL");
+        if (!$hadFixed && $this->hasColumn('restaurant_orders', 'discount_fixed_cents')) {
+            // Before 0.4.0 discount_cents was both the amount typed in and the
+            // amount applied; it becomes the typed-in fixed amount.
+            try {
+                Database::query("UPDATE restaurant_orders SET discount_fixed_cents = discount_cents WHERE discount_cents > 0");
+            } catch (\Throwable $e) {
+                slate_log('Restaurant 0.4.0 discount backfill failed: ' . $e->getMessage(), 'error');
+            }
+        }
+        $this->ensureColumn('restaurant_order_items', 'discount_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_order_items', 'discount_fixed_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_order_items', 'discount_pct', "DECIMAL(6,3) NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_order_items', 'discount_reason', "VARCHAR(160) NULL");
+        $this->ensureColumn('restaurant_order_items', 'sent_at', "DATETIME NULL");
+        $this->ensureColumn('restaurant_order_items', 'ready_at', "DATETIME NULL");
+        $this->ensureColumn('restaurant_order_items', 'served_at', "DATETIME NULL");
+        $this->ensureColumn('restaurant_payments', 'tendered_cents', "INT UNSIGNED NULL");
+        $this->ensureColumn('restaurant_payments', 'change_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+
+        // 0.5.0 — combos, customer history and import. The combo tables come
+        // from install.sql through ensureSchema() above. Existing customers
+        // start active with no imported history; customers deleted before
+        // 0.5.0 already had their orders unlinked, which cannot be undone.
+        $this->ensureColumn('restaurant_items', 'is_combo', "TINYINT(1) NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_order_item_modifiers', 'kind', "ENUM('modifier','component') NOT NULL DEFAULT 'modifier'");
+        $this->ensureColumn('restaurant_order_item_modifiers', 'slot_id', "INT UNSIGNED NULL");
+        $this->ensureColumn('restaurant_order_item_modifiers', 'component_item_id', "INT UNSIGNED NULL");
+        $this->ensureColumn('restaurant_customers', 'member_ref', "VARCHAR(80) NULL");
+        $this->ensureColumn('restaurant_customers', 'first_seen_via', "VARCHAR(60) NULL");
+        $this->ensureColumn('restaurant_customers', 'hist_spend_cents', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_customers', 'hist_orders', "INT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_customers', 'hist_first_seen', "DATE NULL");
+        $this->ensureColumn('restaurant_customers', 'hist_last_visit', "DATE NULL");
+        $this->ensureColumn('restaurant_customers', 'is_active', "TINYINT(1) NOT NULL DEFAULT 1");
+        $this->ensureColumn('restaurant_customers', 'archived_at', "DATETIME NULL");
+        $this->ensureIndex('restaurant_customers', 'tenant_member', '(`tenant_id`, `member_ref`)');
+        $this->ensureIndex('restaurant_orders', 'tenant_customer', '(`tenant_id`, `customer_id`, `status`)');
+        $this->ensureIndex('restaurant_payments', 'tenant_created', '(`tenant_id`, `created_at`)');
+
+        // 0.5.1 — channel intake: the channel tables come from install.sql
+        // through ensureSchema(); orders learn the 'channel' source. Widening
+        // the ENUM keeps every existing value.
+        try {
+            $type = (string) Database::value(
+                "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurant_orders' AND COLUMN_NAME = 'source'");
+            if ($type !== '' && !str_contains($type, "'channel'")) {
+                Database::query("ALTER TABLE `restaurant_orders` MODIFY `source` ENUM('pos','online','channel') NOT NULL DEFAULT 'pos'");
+            }
+        } catch (\Throwable $e) {
+            slate_log('Restaurant 0.5.1 source widen failed: ' . $e->getMessage(), 'error');
+        }
+        $this->ensureColumn('restaurant_orders', 'channel', "VARCHAR(40) NULL");
+        $this->ensureColumn('restaurant_orders', 'external_ref', "VARCHAR(80) NULL");
+        $this->ensureColumn('restaurant_orders', 'flag_reason', "VARCHAR(255) NULL");
+
+        // 0.5.2 — channel types (the Deliverect adapter), their settings,
+        // cancellations sent by a channel, and whether it collected payment.
+        $this->ensureColumn('restaurant_channels', 'kind', "VARCHAR(40) NULL");
+        $this->ensureColumn('restaurant_channels', 'config', "TEXT NULL");
+        $this->ensureColumn('restaurant_channel_orders', 'cancelled_at', "DATETIME NULL");
+        $this->ensureColumn('restaurant_channel_orders', 'channel_paid', "TINYINT(1) NULL");
+        // A channel that collected payment is recorded as a 'channel' payment.
+        foreach (['restaurant_payments', 'restaurant_refunds'] as $tbl) {
+            try {
+                $type = (string) Database::value(
+                    "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+                      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'method'", [$tbl]);
+                if ($type !== '' && !str_contains($type, "'channel'")) {
+                    Database::query("ALTER TABLE `{$tbl}` MODIFY `method` ENUM('cash','terminal','other','channel') NOT NULL DEFAULT 'cash'");
+                }
+            } catch (\Throwable $e) {
+                slate_log("Restaurant 0.5.2 {$tbl}.method widen failed: " . $e->getMessage(), 'error');
+            }
+        }
+    }
+
+    private function hasColumn(string $table, string $column): bool {
+        try {
+            return (int) Database::value(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+                [$table, $column]) > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     private function schemaIsCurrent(): bool {
@@ -225,8 +361,21 @@ class Restaurant extends Plugin {
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES
                   WHERE TABLE_SCHEMA = DATABASE()
                     AND TABLE_NAME IN ('restaurant_items','restaurant_orders',
-                                       'restaurant_order_items','restaurant_payments')");
-            return $tbl >= 4;
+                                       'restaurant_order_items','restaurant_payments',
+                                       'restaurant_refunds','restaurant_combo_slots',
+                                       'restaurant_combo_choices','restaurant_channels',
+                                       'restaurant_channel_orders','restaurant_item_mappings',
+                                       'restaurant_delivery_jobs')");
+            $col = (int) Database::value(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE()
+                    AND ((TABLE_NAME = 'restaurant_payments' AND COLUMN_NAME IN ('central_charge_id','tendered_cents'))
+                      OR (TABLE_NAME = 'restaurant_customers' AND COLUMN_NAME IN ('member_ref','is_active'))
+                      OR (TABLE_NAME = 'restaurant_order_item_modifiers' AND COLUMN_NAME = 'kind')
+                      OR (TABLE_NAME = 'restaurant_orders' AND COLUMN_NAME = 'channel')
+                      OR (TABLE_NAME = 'restaurant_channels' AND COLUMN_NAME = 'config')
+                      OR (TABLE_NAME = 'restaurant_channel_orders' AND COLUMN_NAME IN ('cancelled_at','channel_paid')))");
+            return $tbl >= 11 && $col === 9;
         } catch (\Throwable $e) {
             return false;
         }

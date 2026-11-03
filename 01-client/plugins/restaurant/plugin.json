@@ -1,24 +1,26 @@
 {
     "slug": "restaurant",
     "name": "Restaurant",
-    "version": "0.2.0",
-    "description": "Restaurant management suite — menu with categories, modifier groups and combos, 86-ing and dayparts; a browser POS register with table/floor management, split/merge checks, discounts and tips; card-present payments via Stripe Terminal plus cash; standalone customer records; and a public online-ordering storefront (menu, cart, checkout with hosted Stripe payment or pay-at-pickup) that drops orders into the POS. Part of a SpotOn-style suite (KDS, reservations, loyalty, labor and reporting to follow).",
+    "version": "0.6.0",
+    "description": "Restaurant management: a menu with categories, modifier groups, combos (a priced bundle with slots to pick from) and 86-ing; floor sections and tables; a full-screen POS register with a table map, seats, split and merged checks, line and percentage discounts with reasons, comps and reopening; a kitchen display; card-present payments through Stripe Terminal plus cash with change, full and partial refunds and printable receipts; sales reports with period comparison, sales by channel, courier fees and CSV export, and a payments list for reconciling Stripe payouts; customer records with spend and visit history, archiving, and CSV import and export; a public online-ordering storefront (menu, cart, checkout with Stripe payment or pay at pickup) that drops orders into the POS; and channel order intake for aggregators (signed canonical orders with SKU mapping and status updates, and a Deliverect adapter built to its published order format) plus a menu feed; and courier requests for its own delivery orders through DoorDash Drive (built to the Drive API; DoorDash restricts production access) and Uber Direct (built to the Direct API; Uber approves each business). It does not connect to DoorDash or Uber Eats marketplaces directly.",
     "author": "Kohevo",
     "requires_core": ">=1.0.0",
     "commercial_module": {
         "entitlement": "restaurant",
         "label": "Restaurant",
-        "description": "Menu, POS, tables, card readers and online ordering",
+        "description": "Menu, POS, tables, card readers, online ordering, reports and customers",
         "requires_infrastructure": ["stripe-payment"]
     },
     "permissions": [
         {"key": "restaurant.view",                 "label": "View orders, menu and the floor"},
         {"key": "restaurant.pos",                  "label": "Operate the POS / take orders"},
-        {"key": "restaurant.manage_menu",          "label": "Create / edit menu, categories, modifiers"},
+        {"key": "restaurant.kitchen",              "label": "Use the kitchen display (bump and serve)"},
+        {"key": "restaurant.manage_menu",          "label": "Create / edit menu, categories, modifiers and combos"},
         {"key": "restaurant.manage_floor",         "label": "Manage sections and tables"},
-        {"key": "restaurant.manage_orders",        "label": "Void / comp / reopen checks and refunds"},
-        {"key": "restaurant.manage_customers",     "label": "Manage customer records"},
+        {"key": "restaurant.manage_orders",        "label": "Void, comp and reopen checks, and refund payments"},
+        {"key": "restaurant.manage_customers",     "label": "Manage customers, including import and export"},
         {"key": "restaurant.manage_settings",      "label": "Configure tax, service charge, tips and receipts"},
-        {"key": "restaurant.reports",              "label": "View reports"}
+        {"key": "restaurant.channels",             "label": "Manage order channels, SKU mapping and the menu feed"},
+        {"key": "restaurant.reports",              "label": "View reports and the payments list, and export them"}
     ]
 }

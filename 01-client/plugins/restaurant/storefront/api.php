@@ -53,26 +53,17 @@ switch ($action) {
         if (!empty($item['is_86']))
             sf_api_respond($ajax, ['ok' => false, 'error' => $item['name'] . ' is sold out right now.'], sf_url());
 
-        // Validate the chosen modifiers against each group's required / min / max.
-        $groups = RestaurantAPI::getItemModifierGroups($id);
-        $chosen = array_map('intval', (array)($_POST['modifiers'] ?? []));
-        foreach ($groups as $g) {
-            $ids    = array_map('intval', array_column($g['modifiers'], 'id'));
-            $picked = array_values(array_intersect($chosen, $ids));
-            $min = (int)$g['min_select']; $max = (int)$g['max_select'];
-            if (!empty($g['is_required']) && count($picked) < max(1, $min))
-                sf_api_respond($ajax, ['ok' => false, 'error' => 'Please choose an option for: ' . $g['name']], sf_url());
-            if ($max > 0 && count($picked) > $max)
-                sf_api_respond($ajax, ['ok' => false, 'error' => 'Choose at most ' . $max . ' for: ' . $g['name']], sf_url());
+        // The same rules the POS uses: modifier groups and combo slots, required / min / max.
+        try {
+            $choice = RestaurantAPI::validateLineChoices($id, (array)($_POST['modifiers'] ?? []), (array)($_POST['combo'] ?? []));
+        } catch (\RuntimeException $e) {
+            sf_api_respond($ajax, ['ok' => false, 'error' => $e->getMessage()], sf_url());
         }
 
-        // Keep only modifier ids that actually belong to this item's groups.
-        $valid = [];
-        foreach ($groups as $g) foreach ($g['modifiers'] as $m)
-            if (in_array((int)$m['id'], $chosen, true)) $valid[] = (int)$m['id'];
-
         $qty = max(1, (int)($_POST['qty'] ?? 1));
-        $cart[] = ['item_id' => $id, 'qty' => $qty, 'modifiers' => $valid,
+        $cart[] = ['item_id' => $id, 'qty' => $qty,
+                   'modifiers' => array_map(fn($m) => (int)$m['id'], $choice['modifiers']),
+                   'combo'     => array_map(fn($c) => (int)$c[1]['id'], $choice['components']),
                    'notes' => mb_substr(trim((string)($_POST['notes'] ?? '')), 0, 255)];
         sf_cart_set($cart);
         sf_api_respond($ajax, sf_cart_state(['added' => $item['name']]),

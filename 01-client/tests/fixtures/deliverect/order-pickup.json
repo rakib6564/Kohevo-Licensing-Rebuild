@@ -1,0 +1,21 @@
+{
+  "_id": "65f0c0ffee0000000000d002",
+  "_created": "2026-11-02T19:00:00Z",
+  "channelLink": "chl-synthetic-01",
+  "channel": 10,
+  "channelOrderId": "SYN-DD-55120",
+  "channelOrderDisplayId": "DD120",
+  "status": 1,
+  "orderType": 1,
+  "decimalDigits": 2,
+  "pickupTime": "2026-11-02T19:20:00Z",
+  "customer": {"name": "Alex Placeholder", "phoneNumber": "+15550100456"},
+  "orderIsAlreadyPaid": false,
+  "payment": {"amount": 2090, "type": 1, "due": 2090},
+  "testOrder": true,
+  "items": [
+    {"plu": "BRISKET-PL", "name": "Brisket plate", "price": 1800, "quantity": 1,
+     "subItems": [{"plu": "SAUCE-HOT", "name": "Hot sauce", "price": 50, "quantity": 1,
+                   "subItems": [{"plu": "SAUCE-CUP", "name": "Sauce cup", "price": 25, "quantity": 2, "subItems": []}]}]}
+  ]
+}

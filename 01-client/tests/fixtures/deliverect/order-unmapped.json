@@ -1,0 +1,17 @@
+{
+  "_id": "65f0c0ffee0000000000d003",
+  "_created": "2026-11-02T19:05:00Z",
+  "channelLink": "chl-synthetic-01",
+  "channelOrderDisplayId": "UE903",
+  "status": 1,
+  "orderType": 1,
+  "decimalDigits": 2,
+  "pickupTime": "2026-11-02T19:25:00Z",
+  "customer": {"name": "Jordan Sample", "phoneNumber": "+15550100789"},
+  "orderIsAlreadyPaid": true,
+  "payment": {"amount": 1210},
+  "items": [
+    {"plu": "TEA-SW", "name": "Sweet tea", "price": 300, "quantity": 1, "subItems": []},
+    {"plu": "WINGS-6", "name": "Six wings", "price": 800, "quantity": 1, "subItems": []}
+  ]
+}

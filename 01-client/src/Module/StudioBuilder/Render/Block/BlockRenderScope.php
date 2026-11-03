@@ -164,6 +164,13 @@ final class BlockRenderScope
         return $this->media->resolveImage($mediaRef['media_id']);
     }
 
+    /** A block's alt text for an image: its own, or the library's when the block leaves it empty. */
+    public function imageAlt(mixed $mediaRef, ?ResolvedMedia $image): string
+    {
+        $own = is_array($mediaRef) && is_string($mediaRef['alt'] ?? null) ? trim($mediaRef['alt']) : '';
+        return $own !== '' ? $own : ($image !== null ? $image->alt : '');
+    }
+
     /** First asking wins: for the one `<link>`/`<script>` a plugin block needs per page, however many blocks use it. */
     public function claimOnce(string $key): bool
     {

@@ -8,8 +8,10 @@ $tid = current_tenant_id();
 
 $cats  = Database::rows("SELECT * FROM restaurant_menu_categories WHERE tenant_id = ? AND is_active = 1 ORDER BY sort_order, name", [$tid]);
 $items = Database::rows("SELECT * FROM restaurant_items WHERE tenant_id = ? AND is_active = 1 ORDER BY sort_order, name", [$tid]);
+// Items that need choosing before they go in the cart: those with modifier groups, and combos.
 $modItemIds = array_map('intval', array_column(
-    Database::rows("SELECT DISTINCT item_id FROM restaurant_item_modifier_groups WHERE tenant_id = ?", [$tid]), 'item_id'));
+    Database::rows("SELECT DISTINCT item_id FROM restaurant_item_modifier_groups WHERE tenant_id = ?
+                     UNION SELECT id FROM restaurant_items WHERE tenant_id = ? AND is_combo = 1", [$tid, $tid]), 'item_id'));
 
 // Modifier groups for the items that have them, so each can offer an inline panel.
 $groupsByItem = [];
@@ -33,22 +35,7 @@ $renderPanel = function (array $it, array $groups) use ($api) {
     echo '<form class="sf-ajax" method="post" action="' . $api . '">' . csrf_field();
     echo '<input type="hidden" name="_action" value="add"><input type="hidden" name="item_id" value="' . (int)$it['id'] . '">';
     echo '<div class="sf-opts-name">' . e($it['name']) . '</div>';
-    foreach ($groups as $g) {
-        $min = (int)$g['min_select']; $max = (int)$g['max_select']; $req = !empty($g['is_required']);
-        $hint = $req ? ('required' . ($max > 1 ? ', up to ' . $max : '')) : ($max > 1 ? 'up to ' . $max : '');
-        echo '<div class="sf-opts-grp" data-min="' . $min . '" data-max="' . $max . '" data-required="' . ($req ? '1' : '0') . '" data-name="' . e($g['name']) . '">';
-        echo '<div class="sf-opts-glabel">' . e($g['name']) . ($req ? ' <span class="rq">*</span>' : '')
-           . ($hint ? ' <span style="font-weight:500;text-transform:none;letter-spacing:0">(' . e($hint) . ')</span>' : '') . '</div>';
-        echo '<div class="sf-opts-chips">';
-        foreach ($g['modifiers'] as $m) {
-            $d = (int)$m['price_delta_cents'];
-            echo '<label class="sf-chip"><input type="checkbox" name="modifiers[]" value="' . (int)$m['id'] . '" data-delta="' . $d . '">'
-               . '<span>' . e($m['name']) . '</span>'
-               . ($d !== 0 ? '<em>' . ($d > 0 ? '+' : '') . sf_money($d) . '</em>' : '') . '</label>';
-        }
-        if (!$g['modifiers']) echo '<span class="sf-muted" style="font-size:12px">No options.</span>';
-        echo '</div></div>';
-    }
+    echo sf_choice_groups_html((int)$it['id'], $groups);
     echo '<textarea class="sf-opts-instr" name="notes" rows="2" maxlength="255" placeholder="Special instructions (optional)"></textarea>';
     echo '<div class="sf-opts-foot"><div class="sf-stepper">'
        . '<button type="button" data-qstep="-1" aria-label="Decrease">−</button>'

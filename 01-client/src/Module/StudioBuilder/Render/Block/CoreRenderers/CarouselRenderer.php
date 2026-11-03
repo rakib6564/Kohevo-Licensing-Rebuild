@@ -45,7 +45,7 @@ final class CarouselRenderer implements BlockRendererInterface
             }
             $caption = is_string($slide['caption'] ?? null) ? trim($slide['caption']) : '';
             $image   = $scope->image($slide['image'] ?? null);
-            $alt     = is_array($slide['image'] ?? null) && is_string($slide['image']['alt'] ?? null) ? $slide['image']['alt'] : '';
+            $alt     = $scope->imageAlt($slide['image'] ?? null, $image);
             $quote   = is_string($slide['quote'] ?? null) ? trim($slide['quote']) : '';
             $author  = is_string($slide['author'] ?? null) ? trim($slide['author']) : '';
             if ($image === null && $quote === '' && $caption === '') {
@@ -69,8 +69,9 @@ final class CarouselRenderer implements BlockRendererInterface
         foreach ($slides as $index => $slide) {
             $track .= '<figure class="sb-carousel__slide" data-sb-slide>';
             if ($slide['image'] !== null) {
-                $track .= '<img class="sb-carousel__image" src="' . Html::e($slide['image']->url)
-                    . '" alt="' . Html::e($slide['alt']) . '" loading="lazy" decoding="async">';
+                $track .= '<img class="sb-carousel__image" src="' . Html::e($slide['image']->url) . '"'
+                    . ImageRenderer::srcsetAttrs($slide['image']->url, $slide['image']->width, $slide['image']->srcset)
+                    . ' alt="' . Html::e($slide['alt']) . '" loading="lazy" decoding="async">';
             }
             if ($slide['quote'] !== '') {
                 $track .= '<blockquote class="sb-carousel__quote"><p>' . Html::text($slide['quote']) . '</p>';

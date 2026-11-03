@@ -22,6 +22,14 @@ $covers = (int) Database::value(
     "SELECT COALESCE(SUM(guest_count),0) FROM restaurant_orders
       WHERE tenant_id = ? AND DATE(opened_at) = CURDATE()", [$tid]);
 $openOrders = RestaurantAPI::getOpenOrders();
+$ordersToday = (int) Database::value(
+    "SELECT COUNT(*) FROM restaurant_orders WHERE tenant_id = ? AND status <> 'voided' AND DATE(opened_at) = CURDATE()", [$tid]);
+$onlineQueue = (int) Database::value(
+    "SELECT COUNT(*) FROM restaurant_orders WHERE tenant_id = ? AND source = 'online'
+        AND fulfillment_status IN ('new','accepted','preparing','ready') AND status <> 'voided'", [$tid]);
+$kitchen = (int) Database::value(
+    "SELECT COUNT(DISTINCT order_id) FROM restaurant_order_items WHERE tenant_id = ? AND kitchen_status IN ('sent','ready')", [$tid]);
+$can = fn(string $p) => Auth::can($p) || Auth::isSuperAdmin();
 
 $recent = Database::rows(
     "SELECT o.*, t.label AS table_label FROM restaurant_orders o
@@ -42,15 +50,22 @@ require SLATE_ROOT . '/admin/partials/header.php';
 <div class="page-header">
     <div><h1>Restaurant</h1><p class="page-header-sub">Today at a glance.</p></div>
     <div class="toolbar">
-        <a href="<?= e(plugin_url('restaurant', 'admin/items.php')) ?>" class="btn">Menu</a>
-        <a href="<?= e(plugin_url('restaurant', 'admin/pos.php')) ?>" class="btn btn-primary">Open POS →</a>
+        <a href="<?= e(plugin_url('restaurant', 'admin/orders.php')) ?>" class="btn"><?= e(__('restaurant_orders', 'Orders')) ?></a>
+        <?php if ($can('restaurant.kitchen')): ?><a href="<?= e(plugin_url('restaurant', 'admin/kds.php')) ?>" class="btn"><?= e(__('restaurant_kds_title', 'Kitchen display')) ?></a><?php endif; ?>
+        <?php if ($can('restaurant.pos')): ?><a href="<?= e(plugin_url('restaurant', 'admin/pos.php')) ?>" class="btn btn-primary"><?= e(__('restaurant_index_open_pos', 'Open POS')) ?> →</a><?php endif; ?>
     </div>
 </div>
 
-<div class="dwidget-kpis" style="margin-bottom:var(--space-4);">
-    <div class="dwidget-kpi"><div class="dwidget-kpi-k">Today's sales</div><div class="dwidget-kpi-v"><?= e(RestaurantAPI::money($sales)) ?></div></div>
-    <div class="dwidget-kpi"><div class="dwidget-kpi-k">Open checks</div><div class="dwidget-kpi-v"><?= count($openOrders) ?></div></div>
-    <div class="dwidget-kpi"><div class="dwidget-kpi-k">Covers today</div><div class="dwidget-kpi-v"><?= $covers ?></div></div>
+<div class="dash-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:var(--space-4,16px);">
+    <?php
+    slate_stat_card(['icon' => 'chart', 'number' => RestaurantAPI::money($sales), 'label' => __('restaurant_today_sales', "Today's sales"),
+                     'caption' => sprintf(__('restaurant_index_orders_n', '%s orders'), $ordersToday)]);
+    slate_stat_card(['icon' => 'clipboard', 'number' => (string)count($openOrders), 'label' => __('restaurant_open_checks', 'Open checks'),
+                     'caption' => sprintf(__('restaurant_index_covers_n', '%s covers today'), $covers)]);
+    slate_stat_card(['icon' => 'clock', 'number' => (string)$kitchen, 'label' => __('restaurant_index_in_kitchen', 'Tickets in the kitchen')]);
+    slate_stat_card(['icon' => 'shopping-bag', 'number' => (string)$onlineQueue, 'label' => __('restaurant_index_online_queue', 'Online orders to fulfil'),
+                     'tone' => $onlineQueue ? 'success' : '']);
+    ?>
 </div>
 
 <?php slate_page_layout('with-aside'); ?>
@@ -76,7 +91,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
 
         <div class="card">
-            <div class="card-header"><h2>Recent orders</h2></div>
+            <div class="card-header"><h2>Recent orders</h2><a href="<?= e(plugin_url('restaurant', 'admin/orders.php')) ?>" class="btn btn-sm"><?= e(__('restaurant_index_all_orders', 'All orders')) ?> →</a></div>
             <?php if (!$recent): ?>
                 <div class="empty"><div class="empty-title">No orders yet</div></div>
             <?php else: ?>
