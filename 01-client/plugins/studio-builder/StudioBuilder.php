@@ -121,7 +121,6 @@ class StudioBuilder extends Plugin
         return $items;
     }
 
-    /** Whether this request is one of the Studio admin screens (they all render the platform admin layout). */
     /** `media_updated` action: drop the compiled HTML of every page that uses the file. Never breaks the media screen. */
     public static function onMediaUpdated(mixed $mediaId = 0): void
     {
@@ -135,6 +134,7 @@ class StudioBuilder extends Plugin
         }
     }
 
+    /** Whether this request is one of the Studio admin screens (they all render the platform admin layout). */
     public static function onStudioScreen(): bool
     {
         $script = isset($_SERVER['SCRIPT_NAME']) && is_string($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
