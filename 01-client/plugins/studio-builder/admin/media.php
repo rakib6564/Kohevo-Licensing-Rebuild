@@ -2,9 +2,10 @@
 /**
  * Kohevo Studio — Media & Asset Inspector.
  *
- * Dedicated admin page for browsing, uploading, and inspecting media assets
- * for Studio Builder, including primary Media IDs required for og_image_media_id
- * and dynamic image bindings.
+ * Sends anyone who may see the platform media library there (one media screen
+ * for the whole site). Kept as a fallback for Studio users without media.view:
+ * browsing, uploading and inspecting assets, including the Media IDs used by
+ * og_image_media_id and dynamic image bindings.
  */
 
 declare(strict_types=1);
@@ -14,6 +15,18 @@ require_once __DIR__ . '/_nav.php';
 
 Auth::require();
 Auth::requirePerm('studio-builder.view');
+
+// One media screen: the platform library (Content → Media) holds the same files, shows each file's
+// ID, alt text and the pages that use it. This screen stays only for Studio users without media.view.
+if (Auth::can('media.view') || Auth::isSuperAdmin()) {
+    $kind = (string) ($_GET['kind'] ?? '');
+    $query = array_filter([
+        'type' => in_array($kind, ['image', 'document'], true) ? $kind : null,
+        'q'    => is_string($_GET['q'] ?? null) && trim($_GET['q']) !== '' ? trim($_GET['q']) : null,
+    ]);
+    header('Location: ' . SLATE_URL . '/admin/media.php' . ($query ? '?' . http_build_query($query) : ''), true, 302);
+    exit;
+}
 
 $canEdit = Auth::can('studio-builder.edit') || Auth::isSuperAdmin();
 $tenantId = current_tenant_id();

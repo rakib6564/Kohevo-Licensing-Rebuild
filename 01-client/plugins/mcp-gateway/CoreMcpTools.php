@@ -31,7 +31,7 @@ class CoreMcpTools {
         $scopes['mcp-gateway.settings.read']      = 'Read site/plugin settings (secret-looking values are hidden)';
         $scopes['mcp-gateway.settings.write']      = 'Change general site settings (name, business details, currency, language, time and date)';
         $scopes['mcp-gateway.media.read']          = 'List media library files';
-        $scopes['mcp-gateway.media.write']         = 'Upload and delete media library files';
+        $scopes['mcp-gateway.media.write']         = 'Upload, import, edit and trash media library files';
         $scopes['mcp-gateway.notifications.write'] = 'Send an admin notification';
         $scopes['mcp-gateway.audit.read']          = 'Search the audit log';
         $scopes['mcp-gateway.debug.read']          = 'Tail logs, check migration status, inspect DB schema (read-only)';
@@ -70,32 +70,89 @@ class CoreMcpTools {
             $tools[] = [
                 'name' => 'slate_media_list',
                 'classification' => ['access' => 'read', 'requires_confirmation' => false],
-                'description' => 'List files in the media library.',
+                'description' => 'List files in the media library (newest first). Each item has id, url, mime, size, alt_text, title, tags, folder_id and in_use.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
-                    'type'     => ['type' => 'string', 'enum' => ['all', 'image', 'document'], 'description' => 'Default "all"'],
-                    'search'   => ['type' => 'string'],
+                    'type'     => ['type' => 'string', 'enum' => ['all', 'image', 'video', 'audio', 'document'], 'description' => 'Default "all"'],
+                    'search'   => ['type' => 'string', 'description' => 'Matches file name, alt text and title'],
+                    'usage'    => ['type' => 'string', 'enum' => ['all', 'in_use', 'unused']],
+                    'folder'   => ['type' => 'string', 'description' => 'A folder id, or "none" for files in no folder'],
+                    'tag'      => ['type' => 'integer', 'description' => 'A tag id (see slate_media_folders)'],
+                    'status'   => ['type' => 'string', 'enum' => ['', 'missing_alt', 'trash'], 'description' => '"missing_alt": images without alt text; "trash": trashed files'],
+                    'sort'     => ['type' => 'string', 'enum' => ['newest', 'oldest', 'name', 'size']],
                     'page'     => ['type' => 'integer'],
                     'per_page' => ['type' => 'integer'],
                 ], 'additionalProperties' => false],
+            ];
+            $tools[] = [
+                'name' => 'slate_media_get',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
+                'description' => 'One media library file by id, with the places it is used.',
+                'inputSchema' => ['type' => 'object', 'properties' => [
+                    'id' => ['type' => 'integer'],
+                ], 'required' => ['id'], 'additionalProperties' => false],
+            ];
+            $tools[] = [
+                'name' => 'slate_media_folders',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
+                'description' => 'The media library folders and tags, with how many files each holds.',
+                'inputSchema' => ['type' => 'object', 'properties' => new stdClass(), 'additionalProperties' => false],
+            ];
+            $tools[] = [
+                'name' => 'slate_media_stats',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
+                'description' => 'Storage used by the media library: bytes and counts per type, smaller image copies, trash, unused files, files on disk and the largest files.',
+                'inputSchema' => ['type' => 'object', 'properties' => new stdClass(), 'additionalProperties' => false],
             ];
         }
         if (self::has($context, 'mcp-gateway.media.write')) {
             $tools[] = [
                 'name' => 'slate_media_upload',
                 'classification' => ['access' => 'write', 'requires_confirmation' => true],
-                'description' => 'Upload an image or document to the media library from base64-encoded content.',
+                'description' => 'Upload a file (image, document, video or audio, up to 10 MB) to the media library from base64-encoded content. If the same bytes are already in the library, that item is returned with "duplicate": true. For bigger files use slate_media_import_url.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
-                    'filename'       => ['type' => 'string', 'description' => 'Original filename, used only for its extension'],
+                    'filename'       => ['type' => 'string', 'description' => 'Original filename; its extension must match the content'],
                     'content_base64' => ['type' => 'string', 'description' => 'Raw file bytes, base64-encoded'],
+                    'folder_id'      => ['type' => 'integer', 'description' => 'Put the file in this folder'],
                 ], 'required' => ['filename', 'content_base64'], 'additionalProperties' => false],
+            ];
+            $tools[] = [
+                'name' => 'slate_media_import_url',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
+                'description' => 'Download a file from a public http(s) address into the media library (videos up to 256 MB, audio up to 128 MB, others up to 10 MB). Private and local addresses are refused.',
+                'inputSchema' => ['type' => 'object', 'properties' => [
+                    'url'       => ['type' => 'string'],
+                    'folder_id' => ['type' => 'integer', 'description' => 'Put the file in this folder'],
+                ], 'required' => ['url'], 'additionalProperties' => false],
+            ];
+            $tools[] = [
+                'name' => 'slate_media_update',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
+                'description' => 'Change a file\'s alt text, title, description, tags (replaces the list) or folder (null or 0 for no folder). Only the fields given are changed.',
+                'inputSchema' => ['type' => 'object', 'properties' => [
+                    'id'          => ['type' => 'integer'],
+                    'alt_text'    => ['type' => 'string'],
+                    'title'       => ['type' => 'string'],
+                    'description' => ['type' => 'string'],
+                    'tags'        => ['type' => 'array', 'items' => ['type' => 'string']],
+                    'folder_id'   => ['type' => ['integer', 'null']],
+                ], 'required' => ['id'], 'additionalProperties' => false],
             ];
             $tools[] = [
                 'name' => 'slate_media_delete',
                 'classification' => ['access' => 'destructive', 'requires_confirmation' => true],
-                'description' => 'Delete a media library file by id. Refused if the file is still referenced anywhere.',
+                'description' => 'Move media library files to the trash (restorable with slate_media_restore for ' . Media::TRASH_DAYS . ' days, then removed). Files still used somewhere are refused.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
-                    'id' => ['type' => 'integer'],
-                ], 'required' => ['id'], 'additionalProperties' => false],
+                    'id'  => ['type' => 'integer'],
+                    'ids' => ['type' => 'array', 'items' => ['type' => 'integer']],
+                ], 'additionalProperties' => false],
+            ];
+            $tools[] = [
+                'name' => 'slate_media_restore',
+                'classification' => ['access' => 'write', 'requires_confirmation' => false],
+                'description' => 'Take media library files out of the trash.',
+                'inputSchema' => ['type' => 'object', 'properties' => [
+                    'ids' => ['type' => 'array', 'items' => ['type' => 'integer']],
+                ], 'required' => ['ids'], 'additionalProperties' => false],
             ];
         }
         if (self::has($context, 'mcp-gateway.notifications.write')) {
@@ -187,18 +244,45 @@ class CoreMcpTools {
 
             case 'slate_media_list':
                 self::requireScope($context, 'mcp-gateway.media.read');
-                return Media::listAll([
-                    'type' => $args['type'] ?? 'all', 'search' => $args['search'] ?? '',
-                    'page' => (int)($args['page'] ?? 1), 'per_page' => (int)($args['per_page'] ?? 24),
-                ]);
+                return Media::listAll(self::mediaFilters($args));
+
+            case 'slate_media_get':
+                self::requireScope($context, 'mcp-gateway.media.read');
+                $item = Media::get((int)($args['id'] ?? 0));
+                if (!$item) throw new InvalidArgumentException('No media file with that id.');
+                return $item + ['used_in' => Media::usageDetails((int)$item['id'])];
+
+            case 'slate_media_folders':
+                self::requireScope($context, 'mcp-gateway.media.read');
+                return ['folders' => Media::folders(), 'tags' => Media::tags()];
+
+            case 'slate_media_stats':
+                self::requireScope($context, 'mcp-gateway.media.read');
+                return Media::storageStats() + ['counts' => Media::counts()];
 
             case 'slate_media_upload':
                 self::requireScope($context, 'mcp-gateway.media.write');
-                return self::mediaUpload((string)($args['filename'] ?? ''), (string)($args['content_base64'] ?? ''));
+                return self::mediaUpload((string)($args['filename'] ?? ''), (string)($args['content_base64'] ?? ''), (int)($args['folder_id'] ?? 0));
+
+            case 'slate_media_import_url':
+                self::requireScope($context, 'mcp-gateway.media.write');
+                $res = Media::importUrl((string)($args['url'] ?? ''), ['folder_id' => max(0, (int)($args['folder_id'] ?? 0)), 'via' => 'mcp-gateway']);
+                if (empty($res['id'])) throw new RuntimeException((string)($res['error'] ?? 'The file could not be imported.'));
+                return $res;
+
+            case 'slate_media_update':
+                self::requireScope($context, 'mcp-gateway.media.write');
+                return self::mediaUpdate($args);
 
             case 'slate_media_delete':
                 self::requireScope($context, 'mcp-gateway.media.write');
-                return Media::delete((int)($args['id'] ?? 0));
+                $ids = array_merge(isset($args['id']) ? [(int)$args['id']] : [], array_map('intval', (array)($args['ids'] ?? [])));
+                if ($ids === []) throw new InvalidArgumentException('id or ids is required.');
+                return Media::trash($ids);
+
+            case 'slate_media_restore':
+                self::requireScope($context, 'mcp-gateway.media.write');
+                return ['restored' => Media::restore(array_map('intval', (array)($args['ids'] ?? [])))];
 
             case 'slate_notifications_send':
                 self::requireScope($context, 'mcp-gateway.notifications.write');
@@ -336,19 +420,14 @@ class CoreMcpTools {
      * sanitization, randomized filename, hardened folder) for raw bytes
      * instead.
      */
-    private static function mediaUpload(string $filename, string $contentBase64): array {
+    private static function mediaUpload(string $filename, string $contentBase64, int $folderId = 0): array {
         if ($filename === '' || $contentBase64 === '') {
             throw new InvalidArgumentException('filename and content_base64 are required.');
         }
         $bytes = base64_decode($contentBase64, true);
         if ($bytes === false || $bytes === '') throw new InvalidArgumentException('content_base64 is not valid base64.');
         if (strlen($bytes) > Uploads::DEFAULT_MAX_BYTES) {
-            throw new InvalidArgumentException('File too large (max ' . round(Uploads::DEFAULT_MAX_BYTES / 1024 / 1024) . ' MB).');
-        }
-
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        if (!in_array($ext, Media::allowedExts(), true)) {
-            throw new InvalidArgumentException('File extension not allowed.');
+            throw new InvalidArgumentException('File too large (max ' . round(Uploads::DEFAULT_MAX_BYTES / 1024 / 1024) . ' MB). Use slate_media_import_url for bigger files.');
         }
 
         $tmp = tempnam(sys_get_temp_dir(), 'mcpmedia');
@@ -356,43 +435,57 @@ class CoreMcpTools {
             throw new RuntimeException('Could not stage the upload.');
         }
         try {
-            $finfo = new finfo(FILEINFO_MIME_TYPE);
-            $mime  = $finfo->file($tmp) ?: 'application/octet-stream';
-            if (!in_array($mime, Media::allowedMimes(), true)) {
-                throw new InvalidArgumentException('File type not allowed.');
-            }
-
-            $folder = Media::FOLDER . '/' . date('Y/m');
-            $dir    = Uploads::publicUploadDir($folder); // creates dir + drops hardening .htaccess
-            $newName = bin2hex(random_bytes(12)) . ($ext !== '' ? '.' . $ext : '');
-            $absPath = $dir . '/' . $newName;
-            if (!@copy($tmp, $absPath)) throw new RuntimeException('Could not save the uploaded file.');
-            @chmod($absPath, 0644);
-
-            $relPath = '/uploads/' . $folder . '/' . $newName;
-
-            if ($ext === 'svg' || $mime === 'image/svg+xml') {
-                if (!Media::sanitizeSvgFile($absPath)) {
-                    Uploads::remove($relPath);
-                    throw new RuntimeException('Could not process SVG file.');
-                }
-            }
-
-            $w = null; $h = null;
-            if (Media::kindForMime($mime, $ext) === 'image') {
-                $info = @getimagesize($absPath);
-                if (is_array($info)) { $w = $info[0] ?? null; $h = $info[1] ?? null; }
-            }
-
-            $id = Media::register($relPath, [
-                'mime' => $mime, 'size_bytes' => strlen($bytes), 'width' => $w, 'height' => $h,
-                'original_name' => basename($filename),
-            ]);
-            AuditLog::record('media.uploaded', $relPath, ['id' => $id, 'via' => 'mcp-gateway']);
-            return Media::get($id) ?? ['id' => $id, 'path' => $relPath];
+            // The same path as a browser upload: type and extension checks, duplicate check, SVG and photo clean-up, image sizes.
+            $res = Media::ingestLocal($tmp, basename($filename), ['folder_id' => max(0, $folderId), 'via' => 'mcp-gateway']);
+            if (empty($res['id'])) throw new InvalidArgumentException((string)($res['error'] ?? 'The file could not be uploaded.'));
+            return $res;
         } finally {
             @unlink($tmp);
         }
+    }
+
+    /** slate_media_list arguments → Media::listAll() filters. */
+    private static function mediaFilters(array $args): array {
+        $folder = (string)($args['folder'] ?? 'all');
+        $status = (string)($args['status'] ?? '');
+        return [
+            'type'     => (string)($args['type'] ?? 'all'),
+            'search'   => (string)($args['search'] ?? ''),
+            'usage'    => (string)($args['usage'] ?? 'all'),
+            'folder'   => $folder === 'none' || ctype_digit($folder) ? $folder : 'all',
+            'tag'      => max(0, (int)($args['tag'] ?? 0)),
+            'alt'      => $status === 'missing_alt' ? 'missing' : '',
+            'trash'    => $status === 'trash',
+            'sort'     => (string)($args['sort'] ?? 'newest'),
+            'page'     => max(1, (int)($args['page'] ?? 1)),
+            'per_page' => max(1, min(100, (int)($args['per_page'] ?? 24))),
+        ];
+    }
+
+    private static function mediaUpdate(array $args): array {
+        $id = (int)($args['id'] ?? 0);
+        if (!Media::get($id)) throw new InvalidArgumentException('No media file with that id.');
+        $meta = array_intersect_key($args, array_flip(['alt_text', 'title', 'description']));
+        foreach ($meta as $k => $v) {
+            if (!is_string($v)) throw new InvalidArgumentException("$k must be a string.");
+            $meta[$k] = mb_substr($v, 0, $k === 'description' ? 2000 : 255);
+        }
+        if ($meta !== []) {
+            $r = Media::updateMeta($id, $meta);
+            if (empty($r['ok'])) throw new RuntimeException((string)($r['error'] ?? 'Could not save.'));
+        }
+        if (array_key_exists('tags', $args)) {
+            Media::setTags($id, array_map('strval', (array)$args['tags']));
+        }
+        if (array_key_exists('folder_id', $args)) {
+            $f = (int)($args['folder_id'] ?? 0);
+            if ($f > 0 && !Media::folderExists($f)) throw new InvalidArgumentException('No folder with that id.');
+            Media::moveToFolder([$id], $f > 0 ? $f : null);
+        }
+        if ($meta === [] && !array_key_exists('tags', $args) && !array_key_exists('folder_id', $args)) {
+            throw new InvalidArgumentException('Give at least one of alt_text, title, description, tags or folder_id.');
+        }
+        return ['ok' => true, 'item' => Media::get($id)];
     }
 
     private static function logsTail(int $lines, string $level): array {

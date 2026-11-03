@@ -85,7 +85,7 @@ final class VideoRenderer implements BlockRendererInterface
 
         return '<div' . Html::classAttr($classes) . ' data-sb-video data-sb-video-aspect="' . Html::e($aspectClass) . '"' . ($lightbox ? ' data-sb-video-lightbox' : '') . '>'
             . '<button type="button" class="sb-video__overlay" data-sb-video-play aria-label="' . Html::e(Html::t('studio_video_play', 'Play video')) . '"' . ($lightbox ? ' aria-haspopup="dialog"' : '') . '>'
-            . ImageRenderer::img($poster['url'], $poster['alt'], $poster['width'], $poster['height'], $poster['ref'], $lazy)
+            . ImageRenderer::img($poster['url'], $poster['alt'], $poster['width'], $poster['height'], $poster['ref'], $lazy, $poster['srcset'])
             . ($scope->bool('play_icon', true) ? '<span class="sb-video__play" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" focusable="false"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg></span>' : '')
             . '</button>'
             . '<template data-sb-video-player>' . self::playerHtml($clicked ?? $player, $title, false) . '</template>'
@@ -96,18 +96,18 @@ final class VideoRenderer implements BlockRendererInterface
      * The poster: the chosen overlay image, or a YouTube video's own thumbnail when none is chosen.
      *
      * @param array{kind: string, src: string, provider: string, id: string} $player
-     * @return array{url: string, alt: string, width: ?int, height: ?int, ref: mixed}|null
+     * @return array{url: string, alt: string, width: ?int, height: ?int, ref: mixed, srcset: array<int, string>}|null
      */
     private static function poster(BlockRenderScope $scope, array $player): ?array
     {
         $ref = $scope->prop('overlay_image');
         $image = $scope->image($ref);
         if ($image !== null) {
-            $alt = is_array($ref) && is_string($ref['alt'] ?? null) ? $ref['alt'] : '';
-            return ['url' => $image->url, 'alt' => $alt, 'width' => $image->width, 'height' => $image->height, 'ref' => $ref];
+            $alt = $scope->imageAlt($ref, $image);
+            return ['url' => $image->url, 'alt' => $alt, 'width' => $image->width, 'height' => $image->height, 'ref' => $ref, 'srcset' => $image->srcset];
         }
         if ($player['provider'] === 'youtube') {
-            return ['url' => 'https://i.ytimg.com/vi/' . $player['id'] . '/hqdefault.jpg', 'alt' => '', 'width' => 480, 'height' => 360, 'ref' => null];
+            return ['url' => 'https://i.ytimg.com/vi/' . $player['id'] . '/hqdefault.jpg', 'alt' => '', 'width' => 480, 'height' => 360, 'ref' => null, 'srcset' => []];
         }
         return null;
     }

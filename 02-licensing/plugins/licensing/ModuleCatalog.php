@@ -8,11 +8,11 @@
  *
  * Classifications:
  *   - V1 Commercial (`commercial = true, v1_available = true, status = 'available'`):
- *       forms, membership, booking, shop
+ *       forms, membership, booking, shop, restaurant
  *   - Future / Non-V1 (`commercial = false, v1_available = false, status = 'future'`):
  *       editor, content
  *   - Supporting Infrastructure (`commercial = false, v1_available = false, status = 'infrastructure'`):
- *       stripe-payment (required by membership, booking and shop; never a commercial entitlement)
+ *       stripe-payment (required by membership, booking, shop and restaurant; never a commercial entitlement)
  *   - System / Platform (`commercial = false, v1_available = false, status = 'system'`):
  *       media-library, backups, mcp-gateway, multilang-translate, coaching, licensing
  */
@@ -96,6 +96,17 @@ final class ModuleCatalog
             'plugin_identifier' => 'shop',
             'dependencies'      => ['stripe-payment'],
             'sort_order'        => 32,
+        ],
+        [
+            'module_key'        => 'restaurant',
+            'display_name'      => 'Restaurant',
+            'description'       => 'Menu, POS register, tables, Stripe Terminal readers and online ordering.',
+            'status'            => 'available',
+            'commercial'        => true,
+            'v1_available'      => true,
+            'plugin_identifier' => 'restaurant',
+            'dependencies'      => ['stripe-payment'],
+            'sort_order'        => 33,
         ],
         [
             'module_key'        => 'studio-builder',
