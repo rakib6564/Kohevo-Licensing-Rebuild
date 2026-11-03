@@ -68,6 +68,13 @@ class StudioBuilder extends Plugin
         $mediaUsage = [\Slate\Module\StudioBuilder\Dependency\StudioMediaUsage::class, 'filter'];
         \Hook::removeFilter('media_usage', $mediaUsage);
         \Hook::addFilter('media_usage', $mediaUsage);
+        $mediaUsageDetails = [\Slate\Module\StudioBuilder\Dependency\StudioMediaUsage::class, 'details'];
+        \Hook::removeFilter('media_usage_details', $mediaUsageDetails);
+        \Hook::addFilter('media_usage_details', $mediaUsageDetails, 10, 2);
+        // A library edit (alt text) reaches published pages: their compiled HTML is dropped and rebuilt.
+        $mediaUpdated = [self::class, 'onMediaUpdated'];
+        \Hook::removeAction('media_updated', $mediaUpdated);
+        \Hook::addAction('media_updated', $mediaUpdated);
 
         // MCP AI Gateway integration (Phase 7): Studio scopes + tools for AI
         // assistants. Registered unconditionally, like the other modules; the
@@ -115,6 +122,19 @@ class StudioBuilder extends Plugin
     }
 
     /** Whether this request is one of the Studio admin screens (they all render the platform admin layout). */
+    /** `media_updated` action: drop the compiled HTML of every page that uses the file. Never breaks the media screen. */
+    public static function onMediaUpdated(mixed $mediaId = 0): void
+    {
+        if (!is_int($mediaId) || $mediaId <= 0 || !self::isEntitled()) {
+            return;
+        }
+        try {
+            StudioRuntimeFactory::build()->invalidator->invalidateMedia($mediaId);
+        } catch (\Throwable) {
+            // The Studio tables may not exist yet; the artifact age bound still refreshes the page.
+        }
+    }
+
     public static function onStudioScreen(): bool
     {
         $script = isset($_SERVER['SCRIPT_NAME']) && is_string($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';

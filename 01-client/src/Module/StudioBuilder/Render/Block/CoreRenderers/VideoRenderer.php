@@ -103,7 +103,7 @@ final class VideoRenderer implements BlockRendererInterface
         $ref = $scope->prop('overlay_image');
         $image = $scope->image($ref);
         if ($image !== null) {
-            $alt = is_array($ref) && is_string($ref['alt'] ?? null) ? $ref['alt'] : '';
+            $alt = $scope->imageAlt($ref, $image);
             return ['url' => $image->url, 'alt' => $alt, 'width' => $image->width, 'height' => $image->height, 'ref' => $ref];
         }
         if ($player['provider'] === 'youtube') {

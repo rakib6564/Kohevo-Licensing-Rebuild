@@ -14,5 +14,7 @@ final class ResolvedMedia
         public readonly string $url,
         public readonly ?int $width = null,
         public readonly ?int $height = null,
+        /** The library's alt text: what a block shows when its own alt is empty. */
+        public readonly string $alt = '',
     ) {}
 }

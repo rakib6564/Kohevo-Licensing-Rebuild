@@ -53,6 +53,7 @@ final class CoreMediaResolver implements MediaResolverInterface
                         $url,
                         isset($row['width']) && is_int($row['width']) && $row['width'] > 0 ? $row['width'] : null,
                         isset($row['height']) && is_int($row['height']) && $row['height'] > 0 ? $row['height'] : null,
+                        trim((string) ($row['alt_text'] ?? '')),
                     );
                 }
             }

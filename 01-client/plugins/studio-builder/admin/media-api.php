@@ -70,9 +70,8 @@ try {
         $q = StudioMediaApi::listQuery($_GET);
         if ($q['ids'] !== []) {
             $items = [];
-            foreach ($q['ids'] as $id) {
-                $row = Media::get($id);
-                $item = is_array($row) ? StudioMediaApi::shapeItem($row, $q['type']) : null;
+            foreach (Media::getMany($q['ids']) as $row) {
+                $item = StudioMediaApi::shapeItem($row, $q['type']);
                 if ($item !== null) {
                     $items[] = $item;
                 }
