@@ -999,4 +999,7 @@ return [
     'booking_settings_embed_code_label' => 'Code d’intégration',
     'booking_settings_embed_code_hint' => 'Collez les deux lignes à l’endroit où le widget doit apparaître. Le script adapte la hauteur du cadre à chaque étape. Ajoutez &amp;chrome=0 à l’adresse pour un rendu à plat, sans bordure de carte.',
     'booking_bar_label' => 'Réservations',
+    'booking_confirm_refund_gateway' => 'Rembourser ce paiement via le prestataire qui l’a encaissé ?',
+    'booking_pay_with_instead' => 'Payer plutôt avec %s',
+    'bk_err_no_payment_gateway' => 'Aucune passerelle de paiement n’est active.',
 ];

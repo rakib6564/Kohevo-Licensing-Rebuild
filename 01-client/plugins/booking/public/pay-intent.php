@@ -89,6 +89,8 @@ $opts = [
     'receipt_email' => (string)$appt['customer_email'],
     'metadata'      => [
         'source_plugin'    => 'booking',
+        // The record the payment layer routes the payment_event to.
+        'source_id'        => (string)$appt['id'],
         'booking_appt_id'  => (string)$appt['id'],
         'booking_token'    => $token,
     ],

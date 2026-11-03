@@ -212,4 +212,7 @@ return [
     'booking_embed_autoheight_hint' => 'The script makes the frame grow with the booking steps — no scrollbar, nothing cut off.',
     'booking_settings_embed_code_label' => 'Embed code',
     'booking_settings_embed_code_hint' => 'Paste both lines where the widget should appear. The script resizes the frame to fit each step. Add &amp;chrome=0 to the address for a flat look without the card border.',
+    'booking_confirm_refund_gateway' => 'Refund this payment through the payment provider that took it?',
+    'booking_pay_with_instead' => 'Pay with %s instead',
+    'bk_err_no_payment_gateway' => 'No payment gateway is active.',
 ];

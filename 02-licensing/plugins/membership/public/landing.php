@@ -368,7 +368,7 @@ $brandMark = function (string $cls = 'mlp-brand') use ($logoUrl, $siteName): str
                                     </label>
                                 <?php endif; ?>
                             <?php endif; ?>
-                            <button type="submit" class="mlp-btn <?= $feat ? 'mlp-btn-primary' : 'mlp-btn-ghost' ?> mlp-btn-block"><?= __('membership_lp_choose', 'Choose plan') ?></button>
+                            <?= MembershipAPI::payButtons(__('membership_lp_choose', 'Choose plan'), 'mlp-btn ' . ($feat ? 'mlp-btn-primary' : 'mlp-btn-ghost') . ' mlp-btn-block', 'mlp-btn mlp-btn-ghost mlp-btn-block') ?>
                         </form>
                     <?php else: ?>
                         <?php if ($insMode !== 'none' && $insFee > 0): ?>

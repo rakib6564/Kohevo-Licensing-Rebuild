@@ -151,10 +151,21 @@ final class PaymentLedger
         $txn = trim((string) ($args['txn_id'] ?? ''));
         $ref = trim((string) ($args['ref'] ?? ''));
 
-        $existing = self::findExisting($tid, $gateway, $txnCol, $txn, $refCol, $ref);
-        if ($existing !== null) return ['id' => $existing, 'new' => false];
-
         $status = (string) ($args['status'] ?? 'succeeded');
+        $existing = self::findExisting($tid, $gateway, $txnCol, $txn, $refCol, $ref);
+        if ($existing !== null) {
+            // A declined attempt that was retried and then paid (same intent):
+            // the row becomes the successful charge, and counts as new.
+            if ($status === 'succeeded') {
+                $upgraded = \Database::update(self::TABLE, [
+                    'status'       => 'succeeded',
+                    'amount_cents' => max(0, (int) ($args['amount_cents'] ?? 0)),
+                ], "id = ? AND tenant_id = ? AND status = 'failed'", [$existing, $tid]);
+                if ($upgraded === 1) return ['id' => $existing, 'new' => true];
+            }
+            return ['id' => $existing, 'new' => false];
+        }
+
         $meta   = $args['meta'] ?? null;
         try {
             $id = \Database::insert(self::TABLE, [

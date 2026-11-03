@@ -50,9 +50,14 @@ if ($routePath === 'manage') {
     return;
 }
 
-// Stripe return: /book/pay/done?token=…&session_id=… (post-checkout).
+// Payment return: /book/pay/done?token=…&gw=…&ref=… (post-checkout; `session_id=` for older Stripe links).
 if ($routePath === 'pay/done' || $routePath === 'pay') {
     bookpub_pay_done($embed);
+    return;
+}
+// Pay a pending booking with a hosted gateway: /book/pay/start?token=…&gw=paypal.
+if ($routePath === 'pay/start') {
+    bookpub_pay_start($embed);
     return;
 }
 
@@ -189,7 +194,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($firstResult['needs_payment']) && !empty($firstResult['id'])) {
             $appt = Database::row("SELECT * FROM booking_appointments WHERE id = ?", [(int)$firstResult['id']]);
             if ($appt) {
-                $stripeReady = class_exists('StripePaymentAPI') && StripePaymentAPI::isConfigured();
+                // Stripe's inline card form, when Stripe is set up and offered for Booking.
+                $stripeReady = class_exists('Payments') && isset(Payments::available('booking', ['hosted', 'inline_card'])['stripe']);
                 $embeddedOn  = (Database::setting('stripe-payment.booking_embedded') ?? '1') !== '0';
 
                 // Preferred path: collect payment inline on a summary step
@@ -198,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     bookpub_render_payment($appt, $embed);
                     return;
                 }
-                // Fallback: hosted Stripe Checkout (redirect off-site).
+                // Otherwise a hosted checkout at the gateway offered (Stripe Checkout, PayPal).
                 $pay = BookingAPI::startPayment($appt);
                 if (!empty($pay['ok'])) { header('Location: ' . $pay['url']); exit; }
             }
@@ -1576,6 +1582,9 @@ function bookpub_render_payment(array $appt, bool $embed): void {
         <button type="submit" id="book-pay-btn" class="btn btn-primary btn-lg btn-block" disabled>
             <span><?= __('booking_pay', 'Pay') ?></span> <?= slate_format_price((int)$due, $currency) ?>
         </button>
+        <?php foreach (bookpub_other_gateways() as $gwId => $gwLabel): ?>
+            <a href="<?= e(SLATE_URL . '/book/pay/start?token=' . rawurlencode($token) . '&gw=' . rawurlencode($gwId)) ?>" target="_top" class="btn btn-ghost btn-block" style="margin-top:12px;"><?= e(sprintf(__('booking_pay_with_instead', 'Pay with %s instead'), $gwLabel)) ?></a>
+        <?php endforeach; ?>
         <a href="<?= e(bookpub_home($embed)) ?>" class="book-pay-cancel"><?= __('booking_cancel', 'Cancel') ?></a>
     </form>
 
@@ -2012,88 +2021,85 @@ function bookpub_manage_view(array $appt, bool $embed, string $error): void {
 }
 
 // ─────────────────────────────────────────────────────────────
-//                  Stripe checkout return
+//                  Payment start and return
 // ─────────────────────────────────────────────────────────────
 
+/** Hosted gateways other than Stripe offered for Booking (id => label), for "Pay with … instead". */
+function bookpub_other_gateways(): array {
+    if (!class_exists('Payments')) return [];
+    $out = Payments::choices('booking');
+    unset($out['stripe']);
+    return $out;
+}
+
+/** /book/pay/start?token=…&gw=… — send the customer to that gateway to pay their pending booking. */
+function bookpub_pay_start(bool $embed): void {
+    $token = (string)($_GET['token'] ?? '');
+    $gw    = (string)($_GET['gw'] ?? '');
+    if (!preg_match('/^[a-f0-9]{32}$/', $token) || !preg_match('/^[a-z0-9_-]{1,32}$/', $gw)) {
+        bookpub_render_error(__('booking_invalid_payment_link', 'Invalid payment link.'), $embed);
+        return;
+    }
+    $appt = BookingAPI::findByManageToken($token, false);
+    if (!$appt) { bookpub_render_error(__('booking_not_found', 'Booking not found.'), $embed); return; }
+    if (($appt['status'] ?? '') !== 'pending' || in_array(($appt['payment_status'] ?? ''), ['paid', 'refunded'], true)) {
+        header('Location: ' . SLATE_URL . '/book/manage?token=' . rawurlencode($token));
+        exit;
+    }
+    $pay = BookingAPI::startPayment($appt, $gw);
+    if (!empty($pay['ok'])) { header('Location: ' . $pay['url'], true, 303); exit; }
+    bookpub_render_error((string)($pay['error'] ?? __('bk_err_could_not_start_payment', 'Could not start payment.')), $embed);
+}
+
+/**
+ * A Stripe payment found by its own id (an inline card intent, or a checkout
+ * started before the payment layer), counted only when Stripe's metadata
+ * names THIS appointment. Without that binding a customer holding their own
+ * manage token could pass any paid id from the same Stripe account and have
+ * their booking marked paid against an unrelated payment.
+ */
+function bookpub_settle_stripe_by_metadata(string $id, int $apptId): void {
+    $stripe = Payments::gateway('stripe');
+    $event  = $stripe?->confirm($id);
+    if ($event === null) return;
+    if ((int)($event->metadata['booking_appt_id'] ?? 0) !== $apptId) {
+        slate_log('Booking pay_done: ' . $id . ' metadata appt ' . (int)($event->metadata['booking_appt_id'] ?? 0) . ' != ' . $apptId, 'warning');
+        return;
+    }
+    Payments::emit($event); // payment_event → BookingAPI::handlePaymentEvent()
+}
+
 function bookpub_pay_done(bool $embed): void {
-    $token     = (string)($_GET['token'] ?? '');
-    $sessionId = (string)($_GET['session_id'] ?? '');
-    $piId      = (string)($_GET['payment_intent'] ?? '');
+    $token = (string)($_GET['token'] ?? '');
+    $gw    = (string)($_GET['gw'] ?? 'stripe');
+    $ref   = (string)($_GET['ref'] ?? ($_GET['session_id'] ?? ''));
+    $piId  = (string)($_GET['payment_intent'] ?? '');
     if (!preg_match('/^[a-f0-9]{32}$/', $token)) {
         bookpub_render_error(__('booking_invalid_payment_link', 'Invalid payment link.'), $embed);
         return;
     }
     $appt = BookingAPI::findByManageToken($token, false);
     if (!$appt) { bookpub_render_error(__('booking_not_found', 'Booking not found.'), $embed); return; }
+    $apptId = (int)$appt['id'];
 
-    // Fallback in case the webhook hasn't arrived yet: verify the session is
-    // paid with Stripe, then record + mark paid (all idempotent).
-    if (($appt['payment_status'] ?? '') !== 'paid' && $sessionId !== '' && class_exists('StripePaymentAPI')) {
-        $sess = StripePaymentAPI::getSession($sessionId);
-        // Bind the Stripe session to THIS appointment via the metadata
-        // stamped at session creation. Without this, a customer holding
-        // their own manage_token could pass any paid session_id from the
-        // same Stripe account and have their pending booking marked paid
-        // against an unrelated payment. (The webhook path keys off the
-        // same metadata.booking_appt_id.)
-        $sessMeta   = ($sess && is_array($sess['metadata'] ?? null)) ? $sess['metadata'] : [];
-        $sessApptId = (int)($sessMeta['booking_appt_id'] ?? 0);
-        if ($sess && ($sess['payment_status'] ?? '') === 'paid' && $sessApptId === (int)$appt['id']) {
-            $chargeId = StripePaymentAPI::recordCharge([
-                'source_plugin'            => 'booking',
-                'source_id'                => (string)$appt['id'],
-                'stripe_session_id'        => $sessionId,
-                'stripe_payment_intent_id' => (string)($sess['payment_intent'] ?? ''),
-                'customer_email'           => (string)$appt['customer_email'],
-                'amount_cents'             => (int)($sess['amount_total'] ?? 0),
-                'currency'                 => strtoupper((string)($sess['currency'] ?? 'USD')),
-                'status'                   => 'succeeded',
-            ]);
-            if ($chargeId) {
-                Database::update('booking_appointments',
-                    ['charge_id' => $chargeId, 'stripe_session_id' => $sessionId], 'id = ?', [(int)$appt['id']]);
+    // In case the webhook hasn't arrived yet: confirm with the gateway. A
+    // paid checkout fires payment_event, whose listener marks the booking
+    // paid (idempotent, so the webhook and this page can both run).
+    if (($appt['payment_status'] ?? '') !== 'paid' && class_exists('Payments')) {
+        if ($ref !== '' && preg_match('/^[A-Za-z0-9_-]{6,255}$/', $ref)) {
+            if (Payments::session($gw, $ref) !== null) {
+                // Started through the payment layer: confirmReturn() checks the
+                // checkout belongs to this appointment.
+                Payments::confirmReturn($gw, $ref, 'booking', (string)$apptId);
+            } elseif ($gw === 'stripe') {
+                bookpub_settle_stripe_by_metadata($ref, $apptId);
             }
-            BookingAPI::markPaid((int)$appt['id'], (int)($sess['amount_total'] ?? 0), (string)($sess['payment_intent'] ?? ''));
-            $appt['payment_status'] = 'paid';
-        } elseif ($sess && ($sess['payment_status'] ?? '') === 'paid' && $sessApptId !== (int)$appt['id']) {
-            slate_log('Booking pay_done: session ' . $sessionId
-                . ' metadata appt ' . $sessApptId . ' != ' . (int)$appt['id'], 'warning');
         }
-    }
-
-    // Embedded Payment Element fallback: Stripe (or our inline JS) returns
-    // here with ?payment_intent=pi_…. Verify it with Stripe and bind it to
-    // THIS appointment via metadata.booking_appt_id before marking paid.
-    // Idempotent: recordCharge de-dupes on the PI id and markPaid no-ops
-    // once already paid, so the webhook and this path can both run.
-    if (($appt['payment_status'] ?? '') !== 'paid' && $piId !== ''
-        && preg_match('/^pi_[A-Za-z0-9_]+$/', $piId) && class_exists('StripePaymentAPI')) {
-        $pi = StripePaymentAPI::getPaymentIntent($piId);
-        $piMeta   = ($pi && is_array($pi['metadata'] ?? null)) ? $pi['metadata'] : [];
-        $piApptId = (int)($piMeta['booking_appt_id'] ?? 0);
-        $piStatus = (string)($pi['status'] ?? '');
-        if ($pi && in_array($piStatus, ['succeeded', 'requires_capture'], true)
-            && $piApptId === (int)$appt['id']) {
-            $paid = (int)($pi['amount_received'] ?? $pi['amount'] ?? 0);
-            $chargeId = StripePaymentAPI::recordCharge([
-                'source_plugin'            => 'booking',
-                'source_id'                => (string)$appt['id'],
-                'stripe_payment_intent_id' => $piId,
-                'customer_email'           => (string)$appt['customer_email'],
-                'amount_cents'             => $paid,
-                'currency'                 => strtoupper((string)($pi['currency'] ?? 'USD')),
-                'status'                   => 'succeeded',
-            ]);
-            if ($chargeId) {
-                Database::update('booking_appointments',
-                    ['charge_id' => $chargeId], 'id = ?', [(int)$appt['id']]);
-            }
-            BookingAPI::markPaid((int)$appt['id'], $paid, $piId);
-            $appt['payment_status'] = 'paid';
-        } elseif ($pi && $piApptId !== (int)$appt['id']) {
-            slate_log('Booking pay_done: payment_intent ' . $piId
-                . ' metadata appt ' . $piApptId . ' != ' . (int)$appt['id'], 'warning');
+        // Stripe's inline card form returns with ?payment_intent=pi_….
+        if ($piId !== '' && preg_match('/^pi_[A-Za-z0-9_]+$/', $piId)) {
+            bookpub_settle_stripe_by_metadata($piId, $apptId);
         }
+        $appt = BookingAPI::findByManageToken($token, false) ?: $appt;
     }
 
     // If we still don't see the payment as settled, it may be processing

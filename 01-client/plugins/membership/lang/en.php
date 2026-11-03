@@ -364,4 +364,5 @@ return [
     'mb_err_subscription_not_found' => 'Subscription not found.',
     'mb_err_enter_a_non_zero_amount' => 'Enter a non-zero amount.',
     'mb_err_customer_not_found' => 'Customer not found.',
+    'membership_pay_with' => 'Pay with %s',
 ];
