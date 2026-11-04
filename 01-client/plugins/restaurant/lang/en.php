@@ -1063,4 +1063,8 @@ return [
     'restaurant_help_po_1'                   => 'Customers who give an email get a confirmation with their items, pickup time and a link to the order status. Put the kitchen\'s address under Order emails (New order email) to get every new online order by email too: online orders do not print on the in-store POS printer. An optional email tells the customer when you mark the order Ready.',
     'restaurant_help_po_2'                   => 'Closed dates (under Opening hours) take holidays and days off: no pickup times are offered on them and the order page shows closed.',
     'restaurant_help_po_3'                   => 'A pre-order menu (a holiday menu) is a category with "This is a pre-order menu" ticked, an ordering window and its pickup dates. While open, its items show first on the order page and customers choose a pickup time on those dates only; outside the window they are hidden. Pre-orders are placed on their own, never in the same order as regular items.',
+    'restaurant_mail_sender'                 => 'online ordering',
+    'restaurant_mail_cust_label'             => 'Order confirmed',
+    'restaurant_mail_kitchen_label'          => 'New online order',
+    'restaurant_mail_ready_label'            => 'Order ready',
 ];

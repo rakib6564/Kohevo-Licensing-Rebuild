@@ -77,7 +77,7 @@ try {
         $html = $cust[0]['html'];
         assert_true(str_contains($cust[0]['subject'], (string) $order['order_no']), 'subject has the order number');
         assert_true(str_contains($cust[0]['subject'], 'Test Smokehouse'), 'subject has the restaurant name');
-        foreach (['ROE Brisket Plate', 'extra bark', 'Wed Nov 25, 11:00 AM', '1 Test Street', '/order/confirm?token=' . $res['token'], '$39.60', 'Paid'] as $want) {
+        foreach (['ROE Brisket Plate', 'extra bark', 'Wed Nov 25, 11:00 AM', '1 Test Street', '/order/confirm?token=' . $res['token'], '$39.60', 'Paid', 'class="fe-card"'] as $want) {
             assert_true(str_contains($html, $want), 'customer email has ' . $want);
         }
         $k = $mailTo('kitchen@example.test')[0];

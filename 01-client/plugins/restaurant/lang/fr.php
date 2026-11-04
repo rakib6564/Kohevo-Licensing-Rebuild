@@ -1062,4 +1062,8 @@ return [
     'restaurant_help_po_1'                   => 'Les clients qui donnent leur e-mail reçoivent une confirmation avec leurs articles, l\'heure de retrait et un lien vers le suivi de la commande. Indiquez l\'adresse de la cuisine sous E-mails de commande (E-mail de nouvelle commande) pour recevoir aussi chaque nouvelle commande en ligne par e-mail : les commandes en ligne ne s\'impriment pas sur l\'imprimante de la caisse en magasin. Un e-mail facultatif prévient le client quand vous passez la commande à Prête.',
     'restaurant_help_po_2'                   => 'Les dates de fermeture (sous Heures d\'ouverture) servent pour les jours fériés et les congés : aucune heure de retrait n\'est proposée ces jours-là et la page de commande indique fermé.',
     'restaurant_help_po_3'                   => 'Un menu en précommande (menu de fête) est une catégorie où « Ceci est un menu en précommande » est coché, avec une période de commande et ses dates de retrait. Pendant l\'ouverture, ses articles s\'affichent en premier sur la page de commande et le client choisit une heure de retrait à ces dates seulement ; en dehors, ils sont masqués. Les précommandes se passent à part, jamais dans la même commande que les articles habituels.',
+    'restaurant_mail_sender'                 => 'commande en ligne',
+    'restaurant_mail_cust_label'             => 'Commande confirmée',
+    'restaurant_mail_kitchen_label'          => 'Nouvelle commande en ligne',
+    'restaurant_mail_ready_label'            => 'Commande prête',
 ];

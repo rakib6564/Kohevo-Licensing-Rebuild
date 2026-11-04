@@ -146,9 +146,53 @@ final class RestaurantMail
 
     // ── Content ──────────────────────────────────────────────
 
-    private static function tpl(): string
+    private const BRANDED = '\\Slate\\Services\\Notifications\\BrandedEmail';
+    private const FONT = '-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,Helvetica,Arial,sans-serif';
+
+    /**
+     * The whole email in the site's branded shell (BrandedEmail: logo, hero image band, accent colour, dark mode,
+     * business address footer). $blocks are trusted HTML pieces, each its own padded row; a block starting with
+     * "<table" is a full-width table row (the details table).
+     */
+    private static function page(string $label, string $heading, array $blocks, string $preheader, string $ref): string
     {
-        return '\\Slate\\Services\\Notifications\\EmailTemplate';
+        $cls = self::BRANDED;
+        // The label sits in the header band (over the hero image); the body opens with the heading.
+        $rows = '<tr><td class="fe-pad" style="padding:26px 28px 6px;">'
+            . '<h1 class="fe-title" style="margin:0;font:700 22px/1.25 ' . self::FONT . ';color:#0f172a;letter-spacing:-0.02em;">' . e($heading) . '</h1>'
+            . '</td></tr>';
+        foreach ($blocks as $b) {
+            if ($b === '') continue;
+            $rows .= str_starts_with($b, '<table')
+                ? '<tr><td style="padding:10px 4px;">' . $b . '</td></tr>'
+                : '<tr><td class="fe-pad fe-text" style="padding:8px 28px;font:400 15px/1.65 ' . self::FONT . ';color:#334155;">' . $b . '</td></tr>';
+        }
+        $rows .= '<tr><td style="padding:0 0 18px;"></td></tr>';
+        return $cls::shell([
+            'title'        => $heading,
+            'preheader'    => $preheader,
+            'header_label' => $label,
+            'sender_label' => __('restaurant_mail_sender', 'online ordering'),
+            'footer_ref'   => $ref,
+        ], $rows);
+    }
+
+    private static function button(string $url, string $label): string
+    {
+        $cls = self::BRANDED;
+        return $cls::ctaButton($url, $label);
+    }
+
+    private static function details(array $rows): string
+    {
+        $cls = self::BRANDED;
+        return $cls::detailTable($rows);
+    }
+
+    private static function hello(array $order): string
+    {
+        $name = trim((string) ($order['customer_name'] ?? ''));
+        return $name !== '' ? sprintf(__('email_greeting', 'Hello %s,'), e($name)) : e(__('email_greeting_generic', 'Hello,'));
     }
 
     private static function site(): string
@@ -202,7 +246,7 @@ final class RestaurantMail
         foreach ($order['items'] as $it) {
             if ((string) $it['kitchen_status'] === 'void') continue;
             $mods = array_map(static fn(array $m): string => (string) $m['name_snapshot'], $it['modifiers'] ?? []);
-            $sub = $mods !== [] ? '<div style="color:#6b6355;font-size:13px;margin-top:2px;">' . e(implode(', ', $mods)) . '</div>' : '';
+            $sub = $mods !== [] ? '<div style="color:#64748b;font-size:13px;margin-top:2px;">' . e(implode(', ', $mods)) . '</div>' : '';
             $note = trim((string) ($it['notes'] ?? ''));
             if ($note !== '') $sub .= '<div style="color:#9a2310;font-size:13px;margin-top:2px;">' . e(__('restaurant_mail_note', 'Note')) . ': ' . e($note) . '</div>';
             $qtyStyle = $kitchen ? 'font-size:18px;font-weight:800;' : 'font-weight:700;';
@@ -212,7 +256,7 @@ final class RestaurantMail
                 . ($kitchen ? '' : '<td style="padding:9px 0 9px 10px;vertical-align:top;text-align:right;white-space:nowrap;">' . e(RestaurantAPI::money((int) $it['line_total_cents'])) . '</td>')
                 . '</tr>';
         }
-        return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ece4d3;border-bottom:1px solid #ece4d3;margin:18px 0;font-size:14px;color:#2d2a26;">' . $rows . '</table>';
+        return '<div class="fe-val" style="border-top:1px solid #e6e9ef;border-bottom:1px solid #e6e9ef;margin:8px 0 14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:inherit;">' . $rows . '</table></div>';
     }
 
     /** Subtotal, service, tax, tip, total, then paid or due. */
@@ -225,14 +269,14 @@ final class RestaurantMail
         if ((int) $order['tip_cents'] > 0) $rows[] = [__('restaurant_mail_tip', 'Tip'), (int) $order['tip_cents']];
         $out = '';
         foreach ($rows as [$label, $cents]) {
-            $out .= '<tr><td style="padding:3px 0;color:#6b6355;">' . e($label) . '</td><td style="padding:3px 0;text-align:right;">'
+            $out .= '<tr><td style="padding:3px 0;color:#64748b;">' . e($label) . '</td><td style="padding:3px 0;text-align:right;">'
                   . ($cents < 0 ? '−' . e(RestaurantAPI::money(-$cents)) : e(RestaurantAPI::money($cents))) . '</td></tr>';
         }
         $out .= '<tr><td style="padding:8px 0 3px;font-weight:800;font-size:16px;">' . e(__('restaurant_mail_total', 'Total')) . '</td>'
               . '<td style="padding:8px 0 3px;text-align:right;font-weight:800;font-size:16px;">' . e(RestaurantAPI::money((int) $order['total_cents'])) . '</td></tr>';
-        $out .= '<tr><td style="padding:3px 0;color:#6b6355;">' . e(self::isPaid($order) ? __('restaurant_mail_paid', 'Paid') : __('restaurant_mail_due', 'Due at pickup')) . '</td>'
+        $out .= '<tr><td style="padding:3px 0;color:#64748b;">' . e(self::isPaid($order) ? __('restaurant_mail_paid', 'Paid') : __('restaurant_mail_due', 'Due at pickup')) . '</td>'
               . '<td style="padding:3px 0;text-align:right;">' . e(RestaurantAPI::money(self::isPaid($order) ? (int) $order['paid_cents'] : (int) $order['total_cents'])) . '</td></tr>';
-        return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#2d2a26;margin:0 0 8px;">' . $out . '</table>';
+        return '<div class="fe-text"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:inherit;margin:0;">' . $out . '</table></div>';
     }
 
     public static function customerSubject(array $order): string
@@ -242,11 +286,10 @@ final class RestaurantMail
 
     public static function customerHtml(array $order): string
     {
-        $tpl = self::tpl();
         $n = self::splitNotes($order);
         $rows = [
             [__('restaurant_mail_order', 'Order'), '#' . e((string) $order['order_no'])],
-            [__('restaurant_mail_when', 'When'), e(self::whenText($order))],
+            [__('restaurant_mail_when', 'When'), '<strong>' . e(self::whenText($order)) . '</strong>'],
         ];
         if ($n['address'] !== '') $rows[] = [__('restaurant_mail_deliver_to', 'Deliver to'), e($n['address'])];
         elseif (($addr = self::pickupAddress()) !== '') $rows[] = [__('restaurant_mail_pickup_at', 'Pickup at'), e($addr)];
@@ -254,14 +297,12 @@ final class RestaurantMail
         $intro = self::isPaid($order)
             ? __('restaurant_mail_cust_paid', 'Thank you — we received your payment and your order is in.')
             : __('restaurant_mail_cust_due', 'Thank you — your order is in. Please pay when you pick it up.');
-        $body = $tpl::heading(sprintf(__('restaurant_mail_cust_heading', 'Order #%s confirmed'), $order['order_no']))
-            . $tpl::greeting((string) ($order['customer_name'] ?? ''))
-            . $tpl::paragraph(e($intro))
-            . $tpl::infoCard($rows)
-            . self::itemsHtml($order, false)
-            . self::totalsHtml($order)
-            . $tpl::button(self::statusUrl($order), __('restaurant_mail_status_btn', 'See your order status'));
-        return $tpl::shell($body, self::whenText($order));
+        return self::page(
+            __('restaurant_mail_cust_label', 'Order confirmed'),
+            sprintf(__('restaurant_mail_cust_heading', 'Order #%s confirmed'), $order['order_no']),
+            [self::hello($order) . '<br>' . e($intro), self::details($rows), self::itemsHtml($order, false) . self::totalsHtml($order),
+             self::button(self::statusUrl($order), __('restaurant_mail_status_btn', 'See your order status'))],
+            self::whenText($order), '#' . $order['order_no']);
     }
 
     public static function kitchenSubject(array $order): string
@@ -271,26 +312,25 @@ final class RestaurantMail
 
     public static function kitchenHtml(array $order): string
     {
-        $tpl = self::tpl();
         $n = self::splitNotes($order);
         $paid = self::isPaid($order);
         $who = trim((string) ($order['customer_name'] ?? ''));
         $contact = array_filter([trim((string) ($order['customer_phone'] ?? '')), self::customerEmail($order)]);
         $rows = [
-            [__('restaurant_mail_when', 'When'), '<span style="font-size:16px;">' . e(self::whenText($order)) . '</span>'],
-            [__('restaurant_mail_customer', 'Customer'), e($who !== '' ? $who : '—') . ($contact ? '<br><span style="font-weight:400;">' . e(implode(' · ', $contact)) . '</span>' : '')],
+            [__('restaurant_mail_when', 'When'), '<strong style="font-size:16px;">' . e(self::whenText($order)) . '</strong>'],
+            [__('restaurant_mail_customer', 'Customer'), e($who !== '' ? $who : '—') . ($contact ? '<br>' . e(implode(' · ', $contact)) : '')],
         ];
         if ($n['address'] !== '') $rows[] = [__('restaurant_mail_deliver_to', 'Deliver to'), e($n['address'])];
-        if ($n['notes'] !== '') $rows[] = [__('restaurant_mail_notes', 'Notes'), '<span style="color:#9a2310;">' . e($n['notes']) . '</span>'];
+        if ($n['notes'] !== '') $rows[] = [__('restaurant_mail_notes', 'Notes'), '<strong style="color:#9a2310;">' . e($n['notes']) . '</strong>'];
         $rows[] = [__('restaurant_mail_payment', 'Payment'), $paid
-            ? e(sprintf(__('restaurant_mail_k_paid', 'PAID online · %s'), RestaurantAPI::money((int) $order['paid_cents'])))
-            : '<span style="color:#9a2310;">' . e(sprintf(__('restaurant_mail_k_due', 'DUE at pickup · %s'), RestaurantAPI::money((int) $order['total_cents']))) . '</span>'];
+            ? '<strong>' . e(sprintf(__('restaurant_mail_k_paid', 'PAID online · %s'), RestaurantAPI::money((int) $order['paid_cents']))) . '</strong>'
+            : '<strong style="color:#9a2310;">' . e(sprintf(__('restaurant_mail_k_due', 'DUE at pickup · %s'), RestaurantAPI::money((int) $order['total_cents']))) . '</strong>'];
         $board = function_exists('plugin_url') ? plugin_url('restaurant', 'admin/online.php') : rtrim(SLATE_URL, '/') . '/plugins/restaurant/admin/online.php';
-        $body = $tpl::heading(sprintf(__('restaurant_mail_kitchen_heading', 'New order #%s'), $order['order_no']))
-            . $tpl::infoCard($rows)
-            . self::itemsHtml($order, true)
-            . $tpl::button($board, __('restaurant_mail_board_btn', 'Open the online orders board'));
-        return $tpl::shell($body, self::whenText($order));
+        return self::page(
+            __('restaurant_mail_kitchen_label', 'New online order'),
+            sprintf(__('restaurant_mail_kitchen_heading', 'New order #%s'), $order['order_no']),
+            [self::details($rows), self::itemsHtml($order, true), self::button($board, __('restaurant_mail_board_btn', 'Open the online orders board'))],
+            self::whenText($order), '#' . $order['order_no']);
     }
 
     public static function readySubject(array $order): string
@@ -300,7 +340,6 @@ final class RestaurantMail
 
     public static function readyHtml(array $order): string
     {
-        $tpl = self::tpl();
         $delivery = (string) $order['type'] === 'delivery';
         $addr = self::pickupAddress();
         $text = $delivery
@@ -308,10 +347,10 @@ final class RestaurantMail
             : ($addr !== '' ? sprintf(__('restaurant_mail_ready_pickup_at', 'Your order is ready to pick up at %s.'), $addr)
                             : __('restaurant_mail_ready_pickup', 'Your order is ready to pick up.'));
         if (!self::isPaid($order)) $text .= ' ' . sprintf(__('restaurant_mail_ready_due', 'Amount due: %s.'), RestaurantAPI::money((int) $order['total_cents']));
-        $body = $tpl::heading(sprintf(__('restaurant_mail_ready_heading', 'Order #%s is ready'), $order['order_no']))
-            . $tpl::greeting((string) ($order['customer_name'] ?? ''))
-            . $tpl::paragraph(e($text))
-            . $tpl::button(self::statusUrl($order), __('restaurant_mail_status_btn', 'See your order status'));
-        return $tpl::shell($body);
+        return self::page(
+            __('restaurant_mail_ready_label', 'Order ready'),
+            sprintf(__('restaurant_mail_ready_heading', 'Order #%s is ready'), $order['order_no']),
+            [self::hello($order) . '<br>' . e($text), self::button(self::statusUrl($order), __('restaurant_mail_status_btn', 'See your order status'))],
+            $text, '#' . $order['order_no']);
     }
 }
