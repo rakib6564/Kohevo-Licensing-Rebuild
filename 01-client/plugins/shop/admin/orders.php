@@ -3,7 +3,7 @@
  * Shop — orders (list by status, one order's detail, and its actions).
  *
  * Paid → Mark fulfilled (shipped or collected). Awaiting payment → Cancel. Paid or fulfilled → Refund (the whole
- * Stripe charge, through stripe-payment; stock is put back). Checkouts left unpaid for a day are cancelled when this
+ * charge, through the gateway that took it; stock is put back). Checkouts left unpaid for a day are cancelled when this
  * screen opens: their stock was never taken.
  */
 require_once dirname(__DIR__, 3) . '/config.php';

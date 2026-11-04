@@ -2,7 +2,7 @@
 /**
  * Shop — settings: delivery (flat shipping, free-shipping threshold, pickup), the countries checkout ships to, the
  * addresses of the shop's Studio pages and of a product page, the email that hears about new orders, and a button that
- * creates the Studio pages a shop needs (ShopStudioPages). Payment keys live in the Stripe Payment plugin's settings.
+ * creates the Studio pages a shop needs (ShopStudioPages). Payment keys live in each payment gateway's settings.
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/ShopStoreAPI.php';
@@ -94,7 +94,7 @@ $posted = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : null;
 $val = static function (string $postKey, string $current) use ($posted): string { return e($posted !== null ? (string) ($posted[$postKey] ?? '') : $current); };
 $money = static fn(string $setting): string => number_format(((int) ShopStoreAPI::setting($setting)) / 100, 2, '.', '');
 $err = static fn(string $k): string => isset($errors[$k]) ? '<div class="field-error" role="alert">' . e($errors[$k]) . '</div>' : '';
-$stripeReady = class_exists('StripePaymentAPI') && StripePaymentAPI::isConfigured();
+$paymentsReady = ShopStoreAPI::canTakePayments();
 
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
@@ -106,9 +106,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
 ]); ?>
 
 <?php if ($flash): ?><div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div><?php endif; ?>
-<?php if (!$stripeReady): ?>
-    <div class="alert alert-warning" role="status"><?= __('shop_stripe_not_ready', 'Stripe is not set up yet, so checkout cannot take payments. Add your keys in the Stripe Payment settings.') ?>
-        <?php if (function_exists('plugin_url')): ?> <a href="<?= e(plugin_url('stripe-payment', 'admin/settings.php')) ?>"><?= __('shop_open_stripe', 'Open Stripe settings') ?></a><?php endif; ?></div>
+<?php if (!$paymentsReady): ?>
+    <div class="alert alert-warning" role="status"><?= __('shop_payments_not_ready', 'No payment gateway is set up for the shop yet, so checkout cannot take payments. Connect Stripe or PayPal, and check that it is offered for the shop.') ?>
+        <a href="<?= e(SLATE_URL . '/admin/payment-gateways.php') ?>"><?= __('shop_open_gateways', 'Open Payment gateways') ?></a></div>
 <?php endif; ?>
 
 <?php slate_editor_css(); ?>

@@ -7023,7 +7023,7 @@
                 "max_amount": 5000,
                 "success_path": ""
             },
-            "description": "A Stripe Checkout pay button: a set or visitor-chosen amount, once or monthly",
+            "description": "Pay with Stripe or PayPal: a set or visitor-chosen amount, once or monthly",
             "field_schema": [
                 {
                     "key": "label",
@@ -7177,7 +7177,7 @@
                 "label": "Pay now",
                 "url": ""
             },
-            "description": "A button to a Stripe Payment Link or Buy Button page",
+            "description": "A button to a Stripe or PayPal payment link page",
             "field_schema": [
                 {
                     "key": "label",
@@ -7190,7 +7190,7 @@
                 {
                     "key": "url",
                     "type": "string",
-                    "label": "Stripe link",
+                    "label": "Payment link",
                     "required": false,
                     "default": "",
                     "max_length": 600
@@ -7198,7 +7198,7 @@
             ],
             "icon": "link",
             "inline_text": [],
-            "label": "Stripe Payment Link",
+            "label": "Payment Link",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
             "style_capabilities": [

@@ -3,9 +3,9 @@
  * Shop — the checkout endpoint.
  *
  *   GET   the Checkout widget's fragment (`X-Studio-Fragment: 1`), or a plain checkout page without JavaScript;
- *         `?cancelled=1` (back from Stripe without paying) shows a note, and the cart is still there
- *   POST  the checkout form (CSRF-checked): the order is created pending payment and the visitor goes to Stripe
- *         Checkout (`{redirect}` for studio-runtime.js, a 303 otherwise). Errors come back as the form again.
+ *         `?cancelled=1` (back from the payment page without paying) shows a note, and the cart is still there
+ *   POST  the checkout form (CSRF-checked): the order is created pending payment and the visitor goes to the chosen
+ *         gateway's payment page (`{redirect}` for studio-runtime.js, a 303 otherwise). Errors come back as the form.
  *
  * Guests check out with a name and an email; a signed-in customer's order is linked to their account.
  */
@@ -47,7 +47,7 @@ if (!$placed['ok']) {
     $fail($placed['errors'] ?? [], 422);
 }
 
-$pay = ShopStoreAPI::startPayment($placed['order']);
+$pay = ShopStoreAPI::startPayment($placed['order'], isset($_POST['payment_gateway']) ? (string) $_POST['payment_gateway'] : null);
 if (!$pay['ok']) {
     ShopStoreAPI::cancel((int) $placed['order']['id']);
     $fail(['_' => (string) $pay['error']], 503);

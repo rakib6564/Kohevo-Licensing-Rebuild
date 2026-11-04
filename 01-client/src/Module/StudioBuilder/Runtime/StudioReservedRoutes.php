@@ -22,7 +22,7 @@ final class StudioReservedRoutes
         'claude', 'coaching', 'config', 'cron', 'customer', 'data', 'db', 'db-backups', 'dev-server',
         'docs', 'feed', 'forms', 'includes', 'index', 'install', 'lang', 'licensing', 'login', 'logout',
         'mcp', 'mcp-gateway', 'media', 'media-library', 'member', 'membership', 'multilang-translate',
-        'plugins', 'preview', 'public', 'register', 'robots', 'route', 'shop', 'sitemap', 'src',
+        'paypal-payment', 'plugins', 'preview', 'public', 'register', 'robots', 'route', 'shop', 'sitemap', 'src',
         'storefront', 'stripe-payment', 'studio', 'studio-builder', 'templates', 'tests', 'uploads',
         'well-known',
     ];

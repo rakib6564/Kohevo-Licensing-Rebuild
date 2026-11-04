@@ -3,7 +3,7 @@
  * Shop plugin — bootstrap.
  *
  * Registers the admin nav (Products, Categories, Orders, Settings), a dashboard widget, FR/EN language packs and the
- * Stripe listener that marks an order paid. Schema is kept current by the idempotent ShopStoreAPI::ensureSchema()
+ * payment_event listener that marks an order paid. Schema is kept current by the idempotent ShopStoreAPI::ensureSchema()
  * self-heal, stamped per version.
  *
  * The storefront is Kohevo Studio: the widgets are declared in studio-widgets.php (Add › Components), a product page
@@ -29,8 +29,8 @@ class Shop extends Plugin {
 
         // Studio widgets (Add › Components) are declared in studio-widgets.php.
 
-        // Mark an order paid when its Stripe Checkout completes (routed through the stripe-payment plugin).
-        Hook::addAction('stripe_webhook_event', [$this, 'onStripeEvent']);
+        // Mark an order paid when its payment completes, whichever gateway took it (the shared payment layer).
+        Hook::addAction('payment_event', [$this, 'onPaymentEvent']);
     }
 
     public function addLangPath(array $paths): array {
@@ -40,13 +40,13 @@ class Shop extends Plugin {
         return $paths;
     }
 
-    public function onStripeEvent(array $event): void {
-        // Guard the effect, not the webhook receipt (the controller acknowledges Stripe either way).
+    public function onPaymentEvent(PaymentEvent $event): void {
+        // Guard the effect, not the webhook receipt (the gateway's controller acknowledges it either way).
         if (!ModuleGuard::allows('shop')) return;
         try {
-            ShopStoreAPI::handleStripeEvent($event);
+            ShopStoreAPI::handlePaymentEvent($event);
         } catch (\Throwable $e) {
-            slate_log('Shop: stripe event handling failed: ' . $e->getMessage(), 'error');
+            slate_log('Shop: payment event handling failed: ' . $e->getMessage(), 'error');
         }
     }
 

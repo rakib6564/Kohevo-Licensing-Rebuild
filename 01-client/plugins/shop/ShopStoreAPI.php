@@ -16,12 +16,11 @@
  * product id, or `product id:variant id`). Only ids and quantities are kept; prices, titles and stock are read again
  * every time the cart is shown or checked out.
  *
- * Payment: Stripe Checkout through the stripe-payment plugin's generic facade (`StripePaymentAPI::createCheckout`),
- * like Booking and Membership. An order is created `pending_payment`; the webhook (`stripe_webhook_event`) or the
- * return page's session check moves it to `paid` through one conditional UPDATE, so whichever runs second does
- * nothing. Stock is taken when the order is paid. The class is deliberately not called `ShopAPI`: stripe-payment
- * still carries a back-compat path for an archived Shop of that name (`shop_payment_providers`,
- * `stripepayment_sessions`), and it stays inert.
+ * Payment: through the shared payment layer (`Payments`), with whichever gateway the visitor picks among those the
+ * site offers for the shop (Stripe, PayPal, …). An order is created `pending_payment`; the `payment_event` listener
+ * (fed by the gateway's webhook and by the return page's confirmation) moves it to `paid` through one conditional
+ * UPDATE, so whichever runs second does nothing. Stock is taken when the order is paid. The order keeps the gateway
+ * and its checkout reference (payment_gateway, payment_ref); a Stripe order also keeps it in stripe_session_id.
  *
  * Statuses: pending_payment → paid → fulfilled; pending_payment → cancelled; paid|fulfilled → refunded.
  */
@@ -61,6 +60,8 @@ class ShopStoreAPI {
         self::ensureColumn('shop_products', 'attributes_json', 'TEXT NULL AFTER `images_json`');
         self::ensureColumn('shop_order_items', 'variant_id', 'INT UNSIGNED NULL AFTER `product_id`');
         self::ensureColumn('shop_order_items', 'options_label', 'VARCHAR(255) NULL AFTER `title`');
+        self::ensureColumn('shop_orders', 'payment_gateway', 'VARCHAR(32) NULL AFTER `stripe_session_id`');
+        self::ensureColumn('shop_orders', 'payment_ref', 'VARCHAR(255) NULL AFTER `payment_gateway`');
     }
 
     private static function ensureColumn(string $table, string $column, string $definition): void {
@@ -1040,17 +1041,24 @@ class ShopStoreAPI {
         return 'KS-' . strtoupper(bin2hex(random_bytes(5)));
     }
 
+    /** Whether any payment gateway can take a shop payment right now. */
+    public static function canTakePayments(): bool {
+        return class_exists('Payments') && Payments::canCharge('shop');
+    }
+
     /**
-     * Start paying an order: Stripe Checkout through the stripe-payment plugin. A zero total is paid at once.
+     * Start paying an order through the gateway the visitor chose (or the first one offered). A zero total is paid
+     * at once.
      *
      * @return array{ok: bool, url?: string, error?: string}
      */
-    public static function startPayment(array $order): array {
+    public static function startPayment(array $order, ?string $gateway = null): array {
         if ((int) $order['total_cents'] <= 0) {
             self::markPaid((int) $order['id'], 0, (string) $order['currency']);
             return ['ok' => true, 'url' => self::confirmationUrl($order)];
         }
-        if (!class_exists('StripePaymentAPI') || !StripePaymentAPI::isConfigured()) {
+        $gw = class_exists('Payments') ? Payments::choose('shop', $gateway) : null;
+        if ($gw === null) {
             return ['ok' => false, 'error' => __('shop_err_payment_unavailable', 'Online payment is not available right now. Please contact us to complete your order.')];
         }
         $lineItems = [];
@@ -1061,24 +1069,27 @@ class ShopStoreAPI {
             $lineItems[] = ['name' => __('shop_shipping', 'Shipping'), 'amount_cents' => (int) $order['shipping_cents'], 'quantity' => 1];
         }
         try {
-            $session = StripePaymentAPI::createCheckout($lineItems, [
-                'currency'       => strtolower((string) $order['currency']),
-                'customer_email' => (string) $order['email'],
-                'success_url'    => self::endpoint('return.php') . '?order=' . rawurlencode((string) $order['ref']) . '&key=' . rawurlencode((string) $order['access_key']) . '&session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url'     => self::pageUrl('checkout_page') . '?cancelled=1',
-                'metadata'       => [
-                    'source_plugin' => 'shop',
-                    'source_id'     => (string) $order['id'],
-                    'shop_order_id' => (string) $order['id'],
-                    'order_ref'     => (string) $order['ref'],
-                ],
-            ]);
+            $start = Payments::startCheckout($gw->id(), new CheckoutRequest($lineItems, [
+                'source_plugin'   => 'shop',
+                'source_id'       => (string) $order['id'],
+                'currency'        => strtolower((string) $order['currency']),
+                'customer_email'  => (string) $order['email'],
+                'success_url'     => self::endpoint('return.php') . '?order=' . rawurlencode((string) $order['ref']) . '&key=' . rawurlencode((string) $order['access_key'])
+                                     . '&gw=' . rawurlencode($gw->id()) . '&ref={PAYMENT_REF}',
+                'cancel_url'      => self::pageUrl('checkout_page') . '?cancelled=1',
+                'idempotency_key' => 'shop-order-' . $order['id'],
+                'metadata'        => ['shop_order_id' => (string) $order['id'], 'order_ref' => (string) $order['ref']],
+            ]));
         } catch (\Throwable $e) {
-            slate_log('Shop: createCheckout failed: ' . $e->getMessage(), 'error');
+            slate_log('Shop: starting payment with ' . $gw->id() . ' failed: ' . $e->getMessage(), 'error');
             return ['ok' => false, 'error' => __('shop_err_payment_start', 'Payment could not be started. Please try again.')];
         }
-        Database::update('shop_orders', ['stripe_session_id' => (string) $session['session_id']], 'id = ? AND tenant_id = ?', [(int) $order['id'], current_tenant_id()]);
-        return ['ok' => true, 'url' => (string) $session['url']];
+        Database::update('shop_orders', [
+            'payment_gateway'   => $gw->id(),
+            'payment_ref'       => $start->ref,
+            'stripe_session_id' => $gw->id() === 'stripe' ? $start->ref : null,
+        ], 'id = ? AND tenant_id = ?', [(int) $order['id'], current_tenant_id()]);
+        return ['ok' => true, 'url' => $start->redirectUrl];
     }
 
     /** Where a paid order's confirmation is shown: the thank-you page with the order's ref and key. */
@@ -1088,9 +1099,9 @@ class ShopStoreAPI {
 
     /**
      * Move an order from pending_payment to paid. Exactly one caller wins (webhook, return page, zero total); the
-     * winner records the charge, takes the stock and sends the emails. Returns whether this call made the change.
+     * winner links the ledger row, takes the stock and sends the emails. Returns whether this call made the change.
      */
-    public static function markPaid(int $orderId, int $paidCents, string $paidCurrency, string $sessionId = '', string $paymentIntentId = '', string $email = ''): bool {
+    public static function markPaid(int $orderId, int $paidCents, string $paidCurrency, ?int $chargeId = null): bool {
         self::ensureSchema();
         $tid = current_tenant_id();
         $won = Database::update('shop_orders', ['status' => 'paid', 'paid_at' => slate_db_now()],
@@ -1102,19 +1113,6 @@ class ShopStoreAPI {
         $notes = [];
         if ($paidCents > 0 && ($paidCents !== (int) $order['total_cents'] || strtoupper($paidCurrency) !== strtoupper((string) $order['currency']))) {
             $notes[] = sprintf('Paid %s, order total %s', self::money($paidCents, strtoupper($paidCurrency)), self::money((int) $order['total_cents'], (string) $order['currency']));
-        }
-        $chargeId = null;
-        if ($paidCents > 0 && class_exists('StripePaymentAPI')) {
-            $chargeId = StripePaymentAPI::recordCharge([
-                'source_plugin'            => 'shop',
-                'source_id'                => (string) $orderId,
-                'stripe_session_id'        => $sessionId,
-                'stripe_payment_intent_id' => $paymentIntentId,
-                'customer_email'           => $email !== '' ? $email : (string) $order['email'],
-                'amount_cents'             => $paidCents,
-                'currency'                 => strtoupper($paidCurrency),
-                'status'                   => 'succeeded',
-            ]);
         }
         foreach (self::orderItems($orderId) as $item) {
             if (empty($item['product_id'])) continue;
@@ -1143,38 +1141,38 @@ class ShopStoreAPI {
         return true;
     }
 
-    /** The `stripe_webhook_event` listener: a paid Checkout Session of a Shop order. */
-    public static function handleStripeEvent(array $event): void {
-        if (($event['type'] ?? '') !== 'checkout.session.completed') return;
-        $obj = $event['data']['object'] ?? null;
-        if (!is_array($obj)) return;
-        $meta = is_array($obj['metadata'] ?? null) ? $obj['metadata'] : [];
-        if (($meta['source_plugin'] ?? '') !== 'shop') return;
-        $orderId = (int) ($meta['shop_order_id'] ?? 0);
-        if ($orderId <= 0 || !in_array((string) ($obj['payment_status'] ?? ''), ['paid', 'no_payment_required'], true)) return;
-        $order = self::order($orderId);
-        if (!$order || (string) $order['stripe_session_id'] !== (string) ($obj['id'] ?? '')) return;
-        self::markPaid($orderId, (int) ($obj['amount_total'] ?? 0), (string) ($obj['currency'] ?? $order['currency']),
-            (string) ($obj['id'] ?? ''), (string) ($obj['payment_intent'] ?? ''),
-            (string) ($obj['customer_details']['email'] ?? ($obj['customer_email'] ?? '')));
+    /**
+     * The `payment_event` listener: a Shop order's payment, from any gateway. The event must be for this order's own
+     * checkout (the reference the order was given when payment started), so a payment for an older, abandoned
+     * checkout of the same order cannot mark it paid twice over.
+     */
+    public static function handlePaymentEvent(PaymentEvent $event): void {
+        if (!$event->isFor('shop') || !$event->isPaid()) return;
+        $orderId = (int) $event->sourceId;
+        $order = $orderId > 0 ? self::order($orderId) : null;
+        if (!$order) return;
+        $expected = (string) ($order['payment_ref'] ?: $order['stripe_session_id']);
+        if ($expected === '' || !hash_equals($expected, $event->ref)) return;
+        // The payment layer has already written the ledger row; the order only links it.
+        self::markPaid($orderId, $event->amountCents, $event->currency, $event->chargeId);
     }
 
     /**
-     * The return page after Stripe: the order must be the visitor's (ref + key), and the session id must be the one
-     * Stripe made for it. The session is read back from Stripe, never trusted from the address. The cart is emptied.
+     * The return page after paying: the order must be the visitor's (ref + key), and the payment reference must be
+     * the one this order's checkout was given. The payment is confirmed with the gateway (never trusted from the
+     * address); a paid one marks the order paid through the payment_event listener. The cart is emptied.
      */
-    public static function confirmReturn(string $ref, string $key, string $sessionId): ?array {
+    public static function confirmReturn(string $ref, string $key, string $paymentRef, string $gateway = 'stripe'): ?array {
         $order = self::orderByRefKey($ref, $key);
         if (!$order) return null;
-        if ($order['status'] === 'pending_payment' && $sessionId !== '' && hash_equals((string) $order['stripe_session_id'], $sessionId) && class_exists('StripePaymentAPI')) {
+        $expected = (string) ($order['payment_ref'] ?: $order['stripe_session_id']);
+        $orderGateway = (string) ($order['payment_gateway'] ?: 'stripe');
+        if ($order['status'] === 'pending_payment' && $paymentRef !== '' && $expected !== '' && hash_equals($expected, $paymentRef)
+            && $gateway === $orderGateway && class_exists('Payments')) {
             try {
-                $s = StripePaymentAPI::getSession($sessionId);
-                if (is_array($s) && in_array((string) ($s['payment_status'] ?? ''), ['paid', 'no_payment_required'], true)) {
-                    self::markPaid((int) $order['id'], (int) ($s['amount_total'] ?? 0), (string) ($s['currency'] ?? $order['currency']),
-                        $sessionId, (string) ($s['payment_intent'] ?? ''), (string) ($s['customer_details']['email'] ?? ''));
-                }
+                Payments::confirmReturn($orderGateway, $paymentRef, 'shop', (string) $order['id']);
             } catch (\Throwable $e) {
-                slate_log('Shop: return session check failed: ' . $e->getMessage(), 'warning');
+                slate_log('Shop: return payment check failed: ' . $e->getMessage(), 'warning');
             }
         }
         self::cartClear();
@@ -1241,7 +1239,7 @@ class ShopStoreAPI {
     }
 
     /**
-     * paid|fulfilled → refunded: the whole charge is refunded through stripe-payment, and the stock is put back.
+     * paid|fulfilled → refunded: the whole charge is refunded through the gateway that took it, and the stock is put back.
      *
      * @return array{ok: bool, error?: string}
      */
@@ -1249,8 +1247,8 @@ class ShopStoreAPI {
         $order = self::order($orderId);
         if (!$order || !in_array($order['status'], ['paid', 'fulfilled'], true)) return ['ok' => false, 'error' => __('shop_err_cannot_refund', 'Only a paid order can be refunded.')];
         if ((int) $order['total_cents'] > 0) {
-            if (empty($order['charge_id']) || !class_exists('StripePaymentAPI')) return ['ok' => false, 'error' => __('shop_err_no_charge', 'No Stripe charge is linked to this order; refund it in Stripe.')];
-            $res = StripePaymentAPI::refundCharge((int) $order['charge_id']);
+            if (empty($order['charge_id']) || !class_exists('Payments')) return ['ok' => false, 'error' => __('shop_err_no_payment_charge', 'No payment is linked to this order; refund it in your payment provider\'s dashboard.')];
+            $res = Payments::refundCharge((int) $order['charge_id'], null, 'shop-refund-' . $orderId);
             if (empty($res['ok'])) return ['ok' => false, 'error' => (string) ($res['error'] ?? __('shop_err_refund_failed', 'The refund failed.'))];
         }
         $tid = current_tenant_id();

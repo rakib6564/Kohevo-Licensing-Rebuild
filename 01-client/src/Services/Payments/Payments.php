@@ -97,11 +97,23 @@ final class Payments
             }
             $out[$id] = $gw;
         }
+        if (count($out) < 2) return $out;
         $default = (string) (\Database::setting('payments.default_gateway') ?? '');
         if ($default !== '' && isset($out[$default])) {
             $out = [$default => $out[$default]] + $out;
         }
         return $out;
+    }
+
+    /**
+     * id => customer-facing label of what $forPlugin can offer, for a
+     * "Pay with" choice on its checkout form (show it only when count > 1).
+     *
+     * @return array<string,string>
+     */
+    public static function choices(string $forPlugin, array $needs = [PaymentGateway::HOSTED]): array
+    {
+        return array_map(static fn (PaymentGateway $g): string => $g->label(), self::available($forPlugin, $needs));
     }
 
     /** True when at least one gateway can take a payment for $forPlugin. */

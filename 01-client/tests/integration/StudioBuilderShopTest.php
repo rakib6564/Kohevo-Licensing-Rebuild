@@ -78,6 +78,8 @@ function sbsh_with(\PDO $pdo, callable $fn): void
         $p->setValue(null, $value);
     }
     (new \ReflectionProperty(\ShopStoreAPI::class, 'schemaChecked'))->setValue(null, false);
+    // The payment ledger checks its tables once per process; this is another database.
+    \Slate\Services\Payments\PaymentLedger::resetSchemaCheck();
     $env = ['LICENSE_SERVER_URL' => 'https://license.test', 'LICENSE_SERVER_PUBLIC_KEY' => license_test_public_key(), 'LICENSE_PRODUCT' => 'kohevo', 'LICENSE_KEY' => 'test-key'];
     $prevEnv = [];
     foreach ($env as $k => $v) {
@@ -91,6 +93,7 @@ function sbsh_with(\PDO $pdo, callable $fn): void
     } finally {
         unset($GLOBALS['SLATE_TENANT_OVERRIDE']);
         PageRoutes::forget();
+        \Slate\Services\Payments\PaymentLedger::resetSchemaCheck();
         $_SESSION = $prevSession ?? [];
         foreach ($saved as [$p, $v]) {
             $p->setValue(null, $v);
@@ -240,24 +243,29 @@ unit('shop: catalogue, cart, checkout, payment and the Studio storefront (real M
                 $items = ShopStoreAPI::orderItems((int) $order['id']);
                 assert_eq([['Club <b>T-shirt</b>', 'TS-1', 1990, 3], ['Gloves', null, 4900, 1]], array_map(static fn($i) => [$i['title'], $i['sku'], (int) $i['unit_price_cents'], (int) $i['qty']], $items), 'lines snapshot title, SKU and price');
                 assert_eq(3, (int) Database::value('SELECT stock_qty FROM shop_products WHERE id = ?', [$tsId]), 'no stock is taken before payment');
-                assert_true(!ShopStoreAPI::startPayment($order)['ok'], 'without Stripe keys checkout says payment is unavailable');
+                assert_true(!ShopStoreAPI::startPayment($order)['ok'], 'without a configured gateway checkout says payment is unavailable');
 
-                // The Stripe event: only this order's own session, from Shop, paid.
-                Database::update('shop_orders', ['stripe_session_id' => 'cs_test_A'], 'id = ?', [(int) $order['id']]);
+                // A Stripe webhook, as the payment layer delivers it: only this order's own checkout, from Shop, paid.
+                Database::update('shop_orders', ['stripe_session_id' => 'cs_test_A', 'payment_gateway' => 'stripe', 'payment_ref' => 'cs_test_A'], 'id = ?', [(int) $order['id']]);
                 $event = static fn(string $sid, string $source = 'shop', string $status = 'paid') => ['type' => 'checkout.session.completed', 'data' => ['object' => [
-                    'id' => $sid, 'payment_status' => $status, 'amount_total' => (int) $order['total_cents'], 'currency' => 'eur', 'payment_intent' => 'pi_A',
-                    'customer_details' => ['email' => 'ana@example.test'], 'metadata' => ['source_plugin' => $source, 'shop_order_id' => (string) $order['id']]]]];
-                ShopStoreAPI::handleStripeEvent($event('cs_test_OTHER'));
-                ShopStoreAPI::handleStripeEvent($event('cs_test_A', 'membership'));
-                ShopStoreAPI::handleStripeEvent($event('cs_test_A', 'shop', 'unpaid'));
-                assert_eq('pending_payment', ShopStoreAPI::order((int) $order['id'])['status'], 'another session, another plugin or an unpaid session changes nothing');
-                ShopStoreAPI::handleStripeEvent($event('cs_test_A'));
+                    'id' => $sid, 'payment_status' => $status, 'amount_total' => (int) $order['total_cents'], 'currency' => 'eur', 'payment_intent' => 'pi_' . substr($sid, 3),
+                    'customer_details' => ['email' => 'ana@example.test'], 'metadata' => ['source_plugin' => $source, 'source_id' => (string) $order['id'], 'shop_order_id' => (string) $order['id']]]]];
+                $deliver = static function (array $e): void {
+                    $n = \StripeGateway::normalize($e);
+                    if ($n !== null) ShopStoreAPI::handlePaymentEvent(Payments::emit($n));
+                };
+                $deliver($event('cs_test_OTHER'));
+                $deliver($event('cs_test_M', 'membership'));
+                $deliver($event('cs_test_A', 'shop', 'unpaid'));
+                assert_eq('pending_payment', ShopStoreAPI::order((int) $order['id'])['status'], 'another checkout, another plugin or an unpaid session changes nothing');
+                $deliver($event('cs_test_A'));
                 $paid = ShopStoreAPI::order((int) $order['id']);
                 assert_eq('paid', $paid['status'], 'the webhook marks it paid');
                 assert_eq(0, (int) Database::value('SELECT stock_qty FROM shop_products WHERE id = ?', [$tsId]), 'stock is taken once');
                 assert_true(!ShopStoreAPI::markPaid((int) $order['id'], 100, 'EUR'), 'a second completion (the return page, a retry) does nothing');
+                $deliver($event('cs_test_A'));
                 assert_eq(0, (int) Database::value('SELECT stock_qty FROM shop_products WHERE id = ?', [$tsId]), 'and takes no more stock');
-                $charge = Database::row("SELECT * FROM stripepayment_charges WHERE source_plugin = 'shop' AND source_id = ?", [(string) $order['id']]);
+                $charge = Database::row("SELECT * FROM stripepayment_charges WHERE source_plugin = 'shop' AND stripe_session_id = 'cs_test_A'");
                 assert_true($charge !== null && (int) $charge['amount_cents'] === (int) $order['total_cents'] && (int) $paid['charge_id'] === (int) $charge['id'], 'the charge is in the shared ledger and linked');
 
                 // Confirmation links.

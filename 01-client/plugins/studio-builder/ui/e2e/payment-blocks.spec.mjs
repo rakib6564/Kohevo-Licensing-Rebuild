@@ -63,7 +63,7 @@ test('the payment button shows what visitors will pay on the canvas, follows the
   }
 });
 
-test('the Stripe link block accepts a Stripe address and refuses any other', async ({ page }) => {
+test('the payment link block accepts a Stripe or PayPal address and refuses any other', async ({ page }) => {
   await openBuilder(page);
   await settled(page);
   const before = await layerCount(page);
@@ -72,13 +72,18 @@ test('the Stripe link block accepts a Stripe address and refuses any other', asy
     await panel(page).getByTestId('palette-components').locator('[data-block-type="payment.link"]').click();
     await settled(page);
     const id = await selectedBlock(page);
-    await expect.poll(() => frameEval(page, inBlock(id, '.sb-embed-card__note'), (el) => el.textContent), { timeout: 20_000 }).toContain('Paste a Stripe Payment Link');
+    await expect.poll(() => frameEval(page, inBlock(id, '.sb-embed-card__note'), (el) => el.textContent), { timeout: 20_000 }).toContain('Paste a Stripe or PayPal payment link');
 
     await showEdit(page);
-    const url = page.getByLabel('Stripe link', { exact: true });
+    const url = page.getByLabel('Payment link', { exact: true });
     await url.fill('https://buy.stripe.com/test_123');
     await url.blur();
-    await expect.poll(() => frameEval(page, inBlock(id, '.sb-embed-card__note'), (el) => el.textContent), { timeout: 20_000 }).toContain('go to your Stripe page');
+    await expect.poll(() => frameEval(page, inBlock(id, '.sb-embed-card__note'), (el) => el.textContent), { timeout: 20_000 }).toContain('go to your payment page');
+
+    await url.fill('https://www.paypal.com/ncp/payment/TEST123');
+    await url.blur();
+    await settled(page);
+    await expect(page.getByRole('alert')).toHaveCount(0);
 
     await url.fill('https://evil.test/pay');
     await url.blur();
