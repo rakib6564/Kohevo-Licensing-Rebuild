@@ -5,6 +5,7 @@
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/RestaurantAPI.php';
 require_once SLATE_ROOT . '/includes/record_editor.php';
+require_once dirname(__DIR__) . '/includes/preorder.php';
 
 Auth::require();
 Auth::requirePerm('restaurant.manage_menu');
@@ -33,8 +34,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'save') {
             $id   = (int)($_POST['id'] ?? 0);
             $name = trim((string)($_POST['name'] ?? ''));
+            // Pre-order menu: its ordering window and pickup dates must read cleanly, or nothing is saved.
+            $isPre   = !empty($_POST['preorder']);
+            $poFrom  = trim((string)($_POST['preorder_from'] ?? ''));
+            $poUntil = trim((string)($_POST['preorder_until'] ?? ''));
+            $poDates = RestaurantPreorder::parseDates(mb_substr((string)($_POST['preorder_dates'] ?? ''), 0, 4000));
+            $tz      = RestaurantHours::tz();
+            $fromAt  = $poFrom !== '' ? RestaurantPreorder::at($poFrom, $tz) : null;
+            $untilAt = $poUntil !== '' ? RestaurantPreorder::at($poUntil, $tz) : null;
+            $poError = null;
+            if ($poDates['bad']) $poError = sprintf(__('restaurant_po_dates_bad', 'Pickup dates could not be read: %s. Write one per line, like 2026-11-25 or 2026-11-25 10:00-14:00.'), implode(' | ', $poDates['bad']));
+            elseif (($poFrom !== '' && $fromAt === null) || ($poUntil !== '' && $untilAt === null)) $poError = __('restaurant_po_window_bad', 'The ordering window dates could not be read.');
+            elseif ($fromAt && $untilAt && $untilAt <= $fromAt) $poError = __('restaurant_po_window_order', 'Ordering must close after it opens.');
+            elseif ($isPre && $poDates['dates'] === []) $poError = __('restaurant_po_dates_needed', 'A pre-order menu needs at least one pickup date.');
             if ($name === '') {
                 $flash = ['type' => 'error', 'msg' => 'Name is required.'];
+            } elseif ($poError !== null) {
+                $flash = ['type' => 'error', 'msg' => $poError . ' ' . __('restaurant_po_not_saved', 'Nothing was saved.')];
+                $isNew = $id <= 0;
+                $c = ['id' => $id] + $_POST;   // the form shows what was posted
             } else {
                 $row = [
                     'tenant_id'   => $tid,
@@ -43,6 +61,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'description' => mb_substr(trim((string)($_POST['description'] ?? '')), 0, 255) ?: null,
                     'sort_order'  => (int)($_POST['sort_order'] ?? 0),
                     'is_active'   => !empty($_POST['is_active']) ? 1 : 0,
+                    'preorder'       => $isPre ? 1 : 0,
+                    'preorder_from'  => $fromAt ? $fromAt->format('Y-m-d H:i:s') : null,
+                    'preorder_until' => $untilAt ? $untilAt->format('Y-m-d H:i:s') : null,
+                    'preorder_dates' => RestaurantPreorder::datesText($poDates['dates']) ?: null,
+                    'preorder_note'  => mb_substr(trim((string)($_POST['preorder_note'] ?? '')), 0, 255) ?: null,
                 ];
                 if ($id > 0) {
                     Database::update('restaurant_menu_categories', $row, 'id = ? AND tenant_id = ?', [$id, $tid]);
@@ -87,8 +110,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
 <?php if ($flash): ?><div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div><?php endif; ?>
 
-<?php if ($isNew || $editing):
-    $c = $editing ?: ['id'=>0,'name'=>'','slug'=>'','description'=>'','sort_order'=>0,'is_active'=>1];
+<?php if ($isNew || $editing || isset($c)):
+    $c = ($c ?? null) ?: ($editing ?: ['id'=>0,'name'=>'','slug'=>'','description'=>'','sort_order'=>0,'is_active'=>1]);
+    $c += ['preorder' => 0, 'preorder_from' => '', 'preorder_until' => '', 'preorder_dates' => '', 'preorder_note' => ''];
+    $dtLocal = fn($v): string => ($t = RestaurantPreorder::at((string)$v, RestaurantHours::tz())) ? $t->format('Y-m-d\TH:i') : '';
 ?>
 <?php slate_editor_css(); ?>
 <?php slate_edit_open(['title_fallback' => 'New category']); ?>
@@ -133,6 +158,32 @@ require SLATE_ROOT . '/admin/partials/header.php';
             </div>
         <?php slate_edit_card_close(); ?>
 
+        <?php slate_edit_card_open(['icon' => 'calendar', 'eyebrow' => __('restaurant_po_eyebrow', 'Online ordering'), 'title' => __('restaurant_po_title', 'Pre-order menu')]); ?>
+            <label class="field" style="display:flex;gap:10px;align-items:center;">
+                <input type="checkbox" name="preorder" value="1" <?= !empty($c['preorder']) ? 'checked' : '' ?>>
+                <span><?= __('restaurant_po_on', '<strong>This is a pre-order menu</strong> (a holiday menu, a weekend special). Its items show first on the order page while ordering is open, and are hidden otherwise.') ?></span>
+            </label>
+            <div class="field-row field-row-2">
+                <div class="field">
+                    <label class="field-label" for="preorder_from"><?= e(__('restaurant_po_from', 'Ordering opens')) ?> <span class="field-hint"><?= e(__('restaurant_po_from_hint', 'empty = now')) ?></span></label>
+                    <input type="datetime-local" id="preorder_from" name="preorder_from" value="<?= e(str_contains((string)$c['preorder_from'], 'T') ? (string)$c['preorder_from'] : $dtLocal($c['preorder_from'])) ?>">
+                </div>
+                <div class="field">
+                    <label class="field-label" for="preorder_until"><?= e(__('restaurant_po_until', 'Ordering closes')) ?> <span class="field-hint"><?= e(__('restaurant_po_until_hint', 'empty = after the last pickup date')) ?></span></label>
+                    <input type="datetime-local" id="preorder_until" name="preorder_until" value="<?= e(str_contains((string)$c['preorder_until'], 'T') ? (string)$c['preorder_until'] : $dtLocal($c['preorder_until'])) ?>">
+                </div>
+            </div>
+            <div class="field">
+                <label class="field-label" for="preorder_dates"><?= e(__('restaurant_po_dates', 'Pickup dates')) ?> <span class="field-hint"><?= e(__('restaurant_po_dates_hint', 'one per line, with times if you like')) ?></span></label>
+                <textarea id="preorder_dates" name="preorder_dates" rows="4" placeholder="2026-11-25 10:00-14:00&#10;2026-11-26 9:00-12:00"><?= e((string)$c['preorder_dates']) ?></textarea>
+                <p class="text-sm text-muted" style="margin:6px 0 0;"><?= e(sprintf(__('restaurant_po_dates_help', 'Customers pick a time on these dates, every few minutes as set under Settings > Online ordering. A date without times uses that day\'s opening hours (or is one "any time" choice when there are none). Pickup dates apply even on closed dates. Pre-order items cannot be mixed with other items in one order. Times are in the site time zone (%s).'), RestaurantHours::tz()->getName())) ?></p>
+            </div>
+            <div class="field" style="margin-bottom:0;">
+                <label class="field-label" for="preorder_note"><?= e(__('restaurant_po_note_label', 'Note on the order page')) ?> <span class="field-hint"><?= e(__('restaurant_po_note_hint', 'empty = built from the dates')) ?></span></label>
+                <input type="text" id="preorder_note" name="preorder_note" maxlength="255" value="<?= e((string)$c['preorder_note']) ?>" placeholder="<?= e(__('restaurant_po_note_ph', 'Thanksgiving pre-order · order by Sun Nov 22 · pickup Wed Nov 25')) ?>">
+            </div>
+        <?php slate_edit_card_close(); ?>
+
         <?php slate_edit_actionbar([
             'buttons_html' =>
                 '<button type="submit" class="btn btn-primary">' . ($editing ? 'Save changes' : 'Create category') . '</button>'
@@ -162,7 +213,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 'avatar'       => mb_substr($c['name'], 0, 1),
                 'avatar_color' => $c['is_active'] ? 'info' : 'muted',
                 'title'        => $c['name'],
-                'meta'         => $c['item_count'] . ' item(s) · order ' . (int)$c['sort_order'],
+                'meta'         => $c['item_count'] . ' item(s) · order ' . (int)$c['sort_order'] . (!empty($c['preorder']) ? ' · ' . __('restaurant_po_tag', 'Pre-order') : ''),
                 'badge'        => $c['is_active'] ? ['Active', 'active'] : ['Hidden', 'inactive'],
                 'detail'       => ['Items' => $c['item_count'], 'Sort order' => (int)$c['sort_order'],
                                    'Slug' => ['label'=>'Slug','html'=>'<code>' . e($c['slug']) . '</code>']],

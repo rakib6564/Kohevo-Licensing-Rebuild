@@ -7,6 +7,16 @@ if (!RestaurantAPI::onlineOrderingEnabled()) {
 $tid = current_tenant_id();
 
 $cats  = Database::rows("SELECT * FROM restaurant_menu_categories WHERE tenant_id = ? AND is_active = 1 ORDER BY sort_order, name", [$tid]);
+// Pre-order menus: shown first, with their note, while their ordering window is open; hidden otherwise.
+$poHours = RestaurantHours::config();
+$poNow   = RestaurantHours::now();
+$poOpen  = [];
+$regular = [];
+foreach ($cats as $c) {
+    if (empty($c['preorder'])) { $regular[] = $c; continue; }
+    if (RestaurantPreorder::isOpen($c, $poHours, $poNow)) $poOpen[] = $c;
+}
+$cats = array_merge($poOpen, $regular);
 $items = Database::rows("SELECT * FROM restaurant_items WHERE tenant_id = ? AND is_active = 1 ORDER BY sort_order, name", [$tid]);
 // Items that need choosing before they go in the cart: those with modifier groups, and combos.
 $modItemIds = array_map('intval', array_column(
@@ -26,6 +36,9 @@ $api = e(sf_url('api'));
 sf_header('', true);   // bare: hero renders full-width before the wrap
 sf_hero();
 echo '<div class="sf-wrap">';
+if (isset($_GET['err']) && is_string($_GET['err']) && $_GET['err'] !== '') {   // a refused add without JavaScript
+    echo '<div class="sf-flash sf-flash-err" style="margin-top:18px">' . sf_icon('alert', 15) . ' ' . e(mb_substr($_GET['err'], 0, 200)) . '</div>';
+}
 
 // ── MENU (full width; the cart lives in a slide-in drawer) ───
 echo '<div class="sf-menu-col">';
@@ -75,6 +88,9 @@ foreach ($cats as $c) {
     if (!$list) continue;
     $any = true;
     echo '<div class="sf-sec"><h2>' . e($c['name']) . '</h2><div class="sf-sec-line"></div></div>';
+    if (!empty($c['preorder'])) {
+        echo '<div class="sf-flash sf-flash-info sf-po-note">' . sf_icon('note', 15) . ' ' . e(RestaurantPreorder::note($c, $poHours, $poNow)) . '</div>';
+    }
     echo '<div class="sf-card">';
     foreach ($list as $it) $renderItem($it);
     echo '</div>';

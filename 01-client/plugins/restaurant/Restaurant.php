@@ -16,6 +16,7 @@
 require_once __DIR__ . '/RestaurantAPI.php';
 require_once __DIR__ . '/includes/channels.php';
 require_once __DIR__ . '/includes/delivery.php';
+require_once __DIR__ . '/includes/mail.php';
 
 class Restaurant extends Plugin {
 
@@ -52,6 +53,8 @@ class Restaurant extends Plugin {
             Hook::addAction('restaurant_fulfillment_changed', [RestaurantChannels::class, 'fulfillmentChanged'], 10, 3);
             Hook::addAction('restaurant_order_paid', [RestaurantDelivery::class, 'onOrderPaid'], 10, 1);
         }
+        // Order emails (customer confirmation, kitchen "new order", optional "ready"); wire() runs once per process.
+        RestaurantMail::wire();
 
         // Payment listeners are registered once per process: PluginLoader
         // re-runs boot() after any plugin is switched on or off, and a second
@@ -366,6 +369,17 @@ class Restaurant extends Plugin {
                 slate_log("Restaurant 0.5.2 {$tbl}.method widen failed: " . $e->getMessage(), 'error');
             }
         }
+
+        // 0.8.0 — order emails (each sent once: a stamp per email) and pre-order menus on a category.
+        $this->ensureColumn('restaurant_orders', 'contact_email', "VARCHAR(200) NULL");
+        $this->ensureColumn('restaurant_orders', 'customer_emailed_at', "DATETIME NULL");
+        $this->ensureColumn('restaurant_orders', 'kitchen_emailed_at', "DATETIME NULL");
+        $this->ensureColumn('restaurant_orders', 'ready_emailed_at', "DATETIME NULL");
+        $this->ensureColumn('restaurant_menu_categories', 'preorder', "TINYINT(1) NOT NULL DEFAULT 0");
+        $this->ensureColumn('restaurant_menu_categories', 'preorder_from', "DATETIME NULL");
+        $this->ensureColumn('restaurant_menu_categories', 'preorder_until', "DATETIME NULL");
+        $this->ensureColumn('restaurant_menu_categories', 'preorder_dates', "TEXT NULL");
+        $this->ensureColumn('restaurant_menu_categories', 'preorder_note', "VARCHAR(255) NULL");
     }
 
     private function hasColumn(string $table, string $column): bool {
@@ -398,8 +412,10 @@ class Restaurant extends Plugin {
                       OR (TABLE_NAME = 'restaurant_order_item_modifiers' AND COLUMN_NAME = 'kind')
                       OR (TABLE_NAME = 'restaurant_orders' AND COLUMN_NAME = 'channel')
                       OR (TABLE_NAME = 'restaurant_channels' AND COLUMN_NAME = 'config')
-                      OR (TABLE_NAME = 'restaurant_channel_orders' AND COLUMN_NAME IN ('cancelled_at','channel_paid')))");
-            return $tbl >= 11 && $col === 9;
+                      OR (TABLE_NAME = 'restaurant_channel_orders' AND COLUMN_NAME IN ('cancelled_at','channel_paid'))
+                      OR (TABLE_NAME = 'restaurant_orders' AND COLUMN_NAME IN ('contact_email','customer_emailed_at','kitchen_emailed_at','ready_emailed_at'))
+                      OR (TABLE_NAME = 'restaurant_menu_categories' AND COLUMN_NAME IN ('preorder','preorder_from','preorder_until','preorder_dates','preorder_note')))");
+            return $tbl >= 11 && $col === 18;
         } catch (\Throwable $e) {
             return false;
         }

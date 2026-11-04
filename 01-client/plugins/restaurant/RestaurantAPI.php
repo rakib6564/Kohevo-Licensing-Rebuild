@@ -1745,6 +1745,9 @@ class RestaurantAPI {
             'public_token'       => $token,
             'fulfillment_status' => 'new',
             'requested_time'     => mb_substr((string)($meta['requested_time'] ?? ''), 0, 40) ?: null,
+            // The email typed at this checkout (the customer row is matched by phone and keeps its own): order
+            // emails go here, and only here.
+            'contact_email'      => filter_var(trim((string)($contact['email'] ?? '')), FILTER_VALIDATE_EMAIL) ? mb_substr(trim((string)$contact['email']), 0, 200) : null,
         ], 'id = ? AND tenant_id = ?', [$orderId, $tid]);
 
         AuditLog::record('restaurant.online_order_created', (string)$orderId, ['type' => $type]);

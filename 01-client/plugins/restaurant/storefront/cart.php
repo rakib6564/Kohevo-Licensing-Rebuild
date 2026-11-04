@@ -61,8 +61,12 @@ echo '</div>';
 echo '<div class="sf-card"><div class="sf-totrow grand"><span>Subtotal</span><span>' . sf_money(sf_cart_subtotal()) . '</span></div>'
    . '<p class="sf-muted" style="font-size:.85rem;margin:6px 0 0">Tax' . (RestaurantAPI::serviceChargeAuto() ? ' and service charge' : '') . ' calculated at checkout.</p></div>';
 
+// A cart mixing a pre-order menu with other items cannot check out: say why, and offer no Checkout button.
+$mixed = RestaurantPreorder::cartGroup($cart)['kind'] === 'mixed';
+if ($mixed) echo '<div class="sf-flash sf-flash-err">' . sf_icon('alert', 15) . ' ' . e(RestaurantPreorder::mixMessage()) . '</div>';
+
 echo '<div class="sf-row" style="margin-top:14px">'
    . '<form method="post" style="margin:0">' . csrf_field() . '<input type="hidden" name="_action" value="clear">'
    . '<button class="sf-btn sf-btn-ghost" type="submit">Clear</button></form>'
-   . '<a class="sf-btn" style="margin-left:auto" href="' . e(sf_url('checkout')) . '">Checkout →</a></div>';
+   . ($mixed ? '' : '<a class="sf-btn" style="margin-left:auto" href="' . e(sf_url('checkout')) . '">Checkout →</a>') . '</div>';
 sf_footer();

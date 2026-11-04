@@ -32,9 +32,8 @@ with a receipt preview, floor overview).
 0.3.0 added **refunds**, **Idempotency-Keys** on every Stripe object the module
 creates, and a **printable receipt**.
 
-Not built yet (do not sell these): ordering hours and scheduling, online
-tips, order notifications, loyalty, gift cards, delivery-partner
-integrations. Items carry a daypart field that is stored but does
+Not built yet (do not sell these): online tips, promo codes, pickup-slot
+capacity limits, loyalty, gift cards. Items carry a daypart field that is stored but does
 not yet hide anything.
 
 ---
@@ -142,6 +141,9 @@ route or build step.
 - Pages: `index.php` (menu) · `item.php` (options) · `cart.php` · `checkout.php` (creates the order and starts the payment) · `confirm.php` (settles the returning checkout, shows status). Shared layout in `includes/sf.php`; dispatched by `router.php`.
 - Orders are created via `RestaurantAPI::createOnlineOrder()` as `source = 'online'`, settle through `settleOnlineReturn($gateway, $ref, $token)` on the return page (the ref must be the one that order's payment was given) with the gateway's webhook as a backstop through the `payment_event` action (`handlePaymentEvent()`), and surface in the admin **Online orders** queue (`admin/online.php`) with a fulfilment workflow (`new → accepted → preparing → ready → completed`).
 - Toggle everything in **Settings → Online ordering** (`online_enabled`, `online_pay`, `online_pay_pickup`, `online_delivery`).
+- **Opening hours** (`includes/hours.php`, `RestaurantHours`): pickup times inside the weekly hours (`online_hours_on`, `online_hours`, `online_lead_min`, `online_slot_min`, `online_days_ahead`), and **closed dates** (`online_closed`, one per line: `2026-12-25` or `2026-12-24 to 2026-12-26`, `#` starts a note). No times are offered on a closed date and the storefront shows "Closed today"; with hours off, checkout refuses regular orders on a closed date.
+- **Pre-order menus** (`includes/preorder.php`, `RestaurantPreorder`, 0.8.0): a menu category marked pre-order on its edit screen, with an ordering window (`preorder_from` / `preorder_until`, site time), pickup dates (`preorder_dates`, one per line, optionally with times: `2026-11-25 10:00-14:00`) and an optional note. While open, its items show first under the note; outside it they are hidden and refused by the cart. A pre-order cart picks only from its pickup dates (every `online_slot_min` after the lead time; a date without times uses that weekday's hours, or one "any time" choice when there are none), checked again server-side and saved as `Pre-order · Wed Nov 25, 11:00 AM`. Pickup dates are explicit, so closed dates and the days-ahead limit do not apply to them. **A cart holds either regular items or the items of one pre-order menu, never a mix**: the add is refused with a message, and a cart that ends up mixed (a menu changed under it) cannot check out.
+- **Order emails** (`includes/mail.php`, `RestaurantMail`, 0.8.0), through the core `Mailer`: a confirmation to the email typed at checkout (`restaurant_orders.contact_email`; never an older address from the customer record) when an online order is paid (`restaurant_order_paid`) or placed to pay at pickup; a kitchen "new order" email to `online_notify_emails` (comma-separated, empty = off) at the same moment; and, with `online_ready_email` on, a "ready" email when staff move the order to Ready (`restaurant_fulfillment_changed`). Each is sent at most once per order: `customer_emailed_at`, `kitchen_emailed_at` and `ready_emailed_at` are claimed with one `UPDATE … WHERE … IS NULL` before sending, so the webhook and the return page settling the same order send once. A hosted checkout the customer cancels sends nothing until it is paid. POS and channel orders get no emails. Online orders do not reach the in-store SpotOn/POS printer; the kitchen email is the paper trail.
 
 ### Operating procedure
 - **`docs/SOP.md`** — the staff Standard Operating Procedure: ordering channels (incl. the `/order` link), opening, taking orders, cash + card payment, receipts, refunds, online-order fulfilment, discounts and voids, 86-ing, end-of-day, roles, and troubleshooting.
@@ -247,7 +249,10 @@ Terminal (poll, capture, webhook, decline, cancel) and receipt paths, and
 totals, split/merge, comp/reopen, cash tendered, kitchen lifecycle, seats,
 guests and 86, `RestaurantCombosTest.php` combo setup, pricing, slot rules
 (POS and cart alike), online = POS totals, kitchen and receipt,
-`RestaurantReportsTest.php` every report figure and the payments list against
+`RestaurantOrderEmailsTest.php` the order emails (sent once per order, captured
+through `RestaurantMail::$transport`, nothing really sent) and the pre-order cart
+rule, `tests/unit/RestaurantHoursTest.php` the hours, closed-date and pre-order
+slot maths, `RestaurantReportsTest.php` every report figure and the payments list against
 hand-computed sums, and `RestaurantCustomersTest.php` history, archiving and a
 423-row import, against `tests/fixtures/fake-stripe.php` (a loopback stand-in
 for the Stripe API that honours Idempotency-Keys; see
@@ -255,8 +260,8 @@ for the Stripe API that honours Idempotency-Keys; see
 
 ## Roadmap
 
-Uber Direct courier fulfilment · ordering hours, scheduling, online tips and order notifications · dayparts
+Online tips, promo codes and pickup-slot capacity · dayparts
 applied · loyalty and gift cards · floor-map editor. Shipped: combos, reports
-and payments reconciliation, customer history and CSV import/export (0.5.0), order channels and the menu feed (0.5.1), the Deliverect adapter (0.5.2), DoorDash Drive couriers (0.5.3), Uber Direct couriers (0.5.4), sales by channel and courier fees in reports with the Channels & delivery chapter (0.6.0). Each is additive: new tables via
+and payments reconciliation, customer history and CSV import/export (0.5.0), order channels and the menu feed (0.5.1), the Deliverect adapter (0.5.2), DoorDash Drive couriers (0.5.3), Uber Direct couriers (0.5.4), sales by channel and courier fees in reports with the Channels & delivery chapter (0.6.0), the payment layer for online orders (0.7.0), order emails, closed dates and pre-order menus (0.8.0). Each is additive: new tables via
 version-gated migrations in `Restaurant.php`, new nav items via the
 `admin_nav_items` filter.

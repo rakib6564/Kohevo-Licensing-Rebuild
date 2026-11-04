@@ -5,6 +5,9 @@ if (!RestaurantAPI::onlineOrderingEnabled()) sf_closed('This restaurant is not t
 
 $id   = (int)($_GET['id'] ?? 0);
 $item = sf_item($id);
+// An item of a pre-order menu exists only while that menu is open.
+$poCat = $item ? RestaurantPreorder::categoryOfItem($id) : null;
+if ($item && $poCat !== null && !empty($poCat['preorder']) && !RestaurantPreorder::isOpen($poCat, RestaurantHours::config(), RestaurantHours::now())) $item = null;
 if (!$item) {
     http_response_code(404);
     sf_header('Not found');
@@ -17,6 +20,7 @@ $flash  = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['_action'] ?? '') === 'add') {
     if (!csrf_verify()) { $flash = 'Session expired — please try again.'; }
     elseif (!empty($item['is_86'])) { $flash = "Sorry, {$item['name']} is sold out right now."; }
+    elseif (($poErr = RestaurantPreorder::addError(sf_cart(), $id, RestaurantHours::config(), RestaurantHours::now())) !== null) { $flash = $poErr; }
     else {
         // The same rules the POS uses: modifier groups and combo slots, required / min / max.
         $choice = null;
