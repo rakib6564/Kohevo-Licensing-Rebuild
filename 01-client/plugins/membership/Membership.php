@@ -40,7 +40,13 @@ class Membership extends Plugin {
 
         // Activate a membership when its payment completes, whichever
         // gateway took it (the shared payment layer, same as Booking and Shop).
-        Hook::addAction('payment_event', [$this, 'onPaymentEvent']);
+        // Once per process: Hook keeps every registration, and a second boot
+        // (tests, or a re-boot within one request) would handle each event twice.
+        static $paymentsWired = false;
+        if (!$paymentsWired) {
+            $paymentsWired = true;
+            Hook::addAction('payment_event', [$this, 'onPaymentEvent']);
+        }
 
         // Booking integration: enforce the active-membership / profile / insurance
         // gate on self-service bookings. Inert until Booking fires the filter.
