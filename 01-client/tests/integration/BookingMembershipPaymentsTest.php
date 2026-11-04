@@ -164,6 +164,26 @@ unit('booking: Stripe\'s inline card intent and an older Stripe checkout both co
     assert_true((int) $after['charge_id'] > 0, 'charge linked');
 });
 
+unit('booking review: an older inline intent (no source_id) confirms; a repeated payment is counted once; a balance adds up', function (): void {
+    $a = bmpt_appointment(3000);
+    $pi = 'pi_bmptold_' . $a['id'];
+    $ev = ['type' => 'payment_intent.succeeded', 'data' => ['object' => [
+        'id' => $pi, 'status' => 'succeeded', 'amount_received' => 1000, 'currency' => 'eur', 'receipt_email' => BMPT_EMAIL,
+        'metadata' => ['source_plugin' => 'booking', 'booking_appt_id' => (string) $a['id']]]]];
+    Payments::emit(StripeGateway::normalize($ev));
+    $after = bmpt_appt((int) $a['id']);
+    assert_eq(['confirmed', 'deposit_paid', 1000], [$after['status'], $after['payment_status'], (int) $after['paid_cents']], 'confirmed as a deposit');
+    $charge = (int) $after['charge_id'];
+    // The same payment again (reload of the return page, webhook alongside it): no change.
+    BookingAPI::markPaid((int) $a['id'], 1000, $pi);
+    assert_eq(1000, (int) bmpt_appt((int) $a['id'])['paid_cents'], 'counted once');
+    // The balance is a different payment: it adds up, and the first charge stays the refundable one.
+    BookingAPI::markPaid((int) $a['id'], 2000, 'pi_bmptold_bal_' . $a['id']);
+    $after = bmpt_appt((int) $a['id']);
+    assert_eq(['paid', 3000], [$after['payment_status'], (int) $after['paid_cents']]);
+    assert_eq($charge, (int) $after['charge_id']);
+});
+
 unit('booking: a declined card is recorded as failed, and paying the same intent afterwards confirms it', function (): void {
     $a = bmpt_appointment(2500);
     $pi = 'pi_bmptf_' . $a['id'];

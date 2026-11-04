@@ -633,7 +633,8 @@ class StripePaymentAPI {
         }
         if ($code >= 400) {
             $msg = $json['error']['message'] ?? ('HTTP ' . $code);
-            throw new \RuntimeException('Stripe API error: ' . $msg);
+            // The HTTP status rides as the exception code (409 / 5xx: unknown outcome).
+            throw new \RuntimeException('Stripe API error: ' . $msg, (int) $code);
         }
         return $json;
     }

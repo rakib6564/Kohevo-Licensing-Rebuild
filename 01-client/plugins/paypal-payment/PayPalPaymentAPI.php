@@ -74,8 +74,15 @@ final class PayPalPaymentAPI
         if ($override !== '' && preg_match('#^http://(127\.0\.0\.1|localhost)(:\d{1,5})?$#', $override) === 1) {
             return $override;
         }
-        return self::mode() === 'live' ? self::LIVE_BASE : self::SANDBOX_BASE;
+        return (self::$checkMode ?? self::mode()) === 'live' ? self::LIVE_BASE : self::SANDBOX_BASE;
     }
+
+    /**
+     * The mode a credentials check runs in, for this request only. Checking
+     * typed keys never switches the stored mode, so checkouts and webhooks
+     * running meanwhile keep using the site's own mode.
+     */
+    private static ?string $checkMode = null;
 
     // ── Money ────────────────────────────────────────────────
 
@@ -110,10 +117,18 @@ final class PayPalPaymentAPI
      * $clientId/$secret override the stored credentials (settings "Test
      * connection" checks typed keys before saving them).
      */
-    public static function accessToken(bool $fresh = false, ?string $clientId = null, ?string $secret = null): string
+    public static function accessToken(bool $fresh = false, ?string $clientId = null, ?string $secret = null, ?string $checkMode = null): string
     {
         $mode     = self::mode();
         $override = $clientId !== null;
+        if ($override && $checkMode !== null) {
+            self::$checkMode = $checkMode === 'live' ? 'live' : 'sandbox';
+            try {
+                return self::accessToken(true, $clientId, $secret);
+            } finally {
+                self::$checkMode = null;
+            }
+        }
         $clientId = $clientId ?? self::clientId();
         $secret   = $secret ?? self::clientSecret();
         if ($clientId === '' || $secret === '') throw new \RuntimeException('PayPal API credentials are not configured.');
@@ -290,16 +305,20 @@ final class PayPalPaymentAPI
         foreach (['paypal-auth-algo', 'paypal-cert-url', 'paypal-transmission-id', 'paypal-transmission-sig', 'paypal-transmission-time'] as $h) {
             if (trim((string) ($headers[$h] ?? '')) === '') return false;
         }
+        // PayPal checks the signature over the event exactly as it sent it,
+        // so the received bytes are spliced in rather than decoded and
+        // re-encoded ({} would become [], number and escape forms change).
+        $meta = json_encode([
+            'auth_algo'         => (string) $headers['paypal-auth-algo'],
+            'cert_url'          => (string) $headers['paypal-cert-url'],
+            'transmission_id'   => (string) $headers['paypal-transmission-id'],
+            'transmission_sig'  => (string) $headers['paypal-transmission-sig'],
+            'transmission_time' => (string) $headers['paypal-transmission-time'],
+            'webhook_id'        => $webhookId,
+        ], JSON_UNESCAPED_SLASHES);
         try {
-            $resp = self::request('POST', '/v1/notifications/verify-webhook-signature', [
-                'auth_algo'         => $headers['paypal-auth-algo'],
-                'cert_url'          => $headers['paypal-cert-url'],
-                'transmission_id'   => $headers['paypal-transmission-id'],
-                'transmission_sig'  => $headers['paypal-transmission-sig'],
-                'transmission_time' => $headers['paypal-transmission-time'],
-                'webhook_id'        => $webhookId,
-                'webhook_event'     => $event,
-            ]);
+            $resp = self::request('POST', '/v1/notifications/verify-webhook-signature',
+                substr($meta, 0, -1) . ',"webhook_event":' . trim($payload) . '}');
         } catch (\Throwable $e) {
             slate_log('PayPal webhook verification call failed: ' . $e->getMessage(), 'warning');
             return false;
@@ -356,7 +375,8 @@ final class PayPalPaymentAPI
         if ($requestId !== '') {
             $headers[] = 'PayPal-Request-Id: ' . substr(preg_replace('/[^A-Za-z0-9_.:-]/', '', $requestId), 0, 108);
         }
-        $json = $body === null ? null : json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        // A string body is sent as it is (already JSON).
+        $json = $body === null ? null : (is_string($body) ? $body : json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
         try {
             return self::send($method, $path, $json, array_merge($headers, ['Authorization: Bearer ' . self::accessToken()]));
         } catch (PayPalApiError $e) {

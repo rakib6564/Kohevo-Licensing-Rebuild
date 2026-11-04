@@ -40,8 +40,11 @@ final class PlTestGateway implements PaymentGateway
             || ($c === self::RECURRING && $this->recurring);
     }
 
+    public array $keys = [];
+
     public function startCheckout(CheckoutRequest $r): CheckoutStart
     {
+        $this->keys[] = $r->idempotencyKey;
         $ref = 'PLT-' . getmypid() . '-' . (++$this->seq) . '-' . bin2hex(random_bytes(3));
         $this->state[$ref] = 'pending';
         return new CheckoutStart('pltest', $ref, 'https://pay.invalid/' . $ref);
@@ -78,6 +81,7 @@ function pltest_cleanup(): void
     Database::query("DELETE FROM stripepayment_charges WHERE tenant_id = ? AND (gateway = 'pltest' OR source_plugin LIKE 'pltest%')", [$tid]);
     Database::query("DELETE FROM payment_sessions WHERE tenant_id = ? AND (gateway = 'pltest' OR source_plugin LIKE 'pltest%')", [$tid]);
     Database::query("DELETE FROM settings WHERE tenant_id = ? AND setting_key LIKE 'payments.off.pltest.%'", [$tid]);
+    Database::query("DELETE FROM payment_refunds WHERE tenant_id = ? AND gateway = 'pltest'", [$tid]);
 }
 
 function pltest_request(string $sourceId, array $extra = []): CheckoutRequest
@@ -208,7 +212,7 @@ unit('payments: refunds go through the gateway and keep a running total', functi
     $r1 = Payments::refundCharge($id, 1000, 'k1');
     assert_true($r1['ok'], 'partial refund ok');
     assert_eq(1000, $r1['refunded_cents']);
-    assert_eq([$id, 1000, 'k1'], end($PLT->refunds), 'gateway got the partial amount and key');
+    assert_eq([$id, 1000, Payments::scopedKey('k1')], end($PLT->refunds), 'gateway got the partial amount and the (site-scoped) key');
     assert_eq('partial_refund', Payments::getCharge($id)['status']);
 
     $r2 = Payments::refundCharge($id, 2000);
@@ -306,6 +310,41 @@ unit('stripe adapter: webhook events normalise to the right payment events', fun
     assert_eq(['sub_1', 'pi_r', 'in_1'], [$renew->ref, $renew->txnId, $renew->metadata['ledger_ref']]);
     assert_null(StripeGateway::normalize(['type' => 'invoice.paid', 'data' => ['object' => ['billing_reason' => 'subscription_create']]]),
         'the first invoice is the checkout itself');
+});
+
+unit('payments review: idempotency keys are made unique to this site before they reach the gateway', function () use ($PLT): void {
+    Payments::startCheckout('pltest', pltest_request('k-1', ['idempotency_key' => 'order-5']));
+    $sent = end($PLT->keys);
+    assert_true(str_ends_with($sent, '-order-5') && $sent !== 'order-5', 'prefixed: ' . $sent);
+    assert_eq($sent, Payments::scopedKey('order-5'), 'stable for this site');
+});
+
+unit('payments review: a replayed refund, or one a webhook already counted, is not added twice', function () use ($PLT): void {
+    $start = Payments::startCheckout('pltest', pltest_request('r-1'));
+    $PLT->state[$start->ref] = 'paid';
+    $id = (int) Payments::confirmReturn('pltest', $start->ref, 'pltest-shop', 'r-1')->chargeId;   // 2500
+    $PLT->refundReply = ['ok' => true, 'refund_id' => 'RF-SAME'];
+    assert_true(Payments::refundCharge($id, 400, 'k1')['ok']);
+    assert_eq(400, (int) Payments::getCharge($id)['refunded_cents']);
+    assert_true(Payments::refundCharge($id, 400, 'k1')['ok'], 'the gateway replays the same refund');
+    assert_eq(400, (int) Payments::getCharge($id)['refunded_cents'], 'counted once');
+
+    // The refund webhook already set the gateway's total; our confirmed refund is part of it.
+    PaymentLedger::setRefunded($id, 1000);
+    $PLT->refundReply = ['ok' => true, 'refund_id' => 'RF-NEXT'];
+    assert_true(Payments::refundCharge($id, 600, 'k2')['ok']);
+    assert_eq(1000, (int) Payments::getCharge($id)['refunded_cents'], 'max of the webhook total and our refunds (400+600)');
+    $PLT->refundReply = null;
+    $last = end($PLT->refunds);
+    assert_true(str_ends_with((string) $last[2], '-k2') && $last[2] !== 'k2', 'refund keys are site-scoped too');
+});
+
+unit('payments review: a return for a checkout made before this layer is confirmed only if the gateway names the same record', function () use ($PLT): void {
+    $ref = 'PLT-LEGACY-' . bin2hex(random_bytes(3));
+    $PLT->state[$ref] = 'paid';   // confirm() reports metadata source "evil"/"1"
+    assert_null(Payments::confirmReturn('pltest', $ref, 'pltest-shop', '9'), 'no session, and the gateway names another record');
+    $e = Payments::confirmReturn('pltest', $ref, 'evil', '1');
+    assert_true($e !== null && $e->isPaid(), 'the gateway\'s own record matches');
 });
 
 unit('stripe adapter: a verified webhook emits payment_event before stripe_webhook_event', function () use (&$PLT_EVENTS): void {
