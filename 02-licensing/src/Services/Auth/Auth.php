@@ -667,6 +667,10 @@ class Auth {
                 ['key' => 'customers.view', 'label' => 'View customer records'],
                 ['key' => 'customers.edit', 'label' => 'Create / edit customer records'],
             ],
+            'Payments' => [
+                ['key' => 'payments.manage_charges',  'label' => 'View transactions from every payment gateway and issue refunds'],
+                ['key' => 'payments.manage_gateways', 'label' => 'Choose which payment gateways each module offers'],
+            ],
             'Audit & logs' => [
                 ['key' => 'audit.view',     'label' => 'View the audit log'],
                 ['key' => 'audit.manage',   'label' => 'Clear the audit log'],

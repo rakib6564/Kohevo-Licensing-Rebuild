@@ -166,22 +166,22 @@ slate_license_guard();
 // Surface key events in the topbar bell. Listeners are registered after
 // plugins boot so the actions they fire are caught. Kept defensive so a
 // notification failure never breaks the underlying event.
-Hook::addAction('stripe_webhook_event', function (array $event): void {
+Hook::addAction('payment_charge_recorded', function ($chargeId, array $charge): void {
+    // One bell entry per real charge, from any gateway, however it arrived
+    // (webhook, return page or a plugin's own record call).
     try {
-        $type = (string)($event['type'] ?? '');
-        if ($type !== 'checkout.session.completed'
-            && $type !== 'payment_intent.succeeded') return;
-        $obj    = $event['data']['object'] ?? [];
-        $amount = (int)($obj['amount_total'] ?? $obj['amount_received'] ?? $obj['amount'] ?? 0);
-        $cur    = strtoupper((string)($obj['currency'] ?? 'USD'));
-        $src    = (string)(($obj['metadata']['source_plugin'] ?? '') ?: 'payment');
+        if (($charge['status'] ?? 'succeeded') !== 'succeeded') return;
+        $amount = (int)($charge['amount_cents'] ?? 0);
+        $cur    = strtoupper((string)($charge['currency'] ?? 'USD'));
+        $src    = (string)(($charge['source_plugin'] ?? '') ?: 'payment');
+        if ($src === 'unknown') $src = 'payment';
         Notifications::add('Payment received', [
             'body' => trim(slate_format_price_plain($amount, $cur) . ' · ' . $src),
             'icon' => 'card',
             'url'  => defined('SLATE_URL') ? SLATE_URL . '/admin/' : null,
         ]);
-    } catch (\Throwable $e) { /* never break the webhook */ }
-});
+    } catch (\Throwable $e) { /* never break the payment */ }
+}, 10, 2);
 
 // ── License expiry sweep (Phase 1E C2) ───────────────────────
 // Persists the trial/active -> expired transition once a day. Not the only

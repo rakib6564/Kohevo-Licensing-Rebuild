@@ -45,3 +45,9 @@ class_alias(\Slate\Services\Notifications\BrandedEmail::class, 'BrandedEmail'); 
 // tests/unit/Phase7SlateKohevoIdentityTest.php) are asserted to contain NO
 // occurrence of the internal "Slate" codename anywhere in the file.
 class_alias(\Slate\Services\Licensing\ModuleGuard::class, 'ModuleGuard');
+
+// Gateway-neutral payments (Stripe, PayPal, …) — the facade every paying
+// plugin calls, and the event object its `payment_event` listeners receive.
+class_alias(\Slate\Services\Payments\Payments::class, 'Payments');
+class_alias(\Slate\Services\Payments\PaymentEvent::class, 'PaymentEvent');
+class_alias(\Slate\Services\Payments\CheckoutRequest::class, 'CheckoutRequest');

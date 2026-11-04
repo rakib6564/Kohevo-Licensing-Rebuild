@@ -150,6 +150,27 @@ $coreNav = [
         'order' => 845,
         'group' => 'settings',
     ],
+    // ── Payments (every gateway) ──
+    // Shown to whoever may see charges or manage gateways; a role still on
+    // the older Stripe-only permission keeps its Transactions entry.
+    [
+        'slug'  => 'payments-transactions',
+        'label' => __('payments_transactions', 'Transactions'),
+        'href'  => SLATE_URL . '/admin/payments.php',
+        'icon'  => 'bar-chart-3',
+        'perm'  => Auth::can('stripe.manage_charges') ? 'stripe.manage_charges' : 'payments.manage_charges',
+        'order' => 721,
+        'group' => 'system',
+    ],
+    [
+        'slug'  => 'payment-gateways',
+        'label' => __('payments_gateways', 'Payment gateways'),
+        'href'  => SLATE_URL . '/admin/payment-gateways.php',
+        'icon'  => 'credit-card',
+        'perm'  => 'payments.manage_gateways',
+        'order' => 719,
+        'group' => 'system',
+    ],
     // ── System ──
     [
         'slug'  => 'users',
@@ -222,6 +243,13 @@ $navItems = array_values(array_filter($navItems, function ($item) {
     if ($perm !== null && $perm !== '' && !Auth::can($perm)) return false;
     return true;
 }));
+
+// Stripe's own "Transaction history" entry opens the same cross-gateway
+// page as core's Transactions entry; keep one.
+$navSlugs = array_column($navItems, 'slug');
+if (in_array('shop-stripe-charges', $navSlugs, true) && in_array('payments-transactions', $navSlugs, true)) {
+    $navItems = array_values(array_filter($navItems, fn ($i) => $i['slug'] !== 'shop-stripe-charges'));
+}
 
 // Sort by order (stable across PHP 8+)
 usort($navItems, fn($a, $b) => ($a['order'] ?? 500) <=> ($b['order'] ?? 500));

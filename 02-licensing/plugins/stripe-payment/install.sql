@@ -31,10 +31,13 @@ CREATE TABLE IF NOT EXISTS `stripepayment_charges` (
     `id`                       INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `tenant_id`                INT UNSIGNED NOT NULL DEFAULT 1,
     `mode`                     ENUM('test','live') NOT NULL DEFAULT 'test',
+    `gateway`                  VARCHAR(32) NOT NULL DEFAULT 'stripe',
     `source_plugin`            VARCHAR(80) NOT NULL,
     `source_id`                VARCHAR(190) NULL,
     `stripe_payment_intent_id` VARCHAR(255) NULL,
     `stripe_session_id`        VARCHAR(255) NULL,
+    `gateway_txn_id`           VARCHAR(255) NULL,
+    `gateway_ref`              VARCHAR(255) NULL,
     `customer_email`           VARCHAR(200) NULL,
     `amount_cents`             INT UNSIGNED NOT NULL DEFAULT 0,
     `refunded_cents`           INT UNSIGNED NOT NULL DEFAULT 0,
@@ -47,5 +50,7 @@ CREATE TABLE IF NOT EXISTS `stripepayment_charges` (
     KEY `idx_tenant_created`   (`tenant_id`, `created_at`),
     KEY `idx_source`           (`tenant_id`, `source_plugin`, `source_id`),
     KEY `idx_pi`               (`stripe_payment_intent_id`),
-    KEY `idx_session`          (`stripe_session_id`)
+    KEY `idx_session`          (`stripe_session_id`),
+    UNIQUE KEY `uniq_gateway_txn` (`tenant_id`, `gateway`, `gateway_txn_id`),
+    UNIQUE KEY `uniq_gateway_ref` (`tenant_id`, `gateway`, `gateway_ref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
