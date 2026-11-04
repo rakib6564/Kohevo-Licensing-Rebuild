@@ -157,17 +157,16 @@ final class RestaurantMail
     private static function page(string $label, string $heading, array $blocks, string $preheader, string $ref): string
     {
         $cls = self::BRANDED;
-        // The label sits in the header band (over the hero image); the body opens with the heading.
-        $rows = '<tr><td class="fe-pad" style="padding:26px 28px 6px;">'
+        // One left edge (28px, the shell's .fe-pad) and one gap (22px) for every section, so the heading, the details,
+        // the items, the totals and the button line up. The label sits in the header band over the hero image.
+        $blocks = array_values(array_filter($blocks, static fn($b): bool => $b !== ''));
+        $rows = '<tr><td class="fe-pad" style="padding:28px 28px 18px;">'
             . '<h1 class="fe-title" style="margin:0;font:700 22px/1.25 ' . self::FONT . ';color:#0f172a;letter-spacing:-0.02em;">' . e($heading) . '</h1>'
             . '</td></tr>';
-        foreach ($blocks as $b) {
-            if ($b === '') continue;
-            $rows .= str_starts_with($b, '<table')
-                ? '<tr><td style="padding:10px 4px;">' . $b . '</td></tr>'
-                : '<tr><td class="fe-pad fe-text" style="padding:8px 28px;font:400 15px/1.65 ' . self::FONT . ';color:#334155;">' . $b . '</td></tr>';
+        foreach ($blocks as $i => $b) {
+            $bottom = $i === count($blocks) - 1 ? 30 : 22;
+            $rows .= '<tr><td class="fe-pad fe-text" style="padding:0 28px ' . $bottom . 'px;font:400 15px/1.6 ' . self::FONT . ';color:#334155;">' . $b . '</td></tr>';
         }
-        $rows .= '<tr><td style="padding:0 0 18px;"></td></tr>';
         return $cls::shell([
             'title'        => $heading,
             'preheader'    => $preheader,
@@ -180,13 +179,25 @@ final class RestaurantMail
     private static function button(string $url, string $label): string
     {
         $cls = self::BRANDED;
-        return $cls::ctaButton($url, $label);
+        [, $accent, , $on] = $cls::accent();
+        return '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0;"><tr>'
+            . '<td bgcolor="' . e($accent) . '" style="border-radius:10px;">'
+            . '<a href="' . e($url) . '" style="display:inline-block;padding:13px 22px;font:700 14px/1 ' . self::FONT . ';color:' . $on . ';text-decoration:none;border-radius:10px;">'
+            . e($label) . ' &rarr;</a></td></tr></table>';
     }
 
+    /** Label / value rows between hairlines, on the same left edge as the heading. $rows: [label, trusted valueHtml]. */
     private static function details(array $rows): string
     {
-        $cls = self::BRANDED;
-        return $cls::detailTable($rows);
+        $out = '';
+        foreach ($rows as $i => [$label, $valueHtml]) {
+            $line = $i === 0 ? 'border-top:1px solid #e6e9ef;' : '';
+            $out .= '<tr>'
+                . '<td class="fe-label" valign="top" style="' . $line . 'border-bottom:1px solid #e6e9ef;padding:12px 16px 12px 0;width:32%;vertical-align:top;font:600 13px/1.5 ' . self::FONT . ';color:#64748b;">' . e($label) . '</td>'
+                . '<td class="fe-val" valign="top" style="' . $line . 'border-bottom:1px solid #e6e9ef;padding:12px 0;vertical-align:top;font:400 15px/1.5 ' . self::FONT . ';color:#0f172a;">' . $valueHtml . '</td>'
+                . '</tr>';
+        }
+        return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">' . $out . '</table>';
     }
 
     private static function hello(array $order): string
@@ -243,20 +254,23 @@ final class RestaurantMail
     private static function itemsHtml(array $order, bool $kitchen): string
     {
         $rows = '';
+        $first = true;
         foreach ($order['items'] as $it) {
             if ((string) $it['kitchen_status'] === 'void') continue;
             $mods = array_map(static fn(array $m): string => (string) $m['name_snapshot'], $it['modifiers'] ?? []);
-            $sub = $mods !== [] ? '<div style="color:#64748b;font-size:13px;margin-top:2px;">' . e(implode(', ', $mods)) . '</div>' : '';
+            $sub = $mods !== [] ? '<div style="color:#64748b;font-size:13px;font-weight:400;margin-top:3px;">' . e(implode(', ', $mods)) . '</div>' : '';
             $note = trim((string) ($it['notes'] ?? ''));
-            if ($note !== '') $sub .= '<div style="color:#9a2310;font-size:13px;margin-top:2px;">' . e(__('restaurant_mail_note', 'Note')) . ': ' . e($note) . '</div>';
-            $qtyStyle = $kitchen ? 'font-size:18px;font-weight:800;' : 'font-weight:700;';
+            if ($note !== '') $sub .= '<div style="color:#9a2310;font-size:13px;font-weight:600;margin-top:3px;">' . e(__('restaurant_mail_note', 'Note')) . ': ' . e($note) . '</div>';
+            $cell = 'border-bottom:1px solid #e6e9ef;' . ($first ? 'border-top:1px solid #e6e9ef;' : '') . 'padding:12px 0;vertical-align:top;';
+            $size = $kitchen ? 'font-size:17px;' : 'font-size:15px;';
             $rows .= '<tr>'
-                . '<td style="padding:9px 10px 9px 0;vertical-align:top;white-space:nowrap;' . $qtyStyle . '">' . (int) $it['qty'] . '×</td>'
-                . '<td style="padding:9px 0;vertical-align:top;' . ($kitchen ? 'font-size:16px;font-weight:700;' : 'font-weight:600;') . '">' . e((string) $it['name_snapshot']) . $sub . '</td>'
-                . ($kitchen ? '' : '<td style="padding:9px 0 9px 10px;vertical-align:top;text-align:right;white-space:nowrap;">' . e(RestaurantAPI::money((int) $it['line_total_cents'])) . '</td>')
+                . '<td class="fe-val" valign="top" style="' . $cell . 'width:44px;white-space:nowrap;font-weight:800;' . $size . '">' . (int) $it['qty'] . '×</td>'
+                . '<td class="fe-val" valign="top" style="' . $cell . 'font-weight:700;' . $size . '">' . e((string) $it['name_snapshot']) . $sub . '</td>'
+                . ($kitchen ? '' : '<td class="fe-val" valign="top" align="right" style="' . $cell . 'padding-left:12px;text-align:right;white-space:nowrap;' . $size . '">' . e(RestaurantAPI::money((int) $it['line_total_cents'])) . '</td>')
                 . '</tr>';
+            $first = false;
         }
-        return '<div class="fe-val" style="border-top:1px solid #e6e9ef;border-bottom:1px solid #e6e9ef;margin:8px 0 14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:inherit;">' . $rows . '</table></div>';
+        return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:' . self::FONT . ';color:#0f172a;">' . $rows . '</table>';
     }
 
     /** Subtotal, service, tax, tip, total, then paid or due. */
@@ -269,14 +283,14 @@ final class RestaurantMail
         if ((int) $order['tip_cents'] > 0) $rows[] = [__('restaurant_mail_tip', 'Tip'), (int) $order['tip_cents']];
         $out = '';
         foreach ($rows as [$label, $cents]) {
-            $out .= '<tr><td style="padding:3px 0;color:#64748b;">' . e($label) . '</td><td style="padding:3px 0;text-align:right;">'
+            $out .= '<tr><td class="fe-label" style="padding:3px 0;color:#64748b;">' . e($label) . '</td><td class="fe-val" style="padding:3px 0;text-align:right;color:#0f172a;">'
                   . ($cents < 0 ? '−' . e(RestaurantAPI::money(-$cents)) : e(RestaurantAPI::money($cents))) . '</td></tr>';
         }
-        $out .= '<tr><td style="padding:8px 0 3px;font-weight:800;font-size:16px;">' . e(__('restaurant_mail_total', 'Total')) . '</td>'
-              . '<td style="padding:8px 0 3px;text-align:right;font-weight:800;font-size:16px;">' . e(RestaurantAPI::money((int) $order['total_cents'])) . '</td></tr>';
-        $out .= '<tr><td style="padding:3px 0;color:#64748b;">' . e(self::isPaid($order) ? __('restaurant_mail_paid', 'Paid') : __('restaurant_mail_due', 'Due at pickup')) . '</td>'
-              . '<td style="padding:3px 0;text-align:right;">' . e(RestaurantAPI::money(self::isPaid($order) ? (int) $order['paid_cents'] : (int) $order['total_cents'])) . '</td></tr>';
-        return '<div class="fe-text"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:inherit;margin:0;">' . $out . '</table></div>';
+        $out .= '<tr><td class="fe-val" style="padding:9px 0 3px;font-weight:800;font-size:17px;color:#0f172a;">' . e(__('restaurant_mail_total', 'Total')) . '</td>'
+              . '<td class="fe-val" style="padding:9px 0 3px;text-align:right;font-weight:800;font-size:17px;color:#0f172a;">' . e(RestaurantAPI::money((int) $order['total_cents'])) . '</td></tr>';
+        $out .= '<tr><td class="fe-label" style="padding:3px 0;color:#64748b;">' . e(self::isPaid($order) ? __('restaurant_mail_paid', 'Paid') : __('restaurant_mail_due', 'Due at pickup')) . '</td>'
+              . '<td class="fe-val" style="padding:3px 0;text-align:right;color:#0f172a;">' . e(RestaurantAPI::money(self::isPaid($order) ? (int) $order['paid_cents'] : (int) $order['total_cents'])) . '</td></tr>';
+        return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font:400 14px/1.5 ' . self::FONT . ';color:#334155;margin:0;">' . $out . '</table>';
     }
 
     public static function customerSubject(array $order): string
@@ -300,7 +314,7 @@ final class RestaurantMail
         return self::page(
             __('restaurant_mail_cust_label', 'Order confirmed'),
             sprintf(__('restaurant_mail_cust_heading', 'Order #%s confirmed'), $order['order_no']),
-            [self::hello($order) . '<br>' . e($intro), self::details($rows), self::itemsHtml($order, false) . self::totalsHtml($order),
+            [self::hello($order) . '<br>' . e($intro), self::details($rows), self::itemsHtml($order, false), self::totalsHtml($order),
              self::button(self::statusUrl($order), __('restaurant_mail_status_btn', 'See your order status'))],
             self::whenText($order), '#' . $order['order_no']);
     }
@@ -318,7 +332,7 @@ final class RestaurantMail
         $contact = array_filter([trim((string) ($order['customer_phone'] ?? '')), self::customerEmail($order)]);
         $rows = [
             [__('restaurant_mail_when', 'When'), '<strong style="font-size:16px;">' . e(self::whenText($order)) . '</strong>'],
-            [__('restaurant_mail_customer', 'Customer'), e($who !== '' ? $who : '—') . ($contact ? '<br>' . e(implode(' · ', $contact)) : '')],
+            [__('restaurant_mail_customer', 'Customer'), e($who !== '' ? $who : '—') . ($contact ? '<br>' . implode('<br>', array_map('e', $contact)) : '')],
         ];
         if ($n['address'] !== '') $rows[] = [__('restaurant_mail_deliver_to', 'Deliver to'), e($n['address'])];
         if ($n['notes'] !== '') $rows[] = [__('restaurant_mail_notes', 'Notes'), '<strong style="color:#9a2310;">' . e($n['notes']) . '</strong>'];
