@@ -1,0 +1,11 @@
+/* gq-recipes: recipe pages (appended by recipes.php). */
+.gq-ingredients .sb-repeater__list { list-style: none; margin: 0; padding: 0; }
+.gq-ingredients .sb-repeater__list li { padding: 10px 0; border-bottom: 2px solid #151311; }
+.gq-ingredients .sb-repeater__list li:last-child { border-bottom: 0; }
+.gq-recipe h2, .gq-recipe h3 { font-family: 'Alfa Slab One', serif; font-weight: 400; text-transform: uppercase; color: #151311; line-height: 1.1; margin: 1.4em 0 .5em; }
+.gq-recipe h2 { font-size: 32px; }
+.gq-recipe h3 { font-size: 20px; }
+.gq-recipe ol { margin: 0 0 1em; padding-left: 1.4em; }
+.gq-recipe ol li { margin-bottom: 1em; padding-left: .2em; }
+.gq-recipe ol li::marker { font-family: 'Alfa Slab One', serif; color: #b81d1a; }
+.gq-recipe img { display: block; width: 100%; height: auto; border: 4px solid #151311; box-sizing: border-box; margin: 8px 0 1em; }
