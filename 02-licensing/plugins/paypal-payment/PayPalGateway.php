@@ -145,6 +145,10 @@ final class PayPalGateway implements PaymentGateway
             try {
                 $order = PayPalPaymentAPI::captureOrder($ref);
             } catch (PayPalApiError $e) {
+                // A server error or an order already captured elsewhere may
+                // well have taken the money: not yet known, so no event —
+                // the capture webhook, or the next look, settles it.
+                if ($e->status >= 500 || $e->issue === 'ORDER_ALREADY_CAPTURED') return null;
                 return new PaymentEvent(type: PaymentEvent::FAILED, gateway: 'paypal', ref: $ref,
                     failureMessage: $e->issue === 'INSTRUMENT_DECLINED'
                         ? __('pp_instrument_declined', 'PayPal declined that payment method. Please try again with another one.')
@@ -161,6 +165,11 @@ final class PayPalGateway implements PaymentGateway
         if ($txn === '') {
             return ['ok' => false, 'uncertain' => false,
                     'error' => __('pp_err_nothing_to_refund', 'This PayPal payment has no capture to refund yet.')];
+        }
+        if ($amountCents !== null && !PayPalPaymentAPI::representable($amountCents, (string) $charge['currency'])) {
+            // HUF/TWD are whole units at PayPal: a part amount would be cut short.
+            return ['ok' => false, 'uncertain' => false,
+                    'error' => __('pp_err_refund_whole_units', 'PayPal refunds in this currency must be whole units.')];
         }
         $meta = json_decode((string) ($charge['meta_json'] ?? ''), true) ?: [];
         $isSale = ($meta['paypal_kind'] ?? '') === 'sale';
@@ -302,8 +311,9 @@ final class PayPalGateway implements PaymentGateway
             return new PaymentEvent(type: PaymentEvent::SUCCEEDED, gateway: 'paypal', ref: $subId, txnId: $saleId,
                 amountCents: $minor, currency: $cur, raw: $sale, metadata: ['paypal_kind' => 'sale']);
         }
-        if (PaymentLedger::txnOf($first) === '') {
-            // The activation's row is waiting for its sale id.
+        if (PaymentLedger::txnOf($first) === '' && strtotime((string) ($first['created_at'] ?? '')) > slate_db_time() - 3 * 86400) {
+            // The activation's row is waiting for its first sale id. A sale
+            // weeks later is a renewal even if the first one never arrived.
             PaymentLedger::attachTxn((int) $first['id'], $saleId);
             return null;
         }
