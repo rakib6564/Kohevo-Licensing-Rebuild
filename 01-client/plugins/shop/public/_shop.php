@@ -319,7 +319,8 @@ function shop_view_checkout(array $totals, array $errors = [], array $old = [], 
         }
         if ($totals['shipping_rates'] === []) {
             $msg = $totals['shipping_error'] !== '' ? $totals['shipping_error'] : __('shop_rates_enter_address', 'Enter your address to see the shipping rates.');
-            $ratesHtml .= '<p class="sb-shop-checkout__hint sb-shop-checkout__rates-empty">' . e($msg) . '</p>';
+            // Said once: when the same words already come back as the field's error after a submit, the hint stays out.
+            if (($errors['shipping_rate'] ?? '') !== $msg) $ratesHtml .= '<p class="sb-shop-checkout__hint sb-shop-checkout__rates-empty">' . e($msg) . '</p>';
         } elseif ($totals['shipping_pending']) {
             $ratesHtml .= '<p class="sb-shop-checkout__hint">' . e(__('shop_rates_more', 'Enter your postal code for carrier rates.')) . '</p>';
         }

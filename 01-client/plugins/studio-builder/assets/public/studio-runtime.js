@@ -1803,6 +1803,41 @@
       });
     }
 
+    // What the visitor can type or choose in a form, as name => value (a radio group by its checked value). Hidden
+    // fields (tokens, stamps) are the server's and are never carried over.
+    function formValues(form) {
+      var out = {};
+      Array.prototype.forEach.call(form.elements, function (el) {
+        if (!el.name || /^(hidden|submit|button|reset|file|image)$/i.test(el.type || '')) return;
+        if (el.type === 'radio') { if (el.checked) out[el.name] = el.value; else if (!(el.name in out)) out[el.name] = null; return; }
+        out[el.name] = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value;
+      });
+      return out;
+    }
+
+    // An answer replaces the form with the server's copy. What the visitor changed while it was on its way (a postal
+    // code typed after the state was picked) is put back, and the field they were in keeps the cursor.
+    function keepTyped(slot, typed, activeName) {
+      var form = qs(slot, 'form');
+      if (!form) return;
+      Object.keys(typed).forEach(function (name) {
+        var v = typed[name];
+        Array.prototype.forEach.call(form.elements, function (el) {
+          if (el.name !== name) return;
+          if (el.type === 'radio') el.checked = v !== null && el.value === v;
+          else if (el.type === 'checkbox') el.checked = v === '1';
+          else el.value = v;
+        });
+      });
+      if (activeName) {
+        var again = form.elements.namedItem(activeName);
+        if (again && again.focus && !again.length) {
+          again.focus();
+          try { if (typeof again.value === 'string' && again.setSelectionRange) again.setSelectionRange(again.value.length, again.value.length); } catch (e) { /* not a text field */ }
+        }
+      }
+    }
+
     function onSubmit(event) {
       var form = event.target;
       if (!form || form.tagName !== 'FORM') return;
@@ -1812,8 +1847,15 @@
       var action = new URL(form.getAttribute('action') || global.location.href, global.location.href).href;
       if (!sameOrigin(action) || (form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
       event.preventDefault();
-      if (form.getAttribute('aria-busy') === 'true') return;
+      if (form.getAttribute('aria-busy') === 'true') {
+        // A quote asked for while one is on its way is sent once that answer lands (the visitor's last change counts).
+        // Anything else (placing the order) is not repeated on its own.
+        if (event.submitter && event.submitter.hasAttribute && event.submitter.hasAttribute('data-sb-requote-button')) form.__sbRequoteAgain = true;
+        return;
+      }
       form.setAttribute('aria-busy', 'true');
+      var sent = formValues(form);
+      var requoteAfter = null;
       var body = new FormData(form);
       if (event.submitter && event.submitter.name) body.append(event.submitter.name, event.submitter.value);
       var note = qs(form, '[data-sb-fragment-message]');
@@ -1826,7 +1868,23 @@
             return;
           }
           var fresh = slot && typeof data.html === 'string' ? slot : null;
-          if (fresh) { nextTurn(fresh); fresh.innerHTML = data.html; mountChallenges(fresh); }
+          if (fresh) {
+            var now = formValues(form);
+            var typed = {};
+            Object.keys(now).forEach(function (k) { if (now[k] !== sent[k]) typed[k] = now[k]; });
+            var active = global.document.activeElement;
+            var activeName = active && active.name && form.contains(active) ? active.name : null;
+            nextTurn(fresh); fresh.innerHTML = data.html; mountChallenges(fresh);
+            keepTyped(fresh, typed, activeName);
+            // Changed since this quote was sent, or asked for again while it was on its way: quote once more.
+            var newForm = qs(fresh, 'form');
+            var quoteField = newForm && Object.keys(typed).some(function (k) {
+              var el = newForm.elements.namedItem(k);
+              el = el && el.length && !el.tagName ? el[0] : el;
+              return !!(el && el.hasAttribute && el.hasAttribute('data-sb-requote'));
+            });
+            if (newForm && (form.__sbRequoteAgain || quoteField)) requoteAfter = newForm;
+          }
           if (note && typeof data.message === 'string') {
             note.textContent = data.message;
             note.setAttribute('data-sb-state', r.ok ? 'ok' : 'error');
@@ -1837,7 +1895,14 @@
         .catch(function () {
           if (note) { note.textContent = note.getAttribute('data-sb-fragment-error') || ''; note.setAttribute('data-sb-state', 'error'); }
         })
-        .then(function () { form.removeAttribute('aria-busy'); });
+        .then(function () {
+          form.removeAttribute('aria-busy');
+          form.__sbRequoteAgain = false;
+          var next = requoteAfter;
+          requoteAfter = null;
+          var button = next && qs(next, '[data-sb-requote-button]');
+          if (button) { if (typeof next.requestSubmit === 'function') next.requestSubmit(button); else button.click(); }
+        });
     }
 
     // `[data-sb-requote]`: changing this field sends its form again with the form's `[data-sb-requote-button]` (a

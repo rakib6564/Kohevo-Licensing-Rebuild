@@ -45,3 +45,13 @@ unit('shop product form: the image manager draws from the one saved field, and w
         assert_eq(0, $rc, 'product-media.js parses');
     }
 });
+
+unit('checkout quotes: an answer keeps what was typed while it was on its way, and a quote asked for meanwhile is sent after', function () use ($__root): void {
+    $js = (string) file_get_contents($__root . '/plugins/studio-builder/assets/public/studio-runtime.js');
+    assert_true(str_contains($js, 'function keepTyped(slot, typed, activeName)'), 'typed values are put back into the new form');
+    assert_true(str_contains($js, "if (now[k] !== sent[k]) typed[k] = now[k];"), 'only what changed after sending');
+    assert_true(str_contains($js, "/^(hidden|submit|button|reset|file|image)$/i"), 'hidden fields (tokens, stamps) stay the server\'s');
+    assert_true(str_contains($js, "hasAttribute('data-sb-requote-button')) form.__sbRequoteAgain = true;"), 'only a quote is queued, never placing the order');
+    $php = (string) file_get_contents($__root . '/plugins/shop/public/_shop.php');
+    assert_true(str_contains($php, "if ((\$errors['shipping_rate'] ?? '') !== \$msg)"), 'the rates message is said once');
+});
