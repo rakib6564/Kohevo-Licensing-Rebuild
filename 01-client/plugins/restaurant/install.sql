@@ -270,12 +270,15 @@ CREATE TABLE IF NOT EXISTS `restaurant_payments` (
     `stripe_charge_id` VARCHAR(120) NULL,
     `stripe_session_id` VARCHAR(120) NULL,
     `central_charge_id` INT UNSIGNED NULL,
+    `payment_gateway` VARCHAR(40) NULL,
+    `payment_ref`     VARCHAR(190) NULL,
     `reader_id`       INT UNSIGNED NULL,
     `created_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     KEY `tenant_order` (`tenant_id`, `order_id`),
     KEY `tenant_created` (`tenant_id`, `created_at`),
-    KEY `pi` (`stripe_pi_id`)
+    KEY `pi` (`stripe_pi_id`),
+    KEY `gateway_ref` (`payment_gateway`, `payment_ref`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- One row per refund against a payment. A payment's refunded_cents is the sum

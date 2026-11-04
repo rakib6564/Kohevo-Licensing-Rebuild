@@ -9,6 +9,8 @@ take cash, and charge cards in person through **Stripe Terminal** — and a
 public **online-ordering storefront** at `/order` that drops orders into the
 POS. Single-location, self-contained.
 
+**Version 0.7.0** — online orders pay through Kohevo's shared payment layer (Payments → Gateways): customers can pay with **PayPal** as well as by card through Stripe, refunds go back through whichever gateway took the money, and receipts, reports and the order page name the gateway. Stripe Terminal readers and the on-page card form stay Stripe-only. Schema: `restaurant_payments.payment_gateway` and `payment_ref`.
+
 **Version 0.6.0** — finishes the channels and delivery work: **Reports** gain *Sales by channel* (orders, sales, average order and cancellations per channel, against the period before) and *Courier deliveries* (delivered, under way and fees per courier service, plus a Courier fees card), and Help and the SOP gain a **Channels & delivery** chapter (how intake and mapping work, what a restaurant signs up for per channel, and DoorDash's current production-access limit in plain words). No schema change.
 
 0.5.4 added **Uber Direct couriers** next to DoorDash Drive on the same courier seam: OAuth client credentials (token cached sealed for its 30 days, renewed once on a 401), quotes and deliveries on the Direct API, and status webhooks checked against Uber's HMAC signature before the delivery is re-read. Built to Uber's published docs and tested against a local stand-in only.
@@ -78,10 +80,10 @@ route or build step.
 
 ### Refunds (`admin/order.php`)
 - `RestaurantAPI::refundPayment($paymentId, $cents|null, $reason)`, gated by `restaurant.manage_orders` on the order page
-- Card payments (terminal or online) are refunded through `StripePaymentAPI::refundCharge()` against the central `stripepayment_charges` row recorded when the payment settled (`restaurant_payments.central_charge_id`; payments settled before 0.3.0 find theirs by PaymentIntent). Cash refunds are recorded only
+- Payments taken through a gateway (Stripe terminal or card, Stripe Checkout, PayPal) are refunded through `Payments::refundCharge()` against the shared ledger row recorded when the payment settled (`restaurant_payments.central_charge_id`; payments settled before 0.3.0 find theirs by PaymentIntent), so the money goes back through the gateway that took it. Cash refunds are recorded only
 - The amount is claimed on the payment row in one conditional `UPDATE` before Stripe is called, so concurrent refunds can never exceed what was paid; the claim is released if Stripe refuses
 - Partial refunds keep the payment `paid` with `refunded_cents`; the last one marks it `refunded`. A refund comes out of the amount first and then the tip. The order's `paid_cents` drops, `refunded_cents` rises, and the check is not reopened
-- Every attempt is a row in `restaurant_refunds` (`succeeded`, `failed` = refused by Stripe, `pending` = Stripe did not answer). The Stripe Idempotency-Key is the payment, what was refunded before, the amount and the count of refusals — a retry after a lost answer replays, a retry after a refusal is new
+- Every attempt is a row in `restaurant_refunds` (`succeeded`, `failed` = refused by the gateway, `pending` = the gateway did not answer, reported by the payment layer as `uncertain`). The idempotency key is the payment, what was refunded before, the amount and the count of refusals — a retry after a lost answer replays, a retry after a refusal is new
 
 ### Receipts (`admin/receipt.php`)
 - A bare print page (80 mm wide, also fine on A4/Letter) rendered by `includes/receipt.php`: business name and address, **receipt header/footer** settings, lines with modifiers, subtotal · discount · service charge · tax · tip · total, payments and refunds, timestamps
@@ -136,9 +138,9 @@ route or build step.
 
 ### Online ordering (`storefront/`, public)
 - A public, mobile-friendly storefront at **`/order`** (registered with the core `public_routes` filter — no `.htaccess` change). Customers browse the menu, build a session cart (with sizes + add-ons), and check out.
-- **Payment:** hosted **Stripe Checkout** (PCI-safe — card data never touches the app) and/or **pay at pickup**. Order types: pickup and optional delivery.
-- Pages: `index.php` (menu) · `item.php` (options) · `cart.php` · `checkout.php` (creates the order + Stripe session) · `confirm.php` (settles the returning session, shows status). Shared layout in `includes/sf.php`; dispatched by `router.php`.
-- Orders are created via `RestaurantAPI::createOnlineOrder()` as `source = 'online'`, settle through `settleOnlineFromSession()` (return page) with the Stripe webhook as a backstop, and surface in the admin **Online orders** queue (`admin/online.php`) with a fulfilment workflow (`new → accepted → preparing → ready → completed`).
+- **Payment:** every gateway switched on for Restaurant under **Payments → Gateways** — Stripe's on-page card form, or a hosted checkout at Stripe or PayPal (PCI-safe — card data never touches the app) — and/or **pay at pickup**. With more than one, the checkout lists each. Order types: pickup and optional delivery.
+- Pages: `index.php` (menu) · `item.php` (options) · `cart.php` · `checkout.php` (creates the order and starts the payment) · `confirm.php` (settles the returning checkout, shows status). Shared layout in `includes/sf.php`; dispatched by `router.php`.
+- Orders are created via `RestaurantAPI::createOnlineOrder()` as `source = 'online'`, settle through `settleOnlineReturn($gateway, $ref, $token)` on the return page (the ref must be the one that order's payment was given) with the gateway's webhook as a backstop through the `payment_event` action (`handlePaymentEvent()`), and surface in the admin **Online orders** queue (`admin/online.php`) with a fulfilment workflow (`new → accepted → preparing → ready → completed`).
 - Toggle everything in **Settings → Online ordering** (`online_enabled`, `online_pay`, `online_pay_pickup`, `online_delivery`).
 
 ### Operating procedure
@@ -226,7 +228,7 @@ and other plugins all call its static methods. Highlights:
 - **Floor & guests** — `floorMap`, `setTableStatus`, `searchCustomers`, `set86`
 - **Tender** — `recordCashPayment`, `beginTerminalPayment`, `pollTerminalPayment`, `cancelTerminalPayment`
 - **Refunds** — `refundPayment`, `refundableCents`, `orderMoney` (net paid, tips, refunded)
-- **Stripe bridge** — `handleStripeEvent`, `markPaymentPaid`, `syncOrderPayment`, `idempotencyKey`
+- **Payments** — `beginOnlinePayment($orderId, $ok, $cancel, $gateway)`, `settleOnlineReturn`, `handlePaymentEvent` (payment layer, any gateway), `onlineGateways`, `paymentGatewayOf`; Stripe-only `beginOnlinePaymentIntent`, `handleStripeEvent` (Terminal and on-page card); `markPaymentPaid`, `syncOrderPayment`, `idempotencyKey`
 - **Money** — `money($cents)` → localized string; everything else is integer cents
 
 `addLine()` validates chosen modifiers and combo picks through

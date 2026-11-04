@@ -111,15 +111,31 @@ class ReportingMcpTools {
         }
     }
 
+    /**
+     * Charges from every payment gateway (Stripe, PayPal, ...) through the
+     * shared payment ledger, with a per-gateway breakdown. Null when no
+     * payment gateway plugin is installed.
+     */
     private static function paymentsSection(int $days): ?array {
         try {
-            if (!class_exists('StripePaymentAPI')) return null;
-            $charges = StripePaymentAPI::listCharges(['days' => $days], 500);
+            if (!class_exists('Payments') || Payments::gateways() === []) return null;
+            $charges = Payments::listCharges(['days' => $days], 500);
             $succeeded = array_values(array_filter($charges, static fn($c) => ($c['status'] ?? '') === 'succeeded'));
+            $byGateway = [];
+            foreach ($charges as $c) {
+                $g = (string)($c['gateway'] ?? 'stripe') ?: 'stripe';
+                $byGateway[$g] ??= ['charge_count' => 0, 'succeeded_count' => 0, 'revenue_cents' => 0];
+                $byGateway[$g]['charge_count']++;
+                if (($c['status'] ?? '') === 'succeeded') {
+                    $byGateway[$g]['succeeded_count']++;
+                    $byGateway[$g]['revenue_cents'] += (int)($c['amount_cents'] ?? 0);
+                }
+            }
             return [
                 'charge_count'     => count($charges),
                 'succeeded_count'  => count($succeeded),
                 'revenue_cents'    => array_sum(array_map(static fn($c) => (int)($c['amount_cents'] ?? 0), $succeeded)),
+                'by_gateway'       => $byGateway,
             ];
         } catch (Throwable $e) {
             return null;

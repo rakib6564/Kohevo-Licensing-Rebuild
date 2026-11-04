@@ -53,8 +53,17 @@ class Restaurant extends Plugin {
             Hook::addAction('restaurant_order_paid', [RestaurantDelivery::class, 'onOrderPaid'], 10, 1);
         }
 
-        // Settle Terminal/card payments routed through the stripe-payment plugin.
-        Hook::addAction('stripe_webhook_event', [$this, 'onStripeEvent']);
+        // Payment listeners are registered once per process: PluginLoader
+        // re-runs boot() after any plugin is switched on or off, and a second
+        // registration would settle each payment twice.
+        static $paymentsWired = false;
+        if (!$paymentsWired) {
+            $paymentsWired = true;
+            // Settle Terminal/card payments routed through the stripe-payment plugin.
+            Hook::addAction('stripe_webhook_event', [$this, 'onStripeEvent']);
+            // Settle online orders paid through a hosted checkout (any gateway).
+            Hook::addAction('payment_event', [$this, 'onPaymentEvent']);
+        }
     }
 
     public function addLangPath(array $paths): array {
@@ -86,6 +95,17 @@ class Restaurant extends Plugin {
             RestaurantAPI::handleStripeEvent($event);
         } catch (\Throwable $e) {
             slate_log('Restaurant: stripe event handling failed: ' . $e->getMessage(), 'error');
+        }
+    }
+
+    /** Mark an online order's payment paid (or failed) when its hosted checkout settles, at any gateway. */
+    public function onPaymentEvent($event): void {
+        if (!($event instanceof \Slate\Services\Payments\PaymentEvent) || !$event->isFor('restaurant')) return;
+        if (!ModuleGuard::allows('restaurant')) return;
+        try {
+            RestaurantAPI::handlePaymentEvent($event);
+        } catch (\Throwable $e) {
+            slate_log('Restaurant: payment event handling failed: ' . $e->getMessage(), 'error');
         }
     }
 
@@ -305,6 +325,10 @@ class Restaurant extends Plugin {
         $this->ensureIndex('restaurant_customers', 'tenant_member', '(`tenant_id`, `member_ref`)');
         $this->ensureIndex('restaurant_orders', 'tenant_customer', '(`tenant_id`, `customer_id`, `status`)');
         $this->ensureIndex('restaurant_payments', 'tenant_created', '(`tenant_id`, `created_at`)');
+
+        // 0.7.0 — online orders pay through the shared payment layer (Stripe,
+        // PayPal, ...): which gateway took the payment and its checkout ref.
+        RestaurantAPI::ensurePaymentColumns();
 
         // 0.5.1 — channel intake: the channel tables come from install.sql
         // through ensureSchema(); orders learn the 'channel' source. Widening
