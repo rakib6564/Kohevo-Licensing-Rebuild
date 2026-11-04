@@ -13,6 +13,7 @@
  */
 if (!defined('SLATE_ROOT')) { http_response_code(404); exit; }
 require_once SLATE_ROOT . '/plugins/restaurant/RestaurantAPI.php';
+require_once SLATE_ROOT . '/plugins/restaurant/includes/hours.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) { @session_start(); }
 
@@ -203,6 +204,52 @@ function sf_brand(): array {
     ];
 }
 
+/**
+ * The storefront's look, from Restaurant settings › Online ordering › Storefront look, so the order pages match the
+ * restaurant's own website. Every value is checked here (colours as #hex, font names as letters, digits and spaces);
+ * unset keeps the built-in smokehouse look.
+ *
+ * @return array{accent:string, dark:string, bg:string, font_h:string, font_b:string, h_weight:string, fonts_url:string, site_url:string, site_label:string}
+ */
+function sf_look(): array {
+    static $cache = null;
+    if ($cache !== null) return $cache;
+    $hex = function (string $key, string $default): string {
+        $v = trim((string) RestaurantAPI::setting($key, ''));
+        return preg_match('/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i', $v) === 1 ? $v : $default;
+    };
+    $font = function (string $key): string {
+        $v = trim(preg_replace('/\s+/', ' ', (string) RestaurantAPI::setting($key, '')) ?? '');
+        return preg_match('/^[A-Za-z0-9 ]{2,60}$/', $v) === 1 ? $v : '';
+    };
+    $fh = $font('sf_font_heading');
+    $fb = $font('sf_font_body');
+    $stack = fn (string $f, string $fallback): string => "'" . $f . "'," . $fallback;
+    // A chosen font loads through Google's first Fonts API, which skips weights a family lacks (a one-weight display
+    // face such as Alfa Slab One still loads), where css2 would refuse the whole request.
+    $families = [];
+    $families[] = $fh !== '' ? str_replace(' ', '+', $fh) . ':400,700,900' : 'Playfair+Display:700,900';
+    $families[] = $fb !== '' ? str_replace(' ', '+', $fb) . ':300,400,500,600,700,400i' : 'DM+Sans:300,400,500,600,400i';
+    $siteUrl = '';
+    if ((string) RestaurantAPI::setting('sf_site_link', '1') === '1') {
+        $u = trim((string) RestaurantAPI::setting('sf_site_url', ''));
+        $siteUrl = $u !== '' && preg_match('#^(https?://|/)[^\s<>"\']*$#i', $u) === 1 ? $u : rtrim(SLATE_URL, '/') . '/';
+    }
+    $label = mb_substr(trim((string) RestaurantAPI::setting('sf_site_label', '')), 0, 40);
+    return $cache = [
+        'accent'     => $hex('sf_accent', '#C0380A'),
+        'dark'       => $hex('sf_dark', '#1A1109'),
+        'bg'         => $hex('sf_bg', '#FAF6EF'),
+        'font_h'     => $fh !== '' ? $stack($fh, 'Georgia,serif') : "'Playfair Display',serif",
+        'font_b'     => $fb !== '' ? $stack($fb, 'system-ui,-apple-system,Segoe UI,Roboto,sans-serif') : "'DM Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif",
+        // A chosen heading font draws at its own weight rather than a faked bold.
+        'h_weight'   => $fh !== '' ? '400' : '',
+        'fonts_url'  => 'https://fonts.googleapis.com/css?family=' . implode('|', $families) . '&display=swap',
+        'site_url'   => $siteUrl,
+        'site_label' => $label !== '' ? $label : __('restaurant_sf_back_to_site', 'Website'),
+    ];
+}
+
 /** Render the branded nav brand lockup (logo or initial tile + name + sub). */
 function sf_brand_lockup(): string {
     $b = sf_brand();
@@ -229,17 +276,19 @@ function sf_header(string $title = '', bool $bare = false): void {
 <title><?= e($full) ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<?php $look = sf_look(); ?>
+<link href="<?= e($look['fonts_url']) ?>" rel="stylesheet">
 <style>
 :root{
-  --smoke:#1A1109;--ember:#C0380A;--ember-d:#8B2207;--ember-l:#E8501A;
-  --cream:#FAF6EF;--tan:#F0E8D8;--tan2:#E4D5BE;--tan3:#D4C4AB;
+  --smoke:<?= $look['dark'] ?>;--ember:<?= $look['accent'] ?>;--ember-d:color-mix(in srgb,var(--ember) 72%,#000);--ember-l:color-mix(in srgb,var(--ember) 82%,#fff);
+  --cream:<?= $look['bg'] ?>;--tan:#F0E8D8;--tan2:#E4D5BE;--tan3:#D4C4AB;
+  --font-h:<?= $look['font_h'] ?>;--font-b:<?= $look['font_b'] ?>;--h-weight:<?= $look['h_weight'] ?>;
   --wood:#7A4F2E;--muted:#8C7B68;--ink:#1A1109;--white:#fff;
   --r-sm:10px;--r-md:14px;--r-lg:18px;--r-xl:24px;--r-pill:50px;
 }
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;font-family:'DM Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--cream);line-height:1.5;overflow-x:hidden}
+body{margin:0;font-family:var(--font-b);color:var(--ink);background:var(--cream);line-height:1.5;overflow-x:hidden}
 a{color:var(--ember-d)}
 img{max-width:100%;display:block}
 
@@ -248,9 +297,9 @@ img{max-width:100%;display:block}
 .sf-top-in{max-width:1100px;margin:0 auto;padding:0 20px;min-height:62px;display:flex;align-items:center;justify-content:space-between;gap:14px}
 .sf-brand{display:flex;align-items:center;gap:11px;text-decoration:none;min-width:0}
 .sf-logo-img{height:38px;width:auto;max-width:170px;object-fit:contain;border-radius:8px}
-.sf-logo-tile{width:38px;height:38px;flex-shrink:0;background:var(--ember);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;color:#fff;font-size:19px;font-weight:900;line-height:1}
+.sf-logo-tile{width:38px;height:38px;flex-shrink:0;background:var(--ember);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--font-h);color:#fff;font-size:19px;font-weight:900;line-height:1}
 .sf-brand-txt{display:flex;flex-direction:column;min-width:0}
-.sf-brand-name{font-family:'Playfair Display',serif;color:var(--ink);font-size:16px;font-weight:700;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sf-brand-name{font-family:var(--font-h);color:var(--ink);font-size:16px;font-weight:700;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sf-brand-sub{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.7px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sf-ico{display:inline-block;vertical-align:middle;flex-shrink:0}
 .sf-cart-link{display:inline-flex;align-items:center;gap:8px;background:var(--ember);color:#fff;text-decoration:none;border-radius:var(--r-pill);padding:8px 16px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:background .15s}
@@ -262,10 +311,18 @@ img{max-width:100%;display:block}
 .sf-hero{background:var(--smoke);padding:38px 20px 36px;text-align:center}
 .sf-hero-in{max-width:640px;margin:0 auto}
 .sf-eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
-.sf-hero-title{font-family:'Playfair Display',serif;color:#fff;font-size:clamp(28px,5vw,44px);font-weight:900;line-height:1.08;margin:0 0 12px}
+.sf-hero-title{font-family:var(--font-h);color:#fff;font-size:clamp(28px,5vw,44px);font-weight:900;line-height:1.08;margin:0 0 12px}
 .sf-hero-title em{color:var(--ember-l);font-style:normal}
 .sf-hero-addr{font-size:12.5px;color:rgba(255,255,255,.45);margin-bottom:16px}
-.sf-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(192,56,10,.22);border:1px solid rgba(192,56,10,.45);border-radius:var(--r-pill);padding:6px 15px;color:#F5A07A;font-size:12px;font-weight:600}
+.sf-hero-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.sf-hero-chip{display:inline-flex;align-items:center;gap:6px;background:color-mix(in srgb,var(--ember) 22%,transparent);border:1px solid color-mix(in srgb,var(--ember) 45%,transparent);border-radius:var(--r-pill);padding:6px 15px;color:#fff;font-size:12px;font-weight:600}
+.sf-hero-chip.is-closed{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.25)}
+.sf-hero-chip .dot{width:8px;height:8px;border-radius:50%;background:#5fd07a}
+.sf-hero-chip.is-closed .dot{background:#e0a34a}
+.sf-site-link{display:inline-flex;align-items:center;gap:6px;color:var(--ink);text-decoration:none;font-size:13px;font-weight:600;padding:8px 4px;white-space:nowrap}
+.sf-site-link:hover{color:var(--ember)}
+.sf-site-link .sf-ico{transform:scaleX(-1)}
+.sf-top-actions{display:flex;align-items:center;gap:14px;flex-shrink:0}
 
 /* ── LAYOUT ── */
 .sf-wrap{max-width:1100px;margin:0 auto;padding:24px 20px 80px}
@@ -274,7 +331,7 @@ img{max-width:100%;display:block}
 /* checkout: form + sticky order summary */
 .sf-checkout{display:grid;grid-template-columns:1fr 350px;gap:28px;align-items:start;max-width:1000px;margin:0 auto}
 @media(max-width:820px){.sf-checkout{grid-template-columns:1fr;max-width:600px}}
-.sf-card-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;margin-bottom:13px;display:flex;align-items:center;gap:8px}
+.sf-card-title{font-family:var(--font-h);font-size:16px;font-weight:700;margin-bottom:13px;display:flex;align-items:center;gap:8px}
 .sf-summary{position:sticky;top:78px}
 @media(max-width:820px){.sf-summary{position:static}}
 .sf-osum-row{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--tan)}
@@ -285,7 +342,7 @@ img{max-width:100%;display:block}
 .sf-osum-pr{font-size:13.5px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
 
 /* headings / text used across single-column pages */
-.sf-h1{font-family:'Playfair Display',serif;margin:6px 0 4px;font-size:1.7rem;font-weight:900}
+.sf-h1{font-family:var(--font-h);margin:6px 0 4px;font-size:1.7rem;font-weight:900}
 .sf-sub{color:var(--muted);margin:0 0 18px}
 .sf-muted{color:var(--muted)}
 .sf-back{display:inline-block;margin:4px 0 14px;color:var(--muted);text-decoration:none;font-size:.9rem;font-weight:500}
@@ -294,10 +351,10 @@ img{max-width:100%;display:block}
 /* ── SECTION HEADERS ── */
 .sf-sec{display:flex;align-items:center;gap:14px;margin:26px 0 12px}
 .sf-sec:first-child{margin-top:6px}
-.sf-sec h2{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;color:var(--ink);white-space:nowrap;margin:0}
+.sf-sec h2{font-family:var(--font-h);font-size:21px;font-weight:700;color:var(--ink);white-space:nowrap;margin:0}
 .sf-sec-line{flex:1;height:1.5px;background:linear-gradient(to right,var(--tan2),transparent)}
 /* legacy single .sf-cat (used by other pages) */
-.sf-cat{display:inline-block;margin:26px 0 10px;padding-bottom:3px;font-family:'Playfair Display',serif;font-size:21px;font-weight:700;border-bottom:2px solid var(--ember)}
+.sf-cat{display:inline-block;margin:26px 0 10px;padding-bottom:3px;font-family:var(--font-h);font-size:21px;font-weight:700;border-bottom:2px solid var(--ember)}
 
 /* ── CARD / ITEM ROWS ── */
 .sf-card{background:#fff;border:1px solid var(--tan2);border-radius:var(--r-lg);padding:16px;margin-bottom:14px}
@@ -364,7 +421,7 @@ img{max-width:100%;display:block}
 .sf-opts-chips{display:flex;gap:8px;flex-wrap:wrap}
 .sf-chip{position:relative;border:1.5px solid var(--tan2);border-radius:var(--r-pill);padding:6px 14px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;background:#fff;transition:border-color .12s,background .12s;user-select:none}
 .sf-chip:hover{border-color:var(--ember)}
-.sf-chip.sel{border-color:var(--ember);background:rgba(192,56,10,.08);color:var(--ember-d)}
+.sf-chip.sel{border-color:var(--ember);background:color-mix(in srgb,var(--ember) 8%,transparent);color:var(--ember-d)}
 .sf-chip.is-off{opacity:.5;cursor:not-allowed}
 .sf-chip em{font-style:normal;font-size:11px;color:var(--muted);margin-left:4px}
 .sf-chip.sel em{color:var(--ember)}
@@ -380,7 +437,7 @@ img{max-width:100%;display:block}
 .sf-opts-cancel:hover{color:var(--ember)}
 
 /* ── CART (drawer contents) ── */
-.sf-cart-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sf-cart-title{font-family:var(--font-h);font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
 .sf-cart-empty{text-align:center;padding:48px 14px;color:var(--muted)}
 .sf-cart-empty .ico{opacity:.28;margin-bottom:10px;line-height:0}
 .sf-cart-empty p{font-size:13.5px;line-height:1.5;margin:0}
@@ -408,16 +465,17 @@ img{max-width:100%;display:block}
 .sf-clear{background:none;border:0;width:100%;text-align:center;font-size:12px;color:var(--muted);cursor:pointer;padding:9px 0 2px;transition:color .12s}
 .sf-clear:hover{color:var(--ember)}
 
-/* mobile floating cart trigger */
-.sf-mob-cart{display:none;position:fixed;bottom:18px;right:18px;z-index:300;background:var(--ember);color:#fff;border:0;border-radius:var(--r-pill);padding:13px 20px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;align-items:center;gap:9px;box-shadow:0 6px 20px rgba(192,56,10,.4)}
+/* phone cart bar: full width along the bottom, only once something is in the cart (the page keeps room for it) */
+.sf-mob-cart{display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:300;background:var(--ember);color:#fff;border:0;border-radius:var(--r-pill);padding:13px 20px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;align-items:center;justify-content:space-between;gap:9px;box-shadow:0 6px 20px color-mix(in srgb,var(--ember) 40%,transparent)}
 .sf-mob-cart:hover{background:var(--ember-l)}
+.sf-mob-cart .l{display:inline-flex;align-items:center;gap:9px}
 .sf-mob-cart .b{background:#fff;color:var(--ember);border-radius:50%;min-width:21px;height:21px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;padding:0 5px}
 
-/* overlay + right-hand slide-in drawer */
+/* overlay + right-hand slide-in drawer (hidden, shadow included, until opened) */
 .sf-overlay{position:fixed;inset:0;background:rgba(26,17,9,.5);z-index:400;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
 .sf-overlay.open{opacity:1;visibility:visible}
-.sf-drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);z-index:500;background:var(--cream);transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:-12px 0 40px rgba(26,17,9,.22)}
-.sf-drawer.open{transform:none}
+.sf-drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);z-index:500;background:var(--cream);transform:translateX(100%);visibility:hidden;transition:transform .3s cubic-bezier(.4,0,.2,1),visibility 0s linear .3s;display:flex;flex-direction:column;box-shadow:-12px 0 40px rgba(26,17,9,.22)}
+.sf-drawer.open{transform:none;visibility:visible;transition:transform .3s cubic-bezier(.4,0,.2,1),visibility 0s}
 .sf-drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 20px;background:#fff;border-bottom:1px solid var(--tan2);flex-shrink:0}
 .sf-drawer-body{flex:1;overflow-y:auto;padding:6px 20px 18px;display:flex;flex-direction:column}
 .sf-drawer-body>div{flex:1;display:flex;flex-direction:column}
@@ -432,29 +490,40 @@ img{max-width:100%;display:block}
 
 /* in-place cart highlight when the nav cart is tapped on desktop */
 .sf-pulse{animation:sfPulse .9s ease}
-@keyframes sfPulse{0%{box-shadow:0 0 0 0 rgba(192,56,10,.45)}100%{box-shadow:0 0 0 12px rgba(192,56,10,0)}}
+@keyframes sfPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ember) 45%,transparent)}100%{box-shadow:0 0 0 12px color-mix(in srgb,var(--ember) 0%,transparent)}}
 
 .sf-closed{text-align:center;padding:60px 16px}
 .sf-foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--tan2);font-size:.83rem;text-align:center;color:var(--muted);line-height:1.7}
 
+<?php if ($look['h_weight'] !== ''): ?>
+.sf-brand-name,.sf-hero-title,.sf-card-title,.sf-h1,.sf-sec h2,.sf-cat,.sf-cart-title{font-weight:var(--h-weight)}
+<?php endif; ?>
 @media(max-width:700px){
-  .sf-mob-cart{display:inline-flex}
+  .sf-mob-cart:not([data-empty]){display:flex}
+  body:has(.sf-checkout) .sf-mob-cart{display:none}   /* checkout shows the order itself */
   .sf-wrap{padding-bottom:96px}
 }
 @media(max-width:520px){
   .sf-brand-name{font-size:15px}
   .sf-cart-link .sf-cart-total{display:none}
+  .sf-site-link span{display:none}
+  .sf-top-actions{gap:8px}
 }
 </style>
 </head><body>
 <div class="sf-top"><div class="sf-top-in">
     <?= sf_brand_lockup() ?>
+    <div class="sf-top-actions">
+    <?php if ($look['site_url'] !== ''): ?>
+    <a class="sf-site-link" href="<?= e($look['site_url']) ?>" aria-label="<?= e($look['site_label']) ?>"><?= sf_icon('arrow', 15) ?><span><?= e($look['site_label']) ?></span></a>
+    <?php endif; ?>
     <a class="sf-cart-link" href="<?= e(sf_url('cart')) ?>" data-open-cart>
         <?= sf_icon('bag', 16) ?>
         <span>Cart</span>
         <span class="sf-cart-total" data-cart-total><?= sf_money($subtotal) ?></span>
         <span class="sf-cart-badge" data-cart-badge><?= $count ?></span>
     </a>
+    </div>
 </div></div>
 <?php
     // Single-column pages get the wrap opened here (closed by sf_footer).
@@ -480,7 +549,12 @@ function sf_hero(?string $titleHtml = null): void {
     <?php if ($eyebrow !== ''): ?><div class="sf-eyebrow"><?= e($eyebrow) ?></div><?php endif; ?>
     <h1 class="sf-hero-title"><?= $title ?></h1>
     <?php if ($addr !== ''): ?><div class="sf-hero-addr"><?= e($addr) ?></div><?php endif; ?>
-    <div class="sf-chip"><?= sf_icon('pin', 13) ?> Order online for pickup<?= RestaurantAPI::setting('online_delivery', '0') === '1' ? ' or delivery' : '' ?></div>
+    <div class="sf-hero-chips">
+    <div class="sf-hero-chip"><?= sf_icon('pin', 13) ?> Order online for pickup<?= RestaurantAPI::setting('online_delivery', '0') === '1' ? ' or delivery' : '' ?></div>
+    <?php $hc = RestaurantHours::config(); if ($hc['on']): $st = RestaurantHours::status($hc, RestaurantHours::now()); ?>
+    <div class="sf-hero-chip<?= $st['open'] ? '' : ' is-closed' ?>"><span class="dot" aria-hidden="true"></span> <?= e(RestaurantHours::line($hc, RestaurantHours::now())) ?></div>
+    <?php endif; ?>
+    </div>
 </div></div>
 <?php
 }
@@ -546,9 +620,9 @@ function sf_cart_drawer(): void {
     $done = true;
     $count = sf_cart_count();
     ?>
-<button class="sf-mob-cart" type="button" data-open-cart aria-label="View cart">
-    <?= sf_icon('bag', 18) ?> <span data-cart-total><?= sf_money(sf_cart_subtotal()) ?></span>
-    <span class="b" data-cart-badge><?= $count ?></span>
+<button class="sf-mob-cart" type="button" data-open-cart aria-label="View cart"<?= $count === 0 ? ' data-empty' : '' ?>>
+    <span class="l"><?= sf_icon('bag', 18) ?> <?= e(__('restaurant_sf_view_order', 'View order')) ?> <span class="b" data-cart-badge><?= $count ?></span></span>
+    <span data-cart-total><?= sf_money(sf_cart_subtotal()) ?></span>
 </button>
 <div class="sf-overlay" id="sf-overlay" onclick="sfCloseDrawer()"></div>
 <aside class="sf-drawer" id="sf-drawer" aria-label="Your order">
@@ -594,8 +668,10 @@ function sf_cart_drawer(): void {
   function apply(state){
     if (typeof state.body === 'string')
       $all('[data-cart-body]').forEach(function(el){ el.innerHTML = state.body; });
-    if (state.count != null)
+    if (state.count != null){
       $all('[data-cart-badge]').forEach(function(el){ el.textContent = state.count; });
+      $all('.sf-mob-cart').forEach(function(el){ el.toggleAttribute('data-empty', +state.count === 0); });
+    }
     if (state.subtotal != null)
       $all('[data-cart-total]').forEach(function(el){ el.textContent = state.subtotal; });
   }

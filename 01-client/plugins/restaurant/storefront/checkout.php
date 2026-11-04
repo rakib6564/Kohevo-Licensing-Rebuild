@@ -17,6 +17,18 @@ $payPickup   = (string) RestaurantAPI::setting('online_pay_pickup', '1') === '1'
 $allowDeliv  = (string) RestaurantAPI::setting('online_delivery', '0') === '1';
 if (!$payOnline && !$payPickup) sf_closed('No payment method is configured for online orders.');
 
+// Opening hours: when they are on, the customer picks one of the offered pickup times, and with none on offer
+// (closed now and no pre-order days) checkout says when ordering opens again.
+$hours = RestaurantHours::config();
+$now   = RestaurantHours::now();
+$slots = $hours['on'] ? RestaurantHours::slots($hours, $now) : [];
+if ($hours['on'] && $slots === []) {
+    $st = RestaurantHours::status($hours, $now);
+    sf_closed($st['next'] !== null
+        ? sprintf(__('restaurant_sf_closed_until', 'We are closed right now. Online ordering opens again %s.'), RestaurantHours::label($st['next'], $now))
+        : __('restaurant_sf_closed_now', 'We are not taking online orders right now.'));
+}
+
 $flash = null;
 $old   = ['name' => '', 'phone' => '', 'email' => '', 'type' => 'takeout', 'address' => '', 'time' => '', 'notes' => ''];
 
@@ -41,6 +53,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif ($method !== 'card' && $method !== 'pickup' && !in_array($method, $hostedOther, true)) $flash = 'That payment method is unavailable.';
     elseif ($method === 'pickup' && !$payPickup) $flash = 'Pay at pickup is unavailable.';
 
+    // The chosen time must still be on offer (a page left open past closing, or a hand-made post).
+    $timeText = $old['time'];
+    if ($flash === null && $hours['on']) {
+        $slot = RestaurantHours::pick($slots, $old['time']);
+        if ($slot === null) $flash = __('restaurant_sf_time_gone', 'That pickup time is no longer available. Please choose another.');
+        // Saved with its date ("Thu Nov 6, 12:15 PM"): the kitchen reads it later, when "Today" would mislead.
+        else $timeText = ($slot['value'] === 'asap' ? 'ASAP · ' : '') . $slot['at']->format('D M j, g:i A');
+    }
+
     if ($flash === null) {
         $notes = $old['notes'];
         if ($old['type'] === 'delivery') $notes = trim('Deliver to: ' . $old['address'] . ($notes ? ' · ' . $notes : ''));
@@ -49,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'name' => $old['name'], 'phone' => $old['phone'], 'email' => $old['email'],
             ], [
                 'type' => $old['type'] === 'delivery' ? 'delivery' : 'takeout',
-                'requested_time' => $old['time'], 'notes' => $notes,
+                'requested_time' => $timeText, 'notes' => $notes,
             ]);
         } catch (\Throwable $e) {
             $flash = $e->getMessage();
@@ -116,16 +137,33 @@ if ($flash) echo '<div class="sf-flash sf-flash-err">' . sf_icon('alert', 15) . 
 
     <div class="sf-card">
         <div class="sf-card-title"><?= sf_icon('pin', 16) ?> Pickup details</div>
+        <?php if ($allowDeliv): ?>
         <div class="sf-field"><label for="type">Order type</label>
             <select id="type" name="type" onchange="document.getElementById('addrField').style.display=this.value==='delivery'?'block':'none'">
                 <option value="takeout" <?= $old['type'] !== 'delivery' ? 'selected' : '' ?>>Pickup</option>
-                <?php if ($allowDeliv): ?><option value="delivery" <?= $old['type'] === 'delivery' ? 'selected' : '' ?>>Delivery</option><?php endif; ?>
+                <option value="delivery" <?= $old['type'] === 'delivery' ? 'selected' : '' ?>>Delivery</option>
             </select></div>
+        <?php else: /* pickup is the only way: say where, instead of a one-choice list */
+            $bs = RestaurantAPI::settings(); $where = trim(implode(', ', array_filter([$bs['addr_line1'], $bs['addr_city']]))); ?>
+        <input type="hidden" name="type" value="takeout">
+        <?php if ($where !== ''): ?><p class="sf-muted" style="margin:0 0 13px;font-size:.9rem"><?= e(sprintf(__('restaurant_sf_pickup_at', 'Pickup at %s'), $where)) ?></p><?php endif; ?>
+        <?php endif; ?>
         <div class="sf-field" id="addrField" style="display:<?= $old['type'] === 'delivery' ? 'block' : 'none' ?>">
             <label for="address">Delivery address</label>
             <input type="text" id="address" name="address" maxlength="255" value="<?= e($old['address']) ?>"></div>
+        <?php if ($hours['on']): ?>
+        <div class="sf-field"><label for="time"><?= e(__('restaurant_sf_pickup_time', 'Pickup time')) ?> *</label>
+            <select id="time" name="time" required>
+                <?php $lastDay = ''; foreach ($slots as $s):
+                    $day = $s['value'] === 'asap' ? '' : substr($s['value'], 0, 10);
+                    if ($day !== $lastDay) { if ($lastDay !== '') echo '</optgroup>'; echo '<optgroup label="' . e(RestaurantHours::dayLabel($s['at'], $now)) . '">'; $lastDay = $day; } ?>
+                    <option value="<?= e($s['value']) ?>" <?= $old['time'] === $s['value'] ? 'selected' : '' ?>><?= e($s['label']) /* with its day: a closed list shows only the chosen option */ ?></option>
+                <?php endforeach; if ($lastDay !== '') echo '</optgroup>'; ?>
+            </select></div>
+        <?php else: ?>
         <div class="sf-field"><label for="time">Requested time</label>
             <input type="text" id="time" name="time" maxlength="40" placeholder="ASAP, or e.g. 6:30 PM" value="<?= e($old['time']) ?>"></div>
+        <?php endif; ?>
         <div class="sf-field" style="margin:0"><label for="notes">Order notes</label>
             <input type="text" id="notes" name="notes" maxlength="255" value="<?= e($old['notes']) ?>"></div>
     </div>
@@ -210,7 +248,7 @@ if ($flash) echo '<div class="sf-flash sf-flash-err">' . sf_icon('alert', 15) . 
         stripe = Stripe(j.pk);
         elements = stripe.elements({ clientSecret: j.client_secret, appearance: {
           theme:'flat',
-          variables:{ colorPrimary:'#C0380A', colorText:'#1A1109', fontFamily:'DM Sans, system-ui, sans-serif', borderRadius:'10px', colorDanger:'#9a2310' }
+          variables:{ colorPrimary:<?= json_encode(sf_look()['accent']) ?>, colorText:'#1A1109', fontFamily:<?= json_encode(trim(str_replace("'", '', explode(',', sf_look()['font_b'])[0])) . ', system-ui, sans-serif') ?>, borderRadius:'10px', colorDanger:'#9a2310' }
         }});
         var pe = elements.create('payment', { layout:'tabs' });
         pe.mount('#sf-pay-element');
