@@ -52,7 +52,13 @@ class Booking extends Plugin {
         Hook::addAction('frequent_cron',             [$this, 'sendReminders']);
 
         // React to payments from any gateway, through the shared payment layer.
-        Hook::addAction('payment_event', [$this, 'onPaymentEvent']);
+        // Once per process: Hook keeps every registration, and a second boot
+        // (tests, or a re-boot within one request) would handle each event twice.
+        static $paymentsWired = false;
+        if (!$paymentsWired) {
+            $paymentsWired = true;
+            Hook::addAction('payment_event', [$this, 'onPaymentEvent']);
+        }
 
         // Google Calendar 2-way sync — push on every appointment change,
         // pull (+ watch-channel renewal + failed-push retries) on every
