@@ -62,14 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = __('pp_encryption_unavailable', 'Cannot save the secret: APP_SECRET is not configured, and storing it in plain text is disabled.');
         } elseif ($changed && $clientId !== '' && $secret !== '') {
             // Check the pair with PayPal before saving it, in the chosen mode.
-            $prevMode = (string) Database::setting($P . 'mode');
-            Database::setSetting($P . 'mode', $mode);
             try {
-                PayPalPaymentAPI::accessToken(true, $clientId, $secret);
+                PayPalPaymentAPI::accessToken(true, $clientId, $secret, $mode);
             } catch (\Throwable $e) {
                 $error = sprintf(__('pp_credentials_rejected', 'PayPal rejected these %s credentials: %s'), $mode, $e->getMessage());
-            } finally {
-                Database::setSetting($P . 'mode', $prevMode);
             }
         }
 
