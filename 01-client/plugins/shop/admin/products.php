@@ -126,7 +126,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
         return $src !== null ? array_map('intval', (array) ($src[$field] ?? [])) : ShopStoreAPI::linkedIds((int) $p['id'], $kind);
     };
     $files = $editing ? ShopStoreAPI::productFiles((int) $editing['id']) : [];
+    // The Media library's picker (choose, upload, several at once) when that plugin is on.
+    $mediaOn = class_exists('PluginLoader') && PluginLoader::isActive('media-library');
+    $assetV = static fn(string $rel): string => (string) @filemtime(SLATE_ROOT . '/plugins/' . $rel);
 ?>
+<?php if ($mediaOn): ?>
+    <link rel="stylesheet" href="<?= e(SLATE_URL) ?>/plugins/media-library/assets/css/picker.css?v=<?= e($assetV('media-library/assets/css/picker.css')) ?>">
+    <script src="<?= e(SLATE_URL) ?>/plugins/media-library/assets/js/picker.js?v=<?= e($assetV('media-library/assets/js/picker.js')) ?>"></script>
+<?php endif; ?>
+<link rel="stylesheet" href="<?= e(SLATE_URL) ?>/plugins/shop/assets/admin/product-media.css?v=<?= e($assetV('shop/assets/admin/product-media.css')) ?>">
+<script src="<?= e(SLATE_URL) ?>/plugins/shop/assets/admin/product-media.js?v=<?= e($assetV('shop/assets/admin/product-media.js')) ?>" defer></script>
 <?php slate_editor_css(); ?>
 <?php slate_edit_open(['title_fallback' => __('shop_new_product', 'New product')]); ?>
     <form method="post" enctype="multipart/form-data">
@@ -312,7 +321,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                             <td><input type="number" min="0" step="1" name="<?= $name ?>[stock]" value="<?= $fv('stock', $vr['stock_qty'] === null ? '' : (string) (int) $vr['stock_qty']) ?>" placeholder="<?= e(__('shop_not_tracked', 'Not tracked')) ?>" aria-label="<?= e($label . ' — ' . __('shop_stock', 'Stock')) ?>"></td>
                             <td><input type="text" inputmode="decimal" name="<?= $name ?>[weight]" size="6" value="<?= $fv('weight', ShopStoreAPI::measure($vr['weight'] ?? null)) ?>" placeholder="<?= e(ShopStoreAPI::measure($p['weight'])) ?>" aria-label="<?= e($label . ' — ' . __('shop_weight', 'Weight')) ?>"></td>
                             <td><input type="text" name="<?= $name ?>[size]" size="10" value="<?= $fv('size', ShopStoreAPI::sizeText($vr)) ?>" placeholder="<?= e(ShopStoreAPI::sizeText($p)) ?>" aria-label="<?= e($label . ' — ' . __('shop_size', 'Size')) ?>"></td>
-                            <td><input type="text" name="<?= $name ?>[image]" maxlength="500" value="<?= $fv('image', (string) ($vr['image'] ?? '')) ?>" aria-label="<?= e($label . ' — ' . __('shop_image', 'Image')) ?>"></td>
+                            <td><input type="text" name="<?= $name ?>[image]" maxlength="500" value="<?= $fv('image', (string) ($vr['image'] ?? '')) ?>" aria-label="<?= e($label . ' — ' . __('shop_image', 'Image')) ?>" data-shop-variant-image="<?= e($label) ?>"></td>
                             <td><label class="field-check"><input type="checkbox" name="<?= $name ?>[enabled]" value="1" <?= $on ? 'checked' : '' ?>> <span class="sr-only"><?= e($label) ?></span></label></td>
                         </tr>
                     <?php endforeach; ?>
@@ -324,10 +333,34 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <?php slate_edit_card_close(); ?>
 
         <?php slate_edit_card_open(['icon' => 'image', 'eyebrow' => __('shop_media', 'Media'), 'title' => __('shop_images', 'Images')]); ?>
-            <div class="field" style="margin-bottom:0;">
-                <label class="field-label" for="images"><?= __('shop_image_urls', 'Image addresses') ?></label>
-                <textarea id="images" name="images" rows="4" placeholder="/uploads/tshirt-front.jpg"><?= $v('images', implode("\n", ShopStoreAPI::images($p))) ?></textarea>
-                <div class="field-hint"><?= __('shop_images_hint', 'One per line; the first is the main image. Copy an address from the Media library.') ?></div>
+            <?php
+            // The image manager: the main image and a gallery, picked from the Media library, reordered by dragging.
+            // The addresses box below stays the one field that is saved (first line = main image), so it also works
+            // without JavaScript or the Media library, and still takes an https:// address from elsewhere.
+            $mediaLabels = [
+                'main' => __('shop_main_image', 'Product image'), 'main_hint' => __('shop_main_image_hint', 'Shown on product cards, in the cart and first on the product page.'),
+                'gallery' => __('shop_gallery', 'Gallery'), 'gallery_hint' => __('shop_gallery_hint', 'More photos on the product page. Drag to change the order.'),
+                'choose' => __('shop_choose_image', 'Choose image'), 'replace' => __('shop_replace', 'Replace'), 'remove' => __('shop_remove', 'Remove'),
+                'add' => __('shop_add_images', 'Add images'), 'make_main' => __('shop_make_main', 'Make product image'),
+                'left' => __('shop_move_earlier', 'Move earlier'), 'right' => __('shop_move_later', 'Move later'),
+                'broken' => __('shop_image_missing', 'Image not found'), 'full' => sprintf(__('shop_err_images_many', 'At most %d images.'), ShopStoreAPI::MAX_IMAGES),
+                'empty' => __('shop_no_image', 'No image yet'),
+            ];
+            ?>
+            <div class="shop-media" data-shop-media data-base="<?= e(rtrim((string) SLATE_URL, '/')) ?>" data-max="<?= ShopStoreAPI::MAX_IMAGES ?>"
+                 data-picker="<?= $mediaOn ? '1' : '0' ?>" data-labels="<?= e((string) json_encode($mediaLabels, JSON_UNESCAPED_UNICODE)) ?>">
+                <div class="shop-media-ui" hidden></div>
+                <?php if (!$mediaOn): ?>
+                    <div class="field-hint"><?= __('shop_media_off', 'Turn on the Media library plugin to pick and upload images here. Until then, list image addresses below.') ?></div>
+                <?php endif; ?>
+                <details class="shop-media-raw"<?= ($err('images') !== '' || !$mediaOn) ? ' open' : '' ?>>
+                    <summary><?= __('shop_image_urls', 'Image addresses') ?></summary>
+                    <div class="field" style="margin:10px 0 0;">
+                        <label class="field-label sr-only" for="images"><?= __('shop_image_urls', 'Image addresses') ?></label>
+                        <textarea id="images" name="images" rows="4" placeholder="/uploads/tshirt-front.jpg"><?= $v('images', implode("\n", ShopStoreAPI::images($p))) ?></textarea>
+                        <div class="field-hint"><?= __('shop_images_hint2', 'One per line, the first is the product image: a site path (/uploads/…) or an https:// address.') ?></div>
+                    </div>
+                </details>
                 <?= $err('images') ?>
             </div>
         <?php slate_edit_card_close(); ?>
@@ -490,8 +523,11 @@ require SLATE_ROOT . '/admin/partials/header.php';
             }
             $ptype = ShopStoreAPI::productType($p);
             $isLow = in_array((int) $p['id'], $lowIds, true);
+            $thumb = ShopStoreAPI::images($p)[0] ?? '';
             slate_data_row([
                 'avatar'       => mb_substr((string) $p['title'], 0, 1),
+                // The product image when it has one (the letter shows through if it fails to load).
+                'avatar_html'  => $thumb !== '' ? e(mb_strtoupper(mb_substr((string) $p['title'], 0, 1))) . '<img src="' . e(ShopStoreAPI::assetUrl($thumb)) . '" alt="" loading="lazy" onerror="this.remove()">' : null,
                 'avatar_color' => $p['status'] === 'published' ? 'info' : 'muted',
                 'title'        => (string) $p['title'],
                 'meta'         => $price . ' · ' . __('shop_stock', 'Stock') . ': ' . $stock . ($ptype !== 'physical' ? ' · ' . $typeLabels[$ptype] : '') . ($isLow ? ' · ' . __('shop_low_stock', 'Low stock') : ''),

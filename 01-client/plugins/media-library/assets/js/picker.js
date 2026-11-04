@@ -57,6 +57,7 @@
 
     var modalEl = null;
     var selectedItem = null;
+    var picked = [];          // 'append' mode (several at once): the chosen items, in the order they were chosen
     var currentMode = 'single';
     var currentCallback = null;
     var metaSaveTimeout = null;
@@ -142,6 +143,12 @@
 
         // Pick (commits the selection)
         overlay.querySelector('.mlp-pick').addEventListener('click', function () {
+            if (currentMode === 'append') {
+                if (!picked.length) return;
+                picked.slice().forEach(commitPick);
+                close();
+                return;
+            }
             if (!selectedItem) return;
             commitPick(selectedItem);
             close();
@@ -244,8 +251,13 @@
             var filtered = filterItems(cacheByType[typeKey] || [], searchVal);
             renderGrid(filtered);
 
-            // Auto-select the first uploaded item
-            if (newItems.length > 0) {
+            // Several at once: every upload joins the selection. One at a time: the first upload is selected.
+            if (currentMode === 'append' && newItems.length > 0) {
+                newItems.forEach(function (it) { if (!isPicked(it)) picked.push(it); });
+                syncPicked();
+                var lastCard = modalEl.querySelector('.mlp-grid .mlp-item');
+                selectItem(newItems[0], lastCard, true);
+            } else if (newItems.length > 0) {
                 var firstCard = modalEl.querySelector('.mlp-grid .mlp-item');
                 selectItem(newItems[0], firstCard);
             }
@@ -328,14 +340,45 @@
         });
     }
 
-    function selectItem(it, card) {
-        var grid = modalEl.querySelector('.mlp-grid');
-        grid.querySelectorAll('.mlp-item').forEach(function (n) {
-            n.classList.remove('is-selected');
+    function isPicked(it) {
+        for (var i = 0; i < picked.length; i++) { if (picked[i].id === it.id) return true; }
+        return false;
+    }
+    function togglePicked(it) {
+        if (isPicked(it)) picked = picked.filter(function (p) { return p.id !== it.id; });
+        else picked.push(it);
+        syncPicked();
+    }
+    // Marks the chosen cards (with their order number) and labels the button "Add 3".
+    function syncPicked() {
+        if (!modalEl) return;
+        modalEl.querySelectorAll('.mlp-grid .mlp-item').forEach(function (n) {
+            var idx = -1;
+            for (var i = 0; i < picked.length; i++) { if (String(picked[i].id) === n.getAttribute('data-id')) idx = i; }
+            n.classList.toggle('is-selected', idx !== -1);
+            var badge = n.querySelector('.mlp-order');
+            if (idx !== -1) {
+                if (!badge) { badge = document.createElement('span'); badge.className = 'mlp-order'; n.appendChild(badge); }
+                badge.textContent = String(idx + 1);
+            } else if (badge) { badge.remove(); }
         });
-        if (card) card.classList.add('is-selected');
+        var btn = modalEl.querySelector('.mlp-pick');
+        btn.disabled = picked.length === 0;
+        btn.textContent = picked.length > 1 ? 'Add ' + picked.length : (picked.length === 1 ? 'Add 1' : 'Add');
+        var status = modalEl.querySelector('.mlp-status');
+        if (status && picked.length) status.textContent = picked.length + ' selected';
+    }
+
+    function selectItem(it, card, keepOthers) {
+        var grid = modalEl.querySelector('.mlp-grid');
+        if (!keepOthers) {
+            grid.querySelectorAll('.mlp-item').forEach(function (n) {
+                n.classList.remove('is-selected');
+            });
+            if (card) card.classList.add('is-selected');
+            modalEl.querySelector('.mlp-pick').disabled = false;
+        }
         selectedItem = it;
-        modalEl.querySelector('.mlp-pick').disabled = false;
 
         var sidebar = modalEl.querySelector('.mlp-sidebar');
         if (!sidebar) return;
@@ -380,10 +423,13 @@
         currentMode = opts.mode || 'single';
         currentCallback = opts.onPick || null;
         selectedItem = null;
+        picked = [];
 
         buildModal();
         modalEl.classList.add('is-open');
         modalEl.querySelector('.mlp-pick').disabled = true;
+        modalEl.querySelector('.mlp-pick').textContent = currentMode === 'append' ? 'Add' : 'Use this';
+        modalEl.querySelector('.mlp-title').textContent = currentMode === 'append' ? 'Select media (click several to add them all)' : 'Select media';
         modalEl.querySelector('.mlp-search').value = '';
 
         var progressEl = modalEl.querySelector('.mlp-upload-progress');
@@ -464,7 +510,7 @@
     function escText(s) {
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;')
-            .replace(/'/g, '&lt;')
+            .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
     }
     function truncate(s, n) {
@@ -489,7 +535,7 @@
             status.textContent = '';
             var sidebar = modalEl.querySelector('.mlp-sidebar');
             if (sidebar) sidebar.classList.remove('is-active');
-            modalEl.querySelector('.mlp-pick').disabled = true;
+            modalEl.querySelector('.mlp-pick').disabled = currentMode === 'append' ? picked.length === 0 : true;
             return;
         }
         empty.style.display = 'none';
@@ -499,8 +545,9 @@
         grid.innerHTML = '';
         items.forEach(function (it) {
             var card = document.createElement('div');
-            card.className = 'mlp-item' + (selectedItem && selectedItem.id === it.id ? ' is-selected' : '');
+            card.className = 'mlp-item' + ((currentMode === 'append' ? isPicked(it) : (selectedItem && selectedItem.id === it.id)) ? ' is-selected' : '');
             card.setAttribute('data-path', it.path);
+            card.setAttribute('data-id', String(it.id));
             var dim = (it.width && it.height) ? (it.width + '×' + it.height) : '';
             var kb = Math.round((it.size_bytes || 0) / 1024);
             card.innerHTML =
@@ -515,22 +562,30 @@
                 '</div>';
 
             card.addEventListener('click', function () {
+                if (currentMode === 'append') { togglePicked(it); selectItem(it, card, true); return; }
                 selectItem(it, card);
             });
             card.addEventListener('dblclick', function () {
+                if (currentMode === 'append') {
+                    if (!isPicked(it)) togglePicked(it);
+                    picked.slice().forEach(commitPick);
+                    close();
+                    return;
+                }
                 selectItem(it, card);
                 commitPick(selectedItem);
                 close();
             });
             grid.appendChild(card);
         });
+        if (currentMode === 'append') syncPicked();
     }
 
     function commitPick(item) {
         if (!item) return;
 
         var sidebar = modalEl ? modalEl.querySelector('.mlp-sidebar') : null;
-        if (sidebar && sidebar.classList.contains('is-active')) {
+        if (sidebar && sidebar.classList.contains('is-active') && item === selectedItem) {
             var altIn = sidebar.querySelector('.mlp-input-alt');
             var titleIn = sidebar.querySelector('.mlp-input-title');
             var descIn = sidebar.querySelector('.mlp-input-desc');

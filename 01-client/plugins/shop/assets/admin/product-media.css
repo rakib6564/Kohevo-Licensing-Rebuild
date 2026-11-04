@@ -1,0 +1,37 @@
+/* Shop — product image manager (admin product form). Uses the admin theme's tokens. */
+.shop-media-ui { display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 24px; align-items: start; margin-bottom: 14px; }
+@media (max-width: 760px) { .shop-media-ui { grid-template-columns: minmax(0, 1fr); } }
+.shop-media-label { font-weight: 600; font-size: 13px; margin-bottom: 8px; color: var(--text, #0f172a); }
+
+.shop-media-slot { position: relative; aspect-ratio: 1; border-radius: var(--radius, 10px); overflow: hidden; background: var(--surface-2, #f1f5f9); border: 1px solid var(--border, #e2e8f0); }
+.shop-media-slot img, .shop-media-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shop-media-slot.is-empty { border-style: dashed; }
+.shop-media-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--muted, #64748b); font-size: 13px; }
+.shop-media-missing { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 8px; text-align: center; font-size: 12px; color: var(--danger, #b91c1c); background: var(--danger-soft, #fef2f2); }
+.shop-media-actions { display: flex; gap: 8px; margin: 10px 0 6px; flex-wrap: wrap; }
+
+.shop-media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+.shop-media-tile { position: relative; aspect-ratio: 1; border-radius: var(--radius, 10px); overflow: hidden; background: var(--surface-2, #f1f5f9); border: 1px solid var(--border, #e2e8f0); cursor: grab; }
+.shop-media-tile.is-dragging { opacity: .4; }
+.shop-media-tile.is-over, .shop-media-slot.is-over { outline: 2px solid var(--primary, #4f46e5); outline-offset: 2px; }
+.shop-media-tilebar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; gap: 2px; padding: 4px;
+    background: linear-gradient(to top, rgba(15, 23, 42, .72), rgba(15, 23, 42, 0)); opacity: 0; transition: opacity .15s; }
+.shop-media-tile:hover .shop-media-tilebar, .shop-media-tile:focus-within .shop-media-tilebar { opacity: 1; }
+@media (hover: none) { .shop-media-tilebar { opacity: 1; } }
+.shop-media-btn { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: rgba(255, 255, 255, .92); color: #0f172a; cursor: pointer; padding: 0; }
+.shop-media-btn:hover { background: #fff; }
+.shop-media-btn.is-remove:hover { color: var(--danger, #b91c1c); }
+.shop-media-btn.is-main:hover { color: #b45309; }
+.shop-media-btn:focus-visible { outline: 2px solid var(--primary, #4f46e5); outline-offset: 1px; }
+.shop-media-add { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1.5px dashed var(--border, #cbd5e1);
+    border-radius: var(--radius, 10px); background: transparent; color: var(--muted, #64748b); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.shop-media-add:hover { border-color: var(--primary, #4f46e5); color: var(--primary, #4f46e5); }
+
+.shop-media-raw summary { cursor: pointer; font-size: 13px; color: var(--muted, #64748b); }
+
+/* Variant rows: a small thumbnail, the address and Choose. */
+.shop-variant-img { display: flex; align-items: center; gap: 6px; min-width: 200px; }
+.shop-variant-img input { flex: 1; min-width: 70px; }
+.shop-variant-thumb { position: relative; width: 32px; height: 32px; flex: 0 0 32px; border-radius: 6px; overflow: hidden; background: var(--surface-2, #f1f5f9); border: 1px solid var(--border, #e2e8f0); }
+.shop-variant-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shop-variant-thumb .shop-media-missing { font-size: 0; }
