@@ -158,7 +158,7 @@ unit('paypal: partial then full refunds go to the capture, and the ledger keeps 
     assert_true($r1['ok'], 'partial refund: ' . ($r1['error'] ?? ''));
     $refunds = array_values(array_filter(fake_paypal_requests($PPH), fn ($r) => str_contains($r['path'], "/captures/{$capture}/refund")));
     assert_eq(['10.00', 'EUR'], [$refunds[0]['body']['amount']['value'], $refunds[0]['body']['amount']['currency_code']]);
-    assert_eq('refund-k-o5-1', $refunds[0]['request_id'], 'the idempotency key reaches PayPal');
+    assert_eq('refund-' . Payments::scopedKey('k-o5-1'), $refunds[0]['request_id'], 'the (site-scoped) idempotency key reaches PayPal');
     assert_eq('partial_refund', Payments::getCharge($id)['status']);
 
     $r2 = Payments::refundCharge($id);
