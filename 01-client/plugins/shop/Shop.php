@@ -2,7 +2,7 @@
 /**
  * Shop plugin — bootstrap.
  *
- * Registers the admin nav (Products, Categories, Orders, Settings), a dashboard widget, FR/EN language packs and the
+ * Registers the admin nav (Orders, Products, Categories, Coupons, Shipping, Tax, Settings), a dashboard widget, FR/EN language packs and the
  * payment_event listener that marks an order paid. Schema is kept current by the idempotent ShopStoreAPI::ensureSchema()
  * self-heal, stamped per version.
  *
@@ -74,6 +74,15 @@ class Shop extends Plugin {
         $items[] = ['slug' => 'shop-categories', 'label' => __('shop_categories', 'Categories'),
                     'href' => $this->url('admin/categories.php'),
                     'icon' => 'layers', 'perm' => 'shop.manage_products', 'order' => 512, 'group' => 'shop'];
+        $items[] = ['slug' => 'shop-coupons', 'label' => __('shop_coupons', 'Coupons'),
+                    'href' => $this->url('admin/coupons.php'),
+                    'icon' => 'award', 'perm' => 'shop.manage_products', 'order' => 513, 'group' => 'shop'];
+        $items[] = ['slug' => 'shop-shipping', 'label' => __('shop_shipping', 'Shipping'),
+                    'href' => $this->url('admin/shipping.php'),
+                    'icon' => 'truck', 'perm' => 'shop.manage_settings', 'order' => 516, 'group' => 'shop'];
+        $items[] = ['slug' => 'shop-tax', 'label' => __('shop_tax', 'Tax'),
+                    'href' => $this->url('admin/tax.php'),
+                    'icon' => 'file-text', 'perm' => 'shop.manage_settings', 'order' => 517, 'group' => 'shop'];
         $items[] = ['slug' => 'shop-settings', 'label' => __('shop_settings', 'Shop settings'),
                     'href' => $this->url('admin/settings.php'),
                     'icon' => 'settings', 'perm' => 'shop.manage_settings', 'order' => 518, 'group' => 'shop'];

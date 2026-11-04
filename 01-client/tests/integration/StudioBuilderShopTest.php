@@ -440,9 +440,9 @@ unit('shop: catalogue, cart, checkout, payment and the Studio storefront (real M
                 $rt->app->publish($actor, (int) $created['page']['id'], (int) $saved['revision']['id']);
             }));
             $grid = (string) sbsh_get($rt, '/shop-all')?->body;
-            assert_true(str_contains($grid, 'style="--sb-shop-cols:4"') && str_contains($grid, 'Our &lt;shop&gt;'), 'columns and an escaped heading');
+            assert_true(str_contains($grid, '--sb-dc-d:4;') && str_contains($grid, 'Our &lt;shop&gt;'), 'columns and an escaped heading');
             assert_eq(2, substr_count($grid, '<li class="sb-shop-card">'), 'one page of cards');
-            assert_true(str_contains($grid, 'class="sb-shop-filter"') && str_contains($grid, 'href="?category=apparel"'), 'the category filter');
+            assert_true(str_contains($grid, 'class="sb-shop-filter sb-shop-filter--chips"') && str_contains($grid, 'href="?category=apparel"'), 'the category filter');
             assert_true(str_contains($grid, 'href="?page=2"') && str_contains($grid, 'aria-current="page">1<'), 'pages');
             assert_true(str_contains($grid, 'sb-shop-card__badge') && !str_contains($grid, 'Hidden draft'), 'badges, and no drafts');
 

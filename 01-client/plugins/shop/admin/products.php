@@ -106,7 +106,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     $p = $editing ?: ['id' => 0, 'title' => '', 'slug' => '', 'sku' => '', 'price_cents' => 0, 'sale_price_cents' => null, 'currency' => ShopStoreAPI::currency(),
         'short_description' => '', 'description' => '', 'images_json' => '[]', 'attributes_json' => null, 'stock_qty' => null, 'status' => 'draft', 'sort_order' => 0,
         'product_type' => 'physical', 'weight' => null, 'length' => null, 'width' => null, 'height' => null, 'sale_starts_at' => null, 'sale_ends_at' => null,
-        'featured' => 0, 'low_stock' => null, 'purchase_note' => '', 'download_limit' => null, 'download_days' => null];
+        'featured' => 0, 'tax_class' => '', 'seo_title' => '', 'seo_description' => '', 'low_stock' => null, 'purchase_note' => '', 'download_limit' => null, 'download_days' => null];
     $v = static function (string $key, string $fromRow) use ($src): string { return e($src !== null ? (string) ($src[$key] ?? '') : $fromRow); };
     $fmt = static fn($c): string => $c === null || $c === '' ? '' : number_format(((int) $c) / 100, 2, '.', '');
     $tracked = $src !== null ? !empty($src['track_stock']) : $p['stock_qty'] !== null;
@@ -235,7 +235,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <?php slate_edit_card_open(['icon' => 'credit-card', 'eyebrow' => __('shop_pricing', 'Pricing'), 'title' => __('shop_price_stock', 'Price & stock')]); ?>
             <div class="field-row field-row-2">
                 <div class="field">
-                    <label class="field-label" for="price"><?= __('shop_price', 'Price') ?> <span class="text-muted text-xs">(<?= e((string) $p['currency']) ?>, <?= __('shop_incl_vat', 'incl. VAT') ?>)</span> <span class="field-required">*</span></label>
+                    <label class="field-label" for="price"><?= __('shop_price', 'Price') ?> <span class="text-muted text-xs">(<?= e((string) $p['currency']) ?><?= ShopTax::mode() === 'inclusive' ? ', ' . e(sprintf(__('shop_incl_tax', 'incl. %s'), ShopTax::label())) : (ShopTax::mode() === 'exclusive' ? ', ' . e(sprintf(__('shop_before_tax', 'before %s'), ShopTax::label())) : '') ?>)</span> <span class="field-required">*</span></label>
                     <input type="text" inputmode="decimal" id="price" name="price" required value="<?= $v('price', $fmt($p['price_cents'])) ?>" placeholder="24.90">
                     <?= $err('price') ?>
                 </div>
@@ -349,6 +349,12 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <div class="field-hint"><?= __('shop_tags_hint', 'Separated by commas. A Product Grid can show only the products with a tag.') ?></div>
             </div>
             <div class="field">
+                <label class="field-label" for="tax_class"><?= __('shop_tax_class', 'Tax class') ?></label>
+                <?php $tc = $src !== null ? (string) ($src['tax_class'] ?? '') : (string) ($p['tax_class'] ?? ''); ?>
+                <select id="tax_class" name="tax_class" style="max-width:220px;"><?php foreach (ShopTax::classLabels() as $k => $label): ?><option value="<?= e($k) ?>" <?= $tc === $k ? 'selected' : '' ?>><?= e($label) ?></option><?php endforeach; ?></select>
+                <div class="field-hint"><?= __('shop_tax_class_hint', 'Which tax rate applies (Shop › Tax). Most products are Standard.') ?></div>
+            </div>
+            <div class="field">
                 <label class="field-check"><input type="checkbox" name="featured" value="1" <?= ($src !== null ? !empty($src['featured']) : !empty($p['featured'])) ? 'checked' : '' ?>> <?= __('shop_featured', 'Featured') ?></label>
                 <div class="field-hint"><?= __('shop_featured_hint', 'A Product Grid set to "Featured" shows only these.') ?></div>
             </div>
@@ -388,6 +394,28 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 </div>
             </div>
         <?php slate_edit_card_close(); ?>
+
+        <?php slate_edit_card_open(['icon' => 'search', 'eyebrow' => __('shop_seo', 'Search engines'), 'title' => __('shop_seo_title_card', 'How the product shows in Google')]); ?>
+            <div class="field">
+                <label class="field-label" for="seo_title"><?= __('shop_seo_title', 'Search title') ?></label>
+                <input type="text" id="seo_title" name="seo_title" maxlength="200" value="<?= $v('seo_title', (string) ($p['seo_title'] ?? '')) ?>" data-shop-seo="title">
+                <div class="field-hint"><?= __('shop_seo_title_hint', 'Empty: the product name and the site name. Google shows about 60 characters.') ?></div>
+            </div>
+            <div class="field">
+                <label class="field-label" for="seo_description"><?= __('shop_seo_description', 'Search description') ?></label>
+                <textarea id="seo_description" name="seo_description" rows="3" maxlength="400" data-shop-seo="description"><?= $v('seo_description', (string) ($p['seo_description'] ?? '')) ?></textarea>
+                <div class="field-hint"><?= __('shop_seo_description_hint', 'Empty: the short description. Google shows about 160 characters.') ?> <span data-shop-seo-count></span></div>
+            </div>
+            <div class="field-hint" style="margin-top:4px;"><?= __('shop_seo_data_hint', 'Product pages also tell Google the price, stock, SKU and photos (structured data), so results can show them.') ?></div>
+        <?php slate_edit_card_close(); ?>
+        <script>
+        // The description's length, as it is typed.
+        (function () {
+          var d = document.querySelector('[data-shop-seo="description"]'), c = document.querySelector('[data-shop-seo-count]');
+          function n() { if (d && c) c.textContent = '(' + d.value.trim().length + ')'; }
+          if (d) { d.addEventListener('input', n); n(); }
+        })();
+        </script>
 
         <?php slate_edit_actionbar([
             'buttons_html' => '<button type="submit" class="btn btn-primary">' . ($editing ? __('shop_save', 'Save changes') : __('shop_create_product', 'Create product')) . '</button>'

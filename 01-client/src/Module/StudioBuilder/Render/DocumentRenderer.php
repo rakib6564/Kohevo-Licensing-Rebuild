@@ -300,10 +300,24 @@ final class DocumentRenderer
         return $url === null || $url === '' ? '' : 'background-image:url(' . $url . ')';
     }
 
+    /**
+     * Whether the page shown gives a field a value: its own fields (page meta), else the single item it shows (a Shop
+     * product's `description`, say, on the product template), so a section can go when that item leaves it empty.
+     * Text that is only markup or spaces counts as empty.
+     */
     private static function fieldHasValue(RenderContext $context, string $key): bool
     {
         $meta = $context->attribute('page_meta');
-        $value = is_array($meta) && is_array($meta['values'] ?? null) ? ($meta['values'][$key] ?? null) : null;
+        $values = is_array($meta) && is_array($meta['values'] ?? null) ? $meta['values'] : [];
+        if (array_key_exists($key, $values)) {
+            $value = $values[$key];
+        } else {
+            $item = $context->attribute('single_item');
+            $value = is_array($item) && is_array($item['data'] ?? null) ? ($item['data'][$key] ?? null) : null;
+        }
+        if (is_string($value)) {
+            $value = trim(html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5, 'UTF-8'), " \t\n\r\0\x0B\u{00A0}");
+        }
         return !($value === null || $value === '' || $value === [] || $value === false);
     }
 

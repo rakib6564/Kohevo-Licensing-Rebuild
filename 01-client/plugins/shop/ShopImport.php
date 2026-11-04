@@ -21,10 +21,20 @@
  * the product's options, and a combination the file does not list is kept but not sold.
  *
  * Not imported, and said so in the plan: grouped and external products, attributes no variation uses (shown on
- * WooCommerce's "Additional information" tab), tax status and class, shipping classes, reviews.
+ * WooCommerce's "Additional information" tab), shipping classes, reviews. Tax status and class map to the Shop's tax
+ * classes: not taxable → zero, reduced-rate → reduced, zero-rate → zero, anything else → standard.
  */
 
 class ShopImport {
+
+    /** A WooCommerce tax status and class as a Shop tax class: '' (standard), reduced or zero. */
+    public static function taxClass(string $status, string $class): string {
+        if (strtolower(trim($status)) === 'none') return 'zero';
+        $c = strtolower(trim($class));
+        if (str_starts_with($c, 'reduced')) return 'reduced';
+        if (str_starts_with($c, 'zero')) return 'zero';
+        return '';
+    }
 
     public const MAX_BYTES = 20 * 1024 * 1024;
     public const MAX_ITEMS = 2000;
@@ -35,7 +45,7 @@ class ShopImport {
      * Read a file into items. Each item: ['ref', 'type', 'kind' => physical|digital|service, 'name', 'slug', 'status',
      * 'featured', 'description', 'short_description', 'sku', 'regular_price', 'sale_price', 'sale_from', 'sale_to',
      * 'manage_stock', 'stock', 'in_stock', 'low_stock', 'weight', 'length', 'width', 'height', 'categories', 'tags',
-     * 'images', 'purchase_note', 'download_limit', 'download_days', 'downloads', 'upsells', 'cross_sells',
+     * 'images', 'purchase_note', 'download_limit', 'download_days', 'downloads', 'upsells', 'cross_sells', 'tax_class',
      * 'attributes' => [name => [values]], 'variation_attributes' => [names], 'variations' => [items with 'options']].
      *
      * @return array{items: list<array<string, mixed>>, units: array{weight: ?string, dimension: ?string}, error?: string}
@@ -123,6 +133,7 @@ class ShopImport {
                 'tags'              => self::splitList((string) ($r['tags'] ?? '')),
                 'images'            => array_values(array_filter(array_map('trim', explode(',', (string) ($r['images'] ?? ''))))),
                 'purchase_note'     => self::plainText((string) ($r['purchase note'] ?? '')),
+                'tax_class'         => self::taxClass((string) ($r['tax status'] ?? ''), (string) ($r['tax class'] ?? '')),
                 'download_limit'    => (string) ($r['download limit'] ?? ''),
                 'download_days'     => (string) ($r['download expiry days'] ?? ''),
                 'downloads'         => $downloads,
@@ -190,6 +201,7 @@ class ShopImport {
                 'weight' => (string) ($p['weight'] ?? ''), 'length' => (string) ($dims['length'] ?? ''), 'width' => (string) ($dims['width'] ?? ''), 'height' => (string) ($dims['height'] ?? ''),
                 'categories' => $names($p['categories'] ?? []), 'tags' => $names($p['tags'] ?? []), 'images' => $images,
                 'purchase_note' => self::plainText((string) ($p['purchase_note'] ?? '')),
+                'tax_class' => self::taxClass((string) ($p['tax_status'] ?? ''), (string) ($p['tax_class'] ?? '')),
                 'download_limit' => (string) (($p['download_limit'] ?? -1) >= 0 ? $p['download_limit'] : ''), 'download_days' => (string) (($p['download_expiry'] ?? -1) >= 0 ? $p['download_expiry'] : ''),
                 'downloads' => $downloads,
                 'upsells' => array_map(static fn($id): string => 'id:' . (int) $id, is_array($p['upsell_ids'] ?? null) ? $p['upsell_ids'] : []),
@@ -458,6 +470,7 @@ class ShopImport {
                     'product_type' => $item['kind'], 'weight' => $weight($item['weight']), 'length' => $length($item['length']), 'width' => $length($item['width']), 'height' => $length($item['height']),
                     'featured' => $item['featured'] ? '1' : '', 'low_stock' => preg_match('/^\d+$/', $item['low_stock']) ? $item['low_stock'] : '',
                     'purchase_note' => $item['purchase_note'],
+                    'tax_class' => (string) ($item['tax_class'] ?? ''),
                     'download_limit' => preg_match('/^[1-9]\d*$/', $item['download_limit']) ? $item['download_limit'] : '',
                     'download_days' => preg_match('/^[1-9]\d*$/', $item['download_days']) ? $item['download_days'] : '',
                     'tags' => $item['tags'], 'external_ref' => $item['ref'] !== '' ? $item['ref'] : ($existing['external_ref'] ?? ''),

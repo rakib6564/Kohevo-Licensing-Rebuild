@@ -32,6 +32,9 @@ $seoRobots      = (string) (Database::setting('studio_seo_robots', $tenantId) ?:
 $verifyTokens = \Slate\Module\StudioBuilder\Http\StudioCodePolicy::verificationTokens($tenantId);
 $seoGoogleVerification = $verifyTokens['google'];
 $seoBingVerification   = $verifyTokens['bing'];
+// Web fonts and the business for structured data (their own forms below).
+$webFonts = (string) (Database::setting(\Slate\Module\StudioBuilder\Render\Seo\WebFonts::SETTING, $tenantId) ?: '');
+$business = \Slate\Module\StudioBuilder\Render\Seo\StructuredData::business($tenantId);
 // The name the live pages use for %site_name%.
 try {
     $siteName = \Slate\Services\Content\TenantBranding::siteName();
@@ -47,6 +50,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to edit SEO settings.')];
     } elseif (!sb_studio_entitled()) {
         $flash = ['type' => 'error', 'msg' => __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')];
+    } elseif (($_POST['_form'] ?? '') === 'fonts') {
+        $webFonts = trim((string) ($_POST['web_fonts'] ?? ''));
+        $parsed = \Slate\Module\StudioBuilder\Render\Seo\WebFonts::parse($webFonts);
+        if ($parsed['bad'] !== []) {
+            $flash = ['type' => 'error', 'msg' => __('studio_code_nothing_saved', 'Nothing was saved.') . ' ' . sprintf(__('studio_fonts_bad', 'These lines are not a font (write "Family: 400, 700"): %s'), implode(' · ', $parsed['bad']))];
+        } else {
+            Database::setSetting(\Slate\Module\StudioBuilder\Render\Seo\WebFonts::SETTING, $webFonts, $tenantId);
+            sb_flash_redirect('seo.php', ['type' => 'success', 'msg' => __('studio_fonts_saved', 'Fonts saved. Every page loads them from its next visit.')]);
+        }
+    } elseif (($_POST['_form'] ?? '') === 'business') {
+        $business = \Slate\Module\StudioBuilder\Render\Seo\StructuredData::clean([
+            'type' => (string) ($_POST['biz_type'] ?? ''), 'name' => (string) ($_POST['biz_name'] ?? ''), 'alternate_name' => (string) ($_POST['biz_alternate'] ?? ''),
+            'description' => (string) ($_POST['biz_description'] ?? ''), 'logo_media_id' => (int) ($_POST['biz_logo_media_id'] ?? 0),
+            'founder' => (string) ($_POST['biz_founder'] ?? ''), 'same_as' => (string) ($_POST['biz_same_as'] ?? ''),
+        ]);
+        \Slate\Module\StudioBuilder\Render\Seo\StructuredData::save($tenantId, $business);
+        sb_flash_redirect('seo.php', ['type' => 'success', 'msg' => __('studio_business_saved', 'Saved. Every public page tells search engines about the business from its next visit.')]);
     } else {
         $seoTitleFormat = trim((string) ($_POST['title_format'] ?? ''));
         $seoDescription = trim((string) ($_POST['description'] ?? ''));
@@ -255,6 +275,99 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Fonts and structured data, written by Studio (no pasted code) -->
+    <div class="sb-two-up">
+        <div class="sb-card">
+            <div class="sb-card__head">
+                <span class="sb-card__icon"><?= sb_svg('palette', 18) ?></span>
+                <div>
+                    <h3 class="sb-card__title"><?= e(__('studio_fonts_title', 'Web fonts')) ?></h3>
+                    <p class="sb-card__sub"><?= e(__('studio_fonts_sub', 'Google Fonts every page loads, for the fonts your theme names.')) ?></p>
+                </div>
+            </div>
+            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/seo.php')) ?>">
+                <?= csrf_field() ?>
+                <input type="hidden" name="_form" value="fonts">
+                <div class="sb-field">
+                    <label class="sb-field__label" for="seo-web-fonts"><?= e(__('studio_fonts_label', 'One font per line')) ?></label>
+                    <textarea name="web_fonts" id="seo-web-fonts" rows="4" class="form-control" spellcheck="false" placeholder="Karla: 400, 700&#10;Lora: 400, 400 italic, 700"><?= e($webFonts) ?></textarea>
+                    <p class="sb-field__hint"><?= e(__('studio_fonts_hint', 'The family as Google Fonts names it, then its weights; "400 italic" for italics. Google\'s own notation (Fraunces:opsz,wght@9..144,500) works too. Then pick the fonts under Site settings › Fonts. Visitors\' browsers fetch them from Google.')) ?></p>
+                </div>
+                <div class="sb-card-actions">
+                    <button type="submit" class="btn btn-primary"><?= sb_svg('save', 14) ?> <?= e(__('studio_fonts_save', 'Save fonts')) ?></button>
+                </div>
+            </form>
+        </div>
+
+        <div class="sb-card">
+            <div class="sb-card__head">
+                <span class="sb-card__icon"><?= sb_svg('globe', 18) ?></span>
+                <div>
+                    <h3 class="sb-card__title"><?= e(__('studio_business_title', 'Business details for search engines')) ?></h3>
+                    <p class="sb-card__sub"><?= e(__('studio_business_sub', 'Written into every page as structured data, so Google knows who publishes the site.')) ?></p>
+                </div>
+            </div>
+            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/seo.php')) ?>">
+                <?= csrf_field() ?>
+                <input type="hidden" name="_form" value="business">
+                <div class="sb-stack">
+                    <div class="sb-form-grid">
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-biz-type"><?= e(__('studio_business_type', 'Kind of business')) ?></label>
+                            <select name="biz_type" id="seo-biz-type" class="form-control">
+                                <option value=""><?= e(__('studio_business_none', 'None (no business data)')) ?></option>
+                                <?php foreach (\Slate\Module\StudioBuilder\Render\Seo\StructuredData::TYPES as $k => $label): ?>
+                                    <option value="<?= e($k) ?>" <?= $business['type'] === $k ? 'selected' : '' ?>><?= e(__('studio_business_type_' . strtolower($k), $label)) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-biz-name"><?= e(__('studio_business_name', 'Name')) ?></label>
+                            <input type="text" name="biz_name" id="seo-biz-name" maxlength="160" class="form-control" value="<?= e($business['name']) ?>" placeholder="<?= e($siteName) ?>">
+                        </div>
+                    </div>
+                    <div class="sb-form-grid">
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-biz-alt"><?= e(__('studio_business_alternate', 'Other name (optional)')) ?></label>
+                            <input type="text" name="biz_alternate" id="seo-biz-alt" maxlength="160" class="form-control" value="<?= e($business['alternate_name']) ?>">
+                        </div>
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-biz-founder"><?= e(__('studio_business_founder', 'Founder (optional)')) ?></label>
+                            <input type="text" name="biz_founder" id="seo-biz-founder" maxlength="160" class="form-control" value="<?= e($business['founder']) ?>">
+                        </div>
+                    </div>
+                    <div class="sb-field">
+                        <label class="sb-field__label" for="seo-biz-desc"><?= e(__('studio_business_description', 'What the business does (optional)')) ?></label>
+                        <textarea name="biz_description" id="seo-biz-desc" rows="2" maxlength="500" class="form-control"><?= e($business['description']) ?></textarea>
+                    </div>
+                    <div>
+                        <?php
+                        $bizLogoUrl = '';
+                        if ($business['logo_media_id'] > 0) {
+                            $lp = Database::value("SELECT path FROM media_files WHERE tenant_id = ? AND id = ?", [$tenantId, $business['logo_media_id']]);
+                            $bizLogoUrl = is_string($lp) && $lp !== '' ? rtrim((string) SLATE_URL, '/') . '/' . ltrim($lp, '/') : '';
+                        }
+                        ?>
+                        <input type="hidden" name="biz_logo_media_id" id="seo_biz_logo_media_id" value="<?= $business['logo_media_id'] > 0 ? (int) $business['logo_media_id'] : '' ?>" data-sb-id-for="seo_biz_logo_url">
+                        <?= sb_media_picker_field([
+                            'id' => 'seo_biz_logo_url', 'name' => 'biz_logo_url', 'label' => __('studio_business_logo', 'Logo'), 'value' => $bizLogoUrl,
+                            'placeholder' => __('studio_business_logo_placeholder', 'Choose from the Media library'),
+                            'help' => __('studio_business_logo_help', 'A square or wide logo of at least 112px; Google may show it beside your results.'),
+                        ]) ?>
+                    </div>
+                    <div class="sb-field">
+                        <label class="sb-field__label" for="seo-biz-same"><?= e(__('studio_business_same_as', 'The business elsewhere (optional)')) ?></label>
+                        <textarea name="biz_same_as" id="seo-biz-same" rows="3" class="form-control" spellcheck="false" placeholder="https://www.instagram.com/…"><?= e(implode("\n", $business['same_as'])) ?></textarea>
+                        <p class="sb-field__hint"><?= e(__('studio_business_same_as_hint', 'One https address per line: its other websites and social profiles.')) ?></p>
+                    </div>
+                </div>
+                <div class="sb-card-actions">
+                    <button type="submit" class="btn btn-primary"><?= sb_svg('save', 14) ?> <?= e(__('studio_business_save', 'Save business details')) ?></button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

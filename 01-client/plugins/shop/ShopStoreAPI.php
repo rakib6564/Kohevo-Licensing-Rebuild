@@ -33,6 +33,10 @@
  * Statuses: pending_payment → paid → fulfilled; pending_payment → cancelled; paid|fulfilled → refunded.
  */
 
+require_once __DIR__ . '/ShopShipping.php';
+require_once __DIR__ . '/ShopTax.php';
+require_once __DIR__ . '/ShopCoupons.php';
+
 class ShopStoreAPI {
 
     public const STATUSES = ['pending_payment', 'paid', 'fulfilled', 'cancelled', 'refunded'];
@@ -98,6 +102,30 @@ class ShopStoreAPI {
             self::ensureColumn('shop_variants', $column, $definition);
         }
         self::ensureColumn('shop_order_items', 'product_type', "VARCHAR(16) NOT NULL DEFAULT 'physical' AFTER `sku`");
+        // 0.4.0: tax classes, shipping zones and carrier rates, tax, coupons, tracking and labels.
+        self::ensureColumn('shop_products', 'tax_class', "VARCHAR(16) NOT NULL DEFAULT '' AFTER `external_ref`");
+        // 0.4.0: a product's own search title and description (empty: its name and short description).
+        self::ensureColumn('shop_products', 'seo_title', 'VARCHAR(200) NULL AFTER `tax_class`');
+        self::ensureColumn('shop_products', 'seo_description', 'VARCHAR(400) NULL AFTER `seo_title`');
+        foreach ([
+            'region'           => 'VARCHAR(80) NULL AFTER `country`',
+            'discount_cents'   => 'INT UNSIGNED NOT NULL DEFAULT 0 AFTER `shipping_cents`',
+            'coupon_code'      => 'VARCHAR(40) NULL AFTER `discount_cents`',
+            'tax_cents'        => 'INT UNSIGNED NOT NULL DEFAULT 0 AFTER `coupon_code`',
+            'tax_label'        => 'VARCHAR(80) NULL AFTER `tax_cents`',
+            'tax_inclusive'    => 'TINYINT(1) NOT NULL DEFAULT 1 AFTER `tax_label`',
+            'shipping_method'  => 'VARCHAR(160) NULL AFTER `total_cents`',
+            'shipping_carrier' => 'VARCHAR(40) NULL AFTER `shipping_method`',
+            'shipping_service' => 'VARCHAR(80) NULL AFTER `shipping_carrier`',
+            'tracking_carrier' => 'VARCHAR(40) NULL AFTER `shipping_service`',
+            'tracking_number'  => 'VARCHAR(80) NULL AFTER `tracking_carrier`',
+            'tracking_url'     => 'VARCHAR(500) NULL AFTER `tracking_number`',
+            'label_url'        => 'VARCHAR(500) NULL AFTER `tracking_url`',
+            'shipped_at'       => 'DATETIME NULL AFTER `label_url`',
+            'admin_notes'      => 'TEXT NULL AFTER `shipped_at`',
+        ] as $column => $definition) {
+            self::ensureColumn('shop_orders', $column, $definition);
+        }
     }
 
     private static function ensureColumn(string $table, string $column, string $definition): void {
@@ -129,10 +157,41 @@ class ShopStoreAPI {
             'thanks_page'       => 'order-received',
             'shop_page'         => '',
             'notify_email'      => '',
+            // 0.4.0 — checkout protection (ShopGuard): limits (0 = off), Turnstile keys (the secret sealed), the pause.
+            'guard_enabled'      => '1',
+            'guard_ip_10min'     => '6',
+            'guard_ip_day'       => '25',
+            'guard_email_hour'   => '4',
+            'guard_pause_hour'   => '25',
+            'guard_coupon_10min' => '15',
+            'turnstile_site_key' => '',
+            'turnstile_secret'   => '',
+            'guard_paused_until' => '',
+            'guard_alerted_at'   => '',
             'weight_unit'       => 'kg',
             'dimension_unit'    => 'cm',
             'low_stock'         => '2',
             'low_stock_email'   => '',
+            // 0.4.0 — tax: inclusive (prices include it), exclusive (added at checkout) or none; its name on the page.
+            'tax_mode'          => 'inclusive',
+            'tax_label'         => '',
+            // Where orders ship from (carrier rates, labels) and the shop's own address (tax on pickup and downloads).
+            'from_name'         => '',
+            'from_company'      => '',
+            'from_street1'      => '',
+            'from_street2'      => '',
+            'from_city'         => '',
+            'from_region'       => '',
+            'from_postcode'     => '',
+            'from_country'      => '',
+            'from_phone'        => '',
+            // The box a parcel is sent in (the shop's size unit) and what it weighs (the shop's weight unit).
+            'box_length'        => '',
+            'box_width'         => '',
+            'box_height'        => '',
+            'box_weight'        => '',
+            // EasyPost (carrier rates and labels): the API key, sealed with the app secret.
+            'easypost_key'      => '',
         ];
     }
 
@@ -454,8 +513,11 @@ class ShopStoreAPI {
             'dimensions'        => self::dimensionsText($row),
             'featured'          => !empty($row['featured']),
             'sale_ends_at'      => $effective < $price ? (string) ($row['sale_ends_at'] ?? '') : '',
+            'seo_title'         => (string) ($row['seo_title'] ?? ''),
+            'seo_description'   => (string) ($row['seo_description'] ?? ''),
             'url'               => self::productPath((string) $row['slug']),
             'updated_at'        => (string) ($row['updated_at'] ?? ''),
+            'created_at'        => (string) ($row['created_at'] ?? ''),
         ];
     }
 
@@ -494,6 +556,14 @@ class ShopStoreAPI {
             $args[] = $tag;
         }
         if (!empty($q['featured'])) $where .= ' AND p.featured = 1';
+        // A visitor's search: the words in the title, SKU, short description or tags.
+        $search = trim(mb_substr((string) ($q['q'] ?? ''), 0, 80));
+        foreach (array_slice(preg_split('/\s+/u', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [], 0, 5) as $word) {
+            $like = '%' . addcslashes($word, '%_\\') . '%';
+            $where .= " AND (p.title LIKE ? OR p.sku LIKE ? OR p.short_description LIKE ? OR EXISTS (SELECT 1 FROM shop_product_tags pt JOIN shop_tags t ON t.id = pt.tag_id AND t.tenant_id = pt.tenant_id
+                                     WHERE pt.product_id = p.id AND pt.tenant_id = p.tenant_id AND t.name LIKE ?))";
+            array_push($args, $like, $like, $like, $like);
+        }
         $ids = array_values(array_unique(array_filter(array_map('intval', (array) ($q['ids'] ?? [])))));
         if (array_key_exists('ids', $q)) {
             if ($ids === []) return ['rows' => [], 'total' => 0, 'page' => 1, 'pages' => 1];
@@ -747,6 +817,13 @@ class ShopStoreAPI {
             'sale_starts_at'    => $sale !== null ? $saleFrom : null,
             'sale_ends_at'      => $sale !== null ? $saleTo : null,
             'featured'          => !empty($in['featured']) ? 1 : 0,
+            // Kept as it is when not sent (an importer's update), else one of the classes.
+            'tax_class'         => array_key_exists('tax_class', $in)
+                ? (in_array((string) $in['tax_class'], ShopTax::CLASSES, true) ? (string) $in['tax_class'] : '')
+                : ($id > 0 ? (string) (self::productRow($id)['tax_class'] ?? '') : ''),
+            // Kept as they are when not sent (an importer's update).
+            'seo_title'         => array_key_exists('seo_title', $in) ? (trim((string) $in['seo_title']) !== '' ? mb_substr(trim((string) $in['seo_title']), 0, 200) : null) : ($existing['seo_title'] ?? null),
+            'seo_description'   => array_key_exists('seo_description', $in) ? (trim((string) $in['seo_description']) !== '' ? mb_substr(trim((string) $in['seo_description']), 0, 400) : null) : ($existing['seo_description'] ?? null),
             'low_stock'         => $lowStock,
             'purchase_note'     => trim((string) ($in['purchase_note'] ?? '')) !== '' ? mb_substr(trim((string) $in['purchase_note']), 0, 2000) : null,
             'download_limit'    => $type === 'digital' ? $downloadLimit : null,
@@ -1252,11 +1329,15 @@ class ShopStoreAPI {
             $capped = $qty > $max;
             $qty = min($qty, $max);
             $unit = self::effectivePrice($vid > 0 ? $priced : $r);
+            $regular = (int) (($vid > 0 ? $priced : $r)['price_cents'] ?? $unit);
             $type = self::productType($r);
             $weight = $vid > 0 ? ($priced['weight'] ?? null) : ($r['weight'] ?? null);
             $lines[] = [
                 'product_type'  => $type,
                 'needs_shipping' => $type === 'physical',
+                'tax_class'     => (string) ($r['tax_class'] ?? ''),
+                'on_sale'       => $unit < $regular,
+                'discount_cents' => 0,
                 'unit_weight'   => $weight !== null && $weight !== '' ? (float) $weight : null,
                 'key'           => self::lineKey($pid, $vid),
                 'product_id'    => $pid,
@@ -1308,26 +1389,165 @@ class ShopStoreAPI {
         return max(0, (int) self::setting('shipping_cents'));
     }
 
+    /** An order's delivery address on one line: `12 Main St, Paso Robles, CA 93446, US` or `Rue X 1, 1000 Bruxelles, BE`. */
+    public static function addressText(array $o): string {
+        $region = trim((string) ($o['region'] ?? ''));
+        $place = $region !== '' ? trim(trim((string) $o['city']) . ', ' . $region . ' ' . trim((string) $o['postal_code']), ', ') : trim($o['postal_code'] . ' ' . $o['city']);
+        return implode(', ', array_filter([(string) $o['address_line1'], (string) ($o['address_line2'] ?? ''), $place, (string) $o['country']], static fn(string $v): bool => trim($v) !== ''));
+    }
+
+    /** How a pickup order is collected: the zone's pickup method it chose, else the settings' pickup wording. */
+    public static function pickupText(array $o): string {
+        if (!empty($o['shipping_method'])) return (string) $o['shipping_method'];
+        return self::setting('pickup_label') !== '' ? self::setting('pickup_label') : __('shop_pickup', 'Pick up (free)');
+    }
+
+    /** Where a customer follows their parcel: the label's tracking page, else the carrier's own. */
+    public static function trackingLink(array $o): string {
+        if (!empty($o['tracking_url'])) return (string) $o['tracking_url'];
+        return ShopShipping::trackingUrl((string) ($o['tracking_carrier'] ?? ''), (string) ($o['tracking_number'] ?? ''));
+    }
+
+    /** Countries whose addresses need a state or province (for shipping and sales tax). */
+    public const REGION_COUNTRIES = ['US', 'CA', 'AU'];
+
     /**
-     * @return array{lines: list<array<string, mixed>>, count: int, subtotal_cents: int, shipping_cents: int, total_cents: int, currency: string, delivery: string, free_over_cents: int}
+     * The cart's totals: lines, the coupon (from the session, checked again now), shipping for the delivery choice and
+     * address (`$rateId` picks one of the rates quoted; the cheapest otherwise), tax for the address, and the total.
+     *
+     * total = subtotal − discount + shipping (+ tax when the shop adds tax at checkout).
+     *
+     * @param array<string, mixed> $address country, region, postal_code, city, address_line1 (any may be missing)
+     * @return array<string, mixed>
      */
-    public static function cartTotals(string $delivery = ''): array {
+    public static function cartTotals(string $delivery = '', array $address = [], string $rateId = '', string $email = ''): array {
         $lines = self::cartLines();
         $options = self::deliveryOptions($lines);
         $delivery = in_array($delivery, $options, true) ? $delivery : $options[0];
         $subtotal = array_sum(array_column($lines, 'line_cents'));
-        $shipping = $lines === [] ? 0 : self::shippingFor($subtotal, $delivery);
+        $currency = $lines[0]['currency'] ?? self::currency();
+
+        // The coupon: kept only while it still fits the cart; a note says why it went.
+        $coupon = null;
+        $couponNote = '';
+        $eval = null;
+        $code = ShopCoupons::sessionCode();
+        if ($code !== '' && $lines !== []) {
+            $c = ShopCoupons::find($code);
+            $eval = $c ? ShopCoupons::evaluate($c, $lines, $email) : null;
+            if ($c && $eval['ok']) {
+                $coupon = $c;
+            } else {
+                $couponNote = $eval['error'] ?? __('shop_coupon_unknown', 'That code is not valid.');
+                $eval = null;
+            }
+        }
+        foreach ($lines as &$line) $line['discount_cents'] = (int) ($eval['per_line'][$line['key']] ?? 0);
+        unset($line);
+        $discount = (int) ($eval['discount'] ?? 0);
+        $net = $subtotal - $discount;
+
+        // Shipping.
+        $rates = [];
+        $rate = null;
+        $pending = false;
+        $shipError = '';
+        $shipping = 0;
+        if ($lines !== [] && $delivery === 'shipping') {
+            $quote = ShopShipping::quote($lines, $address, $net);
+            $rates = $quote['rates'];
+            $pending = $quote['pending'];
+            $shipError = $quote['error'];
+            $rate = ($rateId !== '' ? ShopShipping::pick($rates, $rateId) : null) ?? ($rates[0] ?? null);
+            $shipping = $rate !== null ? (int) $rate['cents'] : 0;
+            if (!empty($eval['free_shipping'])) $shipping = 0;
+        }
+
+        // Tax: where the order goes (the shop itself for a pickup, even one chosen among a zone's methods).
+        $taxDelivery = $rate !== null && $rate['kind'] === 'pickup' ? 'pickup' : $delivery;
+        // Tax added at checkout waits for the address an order ships to (prices that include tax use the shop's own).
+        $taxAddress = $taxDelivery === 'shipping' && ShopTax::mode() === 'exclusive' && trim((string) ($address['country'] ?? '')) === ''
+            ? [] : ShopTax::addressFor($taxDelivery, $address);
+        $tax = ShopTax::compute($lines, $shipping, $taxAddress);
+        $total = $net + $shipping + ($tax['inclusive'] ? 0 : $tax['cents']);
         return [
-            'lines'           => $lines,
-            'count'           => array_sum(array_column($lines, 'qty')),
-            'subtotal_cents'  => $subtotal,
-            'shipping_cents'  => $shipping,
-            'total_cents'     => $subtotal + $shipping,
-            'currency'        => $lines[0]['currency'] ?? self::currency(),
-            'delivery'        => $delivery,
+            'lines'            => $lines,
+            'count'            => array_sum(array_column($lines, 'qty')),
+            'subtotal_cents'   => $subtotal,
+            'discount_cents'   => $discount,
+            'coupon'           => $coupon ? (string) $coupon['code'] : '',
+            'coupon_label'     => $coupon ? ShopCoupons::describe($coupon, $currency) : '',
+            'coupon_note'      => $couponNote,
+            'free_shipping'    => !empty($eval['free_shipping']),
+            'shipping_cents'   => $shipping,
+            'shipping_rates'   => $rates,
+            'shipping_rate'    => $rate,
+            'shipping_pending' => $pending,
+            'shipping_error'   => $shipError,
+            'tax_cents'        => $tax['cents'],
+            'tax_label'        => $tax['label'],
+            'tax_inclusive'    => $tax['inclusive'],
+            'tax_pending'      => $tax['pending'],
+            'tax_rate'         => $tax['rate'],
+            'tax_mode'         => ShopTax::mode(),
+            'total_cents'      => $total,
+            'currency'         => $currency,
+            'delivery'         => $delivery,
             'delivery_options' => $options,
-            'free_over_cents' => max(0, (int) self::setting('free_over_cents')),
+            'free_over_cents'  => ShopShipping::hasZones() ? 0 : max(0, (int) self::setting('free_over_cents')),
         ];
+    }
+
+    /**
+     * The rows under an order's or a cart's lines, for every view and email: subtotal, discount, shipping, tax and
+     * the total. A tax that prices include is a note row ("Includes $1.20 VAT"), not added.
+     *
+     * @param array<string, mixed> $t an order row, or cartTotals()
+     * @return list<array{key: string, label: string, cents: int, text: string}>
+     */
+    public static function totalRows(array $t, string $currency): array {
+        $rows = [];
+        $discount = (int) ($t['discount_cents'] ?? 0);
+        $rows[] = ['key' => 'subtotal', 'label' => __('shop_subtotal', 'Subtotal'), 'cents' => (int) $t['subtotal_cents'], 'text' => self::money((int) $t['subtotal_cents'], $currency)];
+        if ($discount > 0) {
+            $code = (string) ($t['coupon'] ?? $t['coupon_code'] ?? '');
+            $rows[] = ['key' => 'discount', 'label' => $code !== '' ? sprintf(__('shop_discount_code', 'Discount (%s)'), $code) : __('shop_discount', 'Discount'),
+                       'cents' => -$discount, 'text' => '−' . self::money($discount, $currency)];
+        }
+        $delivery = (string) ($t['delivery'] ?? 'shipping');
+        if ($delivery === 'shipping') {
+            $method = (string) ($t['shipping_method'] ?? ($t['shipping_rate']['label'] ?? ''));
+            $cents = (int) $t['shipping_cents'];
+            // A cart with no rate yet (no address, or none fits) says so rather than "free".
+            $unknown = array_key_exists('shipping_rates', $t) && ($t['shipping_rate'] ?? null) === null && empty($t['free_shipping']);
+            $rows[] = ['key' => 'shipping', 'label' => $method !== '' && $method !== __('shop_ship_to_me', 'Ship to my address') ? sprintf(__('shop_shipping_via', 'Shipping (%s)'), $method) : __('shop_shipping', 'Shipping'),
+                       'cents' => $cents, 'text' => $unknown ? __('shop_shipping_tbd', 'after your address') : ($cents > 0 ? self::money($cents, $currency) : __('shop_free', 'free'))];
+        }
+        $taxCents = (int) ($t['tax_cents'] ?? 0);
+        $inclusive = !empty($t['tax_inclusive']);
+        $label = (string) ($t['tax_label'] ?? '') !== '' ? (string) $t['tax_label'] : ShopTax::label();
+        if ($taxCents > 0 && !$inclusive) {
+            $rows[] = ['key' => 'tax', 'label' => $label, 'cents' => $taxCents, 'text' => self::money($taxCents, $currency)];
+        }
+        $rows[] = ['key' => 'total', 'label' => __('shop_total', 'Total'), 'cents' => (int) $t['total_cents'], 'text' => self::money((int) $t['total_cents'], $currency)];
+        if ($taxCents > 0 && $inclusive) {
+            $rows[] = ['key' => 'tax_included', 'label' => '', 'cents' => 0, 'text' => sprintf(__('shop_includes_tax', 'Includes %1$s %2$s'), self::money($taxCents, $currency), $label)];
+        }
+        return $rows;
+    }
+
+    /** What the cart says under its subtotal, in the shop's tax mode. */
+    public static function cartTaxNote(bool $ships): string {
+        $mode = ShopTax::mode();
+        // Tax added at checkout, but no rate set: no tax is ever added, so the cart does not promise any.
+        if ($mode === 'exclusive' && ShopTax::rates() === []) $mode = 'none';
+        if ($mode === 'exclusive') {
+            return $ships ? __('shop_cart_note_exclusive', 'Tax and shipping are calculated at checkout.') : __('shop_cart_note_exclusive_noship', 'Tax is calculated at checkout.');
+        }
+        if ($mode === 'none') return $ships ? __('shop_cart_note_none', 'Shipping is calculated at checkout.') : '';
+        $label = ShopTax::label();
+        return $ships ? sprintf(__('shop_cart_note_inclusive', 'Prices include %s. Shipping is calculated at checkout.'), $label)
+                      : sprintf(__('shop_cart_note_inclusive_noship', 'Prices include %s.'), $label);
     }
 
     // ── Checkout ──────────────────────────────────────────────────────────
@@ -1336,9 +1556,11 @@ class ShopStoreAPI {
      * Check the checkout form and the cart, then create the order (pending payment) with its lines in one transaction.
      *
      * @param array<string, mixed> $in posted: email, name, phone, delivery, address_line1, address_line2, postal_code, city, country, notes
-     * @return array{ok: bool, order?: array<string, mixed>, errors?: array<string, string>}
+     * @param ?callable $guard asked once the form and cart are valid, just before the order is made (ShopGuard::check):
+     *   returns {ok, error, status}; a refusal is returned as the order's error with its `status`
+     * @return array{ok: bool, order?: array<string, mixed>, errors?: array<string, string>, status?: int}
      */
-    public static function placeOrder(array $in, ?int $customerId = null): array {
+    public static function placeOrder(array $in, ?int $customerId = null, ?callable $guard = null): array {
         self::ensureSchema();
         $errors = [];
         $str = static fn(string $k, int $max): string => mb_substr(trim(str_replace(["\r", "\n", "\0"], ' ', (string) ($in[$k] ?? ''))), 0, $max);
@@ -1348,7 +1570,7 @@ class ShopStoreAPI {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors['email'] = __('shop_err_email', 'Enter a valid email address.');
         if ($name === '') $errors['name'] = __('shop_err_name', 'Enter your name.');
         if (!in_array($delivery, self::deliveryOptions(), true)) $errors['delivery'] = __('shop_err_delivery', 'Choose how you want to receive your order.');
-        $address = ['address_line1' => null, 'address_line2' => null, 'postal_code' => null, 'city' => null, 'country' => null];
+        $address = ['address_line1' => null, 'address_line2' => null, 'postal_code' => null, 'city' => null, 'country' => null, 'region' => null];
         if ($delivery === 'shipping') {
             $address = [
                 'address_line1' => $str('address_line1', 190),
@@ -1356,14 +1578,31 @@ class ShopStoreAPI {
                 'postal_code'   => $str('postal_code', 20),
                 'city'          => $str('city', 120),
                 'country'       => strtoupper($str('country', 2)),
+                'region'        => strtoupper($str('region', 80)) !== '' ? strtoupper($str('region', 80)) : null,
             ];
+            if ($address['region'] === null && in_array($address['country'], self::REGION_COUNTRIES, true)) $errors['region'] = __('shop_err_region', 'Enter your state or province.');
             if ($address['address_line1'] === '') $errors['address_line1'] = __('shop_err_address', 'Enter your street and number.');
             if ($address['postal_code'] === '') $errors['postal_code'] = __('shop_err_postal', 'Enter your postal code.');
             if ($address['city'] === '') $errors['city'] = __('shop_err_city', 'Enter your town or city.');
             if (!in_array($address['country'], self::countries(), true)) $errors['country'] = __('shop_err_country', 'We do not deliver to that country.');
         }
-        $totals = self::cartTotals($delivery);
+        $totals = self::cartTotals($delivery, $address + ['name' => $name, 'email' => $email, 'phone' => $str('phone', 40)], (string) ($in['shipping_rate'] ?? ''), $email);
         if ($totals['lines'] === []) $errors['_'] = __('shop_err_cart_empty', 'Your cart is empty.');
+        if ($totals['coupon_note'] !== '') {
+            $errors['coupon'] = $totals['coupon_note'] . ' ' . __('shop_coupon_removed', 'It was removed and your total updated.');
+            ShopCoupons::setSessionCode('');
+        }
+        $rate = null;
+        if ($delivery === 'shipping' && $totals['lines'] !== [] && !isset($errors['country'])) {
+            $rates = $totals['shipping_rates'];
+            $rate = ShopShipping::pick($rates, (string) ($in['shipping_rate'] ?? '')) ?? (count($rates) === 1 ? $rates[0] : null);
+            if ($rates === []) {
+                $errors['shipping_rate'] = $totals['shipping_error'] !== '' ? $totals['shipping_error']
+                    : ($totals['shipping_pending'] ? __('shop_err_rates_need_address', 'Enter your address to see the shipping rates.') : __('shop_err_no_zone', 'We do not ship to that address yet. Contact us and we will find a way.'));
+            } elseif ($rate === null) {
+                $errors['shipping_rate'] = __('shop_err_choose_rate', 'Choose a shipping method.');
+            }
+        }
         foreach ($totals['lines'] as $line) {
             if ($line['capped']) {
                 $errors['_'] = sprintf(__('shop_err_stock_changed', 'Only %1$d of “%2$s” left: your cart was updated.'), $line['max_qty'], self::lineTitle($line['title'], $line['options_label']));
@@ -1372,6 +1611,10 @@ class ShopStoreAPI {
             }
         }
         if ($errors !== []) return ['ok' => false, 'errors' => $errors];
+        if ($guard !== null) {
+            $verdict = $guard();
+            if (empty($verdict['ok'])) return ['ok' => false, 'errors' => ['_' => (string) ($verdict['error'] ?? '')], 'status' => (int) ($verdict['status'] ?? 400)];
+        }
 
         $tid = current_tenant_id();
         $pdo = Database::get();
@@ -1385,13 +1628,22 @@ class ShopStoreAPI {
                 'email'          => $email,
                 'name'           => $name,
                 'phone'          => $str('phone', 40) !== '' ? $str('phone', 40) : null,
-                'delivery'       => $delivery,
+                // A zone's pickup method makes a pickup order (the address typed stays on it).
+                'delivery'       => $rate !== null && $rate['kind'] === 'pickup' ? 'pickup' : $delivery,
                 'notes'          => trim((string) ($in['notes'] ?? '')) !== '' ? mb_substr(trim((string) $in['notes']), 0, 2000) : null,
                 'status'         => 'pending_payment',
                 'currency'       => $totals['currency'],
                 'subtotal_cents' => $totals['subtotal_cents'],
                 'shipping_cents' => $totals['shipping_cents'],
+                'discount_cents' => $totals['discount_cents'],
+                'coupon_code'    => $totals['coupon'] !== '' ? $totals['coupon'] : null,
+                'tax_cents'      => $totals['tax_cents'],
+                'tax_label'      => $totals['tax_cents'] > 0 ? mb_substr((string) $totals['tax_label'], 0, 80) : null,
+                'tax_inclusive'  => $totals['tax_inclusive'] ? 1 : 0,
                 'total_cents'    => $totals['total_cents'],
+                'shipping_method'  => $rate !== null ? mb_substr((string) $rate['label'], 0, 160) : null,
+                'shipping_carrier' => $rate !== null && $rate['carrier'] !== '' ? mb_substr((string) $rate['carrier'], 0, 40) : null,
+                'shipping_service' => $rate !== null && $rate['service'] !== '' ? mb_substr((string) $rate['service'], 0, 80) : null,
             ] + $address);
             foreach ($totals['lines'] as $line) {
                 Database::insert('shop_order_items', [
@@ -1449,13 +1701,7 @@ class ShopStoreAPI {
         if ($gw === null) {
             return ['ok' => false, 'error' => __('shop_err_payment_unavailable', 'Online payment is not available right now. Please contact us to complete your order.')];
         }
-        $lineItems = [];
-        foreach (self::orderItems((int) $order['id']) as $item) {
-            $lineItems[] = ['name' => self::lineTitle((string) $item['title'], $item['options_label'] ?? null), 'amount_cents' => (int) $item['unit_price_cents'], 'quantity' => (int) $item['qty']];
-        }
-        if ((int) $order['shipping_cents'] > 0) {
-            $lineItems[] = ['name' => __('shop_shipping', 'Shipping'), 'amount_cents' => (int) $order['shipping_cents'], 'quantity' => 1];
-        }
+        $lineItems = self::paymentLines($order);
         try {
             $start = Payments::startCheckout($gw->id(), new CheckoutRequest($lineItems, [
                 'source_plugin'   => 'shop',
@@ -1478,6 +1724,31 @@ class ShopStoreAPI {
             'stripe_session_id' => $gw->id() === 'stripe' ? $start->ref : null,
         ], 'id = ? AND tenant_id = ?', [(int) $order['id'], current_tenant_id()]);
         return ['ok' => true, 'url' => $start->redirectUrl];
+    }
+
+    /**
+     * What the gateway shows the customer. Itemised (products, shipping, tax added at checkout) when that adds up to
+     * the total; with a discount, one line for the whole order, since gateways take no negative lines.
+     *
+     * @return list<array{name: string, amount_cents: int, quantity: int}>
+     */
+    public static function paymentLines(array $order): array {
+        $items = self::orderItems((int) $order['id']);
+        if ((int) ($order['discount_cents'] ?? 0) > 0) {
+            $n = array_sum(array_map(static fn(array $i): int => (int) $i['qty'], $items));
+            return [['name' => sprintf(__('shop_payment_order_line', 'Order %1$s (%2$d items)'), $order['ref'], $n), 'amount_cents' => (int) $order['total_cents'], 'quantity' => 1]];
+        }
+        $lines = [];
+        foreach ($items as $item) {
+            $lines[] = ['name' => self::lineTitle((string) $item['title'], $item['options_label'] ?? null), 'amount_cents' => (int) $item['unit_price_cents'], 'quantity' => (int) $item['qty']];
+        }
+        if ((int) $order['shipping_cents'] > 0) {
+            $lines[] = ['name' => (string) ($order['shipping_method'] ?? '') !== '' ? (string) $order['shipping_method'] : __('shop_shipping', 'Shipping'), 'amount_cents' => (int) $order['shipping_cents'], 'quantity' => 1];
+        }
+        if ((int) ($order['tax_cents'] ?? 0) > 0 && empty($order['tax_inclusive'])) {
+            $lines[] = ['name' => (string) ($order['tax_label'] ?? '') !== '' ? (string) $order['tax_label'] : ShopTax::label(), 'amount_cents' => (int) $order['tax_cents'], 'quantity' => 1];
+        }
+        return $lines;
     }
 
     /** Where a paid order's confirmation is shown: the thank-you page with the order's ref and key. */
@@ -1528,6 +1799,7 @@ class ShopStoreAPI {
             }
         }
         self::grantDownloads($orderId);
+        ShopCoupons::recordUse($order);
         $after = array_filter([
             'charge_id'  => $chargeId,
             'stock_note' => $notes !== [] ? mb_substr(implode('; ', $notes), 0, 255) : null,
@@ -1786,7 +2058,8 @@ class ShopStoreAPI {
     }
 
     /** @return list<array<string, mixed>> */
-    public static function listOrders(string $status = '', int $limit = 200): array {
+    /** Orders, newest first: by status, and matching `$q` (a reference, an email or a name) when given. */
+    public static function listOrders(string $status = '', int $limit = 200, string $q = ''): array {
         self::ensureSchema();
         $args = [current_tenant_id()];
         $where = 'tenant_id = ?';
@@ -1794,7 +2067,13 @@ class ShopStoreAPI {
             $where .= ' AND status = ?';
             $args[] = $status;
         }
-        return Database::rows("SELECT * FROM shop_orders WHERE $where ORDER BY id DESC LIMIT " . max(1, min(1000, $limit)), $args);
+        $q = trim(mb_substr($q, 0, 120));
+        if ($q !== '') {
+            $like = '%' . addcslashes($q, '%_\\') . '%';
+            $where .= ' AND (ref LIKE ? OR email LIKE ? OR name LIKE ? OR tracking_number LIKE ?)';
+            array_push($args, $like, $like, $like, $like);
+        }
+        return Database::rows("SELECT * FROM shop_orders WHERE $where ORDER BY id DESC LIMIT " . max(1, min(5000, $limit)), $args);
     }
 
     /** @return array<string, string> status => label */
@@ -1809,11 +2088,58 @@ class ShopStoreAPI {
     }
 
     /** paid → fulfilled (shipped or collected). */
-    public static function fulfil(int $orderId): bool {
+    /**
+     * paid → fulfilled: shipped (with its tracking, when given) or collected. `$notify` emails the customer: on its way,
+     * with the tracking link, or ready to collect.
+     *
+     * @param array{carrier?: string, number?: string, url?: string} $tracking
+     */
+    public static function fulfil(int $orderId, array $tracking = [], bool $notify = false): bool {
         $ok = Database::update('shop_orders', ['status' => 'fulfilled', 'fulfilled_at' => slate_db_now()],
             "id = ? AND tenant_id = ? AND status = 'paid'", [$orderId, current_tenant_id()]) === 1;
-        if ($ok && class_exists('AuditLog')) AuditLog::record('shop.order_fulfilled', (string) $orderId);
-        return $ok;
+        if (!$ok) return false;
+        if (array_filter($tracking, static fn($v): bool => trim((string) $v) !== '') !== []) self::saveTracking($orderId, $tracking);
+        $order = self::order($orderId);
+        if ($order && $order['delivery'] === 'shipping') {
+            Database::update('shop_orders', ['shipped_at' => slate_db_now()], 'id = ? AND tenant_id = ? AND shipped_at IS NULL', [$orderId, current_tenant_id()]);
+        }
+        if (class_exists('AuditLog')) AuditLog::record('shop.order_fulfilled', (string) $orderId);
+        if ($notify) self::sendFulfilledEmail($orderId);
+        return true;
+    }
+
+    /**
+     * Keep an order's tracking: the carrier, the number and, when the shop has one, the tracking page's address (else
+     * the carrier's own page is linked).
+     *
+     * @param array{carrier?: string, number?: string, url?: string} $t
+     * @return array{ok: bool, error?: string}
+     */
+    public static function saveTracking(int $orderId, array $t): array {
+        $url = trim((string) ($t['url'] ?? ''));
+        if ($url !== '' && !preg_match('#^https://#i', $url)) return ['ok' => false, 'error' => __('shop_err_tracking_url', 'A tracking link starts with https://.')];
+        $clean = static fn(string $v, int $max): ?string => ($v = mb_substr(trim(str_replace(["\r", "\n", "\0"], ' ', $v)), 0, $max)) !== '' ? $v : null;
+        Database::update('shop_orders', [
+            'tracking_carrier' => $clean((string) ($t['carrier'] ?? ''), 40),
+            'tracking_number'  => $clean((string) ($t['number'] ?? ''), 80),
+            'tracking_url'     => $clean($url, 500),
+        ], 'id = ? AND tenant_id = ?', [$orderId, current_tenant_id()]);
+        if (class_exists('AuditLog')) AuditLog::record('shop.order_tracking', (string) $orderId);
+        return ['ok' => true];
+    }
+
+    /** The shop's own notes on an order (never shown to the customer). */
+    public static function saveAdminNotes(int $orderId, string $notes): void {
+        $notes = trim($notes);
+        Database::update('shop_orders', ['admin_notes' => $notes !== '' ? mb_substr($notes, 0, 5000) : null], 'id = ? AND tenant_id = ?', [$orderId, current_tenant_id()]);
+    }
+
+    /** Send a paid order's receipt to the customer again. */
+    public static function resendReceipt(int $orderId): bool {
+        $order = self::order($orderId);
+        if (!$order || !in_array($order['status'], ['paid', 'fulfilled'], true)) return false;
+        self::sendOrderEmails($orderId, false);
+        return true;
     }
 
     /** pending_payment → cancelled (a checkout that was never paid). */
@@ -1881,7 +2207,33 @@ class ShopStoreAPI {
         return $out;
     }
 
-    private static function sendOrderEmails(int $orderId): void {
+    /** Tell the customer their order is on its way (with tracking) or ready to collect. */
+    public static function sendFulfilledEmail(int $orderId): void {
+        if (!class_exists('Mailer') || !class_exists('\\Slate\\Services\\Notifications\\EmailTemplate')) return;
+        $order = self::order($orderId);
+        if (!$order || $order['delivery'] === 'none') return;
+        try {
+            $tpl = '\\Slate\\Services\\Notifications\\EmailTemplate';
+            $site = Database::setting('site_name') ?: 'Kohevo';
+            $shipped = $order['delivery'] === 'shipping';
+            $rows = [];
+            if ($shipped && !empty($order['tracking_number'])) {
+                $rows[] = [e(__('shop_tracking', 'Tracking')), e(trim((string) $order['tracking_carrier'] . ' ' . $order['tracking_number']))];
+            }
+            $body = $tpl::heading($shipped ? __('shop_email_shipped_heading', 'Your order is on its way') : __('shop_email_ready_heading', 'Your order is ready to collect'))
+                . $tpl::greeting((string) $order['name'])
+                . $tpl::paragraph(e(sprintf($shipped ? __('shop_email_shipped_body', 'Order %s has left us.') : __('shop_email_ready_body', 'Order %s is ready for you.'), $order['ref'])
+                    . ' ' . ($shipped ? self::addressText($order) : self::pickupText($order))))
+                . ($rows !== [] ? $tpl::infoCard($rows) : '')
+                . (($link = self::trackingLink($order)) !== '' ? $tpl::button($link, __('shop_track_parcel', 'Track your parcel')) : $tpl::button(self::confirmationUrl($order), __('shop_view_order', 'View your order')));
+            $subject = sprintf('%s — %s %s', $site, $shipped ? __('shop_email_shipped_subject', 'Shipped') : __('shop_email_ready_subject', 'Ready to collect'), $order['ref']);
+            Mailer::send((string) $order['email'], $subject, $tpl::shell($body), (string) $order['name']);
+        } catch (\Throwable $e) {
+            slate_log('Shop: fulfilment email failed: ' . $e->getMessage(), 'warning');
+        }
+    }
+
+    private static function sendOrderEmails(int $orderId, bool $notifyShop = true): void {
         if (!class_exists('Mailer') || !class_exists('\\Slate\\Services\\Notifications\\EmailTemplate')) return;
         $order = self::order($orderId);
         if (!$order) return;
@@ -1892,8 +2244,10 @@ class ShopStoreAPI {
             foreach (self::orderItems($orderId) as $item) {
                 $rows[] = [e(self::lineTitle((string) $item['title'], $item['options_label'] ?? null)) . ' × ' . (int) $item['qty'], e(self::money((int) $item['line_total_cents'], (string) $order['currency']))];
             }
-            if ((int) $order['shipping_cents'] > 0) $rows[] = [e(__('shop_shipping', 'Shipping')), e(self::money((int) $order['shipping_cents'], (string) $order['currency']))];
-            $rows[] = ['<strong>' . e(__('shop_total_incl_vat', 'Total (incl. VAT)')) . '</strong>', '<strong>' . e(self::money((int) $order['total_cents'], (string) $order['currency'])) . '</strong>'];
+            foreach (self::totalRows($order, (string) $order['currency']) as $t) {
+                if ($t['key'] === 'subtotal') continue;
+                $rows[] = $t['key'] === 'total' ? ['<strong>' . e($t['label']) . '</strong>', '<strong>' . e($t['text']) . '</strong>'] : [e($t['label']), e($t['text'])];
+            }
             $subject = sprintf('%s — %s %s', $site, __('shop_email_subject', 'Order confirmed'), $order['ref']);
             $extra = '';
             $downloads = self::orderDownloads($order);
@@ -1913,7 +2267,7 @@ class ShopStoreAPI {
                 . $tpl::button(self::confirmationUrl($order), __('shop_view_order', 'View your order')));
             Mailer::send((string) $order['email'], $subject, $body, (string) $order['name']);
             $notify = trim(self::setting('notify_email'));
-            if ($notify !== '' && filter_var($notify, FILTER_VALIDATE_EMAIL)) {
+            if ($notifyShop && $notify !== '' && filter_var($notify, FILTER_VALIDATE_EMAIL)) {
                 $admin = $tpl::shell($tpl::heading(sprintf(__('shop_email_admin_heading', 'New order %s'), $order['ref']))
                     . $tpl::paragraph(e($order['name'] . ' <' . $order['email'] . '>'))
                     . $tpl::infoCard($rows)

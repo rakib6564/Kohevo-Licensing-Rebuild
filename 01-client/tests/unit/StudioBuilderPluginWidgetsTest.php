@@ -171,7 +171,7 @@ unit('plugin widgets: each module plugin declares its own widgets, gated by its 
         'membership.member_links' => 'membership', 'membership.plan' => 'membership', 'membership.plans' => 'membership',
         'shop.cart' => 'shop', 'shop.checkout' => 'shop', 'shop.mini_cart' => 'shop', 'shop.order_confirmation' => 'shop',
         'shop.product_add_to_cart' => 'shop', 'shop.product_description' => 'shop', 'shop.product_image' => 'shop',
-        'shop.product_meta' => 'shop', 'shop.product_price' => 'shop', 'shop.product_stock' => 'shop',
+        'shop.product_meta' => 'shop', 'shop.product_options' => 'shop', 'shop.product_price' => 'shop', 'shop.product_stock' => 'shop',
         'shop.product_title' => 'shop', 'shop.products' => 'shop',
     ], $byType);
     foreach (PluginWidgetCatalog::blocks() as $block) {
@@ -247,7 +247,7 @@ unit('plugin widgets: a plugin may declare style parts for its own blocks only, 
 });
 
 unit('plugin widgets: Shop\'s parts reach BlockParts and the editor, and its products are a content type Studio serves', function (): void {
-    assert_eq(['card', 'image', 'body', 'icon', 'link', 'title', 'price', 'button', 'badge', 'filter', 'pager', 'grid'], array_keys(\Slate\Module\StudioBuilder\Registry\BlockParts::for('shop.products')));
+    assert_eq(['card', 'image', 'body', 'icon', 'link', 'title', 'price', 'button', 'badge', 'category', 'excerpt', 'sale_badge', 'toolbar', 'filter', 'filter_active', 'fields', 'count', 'pager', 'more', 'grid'], array_keys(\Slate\Module\StudioBuilder\Registry\BlockParts::for('shop.products')));
     assert_true(in_array('shop.cart', \Slate\Module\StudioBuilder\Registry\BlockParts::types(), true));
     $manifest = ModuleBlockDefinitions::studioRegistry()->get('shop.product_add_to_cart')->toEditorManifest();
     assert_eq(['button', 'options', 'option_labels', 'variant_price', 'quantity', 'message'], array_column($manifest['style_parts'], 'key'));

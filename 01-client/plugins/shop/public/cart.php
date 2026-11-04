@@ -9,7 +9,8 @@
  *                             Studio page, so it carries no CSRF token; it must come from this site (Origin/Referer)
  *                             and only ever adds a published product to the visitor's own cart. A product with
  *                             variants needs the variant (its id, or one value per attribute in `opt[]`).
- *   POST action=update|remove line (or product_id)[, qty]: from the cart's own forms, CSRF-checked
+ *   POST action=update|remove line (or product_id)[, qty][, step -1|1]: from the cart's own forms, CSRF-checked
+ *   POST action=coupon (coupon) | coupon_remove: the cart's discount code, CSRF-checked
  *
  * A JSON caller (studio-runtime.js) gets {ok, message, count[, html]}; a plain form post is sent back with a 303.
  */
@@ -72,12 +73,35 @@ if ($action === 'update' || $action === 'remove') {
         $json ? shop_json(['ok' => false, 'message' => __('shop_err_security', 'Security check failed. Please reload the page.')], 403) : shop_html('Forbidden', 403);
     }
     $line = is_string($_POST['line'] ?? null) ? $_POST['line'] : (string) $productId;
-    ShopStoreAPI::cartSet($line, $action === 'remove' ? 0 : max(0, (int) ($_POST['qty'] ?? 0)));
+    // The cart's − and + buttons send `step` (-1 or 1) with the quantity shown.
+    $step = (int) ($_POST['step'] ?? 0);
+    $qty = max(0, (int) ($_POST['qty'] ?? 0) + (in_array($step, [-1, 1], true) ? $step : 0));
+    ShopStoreAPI::cartSet($line, $action === 'remove' ? 0 : min(ShopStoreAPI::MAX_QTY, $qty));
     $totals = ShopStoreAPI::cartTotals();
     if ($json) {
         shop_json(['ok' => true, 'html' => shop_view_cart($totals, __('shop_cart_updated', 'Your cart was updated.')), 'count' => $totals['count']]);
     }
     shop_redirect(ShopStoreAPI::pageUrl('cart_page'));
+}
+
+if ($action === 'coupon' || $action === 'coupon_remove') {
+    if (!csrf_verify() || !shop_same_site()) {
+        $json ? shop_json(['ok' => false, 'message' => __('shop_err_security', 'Security check failed. Please reload the page.')], 403) : shop_html('Forbidden', 403);
+    }
+    $error = '';
+    $notice = '';
+    if ($action === 'coupon_remove') {
+        ShopCoupons::setSessionCode('');
+        $notice = __('shop_coupon_removed_msg', 'The code was removed.');
+    } else {
+        $res = ShopCoupons::apply((string) ($_POST['coupon'] ?? ''), ShopStoreAPI::cartLines());
+        $res['ok'] ? $notice = $res['message'] : $error = $res['message'];
+    }
+    $totals = ShopStoreAPI::cartTotals();
+    if ($json) {
+        shop_json(['ok' => true, 'html' => shop_view_cart($totals, $notice, $error, $error !== '' ? (string) ($_POST['coupon'] ?? '') : ''), 'count' => $totals['count']]);
+    }
+    shop_html(shop_page(__('shop_cart', 'Cart'), shop_view_cart($totals, $notice, $error)));
 }
 
 $json ? shop_json(['ok' => false, 'message' => 'Unknown action.'], 400) : shop_html('Bad request', 400);

@@ -38,8 +38,9 @@ test('a guest adds to cart, checks out, pays and sees the order; the admin sees 
     await expect(cart.locator('.sb-shop-cart__line')).toHaveCount(2);
     await expect(cart.locator('.sb-shop-cart__subtotal')).toContainText('88.80');
     const tee = cart.locator('.sb-shop-cart__line', { hasText: 'Club T-shirt' });
-    await tee.locator('.sb-shop-cart__qty-input').fill('3');
-    await tee.getByRole('button', { name: 'Update' }).click();
+    // The + button adds one in place (2 → 3).
+    await expect(tee.locator('.sb-shop-cart__qty-input')).toHaveValue('2');
+    await tee.getByRole('button', { name: /^One more / }).click();
     await expect(cart.locator('.sb-shop-notice')).toHaveText('Your cart was updated.');
     await expect(cart.locator('.sb-shop-cart__subtotal')).toContainText('108.70');
     await expect(cart.locator('.sb-shop-cart__free')).toHaveCount(0);
@@ -58,6 +59,8 @@ test('a guest adds to cart, checks out, pays and sees the order; the admin sees 
     await checkout.getByLabel('Postal code').fill('1000');
     await checkout.getByLabel('Town or city').fill('Bruxelles');
     await checkout.getByLabel('Country').selectOption('BE');
+    // Checkout protection refuses a form sent back within 3 seconds of being shown (a person always takes longer).
+    await v.waitForTimeout(3_200);
     await checkout.getByRole('button', { name: 'Continue to payment' }).click();
 
     // Stripe (the fake) sends the visitor back paid; the order-received page shows the order.
@@ -149,6 +152,6 @@ test('the Shop widgets are in Add › Components and Products is a display condi
   });
   const shop = manifest.blocks.filter((b) => b.type.startsWith('shop.'));
   expect(shop.map((b) => b.type).sort()).toEqual(['shop.cart', 'shop.checkout', 'shop.mini_cart', 'shop.order_confirmation', 'shop.product_add_to_cart',
-    'shop.product_description', 'shop.product_image', 'shop.product_meta', 'shop.product_price', 'shop.product_stock', 'shop.product_title', 'shop.products']);
+    'shop.product_description', 'shop.product_image', 'shop.product_meta', 'shop.product_options', 'shop.product_price', 'shop.product_stock', 'shop.product_title', 'shop.products']);
   expect(shop.every((b) => !b.locked), 'licensed in the sandbox, so none is locked').toBe(true);
 });

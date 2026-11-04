@@ -83,7 +83,32 @@ final class ShopStudio
                 . '<ins class="sb-shop-price__sale"><span class="sb-shop-sr">' . Html::e(Html::t('shop_now', 'Now')) . ' </span>' . Html::e(self::money((int) $product['effective_cents'], $cur)) . '</ins>'
             : '<span class="sb-shop-price__amount">' . Html::e(self::money((int) $product['price_cents'], $cur)) . '</span>';
         return '<p class="sb-shop-price' . (!empty($product['on_sale']) && empty($product['has_variants']) ? ' sb-shop-price--sale' : '') . '">' . $html
-            . ($vatNote ? ' <span class="sb-shop-price__vat">' . Html::e(Html::t('shop_incl_vat', 'incl. VAT')) . '</span>' : '') . '</p>';
+            . ($vatNote ? self::taxNote() : '') . '</p>';
+    }
+
+    /**
+     * The combinations a variant picker knows: [id, values, in stock (1|0), price text, photo when it has its own].
+     * Picking a combination with a photo shows that photo in the product's gallery.
+     *
+     * @return list<array<int, mixed>>
+     */
+    public static function variantRows(array $product): array
+    {
+        $cur = (string) ($product['currency'] ?? '');
+        return array_map(static function (array $v) use ($cur): array {
+            $row = [$v['id'], $v['options'], $v['in_stock'] ? 1 : 0, self::money((int) $v['effective_cents'], $cur)];
+            if ((string) ($v['image'] ?? '') !== '') $row[] = \ShopStoreAPI::assetUrl((string) $v['image']);
+            return $row;
+        }, $product['variants'] ?? []);
+    }
+
+    /** "incl. VAT" after a price, only when the shop's prices include tax (none in a shop that adds tax at checkout). */
+    private static function taxNote(): string
+    {
+        if (!class_exists('ShopTax') || \ShopTax::mode() !== 'inclusive') return '';
+        $label = \ShopTax::label();
+        $text = $label === Html::t('shop_vat', 'VAT') ? Html::t('shop_incl_vat', 'incl. VAT') : sprintf(Html::t('shop_incl_tax', 'incl. %s'), $label);
+        return ' <span class="sb-shop-price__vat">' . Html::e($text) . '</span>';
     }
 
     /**
@@ -105,7 +130,7 @@ final class ShopStudio
         $variantData = '';
         if (!empty($product['has_variants'])) {
             $cur = (string) ($product['currency'] ?? '');
-            $rows = array_map(static fn(array $v): array => [$v['id'], $v['options'], $v['in_stock'] ? 1 : 0, self::money((int) $v['effective_cents'], $cur)], $product['variants']);
+            $rows = self::variantRows($product);
             $variantData = ' data-sb-variants="' . Html::e((string) json_encode(['v' => $rows], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '"';
             $pickers = '<div class="sb-shop-add__options">';
             foreach ($product['attributes'] as $i => $attr) {

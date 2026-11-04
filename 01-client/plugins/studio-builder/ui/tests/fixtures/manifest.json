@@ -7284,6 +7284,22 @@
                     "label": "Chosen options"
                 },
                 {
+                    "key": "image",
+                    "label": "Product photos"
+                },
+                {
+                    "key": "stepper",
+                    "label": "Quantity"
+                },
+                {
+                    "key": "line_total",
+                    "label": "Line totals"
+                },
+                {
+                    "key": "remove",
+                    "label": "Remove button"
+                },
+                {
                     "key": "totals",
                     "label": "Totals"
                 },
@@ -7667,7 +7683,9 @@
             "category": "business",
             "default_props": {
                 "ratio": "square",
-                "show_thumbnails": true
+                "show_thumbnails": true,
+                "thumb_position": "below",
+                "thumb_size": 72
             },
             "description": "The product's image and its other images",
             "field_schema": [
@@ -7690,6 +7708,28 @@
                     "label": "Show other images",
                     "required": false,
                     "default": true
+                },
+                {
+                    "key": "thumb_position",
+                    "type": "enum",
+                    "label": "Thumbnails",
+                    "required": false,
+                    "default": "below",
+                    "allowed_values": [
+                        "below",
+                        "left"
+                    ]
+                },
+                {
+                    "key": "thumb_size",
+                    "type": "number",
+                    "label": "Thumbnail size (px)",
+                    "required": false,
+                    "default": 72,
+                    "min": 40,
+                    "max": 160,
+                    "integer_only": true,
+                    "per_device": true
                 }
             ],
             "icon": "gallery",
@@ -7829,6 +7869,209 @@
             ],
             "title": "Product Meta",
             "type": "shop.product_meta",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "align": "left",
+                "attribute": "",
+                "columns": 6,
+                "density": "compact",
+                "display": "chips",
+                "link": true,
+                "more_label": "",
+                "phone_row": false,
+                "product": "",
+                "show_photo": true,
+                "show_price": false,
+                "sold_out": "muted",
+                "visible": 0
+            },
+            "description": "A product's flavours or sizes as swatches that open it with that choice made",
+            "field_schema": [
+                {
+                    "key": "product",
+                    "type": "string",
+                    "label": "Product address (empty: this product page's)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 190
+                },
+                {
+                    "key": "attribute",
+                    "type": "string",
+                    "label": "Option (empty: the first)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "display",
+                    "type": "enum",
+                    "label": "Show as",
+                    "required": false,
+                    "default": "chips",
+                    "allowed_values": [
+                        "chips",
+                        "swatches",
+                        "tiles"
+                    ]
+                },
+                {
+                    "key": "density",
+                    "type": "enum",
+                    "label": "Size",
+                    "required": false,
+                    "default": "compact",
+                    "allowed_values": [
+                        "regular",
+                        "compact"
+                    ]
+                },
+                {
+                    "key": "align",
+                    "type": "enum",
+                    "label": "Alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center"
+                    ],
+                    "per_device": true
+                },
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Columns (tiles)",
+                    "required": false,
+                    "default": 6,
+                    "min": 2,
+                    "max": 8,
+                    "integer_only": true,
+                    "per_device": true
+                },
+                {
+                    "key": "show_photo",
+                    "type": "boolean",
+                    "label": "Show each choice's photo",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_price",
+                    "type": "boolean",
+                    "label": "Show prices that differ",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "sold_out",
+                    "type": "enum",
+                    "label": "Sold-out choices",
+                    "required": false,
+                    "default": "muted",
+                    "allowed_values": [
+                        "muted",
+                        "hidden"
+                    ]
+                },
+                {
+                    "key": "visible",
+                    "type": "number",
+                    "label": "Show first (0: all)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 60,
+                    "integer_only": true
+                },
+                {
+                    "key": "more_label",
+                    "type": "string",
+                    "label": "\"More\" label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40
+                },
+                {
+                    "key": "phone_row",
+                    "type": "boolean",
+                    "label": "One scrolling row on phones",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "link",
+                    "type": "boolean",
+                    "label": "Open the product with the choice made",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "list",
+            "inline_text": [],
+            "label": "Product Options",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "option",
+                    "label": "Choice"
+                },
+                {
+                    "key": "photo",
+                    "label": "Photo"
+                },
+                {
+                    "key": "name",
+                    "label": "Name"
+                },
+                {
+                    "key": "price",
+                    "label": "Price"
+                },
+                {
+                    "key": "sold_out",
+                    "label": "Sold-out choice"
+                },
+                {
+                    "key": "more",
+                    "label": "\"More\" button"
+                }
+            ],
+            "title": "Product Options",
+            "type": "shop.product_options",
             "version": 1
         },
         {
@@ -8050,24 +8293,50 @@
             ],
             "category": "business",
             "default_props": {
+                "align": "left",
+                "all_label": "",
+                "badge_position": "top_left",
                 "button_label": "",
+                "button_placement": "below",
+                "button_width": "auto",
+                "card_padding": 0,
+                "card_radius": 0,
+                "card_style": "plain",
                 "columns": 3,
+                "density": "regular",
                 "empty_message": "",
+                "filter_style": "chips",
+                "gap": 24,
                 "heading": "",
                 "icon": "heart",
+                "image_fit": "cover",
+                "image_hover": "zoom",
+                "image_ratio": "square",
                 "link_label": "",
+                "load_more_label": "",
+                "new_days": 0,
                 "options_label": "",
                 "order": "menu",
+                "pagination": "numbers",
                 "per_page": 12,
+                "row_gap": 24,
+                "sale_badge": "text",
                 "show_add_to_cart": true,
+                "show_badges": true,
+                "show_category": false,
+                "show_count": false,
+                "show_excerpt": false,
                 "show_filter": false,
                 "show_icon": false,
                 "show_pager": true,
                 "show_price": true,
+                "show_search": false,
+                "show_sort": false,
                 "source": "all",
-                "tag": ""
+                "tag": "",
+                "title_lines": "all"
             },
-            "description": "Your products in a grid, with a category filter and pages",
+            "description": "Your products in a grid, with a filter bar, sorting, search and pages",
             "field_schema": [
                 {
                     "key": "heading",
@@ -8076,16 +8345,6 @@
                     "required": false,
                     "default": "",
                     "max_length": 200
-                },
-                {
-                    "key": "columns",
-                    "type": "number",
-                    "label": "Columns",
-                    "required": false,
-                    "default": 3,
-                    "min": 1,
-                    "max": 6,
-                    "integer_only": true
                 },
                 {
                     "key": "source",
@@ -8135,18 +8394,158 @@
                     "integer_only": true
                 },
                 {
-                    "key": "show_filter",
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Columns",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 6,
+                    "integer_only": true,
+                    "per_device": true
+                },
+                {
+                    "key": "gap",
+                    "type": "number",
+                    "label": "Column gap (px)",
+                    "required": false,
+                    "default": 24,
+                    "min": 0,
+                    "max": 80,
+                    "integer_only": true,
+                    "per_device": true
+                },
+                {
+                    "key": "row_gap",
+                    "type": "number",
+                    "label": "Row gap (px)",
+                    "required": false,
+                    "default": 24,
+                    "min": 0,
+                    "max": 120,
+                    "integer_only": true,
+                    "per_device": true
+                },
+                {
+                    "key": "align",
+                    "type": "enum",
+                    "label": "Card alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center"
+                    ],
+                    "per_device": true
+                },
+                {
+                    "key": "density",
+                    "type": "enum",
+                    "label": "Size",
+                    "required": false,
+                    "default": "regular",
+                    "allowed_values": [
+                        "regular",
+                        "compact"
+                    ]
+                },
+                {
+                    "key": "card_style",
+                    "type": "enum",
+                    "label": "Card style",
+                    "required": false,
+                    "default": "plain",
+                    "allowed_values": [
+                        "plain",
+                        "outlined",
+                        "raised",
+                        "filled"
+                    ]
+                },
+                {
+                    "key": "card_padding",
+                    "type": "number",
+                    "label": "Card text padding (px)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 48,
+                    "integer_only": true,
+                    "per_device": true
+                },
+                {
+                    "key": "card_radius",
+                    "type": "number",
+                    "label": "Corner radius (px)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 40,
+                    "integer_only": true
+                },
+                {
+                    "key": "image_ratio",
+                    "type": "enum",
+                    "label": "Image shape",
+                    "required": false,
+                    "default": "square",
+                    "allowed_values": [
+                        "square",
+                        "portrait",
+                        "tall",
+                        "landscape",
+                        "natural"
+                    ]
+                },
+                {
+                    "key": "image_fit",
+                    "type": "enum",
+                    "label": "Image fit",
+                    "required": false,
+                    "default": "cover",
+                    "allowed_values": [
+                        "cover",
+                        "contain"
+                    ]
+                },
+                {
+                    "key": "image_hover",
+                    "type": "enum",
+                    "label": "Image on hover",
+                    "required": false,
+                    "default": "zoom",
+                    "allowed_values": [
+                        "none",
+                        "zoom",
+                        "second_image"
+                    ]
+                },
+                {
+                    "key": "show_category",
                     "type": "boolean",
-                    "label": "Show category filter",
+                    "label": "Show the category",
                     "required": false,
                     "default": false
                 },
                 {
-                    "key": "show_pager",
-                    "type": "boolean",
-                    "label": "Show pages",
+                    "key": "title_lines",
+                    "type": "enum",
+                    "label": "Title lines",
                     "required": false,
-                    "default": true
+                    "default": "all",
+                    "allowed_values": [
+                        "all",
+                        "1",
+                        "2",
+                        "3"
+                    ]
+                },
+                {
+                    "key": "show_excerpt",
+                    "type": "boolean",
+                    "label": "Show the short description",
+                    "required": false,
+                    "default": false
                 },
                 {
                     "key": "show_price",
@@ -8156,11 +8555,72 @@
                     "default": true
                 },
                 {
+                    "key": "show_badges",
+                    "type": "boolean",
+                    "label": "Show badges",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "sale_badge",
+                    "type": "enum",
+                    "label": "Sale badge",
+                    "required": false,
+                    "default": "text",
+                    "allowed_values": [
+                        "text",
+                        "percent"
+                    ]
+                },
+                {
+                    "key": "new_days",
+                    "type": "number",
+                    "label": "\"New\" badge for (days)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 365,
+                    "integer_only": true
+                },
+                {
+                    "key": "badge_position",
+                    "type": "enum",
+                    "label": "Badge position",
+                    "required": false,
+                    "default": "top_left",
+                    "allowed_values": [
+                        "top_left",
+                        "top_right"
+                    ]
+                },
+                {
                     "key": "show_add_to_cart",
                     "type": "boolean",
                     "label": "Show Add to cart",
                     "required": false,
                     "default": true
+                },
+                {
+                    "key": "button_placement",
+                    "type": "enum",
+                    "label": "Add to cart placement",
+                    "required": false,
+                    "default": "below",
+                    "allowed_values": [
+                        "below",
+                        "on_image"
+                    ]
+                },
+                {
+                    "key": "button_width",
+                    "type": "enum",
+                    "label": "Button width",
+                    "required": false,
+                    "default": "auto",
+                    "allowed_values": [
+                        "auto",
+                        "full"
+                    ]
                 },
                 {
                     "key": "button_label",
@@ -8201,6 +8661,81 @@
                     "default": "heart",
                     "max_length": 40,
                     "format": "icon"
+                },
+                {
+                    "key": "show_filter",
+                    "type": "boolean",
+                    "label": "Show category filter",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "filter_style",
+                    "type": "enum",
+                    "label": "Filter style",
+                    "required": false,
+                    "default": "chips",
+                    "allowed_values": [
+                        "chips",
+                        "underline",
+                        "dropdown"
+                    ]
+                },
+                {
+                    "key": "all_label",
+                    "type": "string",
+                    "label": "Label for all products",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40
+                },
+                {
+                    "key": "show_search",
+                    "type": "boolean",
+                    "label": "Show a search box",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "show_sort",
+                    "type": "boolean",
+                    "label": "Let visitors sort",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "show_count",
+                    "type": "boolean",
+                    "label": "Show the number of products",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "show_pager",
+                    "type": "boolean",
+                    "label": "Show pages",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "pagination",
+                    "type": "enum",
+                    "label": "Pages as",
+                    "required": false,
+                    "default": "numbers",
+                    "allowed_values": [
+                        "numbers",
+                        "prev_next",
+                        "load_more"
+                    ]
+                },
+                {
+                    "key": "load_more_label",
+                    "type": "string",
+                    "label": "Load more label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40
                 },
                 {
                     "key": "empty_message",
@@ -8279,12 +8814,44 @@
                     "label": "Badge"
                 },
                 {
+                    "key": "category",
+                    "label": "Category"
+                },
+                {
+                    "key": "excerpt",
+                    "label": "Short description"
+                },
+                {
+                    "key": "sale_badge",
+                    "label": "Sale badge"
+                },
+                {
+                    "key": "toolbar",
+                    "label": "Filter bar"
+                },
+                {
                     "key": "filter",
                     "label": "Category filter"
                 },
                 {
+                    "key": "filter_active",
+                    "label": "Chosen category"
+                },
+                {
+                    "key": "fields",
+                    "label": "Search and sort"
+                },
+                {
+                    "key": "count",
+                    "label": "Number of products"
+                },
+                {
                     "key": "pager",
                     "label": "Pages"
+                },
+                {
+                    "key": "more",
+                    "label": "Load more button"
                 },
                 {
                     "key": "grid",

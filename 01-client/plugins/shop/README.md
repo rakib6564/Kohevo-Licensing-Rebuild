@@ -15,8 +15,9 @@ per-visitor endpoints.
   like Booking and Membership; the charge lands in `stripepayment_charges` and `shop_orders.charge_id` points at it.
   Refunds go through `StripePaymentAPI::refundCharge()`. The API class is `ShopStoreAPI`, not `ShopAPI`, so the
   stripe-payment plugin's back-compat path for an archived Shop of that name stays inert.
-- **Prices include VAT.** One price per product, in its own currency (changing the shop currency never re-prices a
-  product). Shipping is one flat rate with an optional free-shipping threshold, or free pickup.
+- **One price per product**, in its own currency (changing the shop currency never re-prices a product). Whether it
+  includes tax is the shop's tax mode (below). With no shipping zone, shipping is one flat rate with an optional
+  free-shipping threshold, or free pickup, as before 0.4.0.
 - **Guests check out.** Name and email are enough; a signed-in customer's order is linked to their account. A guest
   sees the order through a link with an unguessable key.
 
@@ -54,6 +55,19 @@ duplicating (failing that, a product is matched by SKU, then address). Variation
 file does not list are kept but not sold. Grouped and external products, attributes no variation uses, tax and
 shipping classes and reviews are not imported. See `ShopImport.php`.
 
+Orders › Import orders brings a WooCommerce shop's orders and customers over (`ShopOrderImport.php`). Export them
+on the WooCommerce site with `wp --skip-themes eval-file plugins/shop/tools/woo-export-orders.php > orders.json` (it
+only reads; `all` as an argument adds failed and draft orders), or use a REST API order list. Each order keeps its
+number as the reference (`WC-1234`), its dates, addresses, lines, shipping, coupon, tax and totals; completed becomes
+fulfilled, processing paid, on-hold and pending awaiting payment, cancelled and refunded stay. Order notes, the
+payment method and transaction id, fees and refunds go into the owner's notes. Lines link to the imported product and
+variant by `woo:<id>`, then SKU; others keep their name and price. Each email becomes one guest customer (core
+`customers`, no password, mirrored into Contacts), which becomes a full account if that person signs up with the same
+email; an existing customer is linked, never changed. No email is sent and stock does not move. Failed orders (declined
+cards, card testing) are left out unless asked for. A second run skips orders already imported. The file holds
+personal details: the screen keeps it in `data/shop-import` (never served, mode 600) and deletes it after the import
+or a day.
+
 ## Order states
 
 `pending_payment` → `paid` → `fulfilled`; `pending_payment` → `cancelled` (also automatic after a day unpaid);
@@ -80,22 +94,85 @@ JavaScript they link to the same endpoints' plain pages.
 **Shop settings › Create the shop pages** makes and publishes the Cart, Checkout and Order received pages and the
 product template, laid out with these widgets (pages that exist are left alone).
 
+## Shipping, tax and coupons (0.4.0)
+
+- **Zones** (Shop › Shipping, `ShopShipping`): where an address is (countries or `*`, optional states and postcodes
+  such as `934*` or `93401-93499`); the first zone by sort wins. Each zone's **methods** are what checkout offers:
+  flat (plus per extra item), free, by weight (bands in the shop's unit, products plus the empty box), **local pickup**
+  (only there; the order becomes a pickup order) and **carrier rates** from EasyPost (carriers and services filtered,
+  a percentage and a handling fee added; rates in another currency are dropped). Any method can need a minimum
+  subtotal. Carrier rates for one address and parcel are kept in the session for 30 minutes, so the price paid is the
+  price shown. The EasyPost key is sealed with the app secret; a `SHOP_EASYPOST_API` constant in config.php points a
+  test site at a stand-in. Checkout quotes again when the state, postcode, country or method changes
+  (`data-sb-requote`), and through an Update shipping button without JavaScript.
+- **Tax** (Shop › Tax, `ShopTax`): prices **include** tax (VAT, the default), tax is **added at checkout** by the
+  delivery address (US sales tax; the shop's own address for pickup and downloads), or **none**. Rates by country,
+  state and postcode, the most specific winning, per tax class (standard, reduced, zero; set on each product, and
+  mapped from WooCommerce's tax status and class by the importer), shipping taxed when the rate says so. Tax is worked
+  out per line on what the line costs after a coupon. The cart's wording follows the mode; with tax added but no rate
+  set, it promises none.
+- **Coupons** (Shop › Coupons, `ShopCoupons`): percentage, amount, or free shipping; a minimum, dates, uses in all
+  (counted when an order is paid) and per customer email, the products or categories it applies to, and sale items
+  left out. The cart keeps one code in the session and checks it again on every total; one that stops fitting drops
+  off with a note. The code box shows only while the shop has an active coupon. A discounted order goes to the
+  gateway as one line for the whole order (gateways take no negative lines).
+- An order keeps its state or province, discount and code, tax (and whether it was included), shipping method,
+  carrier and service.
+
+## Orders (0.4.0)
+
+The orders screen searches by reference, email, name or tracking and exports CSV (spreadsheet-safe). An order:
+fulfil with tracking (carrier, number, link; the carrier's own page for USPS, UPS, FedEx, DHL, Canada Post and bpost)
+and email the customer that it is on its way or ready to collect; buy a label through EasyPost for the rate the
+customer chose; print a packing slip; keep notes only the shop sees; send the receipt again.
+
+## Storefront (0.4.0)
+
+- The Product Grid can show a **search box** and a **sort** choice (`?q=`, `?sort=`); search matches every word in
+  the title, SKU, short description or tags.
+- Picking a variant shows **its photo** in the product's gallery (`data-sb-shop-gallery`, the fifth entry of a
+  `data-sb-variants` row), and the product photo again when the choice is reset.
+
+## Checkout protection (0.4.0)
+
+Card numbers are typed on Stripe's or PayPal's page, so card testers abuse the checkout itself: a script placing order
+after order to get payment pages. `ShopGuard` stops that before an order is made, once the form is valid
+(`placeOrder($in, $customer, $guard)`): a hidden trap field and a signed time stamp (a form sent back within 3 seconds,
+without the stamp or with the trap filled is refused), optional Cloudflare Turnstile (both keys on Shop › Settings; the
+secret sealed; studio-runtime.js renders the widget, `[data-sb-turnstile]`), orders per visitor per 10 minutes and per
+day (the client address as PayThrottle reads it, counted in files under data/shop-guard), unpaid orders per email per
+hour, and a pause of online checkout for an hour when unpaid orders in the last hour reach the limit (the notification
+address is emailed, once an hour; Shop › Settings can start it again). Discount codes have their own per-visitor limit.
+Every limit is a setting (0 = off). Behind Cloudflare or another proxy, set STUDIO_TRUSTED_PROXIES to its ranges, or every
+visitor counts as the proxy's address.
+
+## Search engines (0.4.0)
+
+Each product has its own search title and description (Products › edit › Search engines; empty: its name with the
+site name, and its short description cut at a whole word). Its page tells search engines what it sells: a schema.org
+Product with its photos, SKU, category, weight and offer (price, currency, stock; the price range of its variants as an
+AggregateOffer), and the breadcrumb Home › Shop › product. Studio writes it into the page head with the business set on
+Site & SEO (`ShopProductSingle::schema`, `Render\Seo\StructuredData`). Products are in the sitemap.
+
 ## Endpoints (`public/`)
 
 | File | What |
 |---|---|
 | `cart.php` | `?view=mini|cart` fragments; POST `add` (from cached pages: same-site check, no token), `update`/`remove` (CSRF) |
-| `checkout.php` | the checkout fragment; POST places the order and answers the Stripe Checkout address |
+| `cart.php` (0.4.0) | POST `coupon` / `coupon_remove` (CSRF): the cart's discount code |
+| `checkout.php` | the checkout fragment; POST `action`: `pay` (default) places the order and answers the gateway's address; `quote` the shipping and tax for the address typed; `coupon`, `coupon_remove` |
 | `return.php` | Stripe's success address: checks the session with Stripe, marks paid, empties the cart |
 | `order.php` | the confirmation fragment for `?order=<ref>&key=<key>` |
 
 ## Tables
 
-`shop_products`, `shop_categories`, `shop_product_categories`, `shop_orders`, `shop_order_items` (all with
-`tenant_id`; `install.sql`, kept current by `ShopStoreAPI::ensureSchema()`).
+`shop_products`, `shop_variants`, `shop_categories`, `shop_product_categories`, `shop_tags`, `shop_product_tags`,
+`shop_product_links`, `shop_product_files`, `shop_downloads`, `shop_orders`, `shop_order_items`,
+`shop_shipping_zones`, `shop_shipping_methods`, `shop_tax_rates`, `shop_coupons` (all with `tenant_id`; `install.sql`,
+kept current by `ShopStoreAPI::ensureSchema()`).
 
 ## Not in this version
 
-Coupons, tax rates other than VAT-inclusive prices, shipping zones and rates by weight, carrier rates, customer
-order history in the portal, partial refunds from the order screen, and the Stripe Payment Element (embedded) flow.
-Shipping, tax and coupons come in the next parts of the Shop upgrade.
+Customer order history in the portal, partial refunds from the order screen, packing several boxes per order
+(one box size is used), automatic tax rate lookup (rates are entered by the shop), and the Stripe Payment Element
+(embedded) flow.

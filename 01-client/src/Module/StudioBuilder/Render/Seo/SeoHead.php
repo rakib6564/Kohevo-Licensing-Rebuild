@@ -155,13 +155,15 @@ final class SeoHead
         // An item a plugin keeps itself (a Shop product): its own title, description, image and address.
         $item = $context->attribute('single_item');
         if (is_array($item) && is_string($item['title'] ?? null) && trim($item['title']) !== '' && is_string($item['url'] ?? null)) {
-            $description = is_string($item['description'] ?? null) ? trim(mb_substr(trim(strip_tags($item['description'])), 0, 300)) : '';
+            // The item's own search description when it has one, else its description, cut at a whole word.
+            $own = is_string($item['seo_description'] ?? null) ? trim($item['seo_description']) : '';
+            $description = self::excerpt($own !== '' ? $own : (is_string($item['description'] ?? null) ? $item['description'] : ''), 300);
             $image = is_string($item['image'] ?? null) && $item['image'] !== '' ? $item['image'] : null;
             if ($image !== null && !preg_match('#^https?://#i', $image) && $context->site->baseUrl !== '') {
                 $image = $context->site->absoluteUrl($image);
             }
             return new self(
-                trim($item['title']) . ($this->siteName !== '' ? ' | ' . $this->siteName : ''),
+                is_string($item['seo_title'] ?? null) && trim($item['seo_title']) !== '' ? trim($item['seo_title']) : trim($item['title']) . ($this->siteName !== '' ? ' | ' . $this->siteName : ''),
                 $description !== '' ? $description : $this->description,
                 $this->robots,
                 $context->site->baseUrl !== '' ? $context->site->absoluteUrl($item['url']) : null,
@@ -175,6 +177,25 @@ final class SeoHead
             return new self($title, $this->description, 'noindex,follow', null, $this->ogImageUrl, $this->siteName);
         }
         return $this;
+    }
+
+    /**
+     * Plain text of at most `$max` characters, cut after the last whole word (and its sentence when one ends near the
+     * end), with no markup or entities left: `…including real butter` rather than `…including re`.
+     */
+    public static function excerpt(string $html, int $max): string
+    {
+        $text = trim((string) preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+        if (mb_strlen($text) <= $max) {
+            return $text;
+        }
+        $cut = mb_substr($text, 0, $max);
+        $dot = max((int) mb_strrpos($cut, '. '), (int) mb_strrpos($cut, '! '), (int) mb_strrpos($cut, '? '));
+        if ($dot > $max * 0.6) {
+            return mb_substr($cut, 0, $dot + 1);
+        }
+        $space = mb_strrpos($cut, ' ');
+        return rtrim(mb_substr($cut, 0, $space !== false && $space > $max * 0.5 ? $space : $max), " ,;:-–—") . '…';
     }
 
     /** Preview/Editor output is never indexable and never declares a canonical. */
