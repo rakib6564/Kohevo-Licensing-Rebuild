@@ -53,10 +53,17 @@ class Restaurant extends Plugin {
             Hook::addAction('restaurant_order_paid', [RestaurantDelivery::class, 'onOrderPaid'], 10, 1);
         }
 
-        // Settle Terminal/card payments routed through the stripe-payment plugin.
-        Hook::addAction('stripe_webhook_event', [$this, 'onStripeEvent']);
-        // Settle online orders paid through a hosted checkout (any gateway).
-        Hook::addAction('payment_event', [$this, 'onPaymentEvent']);
+        // Payment listeners are registered once per process: PluginLoader
+        // re-runs boot() after any plugin is switched on or off, and a second
+        // registration would settle each payment twice.
+        static $paymentsWired = false;
+        if (!$paymentsWired) {
+            $paymentsWired = true;
+            // Settle Terminal/card payments routed through the stripe-payment plugin.
+            Hook::addAction('stripe_webhook_event', [$this, 'onStripeEvent']);
+            // Settle online orders paid through a hosted checkout (any gateway).
+            Hook::addAction('payment_event', [$this, 'onPaymentEvent']);
+        }
     }
 
     public function addLangPath(array $paths): array {
