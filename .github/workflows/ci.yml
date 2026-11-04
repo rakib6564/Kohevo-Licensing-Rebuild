@@ -137,6 +137,7 @@ jobs:
             ('forms','Forms','1.0.0','active','{"slug":"forms","name":"Forms"}'),
             ('membership','Membership','1.0.0','active','{"slug":"membership","name":"Membership"}'),
             ('stripe-payment','Stripe Payment Gateway','1.0.0','active','{"slug":"stripe-payment","name":"Stripe Payment Gateway"}'),
+            ('paypal-payment','PayPal Payment Gateway','1.0.0','active','{"slug":"paypal-payment","name":"PayPal Payment Gateway"}'),
             ('studio-builder','Kohevo Studio','1.0.0','active','{"slug":"studio-builder","name":"Kohevo Studio"}')
             ON DUPLICATE KEY UPDATE status=VALUES(status), manifest_json=VALUES(manifest_json);
           SQL

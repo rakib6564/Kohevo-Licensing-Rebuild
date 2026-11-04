@@ -1346,6 +1346,7 @@ return array (
     'payments_gateways_sub' => 'Choisissez les passerelles proposées par chaque module au paiement. Si plusieurs sont proposées, le client choisit.',
     'payments_gateway' => 'Passerelle',
     'payments_gateway_stripe' => 'Carte (Stripe)',
+    'payments_gateway_paypal' => 'PayPal',
     'payments_gateways_installed' => 'Passerelles installées',
     'payments_gateway_ready' => 'Prête · mode %s',
     'payments_gateway_needs_keys' => 'Clés API manquantes',

@@ -256,6 +256,32 @@ final class PaymentLedger
         );
     }
 
+    /** The ledger row for a gateway's checkout ref, or null. */
+    public static function findByRef(string $gateway, string $ref): ?array
+    {
+        if ($ref === '') return null;
+        self::ensureSchema();
+        [, $refCol] = self::columnsFor($gateway);
+        return \Database::row(
+            "SELECT * FROM stripepayment_charges WHERE tenant_id = ? AND gateway = ? AND `" . $refCol . "` = ? LIMIT 1",
+            [current_tenant_id(), $gateway, $ref]
+        );
+    }
+
+    /**
+     * Fill in the txn id of a row recorded before its money movement was
+     * known (a subscription activated before its first sale). Never
+     * overwrites a txn that is already set.
+     */
+    public static function attachTxn(int $id, string $txn): bool
+    {
+        $row = self::get($id);
+        if ($row === null || $txn === '') return false;
+        [$txnCol] = self::columnsFor((string) $row['gateway']);
+        return \Database::update(self::TABLE, [$txnCol => $txn],
+            "id = ? AND tenant_id = ? AND `" . $txnCol . "` IS NULL", [$id, current_tenant_id()]) === 1;
+    }
+
     /**
      * Charges, newest first.
      * $filters: gateway, source_plugin, mode, status, email_like, days

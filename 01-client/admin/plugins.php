@@ -35,7 +35,8 @@ if (!function_exists('slate_is_system_plugin')) {
 // through the existing plugins.manage boundary.
 if (!function_exists('slate_is_client_managed_plugin')) {
     function slate_is_client_managed_plugin(string $slug): bool {
-        if ($slug === 'stripe-payment') return true;
+        // Payment gateways: the client chooses which ones to run.
+        if ($slug === 'stripe-payment' || $slug === 'paypal-payment') return true;
         if (class_exists('\Slate\Services\Installation\CommercialModuleRegistry')) {
             $comm = \Slate\Services\Installation\CommercialModuleRegistry::definitions();
             if (isset($comm[$slug])) return true;

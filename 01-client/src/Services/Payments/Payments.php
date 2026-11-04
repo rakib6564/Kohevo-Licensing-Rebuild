@@ -201,9 +201,28 @@ final class Payments
             'currency'       => $request->currency,
             'interval'       => $request->interval,
             'customer_email' => $request->customerEmail,
-            'meta'           => $request->metadata ?: null,
+            // Where to send the customer once a gateway's own return page
+            // has settled the payment (PayPal returns to its plugin first).
+            'meta'           => [
+                'success_url' => $request->successUrl,
+                'cancel_url'  => $request->cancelUrl,
+                'metadata'    => $request->metadata,
+            ],
         ]);
         return $start;
+    }
+
+    /**
+     * The plugin's own success (or cancel) URL for a session, with
+     * {PAYMENT_REF} filled in. Only ever a URL the plugin itself passed to
+     * startCheckout(), so a gateway return page can redirect to it safely.
+     */
+    public static function returnUrl(array $session, bool $success = true): string
+    {
+        $meta = json_decode((string) ($session['meta_json'] ?? ''), true);
+        $url  = is_array($meta) ? (string) ($meta[$success ? 'success_url' : 'cancel_url'] ?? '') : '';
+        if ($url === '') return (defined('SLATE_URL') ? SLATE_URL : '') . '/';
+        return str_replace('{PAYMENT_REF}', rawurlencode((string) $session['gateway_ref']), $url);
     }
 
     /** The payment_sessions row for a gateway checkout, or null. */
