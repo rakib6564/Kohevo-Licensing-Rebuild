@@ -21,8 +21,20 @@ if (!$payOnline && !$payPickup) sf_closed('No payment method is configured for o
 // (closed now and no pre-order days) checkout says when ordering opens again.
 $hours = RestaurantHours::config();
 $now   = RestaurantHours::now();
-$slots = $hours['on'] ? RestaurantHours::slots($hours, $now) : [];
-if ($hours['on'] && $slots === []) {
+// A pre-order cart (the items of one pre-order menu) picks from that menu's pickup dates instead; a cart mixing it
+// with anything else goes back to the cart page, which explains.
+$group  = RestaurantPreorder::cartGroup($cart);
+if ($group['kind'] === 'mixed') { header('Location: ' . sf_url('cart')); exit; }
+$preCat = $group['kind'] === 'preorder' ? $group['category'] : null;
+if ($preCat !== null) {
+    $slots = RestaurantPreorder::inWindow($preCat, $now) ? RestaurantPreorder::slots($preCat, $hours, $now) : [];
+    if ($slots === []) sf_closed(sprintf(__('restaurant_po_closed_named', 'Pre-orders for %s are closed. Please empty your cart to order from the regular menu.'), (string) $preCat['name']));
+} else {
+    $slots = $hours['on'] ? RestaurantHours::slots($hours, $now) : [];
+    if (!$hours['on'] && RestaurantHours::isClosedDate($hours, $now)) sf_closed(__('restaurant_sf_closed_today', 'We are closed today. Please come back another day.'));
+}
+$picker = $preCat !== null || $hours['on'];   // pick one of the offered times (validated below), or type a time
+if ($preCat === null && $hours['on'] && $slots === []) {
     $st = RestaurantHours::status($hours, $now);
     sf_closed($st['next'] !== null
         ? sprintf(__('restaurant_sf_closed_until', 'We are closed right now. Online ordering opens again %s.'), RestaurantHours::label($st['next'], $now))
@@ -55,10 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // The chosen time must still be on offer (a page left open past closing, or a hand-made post).
     $timeText = $old['time'];
-    if ($flash === null && $hours['on']) {
+    if ($flash === null && $picker) {
         $slot = RestaurantHours::pick($slots, $old['time']);
         if ($slot === null) $flash = __('restaurant_sf_time_gone', 'That pickup time is no longer available. Please choose another.');
         // Saved with its date ("Thu Nov 6, 12:15 PM"): the kitchen reads it later, when "Today" would mislead.
+        elseif ($preCat !== null) $timeText = RestaurantPreorder::savedText($slot);
         else $timeText = ($slot['value'] === 'asap' ? 'ASAP · ' : '') . $slot['at']->format('D M j, g:i A');
     }
 
@@ -105,8 +118,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $gw
             );
             if (!empty($pay['ok']) && !empty($pay['url'])) { header('Location: ' . $pay['url']); exit; }
+            // The payment could not start: the order stands, to be paid at pickup, so it is confirmed now.
+            RestaurantMail::orderConfirmed((int)$res['order_id']);
             header('Location: ' . sf_url('confirm') . '?token=' . $token . '&payerr=1'); exit;
         }
+        // Pay at pickup: confirmed as placed (a paid order is confirmed when its payment settles).
+        RestaurantMail::orderConfirmed((int)$res['order_id']);
         header('Location: ' . sf_url('confirm') . '?token=' . $token); exit;
     }
 
@@ -151,7 +168,10 @@ if ($flash) echo '<div class="sf-flash sf-flash-err">' . sf_icon('alert', 15) . 
         <div class="sf-field" id="addrField" style="display:<?= $old['type'] === 'delivery' ? 'block' : 'none' ?>">
             <label for="address">Delivery address</label>
             <input type="text" id="address" name="address" maxlength="255" value="<?= e($old['address']) ?>"></div>
-        <?php if ($hours['on']): ?>
+        <?php if ($preCat !== null): ?>
+        <div class="sf-flash sf-flash-info sf-po-note" style="margin:0 0 13px"><?= e(RestaurantPreorder::note($preCat, $hours, $now)) ?></div>
+        <?php endif; ?>
+        <?php if ($picker): ?>
         <div class="sf-field"><label for="time"><?= e(__('restaurant_sf_pickup_time', 'Pickup time')) ?> *</label>
             <select id="time" name="time" required>
                 <?php $lastDay = ''; foreach ($slots as $s):

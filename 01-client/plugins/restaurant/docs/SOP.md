@@ -23,6 +23,9 @@
 2. Tap **Send to kitchen** to fire the ticket, then advance **Accepted → Preparing → Ready → Completed**.
 3. **Paid** (card) orders are already paid; **Due** (pay-at-pickup) orders are collected on the POS/counter when the customer arrives.
 4. To turn online ordering on/off or change payment options, use **Settings → Online ordering**.
+5. **Emails.** Customers who give an email get a confirmation with a link to their order status. Put the kitchen's address in **Settings → Online ordering → Order emails → New order email** so every new online order also arrives by email (online orders do **not** print on the in-store POS printer). Tick the "ready" option to email customers when you move their order to **Ready**.
+6. **Holidays.** Add days you are closed under **Settings → Online ordering → Opening hours → Closed dates** (one per line, e.g. `2026-12-25` or `2026-12-24 to 2026-12-26`). No pickup times are offered on them.
+7. **Pre-orders** (e.g. a Thanksgiving menu). Put the pre-order items in their own category, then on the category tick **This is a pre-order menu** and set when ordering opens and closes and the pickup dates (with times, e.g. `2026-11-25 10:00-14:00`). While open, the items show first on `/order` with the note; customers choose a pickup time on those dates only. Pre-orders are checked out on their own — a customer cannot mix them with regular items in one order.
 
 ---
 

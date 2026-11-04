@@ -52,6 +52,9 @@ switch ($action) {
             sf_api_respond($ajax, ['ok' => false, 'error' => 'That item is unavailable.'], sf_url());
         if (!empty($item['is_86']))
             sf_api_respond($ajax, ['ok' => false, 'error' => $item['name'] . ' is sold out right now.'], sf_url());
+        // Pre-order menus: only while open, and never mixed with regular items or another pre-order menu.
+        if (($poErr = RestaurantPreorder::addError($cart, $id, RestaurantHours::config(), RestaurantHours::now())) !== null)
+            sf_api_respond($ajax, ['ok' => false, 'error' => $poErr], sf_url() . '?err=' . rawurlencode($poErr));
 
         // The same rules the POS uses: modifier groups and combo slots, required / min / max.
         try {

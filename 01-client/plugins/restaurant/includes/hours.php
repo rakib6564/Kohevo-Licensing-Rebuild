@@ -8,6 +8,9 @@
  *   online_lead_min   minutes the kitchen needs before the first pickup (default 20)
  *   online_slot_min   minutes between pickup times offered (default 15)
  *   online_days_ahead days ahead a customer may order for (default 0 = today only; pre-orders use more)
+ *   online_closed     closed dates (holidays, blackouts), one per line: "2026-12-25" or "2026-12-24 to 2026-12-26";
+ *                     no pickup times are offered on them and the storefront shows closed. Pre-order pickup dates
+ *                     (includes/preorder.php) are explicit and are not blocked by them.
  *
  * The maths is pure (config + "now" in, slots/status out) so it is unit tested without a database; the times are in
  * the site's time zone (Settings > Date & Time, slate_timezone()).
@@ -18,6 +21,8 @@ final class RestaurantHours
 {
     public const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
     public const MAX_DAYS_AHEAD = 30;
+    /** A closed range longer than this is refused (a typo like 2026 -> 2027 would otherwise close a year). */
+    public const MAX_CLOSED_RANGE = 62;
 
     /**
      * One day's text ("12:00-14:30, 5pm-8pm") as [[startMinute, endMinute], ...], or null when a part cannot be read.
@@ -68,6 +73,44 @@ final class RestaurantHours
         return $total <= 24 * 60 ? $total : null;
     }
 
+    /**
+     * Closed dates as typed (one per line: "2026-12-25", "2026-12-24 to 2026-12-26", "2026-12-24..2026-12-26";
+     * text after a "#" is a note). Returns the dates as sorted "Y-m-d" strings, and the lines that could not be read.
+     *
+     * @return array{dates:list<string>, bad:list<string>}
+     */
+    public static function parseClosed(string $text): array
+    {
+        $dates = [];
+        $bad = [];
+        foreach (preg_split('/\r\n|\r|\n/', $text) ?: [] as $line) {
+            $line = trim((string) preg_replace('/#.*$/', '', $line));
+            if ($line === '') continue;
+            $bits = preg_split('/\s*(?:\.\.|\bto\b|→|–|\s-\s|\bau\b)\s*/iu', $line) ?: [];
+            $a = self::date($bits[0] ?? '');
+            $b = count($bits) === 2 ? self::date($bits[1]) : (count($bits) === 1 ? $a : null);
+            if ($a === null || $b === null || $b < $a || $a->diff($b)->days > self::MAX_CLOSED_RANGE) { $bad[] = $line; continue; }
+            for ($d = $a; $d <= $b; $d = $d->modify('+1 day')) $dates[$d->format('Y-m-d')] = true;
+        }
+        $out = array_keys($dates);
+        sort($out);
+        return ['dates' => $out, 'bad' => $bad];
+    }
+
+    /** A strict "YYYY-MM-DD" (a real calendar date) as a midnight DateTime, or null. */
+    public static function date(string $t): ?\DateTimeImmutable
+    {
+        $t = trim($t);
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $t, $m) !== 1 || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])) return null;
+        return new \DateTimeImmutable($t . ' 00:00:00', new \DateTimeZone('UTC'));
+    }
+
+    /** Is this day one of the closed dates? */
+    public static function isClosedDate(array $c, \DateTimeImmutable $day): bool
+    {
+        return in_array($day->format('Y-m-d'), $c['closed'] ?? [], true);
+    }
+
     /** Minutes back to "H:MM" (24-hour), as the settings screen shows them. */
     public static function hhmm(int $minute): string
     {
@@ -77,7 +120,7 @@ final class RestaurantHours
     /**
      * The saved config, cleaned.
      *
-     * @return array{on:bool, week:array<string,list<array{0:int,1:int}>>, lead:int, step:int, ahead:int}
+     * @return array{on:bool, week:array<string,list<array{0:int,1:int}>>, lead:int, step:int, ahead:int, closed:list<string>}
      */
     public static function config(): array
     {
@@ -92,6 +135,7 @@ final class RestaurantHours
             'lead'  => (int) RestaurantAPI::setting('online_lead_min', '20'),
             'step'  => (int) RestaurantAPI::setting('online_slot_min', '15'),
             'ahead' => (int) RestaurantAPI::setting('online_days_ahead', '0'),
+            'closed' => self::parseClosed((string) RestaurantAPI::setting('online_closed', ''))['dates'],
         ]);
     }
 
@@ -99,9 +143,10 @@ final class RestaurantHours
     public static function clean(array $c): array
     {
         $c['lead']  = max(0, min(24 * 60, (int) ($c['lead'] ?? 20)));
-        $c['step']  = in_array((int) ($c['step'] ?? 15), [5, 10, 15, 20, 30, 60], true) ? (int) $c['step'] : 15;
+        $c['step']  = in_array((int) ($c['step'] ?? 15), [5, 10, 15, 20, 30, 60], true) ? (int) ($c['step'] ?? 15) : 15;
         $c['ahead'] = max(0, min(self::MAX_DAYS_AHEAD, (int) ($c['ahead'] ?? 0)));
         $c['on']    = !empty($c['on']);
+        $c['closed'] = array_values(array_filter((array) ($c['closed'] ?? []), static fn($d): bool => is_string($d) && self::date($d) !== null));
         return $c;
     }
 
@@ -115,8 +160,15 @@ final class RestaurantHours
         return new \DateTimeImmutable('now', self::tz());
     }
 
-    /** The windows of a date, as [start, end] DateTimes in that date's zone. */
+    /** The windows of a date, as [start, end] DateTimes in that date's zone; none on a closed date. */
     private static function windows(array $c, \DateTimeImmutable $day): array
+    {
+        if (self::isClosedDate($c, $day)) return [];
+        return self::weekWindows($c, $day);
+    }
+
+    /** The weekly opening-hour windows of a date, closed dates ignored (pre-order pickup dates use these). */
+    public static function weekWindows(array $c, \DateTimeImmutable $day): array
     {
         $key = self::DAYS[(int) $day->format('N') - 1];
         $midnight = $day->setTime(0, 0);
@@ -137,7 +189,6 @@ final class RestaurantHours
     {
         $out = [];
         $ready = $now->modify('+' . $c['lead'] . ' minutes');
-        $step = $c['step'] * 60;
         $status = self::status($c, $now);
         if ($status['open'] && $status['until'] !== null && $ready <= $status['until']) {
             $out[] = ['value' => 'asap', 'label' => sprintf(__('restaurant_sf_asap_n', 'ASAP (about %d min)'), max(5, $c['lead'])), 'at' => $ready];
@@ -145,17 +196,31 @@ final class RestaurantHours
         for ($d = 0; $d <= $c['ahead']; $d++) {
             $day = $now->setTime(0, 0)->modify("+{$d} days");
             foreach (self::windows($c, $day) as [$open, $close]) {
-                $t = $open;
-                if ($t < $ready) {
-                    // First step-aligned time (counted from the window's opening) at or after the ready time.
-                    $gap = $ready->getTimestamp() - $open->getTimestamp();
-                    $t = $open->modify('+' . (int) (ceil($gap / $step) * $c['step']) . ' minutes');
-                }
-                for (; $t <= $close; $t = $t->modify('+' . $c['step'] . ' minutes')) {
+                foreach (self::stepTimes($open, $close, $ready, $c['step']) as $t) {
                     $out[] = ['value' => $t->format('Y-m-d H:i'), 'label' => self::label($t, $now), 'at' => $t];
                 }
             }
         }
+        return $out;
+    }
+
+    /**
+     * The times of one window, every `step` minutes counted from its opening, from the first one at or after
+     * `ready` up to and including the closing time.
+     *
+     * @return list<\DateTimeImmutable>
+     */
+    public static function stepTimes(\DateTimeImmutable $open, \DateTimeImmutable $close, \DateTimeImmutable $ready, int $stepMin): array
+    {
+        $stepMin = max(1, $stepMin);
+        $t = $open;
+        if ($t < $ready) {
+            // First step-aligned time (counted from the window's opening) at or after the ready time.
+            $gap = $ready->getTimestamp() - $open->getTimestamp();
+            $t = $open->modify('+' . (int) (ceil($gap / ($stepMin * 60)) * $stepMin) . ' minutes');
+        }
+        $out = [];
+        for (; $t <= $close; $t = $t->modify('+' . $stepMin . ' minutes')) $out[] = $t;
         return $out;
     }
 
@@ -184,7 +249,8 @@ final class RestaurantHours
     }
 
     /**
-     * Open right now? With the end of the current window, or the start of the next one (within 8 days).
+     * Open right now? With the end of the current window, or the start of the next one (within 8 days, or further
+     * when closed dates are in the way).
      *
      * @return array{open:bool, until:?\DateTimeImmutable, next:?\DateTimeImmutable}
      */
@@ -193,7 +259,7 @@ final class RestaurantHours
         foreach (self::windows($c, $now) as [$a, $b]) {
             if ($now >= $a && $now < $b) return ['open' => true, 'until' => $b, 'next' => null];
         }
-        for ($d = 0; $d <= 8; $d++) {
+        for ($d = 0, $max = 8 + count($c['closed'] ?? []); $d <= $max; $d++) {
             foreach (self::windows($c, $now->setTime(0, 0)->modify("+{$d} days")) as [$a]) {
                 if ($a > $now) return ['open' => false, 'until' => null, 'next' => $a];
             }
@@ -216,6 +282,7 @@ final class RestaurantHours
         $s = self::status($c, $now);
         if ($s['open']) return sprintf(__('restaurant_sf_open_until', 'Open now · until %s'), $s['until']->format('g:i A'));
         if ($s['next'] === null) return __('restaurant_sf_closed', 'Closed');
+        if (self::isClosedDate($c, $now)) return sprintf(__('restaurant_sf_closed_today_opens', 'Closed today · opens %s'), self::label($s['next'], $now));
         return sprintf(__('restaurant_sf_closed_opens', 'Closed · opens %s'), self::label($s['next'], $now));
     }
 }

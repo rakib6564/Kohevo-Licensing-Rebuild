@@ -14,6 +14,8 @@
 if (!defined('SLATE_ROOT')) { http_response_code(404); exit; }
 require_once SLATE_ROOT . '/plugins/restaurant/RestaurantAPI.php';
 require_once SLATE_ROOT . '/plugins/restaurant/includes/hours.php';
+require_once SLATE_ROOT . '/plugins/restaurant/includes/preorder.php';
+require_once SLATE_ROOT . '/plugins/restaurant/includes/mail.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) { @session_start(); }
 

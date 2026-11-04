@@ -28,13 +28,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($parsed === null) $hoursBad[] = $d;
         $hoursIn[$d] = $parsed === null ? $txt : implode(', ', array_map(fn ($w) => RestaurantHours::hhmm($w[0]) . '-' . RestaurantHours::hhmm($w[1]), $parsed));
     }
+    // Closed dates and the kitchen's order-email addresses must read cleanly too.
+    $closedIn  = mb_substr(trim(str_replace("\r", '', (string)($_POST['online_closed'] ?? ''))), 0, 4000);
+    $closedBad = RestaurantHours::parseClosed($closedIn)['bad'];
+    $notifyIn  = mb_substr(trim((string)($_POST['online_notify_emails'] ?? '')), 0, 1000);
+    require_once dirname(__DIR__) . '/includes/mail.php';
+    $notifyBad = RestaurantMail::parseAddresses($notifyIn)['bad'];
 }
+$closedBad ??= [];
+$notifyBad ??= [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify()) {
         $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
     } elseif ($hoursBad) {
         $flash = ['type' => 'error', 'msg' => sprintf(__('restaurant_hours_bad', 'Opening hours could not be read for: %s. Write them like 12:00-14:30, 17:00-20:00 (or leave the day empty when closed). Nothing was saved.'), implode(', ', array_map('ucfirst', $hoursBad)))];
+        $_GET['tab'] = 'online';
+    } elseif ($closedBad) {
+        $flash = ['type' => 'error', 'msg' => sprintf(__('restaurant_closed_bad', 'Closed dates could not be read: %s. Write one per line, like 2026-12-25 or 2026-12-24 to 2026-12-26. Nothing was saved.'), implode(' | ', $closedBad))];
+        $_GET['tab'] = 'online';
+    } elseif ($notifyBad) {
+        $flash = ['type' => 'error', 'msg' => sprintf(__('restaurant_notify_bad', 'These are not email addresses: %s. Nothing was saved.'), implode(', ', $notifyBad))];
         $_GET['tab'] = 'online';
     } else {
         $set('currency',            strtoupper(substr(trim((string)($_POST['currency'] ?? 'USD')), 0, 8)));
@@ -67,6 +81,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $set('online_lead_min',   (string) $hc['lead']);
         $set('online_slot_min',   (string) $hc['step']);
         $set('online_days_ahead', (string) $hc['ahead']);
+        // Closed dates, kept as typed (one per line) once every line reads.
+        $set('online_closed', $closedIn);
+        // Order emails: the kitchen's addresses (empty = off) and the optional "ready" email to the customer.
+        $set('online_notify_emails', implode(', ', RestaurantMail::parseAddresses($notifyIn)['ok']));
+        $set('online_ready_email', !empty($_POST['online_ready_email']) ? '1' : '0');
         // Storefront look: bad colours and font names are simply not kept (the storefront falls back to its own look).
         foreach (['sf_accent', 'sf_dark', 'sf_bg'] as $k) {
             $v = trim((string)($_POST[$k] ?? ''));
@@ -93,10 +112,11 @@ $TABS = ['general' => __('restaurant_settings_tab_general', 'Money & tax'), 'rec
 $tab = array_key_exists($_GET['tab'] ?? '', $TABS) ? (string)$_GET['tab'] : 'general';
 
 // After a refused save the form shows what was posted, so nothing typed is lost.
-$g = $hoursBad
+$refused = $hoursBad || $closedBad || $notifyBad;
+$g = $refused
     ? fn(string $k, $d = '') => array_key_exists($k, $_POST) ? (string) $_POST[$k] : (str_starts_with($k, 'online_') || str_starts_with($k, 'sf_site_link') ? '0' : RestaurantAPI::setting($k, $d))
     : fn(string $k, $d = '') => RestaurantAPI::setting($k, $d);
-$hoursShown = $hoursBad ? $hoursIn : (json_decode((string) RestaurantAPI::setting('online_hours', ''), true) ?: []);
+$hoursShown = $refused ? $hoursIn : (json_decode((string) RestaurantAPI::setting('online_hours', ''), true) ?: []);
 
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
@@ -267,6 +287,27 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <div class="field"><label class="field-label" for="online_days_ahead"><?= e(__('restaurant_hours_ahead', 'Order ahead (days)')) ?> <span class="field-hint"><?= e(__('restaurant_hours_ahead_hint', '0 = today only')) ?></span></label>
                     <input type="number" id="online_days_ahead" name="online_days_ahead" min="0" max="<?= RestaurantHours::MAX_DAYS_AHEAD ?>" value="<?= e((string)$g('online_days_ahead','0')) ?>"></div>
             </div>
+            <div class="field" style="margin:12px 0 0;">
+                <label class="field-label" for="online_closed"><?= e(__('restaurant_closed_title', 'Closed dates')) ?> <span class="field-hint"><?= e(__('restaurant_closed_hint', 'holidays and days off, one per line: 2026-12-25, or 2026-12-24 to 2026-12-26; text after # is a note')) ?></span></label>
+                <textarea id="online_closed" name="online_closed" rows="4" placeholder="2026-11-26 # Thanksgiving&#10;2026-12-24 to 2026-12-26"<?= $closedBad ? ' aria-invalid="true" style="border-color:var(--danger,#c0392b)"' : '' ?>><?= e((string)$g('online_closed','')) ?></textarea>
+                <p class="text-sm text-muted" style="margin:6px 0 0;"><?= e(__('restaurant_closed_help', 'No pickup times are offered on these dates and the order page shows closed. Pre-order pickup dates set on a menu category still apply.')) ?></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h2><?= e(__('restaurant_mail_title', 'Order emails')) ?></h2></div>
+        <div class="card-body">
+            <p class="text-sm text-muted" style="margin-top:0;"><?= e(__('restaurant_mail_intro', 'Customers who give an email get a confirmation when their online order is paid (or placed to pay at pickup), with a link to its status page. Emails go out through Settings > Email.')) ?></p>
+            <div class="field">
+                <label class="field-label" for="online_notify_emails"><?= e(__('restaurant_notify_label', 'New order email')) ?> <span class="field-hint"><?= e(__('restaurant_notify_hint', 'one or more addresses, separated by commas; empty = off')) ?></span></label>
+                <input type="text" id="online_notify_emails" name="online_notify_emails" maxlength="1000" placeholder="kitchen@example.com, owner@example.com" value="<?= e((string)$g('online_notify_emails','')) ?>"<?= $notifyBad ? ' aria-invalid="true" style="border-color:var(--danger,#c0392b)"' : '' ?>>
+                <p class="text-sm text-muted" style="margin:6px 0 0;"><?= e(__('restaurant_notify_help', 'Each new online order is emailed here, laid out for the kitchen. Online orders do not print on the in-store POS printer.')) ?></p>
+            </div>
+            <label class="field" style="display:flex;gap:10px;align-items:center;margin-bottom:0;">
+                <input type="checkbox" name="online_ready_email" value="1" <?= $g('online_ready_email','0') === '1' ? 'checked' : '' ?>>
+                <span><?= e(__('restaurant_ready_email_label', 'Email the customer when their order is marked Ready on the online orders board')) ?></span>
+            </label>
         </div>
     </div>
 
