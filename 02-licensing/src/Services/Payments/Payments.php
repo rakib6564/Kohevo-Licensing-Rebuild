@@ -177,6 +177,15 @@ final class Payments
             throw new \RuntimeException("Payment gateway '{$gatewayId}' cannot take recurring payments.");
         }
 
+        if ($request->idempotencyKey !== '') {
+            $request = new CheckoutRequest($request->lineItems, [
+                'currency' => $request->currency, 'success_url' => $request->successUrl, 'cancel_url' => $request->cancelUrl,
+                'source_plugin' => $request->sourcePlugin, 'source_id' => $request->sourceId,
+                'customer_email' => $request->customerEmail, 'interval' => $request->interval,
+                'metadata' => $request->metadata, 'options' => $request->options,
+                'idempotency_key' => self::scopedKey($request->idempotencyKey),
+            ]);
+        }
         $start = $gw->startCheckout($request);
 
         // Without this row the webhook could not route the payment back
@@ -214,10 +223,12 @@ final class Payments
     public static function confirmReturn(string $gatewayId, string $ref, string $sourcePlugin, string $sourceId = ''): ?PaymentEvent
     {
         $gw = self::gateway($gatewayId);
+        if ($gw === null || $ref === '') return null;
         $session = self::session($gatewayId, $ref);
-        if ($gw === null || $session === null) return null;
-        if ($session['source_plugin'] !== $sourcePlugin) return null;
-        if ($sourceId !== '' && !hash_equals((string) ($session['source_id'] ?? ''), $sourceId)) return null;
+        if ($session !== null) {
+            if ($session['source_plugin'] !== $sourcePlugin) return null;
+            if ($sourceId !== '' && !hash_equals((string) ($session['source_id'] ?? ''), $sourceId)) return null;
+        }
 
         try {
             $event = $gw->confirm($ref);
@@ -225,7 +236,32 @@ final class Payments
             slate_log("Payments::confirmReturn({$gatewayId}) failed: " . $e->getMessage(), 'warning');
             return null;
         }
-        return $event === null ? null : self::emit($event);
+        if ($event === null) return null;
+        if ($session === null) {
+            // A checkout started before this layer has no session row; the
+            // gateway's own record of it must then name the same plugin record.
+            $evPlugin = $event->sourcePlugin !== '' ? $event->sourcePlugin : (string) ($event->metadata['source_plugin'] ?? '');
+            $evId     = $event->sourceId !== '' ? $event->sourceId : (string) ($event->metadata['source_id'] ?? '');
+            if ($evPlugin !== $sourcePlugin) return null;
+            if ($sourceId !== '' && !hash_equals($evId, $sourceId)) return null;
+        }
+        return self::emit($event);
+    }
+
+    /**
+     * An idempotency key made unique to this site: two installs sharing one
+     * gateway account (or ids reused after a restore) never replay each
+     * other's checkouts or refunds.
+     */
+    public static function scopedKey(string $key): string
+    {
+        if ($key === '') return '';
+        $salt = (string) \Database::setting('payments.idem_salt');
+        if ($salt === '') {
+            $salt = bin2hex(random_bytes(8));
+            \Database::setSetting('payments.idem_salt', $salt);
+        }
+        return 'k' . substr(hash('sha256', $salt . '|' . current_tenant_id()), 0, 10) . '-' . $key;
     }
 
     // ── Events ────────────────────────────────────────────────
@@ -330,7 +366,11 @@ final class Payments
             return self::refusal(__('payments_err_no_partial_refund', 'This gateway can only refund the full amount.'));
         }
 
-        $res = $gw->refund($row, $amount === $remaining ? null : $amount, $idempotencyKey);
+        // Without a key from the caller, the charge, what was refunded before
+        // and this amount make one, so a retry is replayed, not repeated.
+        $key = $idempotencyKey !== '' ? $idempotencyKey
+            : 'refund-' . $chargeId . '-' . (int) $row['refunded_cents'] . '-' . $amount;
+        $res = $gw->refund($row, $amount === $remaining ? null : $amount, self::scopedKey($key));
         if (empty($res['ok'])) {
             return [
                 'ok'        => false,
@@ -339,7 +379,7 @@ final class Payments
             ];
         }
 
-        $after = PaymentLedger::setRefunded($chargeId, (int) $row['refunded_cents'] + $amount);
+        $after = PaymentLedger::addRefund($chargeId, $amount, (string) ($res['refund_id'] ?? ''));
         \AuditLog::record('payments.refunded', (string) $chargeId, [
             'gateway'   => $row['gateway'],
             'refund_id' => (string) ($res['refund_id'] ?? ''),

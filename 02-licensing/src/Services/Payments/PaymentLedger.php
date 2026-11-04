@@ -95,6 +95,23 @@ final class PaymentLedger
                     KEY `idx_source` (`tenant_id`, `source_plugin`, `source_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
             );
+
+            // One row per refund the gateway confirmed, so a replayed refund
+            // (same idempotency key → same gateway refund id) is counted once.
+            $pdo->exec(
+                "CREATE TABLE IF NOT EXISTS `payment_refunds` (
+                    `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    `tenant_id`     INT UNSIGNED NOT NULL DEFAULT 1,
+                    `charge_id`     INT UNSIGNED NOT NULL,
+                    `gateway`       VARCHAR(32)  NOT NULL,
+                    `refund_ref`    VARCHAR(255) NOT NULL,
+                    `amount_cents`  INT UNSIGNED NOT NULL,
+                    `created_at`    DATETIME NOT NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `uniq_refund` (`tenant_id`, `gateway`, `refund_ref`),
+                    KEY `idx_charge` (`tenant_id`, `charge_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
         } catch (\Throwable $e) {
             slate_log('PaymentLedger: ensure schema failed: ' . $e->getMessage(), 'error');
         }
@@ -273,14 +290,52 @@ final class PaymentLedger
      */
     public static function setRefunded(int $id, int $refundedCents): ?array
     {
+        // The gateway's own running total (a refund webhook): never lowers
+        // what is recorded, in one statement so concurrent writers can't.
+        \Database::query(
+            "UPDATE stripepayment_charges SET refunded_cents = LEAST(amount_cents, GREATEST(refunded_cents, ?))
+              WHERE tenant_id = ? AND id = ?", [max(0, $refundedCents), current_tenant_id(), $id]);
+        return self::syncRefundStatus($id);
+    }
+
+    /**
+     * Count one confirmed refund of $amountCents. $refundRef is the gateway's
+     * refund id. The recorded total becomes the larger of what is already
+     * recorded (which a refund webhook may have set) and the sum of the
+     * refunds confirmed here, so a replayed refund (same id) or one the
+     * webhook already counted is not added twice, and two refunds finishing
+     * together both count.
+     */
+    public static function addRefund(int $id, int $amountCents, string $refundRef = ''): ?array
+    {
+        self::ensureSchema();
         $row = self::get($id);
         if (!$row) return null;
-        $total  = (int) $row['amount_cents'];
-        $newRef = min($total, max((int) $row['refunded_cents'], $refundedCents));
-        \Database::update(self::TABLE, [
-            'refunded_cents' => $newRef,
-            'status'         => $newRef >= $total ? 'refunded' : ($newRef > 0 ? 'partial_refund' : $row['status']),
-        ], 'id = ? AND tenant_id = ?', [$id, current_tenant_id()]);
+        $tid = current_tenant_id();
+        try {
+            \Database::insert('payment_refunds', [
+                'tenant_id' => $tid, 'charge_id' => $id, 'gateway' => (string) $row['gateway'],
+                'refund_ref' => $refundRef !== '' ? mb_substr($refundRef, 0, 255) : 'noid-' . bin2hex(random_bytes(8)),
+                'amount_cents' => max(0, $amountCents), 'created_at' => slate_db_now(),
+            ]);
+        } catch (\PDOException $e) {
+            if ($e->getCode() !== '23000') throw $e;   // this refund is already counted
+        }
+        \Database::query(
+            "UPDATE stripepayment_charges c
+                SET c.refunded_cents = LEAST(c.amount_cents, GREATEST(c.refunded_cents,
+                    (SELECT COALESCE(SUM(r.amount_cents), 0) FROM payment_refunds r WHERE r.tenant_id = c.tenant_id AND r.charge_id = c.id)))
+              WHERE c.tenant_id = ? AND c.id = ?", [$tid, $id]);
+        return self::syncRefundStatus($id);
+    }
+
+    private static function syncRefundStatus(int $id): ?array
+    {
+        \Database::query(
+            "UPDATE stripepayment_charges
+                SET status = CASE WHEN refunded_cents >= amount_cents THEN 'refunded'
+                                  WHEN refunded_cents > 0 THEN 'partial_refund' ELSE status END
+              WHERE tenant_id = ? AND id = ?", [current_tenant_id(), $id]);
         return self::get($id);
     }
 

@@ -1547,6 +1547,8 @@ return array (
     'payments_cap_card_present' => 'Terminaux de paiement',
     'payments_refunded_msg' => 'Remboursé. Identifiant de remboursement : %s',
     'payments_refund_uncertain' => 'La passerelle l\'a peut-être quand même traité — vérifiez son tableau de bord avant de réessayer.',
+    'payments_err_no_access' => 'Vous ne pouvez pas rembourser ce paiement.',
+    'payments_refund_already_submitted' => 'Ce remboursement a déjà été envoyé. Vérifiez le paiement ci-dessous avant de rembourser à nouveau.',
     'payments_empty_desc' => 'Quand un client paie par une passerelle, le paiement apparaît ici.',
     'payments_detail_txn' => 'Transaction',
     'payments_detail_ref' => 'Paiement',

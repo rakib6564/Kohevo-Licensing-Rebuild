@@ -22,6 +22,9 @@ if (!Auth::can('payments.manage_charges') && !Auth::can('stripe.manage_charges')
 
 PaymentLedger::ensureSchema();
 $tid       = current_tenant_id();
+// A role with only the Stripe plugin's charges permission sees and refunds
+// Stripe charges only, as it did on the Stripe Charges page.
+$onlyGw    = Auth::can('payments.manage_charges') ? null : 'stripe';
 $gateways  = Payments::gateways();
 $gwLabel   = static fn (string $id): string => isset($gateways[$id]) ? $gateways[$id]->label() : ucfirst($id);
 
@@ -34,13 +37,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action    = $_POST['_action'] ?? '';
         $chargeId  = (int)($_POST['id'] ?? 0);
         $amountVal = trim((string)($_POST['amount'] ?? ''));
-        if ($action === 'refund' && $chargeId > 0) {
-            $charge      = Payments::getCharge($chargeId);
+        $charge = $chargeId > 0 ? Payments::getCharge($chargeId) : null;
+        if ($action === 'refund' && $chargeId > 0 && !$charge) {
+            $flash = ['type' => 'error', 'msg' => __('payments_err_charge_not_found', 'Charge not found.')];
+        } elseif ($action === 'refund' && $charge && $onlyGw !== null && $charge['gateway'] !== $onlyGw) {
+            $flash = ['type' => 'error', 'msg' => __('payments_err_no_access', 'You cannot refund this charge.')];
+        } elseif ($action === 'refund' && $charge && !submit_token_consume()) {
+            // A reload or Back + resubmit of a form already handled.
+            $flash = ['type' => 'error', 'msg' => __('payments_refund_already_submitted', 'That refund was already submitted. Check the charge below before refunding again.')];
+        } elseif ($action === 'refund' && $charge) {
             $amountCents = ($amountVal !== '' && $charge)
                 ? Payments::toMinor($amountVal, (string)$charge['currency'])
                 : null;
             // Same charge, same prior refund total, same amount → same key, so a
-            // double-submitted form cannot refund twice at the gateway.
+            // retry after an unanswered request is replayed by the gateway.
             $idemKey = 'admin-refund-' . $chargeId . '-' . (int)($charge['refunded_cents'] ?? 0) . '-' . ($amountCents ?? 'rest');
             $result  = Payments::refundCharge($chargeId, $amountCents, $idemKey);
             if ($result['ok']) {
@@ -55,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ── Filters ──────────────────────────────────────────────────
-$gatewayF     = trim((string)($_GET['gateway']       ?? ''));
+$gatewayF     = $onlyGw ?? trim((string)($_GET['gateway'] ?? ''));
 $sourcePlugin = trim((string)($_GET['source_plugin'] ?? ''));
 $mode         = trim((string)($_GET['mode']          ?? ''));
 $status       = trim((string)($_GET['status']        ?? ''));
@@ -79,8 +89,9 @@ $summary = Database::row(
         SUM(CASE WHEN status = 'succeeded' THEN 1 ELSE 0 END)     AS n_succeeded,
         SUM(CASE WHEN status IN ('refunded','partial_refund') THEN 1 ELSE 0 END) AS n_refunded
        FROM stripepayment_charges
-      WHERE tenant_id = ? AND created_at >= NOW() - INTERVAL " . (int)$days . " DAY",
-    [$tid]
+      WHERE tenant_id = ? AND created_at >= NOW() - INTERVAL " . (int)$days . " DAY"
+        . ($onlyGw !== null ? " AND gateway = ?" : ''),
+    $onlyGw !== null ? [$tid, $onlyGw] : [$tid]
 ) ?: ['n'=>0,'gross'=>0,'refunded'=>0,'n_succeeded'=>0,'n_refunded'=>0];
 
 $plugins = array_column(Database::rows(
@@ -91,7 +102,7 @@ $usedGateways = array_column(Database::rows(
     "SELECT DISTINCT gateway FROM stripepayment_charges
       WHERE tenant_id = ? ORDER BY gateway", [$tid]
 ), 'gateway');
-$gatewayOptions = array_values(array_unique(array_merge(array_keys($gateways), $usedGateways)));
+$gatewayOptions = $onlyGw !== null ? [$onlyGw] : array_values(array_unique(array_merge(array_keys($gateways), $usedGateways)));
 
 $pageTitle  = __('payments_transactions', 'Transactions');
 $currentNav = $currentNav ?? 'payments-transactions';
@@ -226,7 +237,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         $step        = $dec === 0 ? '1' : '0.01';
                         $refundLabel = __('stripe_charges_refund_btn', 'Refund');
                         $actions = '<form method="post" style="display:inline-flex;align-items:center;gap:6px;margin:0;" onsubmit="return confirm(\'' . e($refundLabel) . ' ' . e($r['currency']) . ' \' + (this.amount ? (this.amount.value || \'' . $maxRefund . '\') : \'' . $maxRefund . '\') + \'?\')">'
-                                 . csrf_field()
+                                 . csrf_field() . submit_token_field()
                                  . '<input type="hidden" name="_action" value="refund">'
                                  . '<input type="hidden" name="id" value="' . (int)$r['id'] . '">'
                                  . ($partialOk
