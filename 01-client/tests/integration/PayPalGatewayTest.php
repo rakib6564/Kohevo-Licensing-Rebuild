@@ -271,6 +271,62 @@ unit('paypal: a sale that arrives before the activation stands in for it', funct
     assert_false($act->isNewCharge);
 });
 
+unit('paypal: a refund notice counts each refund once and names the paid record', function () use ($PPH, $PPG, &$PPT_EVENTS): void {
+    $start = Payments::startCheckout('paypal', ppt_request('o-r1'));
+    fake_paypal_hook($PPH, '/__test/approve/' . $start->ref);
+    $id = (int) Payments::confirmReturn('paypal', $start->ref, 'ppt-shop', 'o-r1')->chargeId;
+    $cap = Payments::getCharge($id)['gateway_txn_id'];
+
+    // Refunded from the admin first; PayPal then sends the notice for that same refund.
+    $r = Payments::refundCharge($id, 500, 'k-or1');
+    assert_true($r['ok'], 'admin refund');
+    $notice = fn (string $rid, string $value) => ppt_webhook('PAYMENT.CAPTURE.REFUNDED', [
+        'id' => $rid, 'status' => 'COMPLETED', 'amount' => ['currency_code' => 'EUR', 'value' => $value],
+        'links' => [['rel' => 'up', 'href' => 'https://api-m.sandbox.paypal.com/v2/payments/captures/' . $cap]],
+    ]);
+    $ev = Payments::emit($PPG->fromWebhook($notice($r['refund_id'], '5.00')));
+    assert_eq(500, (int) Payments::getCharge($id)['refunded_cents'], 'the notice for an admin refund adds nothing');
+    assert_true($ev->isFor('ppt-shop', 'o-r1'), 'the refund event names the paid record');
+
+    // A second refund made in PayPal, delivered twice. (Refund ids are unique for good, so each run makes its own.)
+    $dash = 'REF-DASH-' . bin2hex(random_bytes(4));
+    Payments::emit($PPG->fromWebhook($notice($dash, '3.00')));
+    Payments::emit($PPG->fromWebhook($notice($dash, '3.00')));
+    assert_eq([800, 'partial_refund'], [(int) Payments::getCharge($id)['refunded_cents'], Payments::getCharge($id)['status']],
+        'a dashboard refund counts once');
+});
+
+unit('paypal: a reversed capture and a refunded subscription payment reach the ledger', function () use ($PPH, $PPG): void {
+    $start = Payments::startCheckout('paypal', ppt_request('o-r2'));
+    fake_paypal_hook($PPH, '/__test/approve/' . $start->ref);
+    $id = (int) Payments::confirmReturn('paypal', $start->ref, 'ppt-shop', 'o-r2')->chargeId;
+    $cap = Payments::getCharge($id)['gateway_txn_id'];
+    $ev = Payments::emit($PPG->fromWebhook(ppt_webhook('PAYMENT.CAPTURE.REVERSED', [
+        'id' => 'REV-' . bin2hex(random_bytes(4)), 'status' => 'COMPLETED',
+        'links' => [['rel' => 'up', 'href' => 'https://api-m.sandbox.paypal.com/v2/payments/captures/' . $cap]],
+    ])));
+    assert_eq(PaymentEvent::REFUNDED, $ev->type);
+    assert_true(!empty($ev->metadata['reversal']), 'marked as a reversal');
+    assert_eq([2500, 'refunded'], [(int) Payments::getCharge($id)['refunded_cents'], Payments::getCharge($id)['status']],
+        'a reversal with no amount pulls back the whole payment');
+
+    $sub = Payments::startCheckout('paypal', ppt_request('s-r', ['interval' => 'month'], [['name' => 'Club membership', 'amount_cents' => 990]]));
+    fake_paypal_hook($PPH, '/__test/activate/' . $sub->ref);
+    $saleId = 'SALE-R' . bin2hex(random_bytes(4));
+    $first = Payments::emit($PPG->fromWebhook(ppt_webhook('PAYMENT.SALE.COMPLETED', [
+        'id' => $saleId, 'billing_agreement_id' => $sub->ref, 'amount' => ['total' => '9.90', 'currency' => 'EUR']])));
+    $srefId = 'SREF-' . bin2hex(random_bytes(4));
+    $refund = fn () => Payments::emit($PPG->fromWebhook(ppt_webhook('PAYMENT.SALE.REFUNDED', [
+        'id' => $srefId, 'state' => 'completed', 'sale_id' => $saleId, 'amount' => ['total' => '4.00', 'currency' => 'EUR']])));
+    $ev = $refund();
+    $refund();
+    assert_eq($first->chargeId, $ev->chargeId, 'the refund finds the sale\'s row');
+    assert_eq(400, (int) Payments::getCharge((int) $first->chargeId)['refunded_cents'], 'a sale refund counts once');
+    assert_true($ev->isFor('ppt-shop', 's-r'), 'and names the subscription\'s record');
+    assert_null($PPG->fromWebhook(ppt_webhook('PAYMENT.SALE.REFUNDED', ['id' => 'SREF-X', 'amount' => ['total' => '1.00', 'currency' => 'EUR']])),
+        'a sale refund without a sale id is ignored');
+});
+
 unit('paypal settings: the secret is write-only, and new credentials are checked with PayPal before saving', function (): void {
     assert_true(slate_has_app_secret(), 'precondition: APP_SECRET must be configured for the integration suite');
     $probe = function (?array $fields): array {

@@ -1530,6 +1530,16 @@ class RestaurantAPI {
                 ? Payments::refundCharge($chargeId, $amount, self::idempotencyKey('refund',
                       $paymentId . '-' . $before . '-' . $amount . '-' . $refused))
                 : ['ok' => false, 'error' => __('restaurant_refund_err_no_charge', 'No Stripe charge is recorded for this payment.')];
+            if (empty($res['ok']) && $chargeId) {
+                // An earlier try whose answer was lost may have gone through:
+                // the gateway's refund notice then already brought the charge
+                // to (or past) this refund, and the gateway now says "already
+                // refunded". The money is back with the customer, so record it.
+                $charge = Payments::getCharge($chargeId);
+                if ($charge && (int)$charge['refunded_cents'] >= $before + $amount) {
+                    $res = ['ok' => true, 'refund_id' => ''];
+                }
+            }
             if (empty($res['ok'])) {
                 Database::query(
                     "UPDATE restaurant_payments SET refunded_cents = refunded_cents - ?

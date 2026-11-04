@@ -239,6 +239,31 @@ try {
         assert_eq(500, (int) $rmtPay($res['payment_id'])['refunded_cents']);
     });
 
+    unit('a full refund whose answer was lost, then reported by the gateway, is recorded on retry instead of refused', function () use ($rmtOrder, $rmtTerminal, $rmtPay): void {
+        $order = $rmtOrder();
+        $res   = $rmtTerminal($order, 2200, 0);
+        assert_eq('paid', RestaurantAPI::pollTerminalPayment($res['payment_id'])['state']);
+        $chargeId = (int) ($rmtPay($res['payment_id'])['central_charge_id'] ?? 0);
+        if ($chargeId === 0) {
+            RestaurantAPI::refundPayment($res['payment_id'], 100);   // records the central charge
+            $chargeId = (int) $rmtPay($res['payment_id'])['central_charge_id'];
+        }
+        assert_true($chargeId > 0, 'the payment has a ledger charge');
+        $before = (int) $rmtPay($res['payment_id'])['refunded_cents'];
+
+        // The gateway refunded the rest, but Restaurant never heard back; its
+        // refund notice has brought the ledger to fully refunded.
+        $left = (int) Payments::getCharge($chargeId)['amount_cents'] - (int) Payments::getCharge($chargeId)['refunded_cents'];
+        assert_true(Payments::refundCharge($chargeId, $left, 'rmt-lost-answer')['ok'], 'refunded at the gateway');
+
+        $r = RestaurantAPI::refundPayment($res['payment_id']);
+        assert_true($r['ok'], 'the retry records the refund: ' . ($r['error'] ?? ''));
+        $p = $rmtPay($res['payment_id']);
+        assert_eq(['refunded', 2200], [$p['status'], (int) $p['refunded_cents']]);
+        assert_eq(2200 - $before, (int) Database::value(
+            "SELECT amount_cents FROM restaurant_refunds WHERE payment_id = ? AND status = 'succeeded' ORDER BY id DESC LIMIT 1", [$res['payment_id']]));
+    });
+
     unit('declined card: poll reports the decline and the payment fails, the check stays open', function () use ($rmtOrder, $rmtTerminal, $rmtPay, $rmtOrd): void {
         $order = $rmtOrder();
         $res   = $rmtTerminal($order, 2200, 0, true);

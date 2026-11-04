@@ -249,7 +249,7 @@ $whWhy = [
             <div class="card-header"><h2><?= e(__('pp_step3_title', '3 · Add the webhook')) ?></h2></div>
             <p class="text-muted text-sm"><?= e(__('pp_step3_desc', 'In the same PayPal app, under Webhooks, add this URL and select the events below. Then paste the webhook id PayPal shows into step 2.')) ?></p>
             <code style="display:block;padding:10px;background:var(--surface-sunken);border-radius:6px;word-break:break-all;font-size:12px;"><?= e($webhookUrl) ?></code>
-            <p class="text-sm" style="margin:.75rem 0 0;"><code>CHECKOUT.ORDER.APPROVED</code>, <code>PAYMENT.CAPTURE.COMPLETED</code>, <code>PAYMENT.CAPTURE.DENIED</code>, <code>PAYMENT.CAPTURE.REFUNDED</code>, <code>BILLING.SUBSCRIPTION.ACTIVATED</code>, <code>PAYMENT.SALE.COMPLETED</code></p>
+            <p class="text-sm" style="margin:.75rem 0 0;"><code>CHECKOUT.ORDER.APPROVED</code>, <code>PAYMENT.CAPTURE.COMPLETED</code>, <code>PAYMENT.CAPTURE.DENIED</code>, <code>PAYMENT.CAPTURE.REFUNDED</code>, <code>PAYMENT.CAPTURE.REVERSED</code>, <code>BILLING.SUBSCRIPTION.ACTIVATED</code>, <code>PAYMENT.SALE.COMPLETED</code>, <code>PAYMENT.SALE.REFUNDED</code>, <code>PAYMENT.SALE.REVERSED</code></p>
         </div>
     </div>
 </div>

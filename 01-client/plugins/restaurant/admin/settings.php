@@ -17,9 +17,25 @@ $currentNav = 'restaurant-settings';
 $flash = null;
 $set = function (string $k, string $v): void { Database::setSetting('restaurant.' . $k, $v); };
 
+require_once dirname(__DIR__) . '/includes/hours.php';
+// Opening hours as posted: each day must read cleanly ("12:00-14:30, 17:00-20:00"), or nothing is saved.
+$hoursIn = [];
+$hoursBad = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    foreach (RestaurantHours::DAYS as $d) {
+        $txt = mb_substr(trim((string)($_POST['hours'][$d] ?? '')), 0, 120);
+        $parsed = RestaurantHours::parseDay($txt);
+        if ($parsed === null) $hoursBad[] = $d;
+        $hoursIn[$d] = $parsed === null ? $txt : implode(', ', array_map(fn ($w) => RestaurantHours::hhmm($w[0]) . '-' . RestaurantHours::hhmm($w[1]), $parsed));
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify()) {
         $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
+    } elseif ($hoursBad) {
+        $flash = ['type' => 'error', 'msg' => sprintf(__('restaurant_hours_bad', 'Opening hours could not be read for: %s. Write them like 12:00-14:30, 17:00-20:00 (or leave the day empty when closed). Nothing was saved.'), implode(', ', array_map('ucfirst', $hoursBad)))];
+        $_GET['tab'] = 'online';
     } else {
         $set('currency',            strtoupper(substr(trim((string)($_POST['currency'] ?? 'USD')), 0, 8)));
         $set('default_tax_rate',    (string)max(0, (float)($_POST['default_tax_rate'] ?? 0)));
@@ -43,6 +59,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $set('online_pay',         !empty($_POST['online_pay'])         ? '1' : '0');
         $set('online_pay_pickup',  !empty($_POST['online_pay_pickup'])  ? '1' : '0');
         $set('online_delivery',    !empty($_POST['online_delivery'])    ? '1' : '0');
+        // Opening hours for online orders.
+        $hc = RestaurantHours::clean(['on' => !empty($_POST['online_hours_on']), 'lead' => $_POST['online_lead_min'] ?? 20,
+            'step' => $_POST['online_slot_min'] ?? 15, 'ahead' => $_POST['online_days_ahead'] ?? 0]);
+        $set('online_hours_on',   $hc['on'] ? '1' : '0');
+        $set('online_hours',      (string) json_encode($hoursIn));
+        $set('online_lead_min',   (string) $hc['lead']);
+        $set('online_slot_min',   (string) $hc['step']);
+        $set('online_days_ahead', (string) $hc['ahead']);
+        // Storefront look: bad colours and font names are simply not kept (the storefront falls back to its own look).
+        foreach (['sf_accent', 'sf_dark', 'sf_bg'] as $k) {
+            $v = trim((string)($_POST[$k] ?? ''));
+            $set($k, preg_match('/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i', $v) === 1 ? $v : '');
+        }
+        foreach (['sf_font_heading', 'sf_font_body'] as $k) {
+            $v = trim(preg_replace('/\s+/', ' ', (string)($_POST[$k] ?? '')) ?? '');
+            $set($k, preg_match('/^[A-Za-z0-9 ]{2,60}$/', $v) === 1 ? $v : '');
+        }
+        $set('sf_site_link', !empty($_POST['sf_site_link']) ? '1' : '0');
+        $u = trim((string)($_POST['sf_site_url'] ?? ''));
+        $set('sf_site_url', $u !== '' && preg_match('#^(https?://|/)[^\s<>"\']*$#i', $u) === 1 ? mb_substr($u, 0, 300) : '');
+        $set('sf_site_label', mb_substr(trim((string)($_POST['sf_site_label'] ?? '')), 0, 40));
         AuditLog::record('restaurant.settings_saved', 'settings');
         // Back to the tab that was open, so a save never loses the operator's place.
         $tab = preg_replace('/[^a-z]/', '', (string)($_POST['tab'] ?? ''));
@@ -55,7 +92,11 @@ $TABS = ['general' => __('restaurant_settings_tab_general', 'Money & tax'), 'rec
          'business' => __('restaurant_settings_tab_business', 'Business'), 'online' => __('restaurant_settings_tab_online', 'Online ordering')];
 $tab = array_key_exists($_GET['tab'] ?? '', $TABS) ? (string)$_GET['tab'] : 'general';
 
-$g = fn(string $k, $d = '') => RestaurantAPI::setting($k, $d);
+// After a refused save the form shows what was posted, so nothing typed is lost.
+$g = $hoursBad
+    ? fn(string $k, $d = '') => array_key_exists($k, $_POST) ? (string) $_POST[$k] : (str_starts_with($k, 'online_') || str_starts_with($k, 'sf_site_link') ? '0' : RestaurantAPI::setting($k, $d))
+    : fn(string $k, $d = '') => RestaurantAPI::setting($k, $d);
+$hoursShown = $hoursBad ? $hoursIn : (json_decode((string) RestaurantAPI::setting('online_hours', ''), true) ?: []);
 
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
@@ -202,6 +243,62 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
     </div>
 
+    <div class="card">
+        <div class="card-header"><h2><?= e(__('restaurant_hours_title', 'Opening hours')) ?></h2></div>
+        <div class="card-body">
+            <label class="field" style="display:flex;gap:10px;align-items:center;">
+                <input type="checkbox" name="online_hours_on" value="1" <?= $g('online_hours_on','0') === '1' ? 'checked' : '' ?>>
+                <span><?= __('restaurant_hours_on', '<strong>Only take orders for these hours.</strong> Customers pick a pickup time inside them; outside them checkout says when ordering opens.') ?></span>
+            </label>
+            <p class="text-sm text-muted" style="margin:0 0 10px;"><?= e(sprintf(__('restaurant_hours_hint', 'One or more times per day, like 12:00-14:30, 17:00-20:00 (5pm-8pm works too). Leave a day empty when closed. Times are in the site time zone (%s).'), RestaurantHours::tz()->getName())) ?></p>
+            <div class="rs-hours">
+                <?php foreach (RestaurantHours::DAYS as $d): ?>
+                <label class="field-label" for="hours_<?= $d ?>"><?= e(ucfirst($d)) ?></label>
+                <input type="text" id="hours_<?= $d ?>" name="hours[<?= $d ?>]" maxlength="120" placeholder="<?= e(__('restaurant_hours_closed', 'Closed')) ?>" value="<?= e((string)($hoursShown[$d] ?? '')) ?>"<?= in_array($d, $hoursBad, true) ? ' aria-invalid="true" style="border-color:var(--danger,#c0392b)"' : '' ?>>
+                <?php endforeach; ?>
+            </div>
+            <div class="field-row field-row-3" style="margin-top:12px;">
+                <div class="field"><label class="field-label" for="online_lead_min"><?= e(__('restaurant_hours_lead', 'Kitchen needs (minutes)')) ?></label>
+                    <input type="number" id="online_lead_min" name="online_lead_min" min="0" max="1440" value="<?= e((string)$g('online_lead_min','20')) ?>"></div>
+                <div class="field"><label class="field-label" for="online_slot_min"><?= e(__('restaurant_hours_step', 'Pickup times every')) ?></label>
+                    <select id="online_slot_min" name="online_slot_min">
+                        <?php foreach ([5, 10, 15, 20, 30, 60] as $m): ?><option value="<?= $m ?>" <?= (string)$g('online_slot_min','15') === (string)$m ? 'selected' : '' ?>><?= $m ?> min</option><?php endforeach; ?>
+                    </select></div>
+                <div class="field"><label class="field-label" for="online_days_ahead"><?= e(__('restaurant_hours_ahead', 'Order ahead (days)')) ?> <span class="field-hint"><?= e(__('restaurant_hours_ahead_hint', '0 = today only')) ?></span></label>
+                    <input type="number" id="online_days_ahead" name="online_days_ahead" min="0" max="<?= RestaurantHours::MAX_DAYS_AHEAD ?>" value="<?= e((string)$g('online_days_ahead','0')) ?>"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h2><?= e(__('restaurant_look_title', 'Storefront look')) ?></h2></div>
+        <div class="card-body">
+            <p class="text-sm text-muted" style="margin-top:0;"><?= e(__('restaurant_look_hint', 'Match the order pages to your website. Leave a field empty to keep the built-in look. Fonts are Google Fonts family names.')) ?></p>
+            <div class="field-row field-row-3">
+                <?php foreach (['sf_accent' => [__('restaurant_look_accent', 'Accent colour'), '#C0380A'], 'sf_dark' => [__('restaurant_look_dark', 'Dark band colour'), '#1A1109'], 'sf_bg' => [__('restaurant_look_bg', 'Page background'), '#FAF6EF']] as $k => [$lbl, $ph]): ?>
+                <div class="field"><label class="field-label" for="<?= $k ?>"><?= e($lbl) ?></label>
+                    <input type="text" id="<?= $k ?>" name="<?= $k ?>" maxlength="7" placeholder="<?= $ph ?>" value="<?= e((string)$g($k,'')) ?>"></div>
+                <?php endforeach; ?>
+            </div>
+            <div class="field-row field-row-2">
+                <div class="field"><label class="field-label" for="sf_font_heading"><?= e(__('restaurant_look_font_h', 'Heading font')) ?></label>
+                    <input type="text" id="sf_font_heading" name="sf_font_heading" maxlength="60" placeholder="Playfair Display" value="<?= e((string)$g('sf_font_heading','')) ?>"></div>
+                <div class="field"><label class="field-label" for="sf_font_body"><?= e(__('restaurant_look_font_b', 'Body font')) ?></label>
+                    <input type="text" id="sf_font_body" name="sf_font_body" maxlength="60" placeholder="DM Sans" value="<?= e((string)$g('sf_font_body','')) ?>"></div>
+            </div>
+            <label class="field" style="display:flex;gap:10px;align-items:center;">
+                <input type="checkbox" name="sf_site_link" value="1" <?= $g('sf_site_link','1') === '1' ? 'checked' : '' ?>>
+                <span><?= e(__('restaurant_look_site_link', 'Show a link back to the website in the order page header')) ?></span>
+            </label>
+            <div class="field-row field-row-2" style="margin-bottom:0;">
+                <div class="field" style="margin-bottom:0;"><label class="field-label" for="sf_site_url"><?= e(__('restaurant_look_site_url', 'Website address')) ?> <span class="field-hint"><?= e(__('restaurant_look_site_url_hint', 'empty = this site\'s home page')) ?></span></label>
+                    <input type="text" id="sf_site_url" name="sf_site_url" maxlength="300" placeholder="<?= e(rtrim(SLATE_URL, '/') . '/') ?>" value="<?= e((string)$g('sf_site_url','')) ?>"></div>
+                <div class="field" style="margin-bottom:0;"><label class="field-label" for="sf_site_label"><?= e(__('restaurant_look_site_label', 'Link text')) ?></label>
+                    <input type="text" id="sf_site_label" name="sf_site_label" maxlength="40" placeholder="<?= e(__('restaurant_sf_back_to_site', 'Website')) ?>" value="<?= e((string)$g('sf_site_label','')) ?>"></div>
+            </div>
+        </div>
+    </div>
+
     </div>
 
     <div class="form-actions rs-actions">
@@ -213,6 +310,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
 <style>
 .settings-tabs { margin-bottom: 14px; }
 .rs-split { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; }
+.rs-hours { display: grid; grid-template-columns: 56px minmax(0, 360px); gap: 8px 12px; align-items: center; }
+.rs-hours .field-label { margin: 0; }
 .rs-preview { position: sticky; top: 12px; }
 .rs-paper { margin: 0 16px 16px; padding: 16px 14px; background: #fff; color: #111; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm);
     font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }

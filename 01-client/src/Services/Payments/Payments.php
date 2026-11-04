@@ -349,7 +349,18 @@ final class Payments
             $row = PaymentLedger::findByTxn($event->gateway, $event->txnId);
             if ($row !== null) {
                 $event->chargeId = (int) $row['id'];
-                PaymentLedger::setRefunded((int) $row['id'], $event->refundedCents);
+                // The charge row knows which plugin record was paid, even when
+                // the gateway's refund notice carries no reference to it.
+                if ($event->sourcePlugin === '') {
+                    $event->sourcePlugin = (string) ($row['source_plugin'] ?? '');
+                    $event->sourceId     = (string) ($row['source_id'] ?? '');
+                }
+                // One refund with its own id counts once (an admin refund of
+                // the same id is already there); a running total only raises.
+                $one = (int) ($event->metadata['refund_amount'] ?? 0);
+                $rid = (string) ($event->metadata['refund_id'] ?? '');
+                if ($one > 0 && $rid !== '') PaymentLedger::addRefund((int) $row['id'], $one, $rid);
+                if ($event->refundedCents > 0) PaymentLedger::setRefunded((int) $row['id'], $event->refundedCents);
             }
         }
 
