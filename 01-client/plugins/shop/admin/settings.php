@@ -1,8 +1,9 @@
 <?php
 /**
  * Shop — settings: delivery (flat shipping, free-shipping threshold, pickup), the countries checkout ships to, the
- * addresses of the shop's Studio pages and of a product page, the email that hears about new orders, and a button that
- * creates the Studio pages a shop needs (ShopStudioPages). Payment keys live in each payment gateway's settings.
+ * addresses of the shop's Studio pages and of a product page, the email that hears about new orders, the units of
+ * weight and size, the low-stock level and who hears about it, and a button that creates the Studio pages a shop
+ * needs (ShopStudioPages). Payment keys live in each payment gateway's settings.
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/ShopStoreAPI.php';
@@ -65,6 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $notify = $in('notify_email');
         if ($notify !== '' && !filter_var($notify, FILTER_VALIDATE_EMAIL)) $errors['notify_email'] = __('shop_err_email', 'Enter a valid email address.');
+        $lowStock = $in('low_stock');
+        if ($lowStock !== '' && !preg_match('/^\d{1,6}$/', $lowStock)) $errors['low_stock'] = __('shop_err_whole_number', 'Enter a whole number, or leave it empty.');
+        $lowEmail = $in('low_stock_email');
+        if ($lowEmail !== '' && !filter_var($lowEmail, FILTER_VALIDATE_EMAIL)) $errors['low_stock_email'] = __('shop_err_email', 'Enter a valid email address.');
         $currency = strtoupper($in('currency'));
         if ($currency !== '' && !preg_match('/^[A-Z]{3}$/', $currency)) $errors['currency'] = __('shop_err_currency_code', 'Use a three-letter code such as EUR.');
         if (!$errors) {
@@ -76,6 +81,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ShopStoreAPI::setSetting('countries', $countries !== '' ? $countries : 'BE');
             ShopStoreAPI::setSetting('currency', $currency);
             ShopStoreAPI::setSetting('notify_email', $notify);
+            ShopStoreAPI::setSetting('weight_unit', in_array($in('weight_unit'), ShopStoreAPI::WEIGHT_UNITS, true) ? $in('weight_unit') : 'kg');
+            ShopStoreAPI::setSetting('dimension_unit', in_array($in('dimension_unit'), ShopStoreAPI::DIMENSION_UNITS, true) ? $in('dimension_unit') : 'cm');
+            ShopStoreAPI::setSetting('low_stock', $lowStock);
+            ShopStoreAPI::setSetting('low_stock_email', $lowEmail);
             foreach (['product_prefix', 'cart_page', 'checkout_page', 'thanks_page'] as $k) {
                 ShopStoreAPI::setSetting($k, strtolower(trim($in($k), '/')));
             }
@@ -192,6 +201,36 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <label class="field-label" for="notify_email"><?= __('shop_notify_email', 'Email new orders to') ?></label>
                 <input type="email" id="notify_email" name="notify_email" value="<?= $val('notify_email', ShopStoreAPI::setting('notify_email')) ?>">
                 <?= $err('notify_email') ?>
+            </div>
+        </div>
+    <?php slate_edit_card_close(); ?>
+
+    <?php slate_edit_card_open(['icon' => 'package', 'eyebrow' => __('shop_catalogue', 'Catalogue'), 'title' => __('shop_units_stock', 'Units and stock alerts')]); ?>
+        <div class="field-row field-row-2">
+            <div class="field">
+                <label class="field-label" for="weight_unit"><?= __('shop_weight_unit', 'Weight unit') ?></label>
+                <?php $wu = $posted !== null ? (string) ($posted['weight_unit'] ?? '') : ShopStoreAPI::weightUnit(); ?>
+                <select id="weight_unit" name="weight_unit"><?php foreach (ShopStoreAPI::WEIGHT_UNITS as $u): ?><option value="<?= $u ?>" <?= $wu === $u ? 'selected' : '' ?>><?= $u ?></option><?php endforeach; ?></select>
+            </div>
+            <div class="field">
+                <label class="field-label" for="dimension_unit"><?= __('shop_dimension_unit', 'Size unit') ?></label>
+                <?php $du = $posted !== null ? (string) ($posted['dimension_unit'] ?? '') : ShopStoreAPI::dimensionUnit(); ?>
+                <select id="dimension_unit" name="dimension_unit"><?php foreach (ShopStoreAPI::DIMENSION_UNITS as $u): ?><option value="<?= $u ?>" <?= $du === $u ? 'selected' : '' ?>><?= $u ?></option><?php endforeach; ?></select>
+            </div>
+        </div>
+        <div class="field-hint" style="margin:-4px 0 14px;"><?= __('shop_units_hint', 'Products keep the numbers you typed: changing a unit does not convert them.') ?></div>
+        <div class="field-row field-row-2">
+            <div class="field">
+                <label class="field-label" for="low_stock"><?= __('shop_low_stock_level', 'Low-stock alert at') ?></label>
+                <input type="number" id="low_stock" name="low_stock" min="0" step="1" value="<?= $val('low_stock', ShopStoreAPI::setting('low_stock')) ?>">
+                <div class="field-hint"><?= __('shop_low_stock_shop_hint', 'For products that track stock. A product can set its own level. Empty: no alerts.') ?></div>
+                <?= $err('low_stock') ?>
+            </div>
+            <div class="field">
+                <label class="field-label" for="low_stock_email"><?= __('shop_low_stock_email', 'Email low stock to') ?></label>
+                <input type="email" id="low_stock_email" name="low_stock_email" value="<?= $val('low_stock_email', ShopStoreAPI::setting('low_stock_email')) ?>" placeholder="<?= e(ShopStoreAPI::setting('notify_email')) ?>">
+                <div class="field-hint"><?= __('shop_low_stock_email_hint', 'Empty: the address that hears about new orders.') ?></div>
+                <?= $err('low_stock_email') ?>
             </div>
         </div>
     <?php slate_edit_card_close(); ?>

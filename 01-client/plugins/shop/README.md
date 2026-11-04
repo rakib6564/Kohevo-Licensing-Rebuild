@@ -1,7 +1,7 @@
 # Shop
 
-Sell physical products from a Kohevo Studio site: products, a session cart, guest checkout, Stripe payment and an
-orders screen. The storefront is built in Studio with the Shop widgets; this plugin owns the data and the
+Sell physical, digital and service products from a Kohevo Studio site: products with variants, a session cart, guest
+checkout, payment through the shared payment layer (Stripe, PayPal) and an orders screen. The storefront is built in Studio with the Shop widgets; this plugin owns the data and the
 per-visitor endpoints.
 
 ## Design principles
@@ -19,6 +19,40 @@ per-visitor endpoints.
   product). Shipping is one flat rate with an optional free-shipping threshold, or free pickup.
 - **Guests check out.** Name and email are enough; a signed-in customer's order is linked to their account. A guest
   sees the order through a link with an unguessable key.
+
+## Catalogue (0.3.0)
+
+- **Product types.** Physical (shipped or collected), digital (files to download) and service (nothing to ship, such
+  as a class). A cart holding only digital and service products checks out without a delivery choice or an address
+  (the order's `delivery` is `none`).
+- **Weight and size** per product and per variant (a variant's empty value is the product's), in the units set under
+  Shop settings › Units (kg, g, lb, oz; cm, mm, m, in). Changing a unit does not convert stored numbers.
+  `ShopStoreAPI::toGrams()` gives a common weight for shipping rules.
+- **Sale dates.** A sale price applies between `sale_starts_at` and `sale_ends_at` (either may be empty); the product's
+  dates also govern its variants' sale prices. Listing order by price uses the price paid now.
+- **Tags, featured, upsells, cross-sells.** Tags are made as they are typed. The Product Grid's *Show* setting lists
+  every product, the featured ones, or, on a product's page, its upsells, cross-sells or related products (same
+  category, else same tag); it can also keep only one tag. `ShopStoreAPI::cartCrossSells()` gives the cross-sells of
+  a cart. Product Meta can show tags, weight and size.
+- **Low stock.** A level per product, else the shop's (Shop settings; empty turns alerts off). The sale that takes
+  tracked stock to the level or below sends one email (to the low-stock address, else the new-orders address). The
+  products list filters by type and by low stock (`?stock=low`).
+- **Digital files.** Uploaded on the product (any of the extensions in `ShopStoreAPI::FILE_EXTS`, 512 MB each), kept
+  in `data/shop-files/<tenant>/` (data/ is never served: its `.htaccess` and the dev router refuse it), never under
+  `uploads/`. A paid order gets one
+  link per file of each digital line (`shop_downloads`, a 40-hex token, the product's download limit and days copied
+  in); `public/download.php?t=…` counts and streams it. Links stop working when the order is refunded.
+- **Note to buyers** (`purchase_note`): shown on the confirmation page and in the receipt email of a paid order.
+
+## Importing from WooCommerce
+
+Products › Import takes WooCommerce's product CSV (Products › Export) or a JSON list from its REST API, shows a
+preview (new, updated, skipped, and a note for anything that does not carry over), then imports. Images are copied
+into the Media library (or kept as addresses), weights and sizes are converted from the file's units, and every
+product and variant keeps `external_ref` = `woo:<id>`, so a second import of the same file updates instead of
+duplicating (failing that, a product is matched by SKU, then address). Variations become variants; combinations the
+file does not list are kept but not sold. Grouped and external products, attributes no variation uses, tax and
+shipping classes and reviews are not imported. See `ShopImport.php`.
 
 ## Order states
 
@@ -62,6 +96,6 @@ product template, laid out with these widgets (pages that exist are left alone).
 
 ## Not in this version
 
-Digital products, variants (size/colour), coupons, tax rates other than VAT-inclusive prices, shipping zones or
-weights, customer order history in the portal, partial refunds from the order screen, and the Stripe Payment Element
-(embedded) flow.
+Coupons, tax rates other than VAT-inclusive prices, shipping zones and rates by weight, carrier rates, customer
+order history in the portal, partial refunds from the order screen, and the Stripe Payment Element (embedded) flow.
+Shipping, tax and coupons come in the next parts of the Shop upgrade.

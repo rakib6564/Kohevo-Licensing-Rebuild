@@ -25,7 +25,7 @@ test('the Product grid binds to the shop\'s products, whose category is picked f
   const provider = manifest.providers.find((p) => p.key === 'shop.products');
   assert.deepEqual(provider.params.map((p) => p.key), ['category']);
   assert.ok(Array.isArray(provider.params[0].choices), 'a pick-list, filled from the shop\'s categories');
-  assert.deepEqual(grid.field_schema.map((f) => f.key), ['heading', 'columns', 'order', 'per_page', 'show_filter', 'show_pager', 'show_price', 'show_add_to_cart', 'button_label', 'link_label', 'options_label', 'show_icon', 'icon', 'empty_message']);
+  assert.deepEqual(grid.field_schema.map((f) => f.key), ['heading', 'columns', 'source', 'tag', 'order', 'per_page', 'show_filter', 'show_pager', 'show_price', 'show_add_to_cart', 'button_label', 'link_label', 'options_label', 'show_icon', 'icon', 'empty_message']);
 });
 
 test('the widgets an author styles piece by piece list their parts', () => {

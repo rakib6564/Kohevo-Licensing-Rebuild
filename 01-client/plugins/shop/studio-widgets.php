@@ -47,6 +47,8 @@ return [
         $block('shop.products', 'Product Grid', 'Your products in a grid, with a category filter and pages', 'grid-panes', [
             $text('heading', 'Heading', 200),
             ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'default' => 3, 'min' => 1, 'max' => 6, 'integer_only' => true],
+            ['key' => 'source', 'type' => 'enum', 'label' => 'Show', 'required' => false, 'default' => 'all', 'allowed_values' => S\ShopProductsProvider::SOURCES],
+            $text('tag', 'Only products with this tag', 80),
             ['key' => 'order', 'type' => 'enum', 'label' => 'Order', 'required' => false, 'default' => 'menu', 'allowed_values' => S\ShopProductsProvider::ORDERS],
             ['key' => 'per_page', 'type' => 'number', 'label' => 'Products per page', 'required' => false, 'default' => 12, 'min' => 1, 'max' => 48, 'integer_only' => true],
             $bool('show_filter', 'Show category filter', false),
@@ -82,9 +84,12 @@ return [
             ['key' => 'low_stock', 'type' => 'number', 'label' => 'Say "only N left" from', 'required' => false, 'default' => 5, 'min' => 0, 'max' => 100, 'integer_only' => true],
             $bool('show_in_stock', 'Show "In stock"', true),
         ]),
-        $block('shop.product_meta', 'Product Meta', 'SKU and categories', 'list', [
+        $block('shop.product_meta', 'Product Meta', 'SKU, categories, tags, weight and size', 'list', [
             $bool('show_sku', 'Show SKU', true),
             $bool('show_categories', 'Show categories', true),
+            $bool('show_tags', 'Show tags', false),
+            $bool('show_weight', 'Show weight', false),
+            $bool('show_dimensions', 'Show size', false),
         ]),
         $block('shop.mini_cart', 'Mini Cart', 'A cart link with the item count, for your header', 'box', [
             $text('label', 'Label', 40),

@@ -146,7 +146,7 @@ function shop_view_cart(array $totals, string $notice = ''): string {
     $cur = (string) $totals['currency'];
     $freeOver = (int) $totals['free_over_cents'];
     $freeNote = '';
-    if ($freeOver > 0 && in_array('shipping', ShopStoreAPI::deliveryOptions(), true) && $totals['subtotal_cents'] < $freeOver) {
+    if ($freeOver > 0 && in_array('shipping', $totals['delivery_options'] ?? ShopStoreAPI::deliveryOptions($totals['lines']), true) && $totals['subtotal_cents'] < $freeOver) {
         $freeNote = '<p class="sb-shop-cart__free">' . e(sprintf(__('shop_free_shipping_from', 'Free shipping from %s.'), ShopStoreAPI::money($freeOver, $cur))) . '</p>';
     }
     return '<div class="sb-shop-cart">'
@@ -180,18 +180,22 @@ function shop_view_checkout(array $totals, array $errors = [], array $old = [], 
             . '<input id="sb-shop-' . e($k) . '" name="' . e($k) . '" type="' . e($type) . '"' . ($required ? ' required' : '') . ($auto !== '' ? ' autocomplete="' . e($auto) . '"' : '')
             . ' value="' . $val($k, $fallback) . '"' . $aria($k) . '>' . $err($k) . '</p>';
     };
-    $options = ShopStoreAPI::deliveryOptions();
+    $options = $totals['delivery_options'] ?? ShopStoreAPI::deliveryOptions($totals['lines']);
     $delivery = in_array($old['delivery'] ?? '', $options, true) ? (string) $old['delivery'] : $totals['delivery'];
     $cur = (string) $totals['currency'];
-    $deliveryHtml = '<fieldset class="sb-shop-checkout__delivery"><legend>' . e(__('shop_delivery', 'Delivery')) . '</legend>';
-    foreach ($options as $opt) {
+    // Nothing to ship (digital and service products only): no delivery choice and no address.
+    $nothingToShip = $options === ['none'];
+    $deliveryHtml = $nothingToShip
+        ? '<input type="hidden" name="delivery" value="none">'
+        : '<fieldset class="sb-shop-checkout__delivery"><legend>' . e(__('shop_delivery', 'Delivery')) . '</legend>';
+    foreach ($nothingToShip ? [] : $options as $opt) {
         $cost = ShopStoreAPI::shippingFor((int) $totals['subtotal_cents'], $opt);
         $label = $opt === 'pickup'
             ? (ShopStoreAPI::setting('pickup_label') !== '' ? ShopStoreAPI::setting('pickup_label') : __('shop_pickup', 'Pick up (free)'))
             : __('shop_ship_to_me', 'Ship to my address') . ' — ' . ($cost > 0 ? ShopStoreAPI::money($cost, $cur) : __('shop_free', 'free'));
         $deliveryHtml .= '<label class="sb-shop-checkout__option"><input type="radio" name="delivery" value="' . e($opt) . '"' . ($opt === $delivery ? ' checked' : '') . '> ' . e($label) . '</label>';
     }
-    $deliveryHtml .= $err('delivery') . '</fieldset>';
+    if (!$nothingToShip) $deliveryHtml .= $err('delivery') . '</fieldset>';
     $countries = '';
     foreach (ShopStoreAPI::countries() as $c) {
         $countries .= '<option value="' . e($c) . '"' . (($old['country'] ?? '') === $c ? ' selected' : '') . '>' . e($c) . '</option>';
@@ -238,7 +242,7 @@ function shop_view_checkout(array $totals, array $errors = [], array $old = [], 
         . '<p class="sb-shop-checkout__field"><label for="sb-shop-notes">' . e(__('shop_notes', 'Order notes (optional)')) . '</label><textarea id="sb-shop-notes" name="notes" rows="3" maxlength="2000">' . $val('notes') . '</textarea></p></div>'
         . '<aside class="sb-shop-summary" aria-label="' . e(__('shop_order_summary', 'Order summary')) . '"><h2 class="sb-shop-summary__title">' . e(__('shop_order_summary', 'Order summary')) . '</h2><ul class="sb-shop-summary__lines">' . $summary . '</ul>'
         . '<p class="sb-shop-summary__row"><span>' . e(__('shop_subtotal', 'Subtotal')) . '</span> <span>' . shop_money((int) $totals['subtotal_cents'], $cur) . '</span></p>'
-        . '<p class="sb-shop-summary__row"><span>' . e(__('shop_shipping', 'Shipping')) . '</span> <span>' . ($shipping > 0 ? shop_money($shipping, $cur) : e(__('shop_free', 'free'))) . '</span></p>'
+        . ($nothingToShip ? '' : '<p class="sb-shop-summary__row"><span>' . e(__('shop_shipping', 'Shipping')) . '</span> <span>' . ($shipping > 0 ? shop_money($shipping, $cur) : e(__('shop_free', 'free'))) . '</span></p>')
         . '<p class="sb-shop-summary__total"><span>' . e(__('shop_total_incl_vat', 'Total (incl. VAT)')) . '</span> <strong>' . shop_money((int) $totals['subtotal_cents'] + $shipping, $cur) . '</strong></p>'
         . '<p class="sb-button-row"><button type="submit" class="sb-button sb-button--primary sb-shop-checkout__pay">' . e(__('shop_pay_now', 'Continue to payment')) . '</button></p>'
         . '<p class="sb-shop-checkout__secure">' . e($secure) . '</p></aside>'
@@ -259,9 +263,24 @@ function shop_view_order(array $order): string {
         : ($order['status'] === 'pending_payment'
             ? __('shop_order_processing', 'We are confirming your payment. This page updates when it is done; you can also refresh it.')
             : sprintf(__('shop_order_status_is', 'This order is %s.'), mb_strtolower($labels[$order['status']] ?? $order['status'])));
-    $where = $order['delivery'] === 'pickup'
-        ? e(ShopStoreAPI::setting('pickup_label') !== '' ? ShopStoreAPI::setting('pickup_label') : __('shop_pickup', 'Pick up (free)'))
-        : e(implode(', ', array_filter([$order['address_line1'], $order['address_line2'], trim($order['postal_code'] . ' ' . $order['city']), $order['country']])));
+    $where = match ((string) $order['delivery']) {
+        'pickup' => e(ShopStoreAPI::setting('pickup_label') !== '' ? ShopStoreAPI::setting('pickup_label') : __('shop_pickup', 'Pick up (free)')),
+        'none'   => e(__('shop_nothing_to_ship', 'Nothing to ship')),
+        default  => e(implode(', ', array_filter([$order['address_line1'], $order['address_line2'], trim($order['postal_code'] . ' ' . $order['city']), $order['country']]))),
+    };
+    $downloads = '';
+    foreach (ShopStoreAPI::orderDownloads($order) as $d) {
+        $terms = ShopStoreAPI::downloadTerms($d);
+        $downloads .= '<li class="sb-shop-order__download">' . ($d['usable']
+            ? '<a class="sb-shop-order__download-link" href="' . e($d['url']) . '" rel="nofollow">' . e($d['name']) . '</a>'
+            : '<span>' . e($d['name']) . '</span>') . ($terms !== '' ? ' <small>' . e($terms) . '</small>' : '') . '</li>';
+    }
+    $notes = '';
+    if ($paid) {
+        foreach (ShopStoreAPI::purchaseNotes((int) $order['id']) as $title => $note) {
+            $notes .= '<div class="sb-shop-order__note"><strong>' . e($title) . '</strong><p>' . nl2br(e($note)) . '</p></div>';
+        }
+    }
     return '<div class="sb-shop-order" data-status="' . e($order['status']) . '">'
         . '<p class="sb-shop-order__lead">' . e($lead) . '</p>'
         . '<dl class="sb-shop-order__meta"><dt>' . e(__('shop_order_number', 'Order number')) . '</dt><dd class="sb-shop-order__ref">' . e($order['ref']) . '</dd>'
@@ -270,5 +289,7 @@ function shop_view_order(array $order): string {
         . '<ul class="sb-shop-order__lines">' . $lines . '</ul>'
         . ((int) $order['shipping_cents'] > 0 ? '<p class="sb-shop-order__row"><span>' . e(__('shop_shipping', 'Shipping')) . '</span> <span>' . shop_money((int) $order['shipping_cents'], $cur) . '</span></p>' : '')
         . '<p class="sb-shop-order__total"><span>' . e(__('shop_total_incl_vat', 'Total (incl. VAT)')) . '</span> <strong>' . shop_money((int) $order['total_cents'], $cur) . '</strong></p>'
+        . ($downloads !== '' ? '<h3 class="sb-shop-order__downloads-title">' . e(__('shop_your_downloads', 'Your downloads')) . '</h3><ul class="sb-shop-order__downloads">' . $downloads . '</ul>' : '')
+        . $notes
         . '</div>';
 }

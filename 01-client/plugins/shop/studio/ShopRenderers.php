@@ -42,15 +42,31 @@ final class ShopProductsRenderer implements BlockRendererInterface
         $params = is_array($params) ? $params : [];
         $fixed = is_string($params['category'] ?? null) ? $params['category'] : '';
         $order = $scope->string('order', 'menu');
-        $showFilter = $scope->bool('show_filter', false) && $fixed === '';
+        $source = $scope->string('source', 'all');
+        $source = in_array($source, ShopProductsProvider::SOURCES, true) ? $source : 'all';
+        // Upsells, cross-sells and related products belong to the product whose page this is.
+        $around = in_array($source, ['upsell', 'cross_sell', 'related'], true);
+        $showFilter = $scope->bool('show_filter', false) && $fixed === '' && !$around;
         $chosen = $showFilter && is_string($_GET['category'] ?? null) && preg_match('/^[a-z0-9-]{1,120}$/', $_GET['category']) === 1 ? $_GET['category'] : '';
         $category = $fixed !== '' ? $fixed : $chosen;
+        $tag = strtolower(trim($scope->string('tag')));
         $perPage = max(1, min(48, (int) $scope->prop('per_page', 12)));
-        $page = $scope->mode()->isPublic() ? max(1, (int) ($_GET['page'] ?? 1)) : 1;
+        $page = $scope->mode()->isPublic() && !$around ? max(1, (int) ($_GET['page'] ?? 1)) : 1;
         try {
-            $list = \ShopStoreAPI::listProducts(['category' => $category, 'order' => $order, 'per_page' => $perPage, 'page' => $page]);
+            if ($around) {
+                $current = ShopStudio::current($scope);
+                $rows = $current === null ? [] : \ShopStoreAPI::relatedProducts((int) $current['id'], $source, $perPage);
+                $list = ['rows' => $rows, 'total' => count($rows), 'page' => 1, 'pages' => 1];
+            } else {
+                $list = \ShopStoreAPI::listProducts(['category' => $category, 'tag' => $tag !== '' ? \ShopStoreAPI::slugify($tag, 80) : '',
+                    'featured' => $source === 'featured', 'order' => $order, 'per_page' => $perPage, 'page' => $page]);
+            }
             $categories = $showFilter ? \ShopStoreAPI::categories() : [];
         } catch (\Throwable) {
+            return '';
+        }
+        // Nothing to suggest: the section stays out of the page (the editor still shows the empty message).
+        if ($around && $list['rows'] === [] && $scope->mode()->isPublic()) {
             return '';
         }
 
@@ -317,6 +333,16 @@ final class ShopProductMetaRenderer implements BlockRendererInterface
         if ($scope->bool('show_categories', true) && $p['categories'] !== []) {
             $names = implode(', ', array_map(static fn(array $c): string => Html::e($c['name']), $p['categories']));
             $rows .= '<div class="sb-shop-meta__row"><dt>' . Html::e(count($p['categories']) > 1 ? Html::t('shop_categories', 'Categories') : Html::t('shop_category', 'Category')) . '</dt><dd class="sb-shop-meta__categories">' . $names . '</dd></div>';
+        }
+        if ($scope->bool('show_tags', false) && ($p['tags'] ?? []) !== []) {
+            $names = implode(', ', array_map(static fn(array $t): string => Html::e($t['name']), $p['tags']));
+            $rows .= '<div class="sb-shop-meta__row"><dt>' . Html::e(Html::t('shop_tags', 'Tags')) . '</dt><dd class="sb-shop-meta__tags">' . $names . '</dd></div>';
+        }
+        if ($scope->bool('show_weight', false) && ($p['weight'] ?? '') !== '') {
+            $rows .= '<div class="sb-shop-meta__row"><dt>' . Html::e(Html::t('shop_weight', 'Weight')) . '</dt><dd class="sb-shop-meta__weight">' . Html::e($p['weight'] . ' ' . $p['weight_unit']) . '</dd></div>';
+        }
+        if ($scope->bool('show_dimensions', false) && ($p['dimensions'] ?? '') !== '') {
+            $rows .= '<div class="sb-shop-meta__row"><dt>' . Html::e(Html::t('shop_size', 'Size')) . '</dt><dd class="sb-shop-meta__dimensions">' . Html::e($p['dimensions']) . '</dd></div>';
         }
         return $rows === '' ? '' : '<dl class="sb-shop-meta">' . $rows . '</dl>';
     }

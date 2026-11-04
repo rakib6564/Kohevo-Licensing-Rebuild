@@ -7744,9 +7744,12 @@
             "category": "business",
             "default_props": {
                 "show_categories": true,
-                "show_sku": true
+                "show_dimensions": false,
+                "show_sku": true,
+                "show_tags": false,
+                "show_weight": false
             },
-            "description": "SKU and categories",
+            "description": "SKU, categories, tags, weight and size",
             "field_schema": [
                 {
                     "key": "show_sku",
@@ -7761,6 +7764,27 @@
                     "label": "Show categories",
                     "required": false,
                     "default": true
+                },
+                {
+                    "key": "show_tags",
+                    "type": "boolean",
+                    "label": "Show tags",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "show_weight",
+                    "type": "boolean",
+                    "label": "Show weight",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "show_dimensions",
+                    "type": "boolean",
+                    "label": "Show size",
+                    "required": false,
+                    "default": false
                 }
             ],
             "icon": "list",
@@ -8039,7 +8063,9 @@
                 "show_filter": false,
                 "show_icon": false,
                 "show_pager": true,
-                "show_price": true
+                "show_price": true,
+                "source": "all",
+                "tag": ""
             },
             "description": "Your products in a grid, with a category filter and pages",
             "field_schema": [
@@ -8062,6 +8088,28 @@
                     "integer_only": true
                 },
                 {
+                    "key": "source",
+                    "type": "enum",
+                    "label": "Show",
+                    "required": false,
+                    "default": "all",
+                    "allowed_values": [
+                        "all",
+                        "featured",
+                        "upsell",
+                        "cross_sell",
+                        "related"
+                    ]
+                },
+                {
+                    "key": "tag",
+                    "type": "string",
+                    "label": "Only products with this tag",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                },
+                {
                     "key": "order",
                     "type": "enum",
                     "label": "Order",
@@ -8072,7 +8120,8 @@
                         "newest",
                         "price_asc",
                         "price_desc",
-                        "title"
+                        "title",
+                        "random"
                     ]
                 },
                 {
