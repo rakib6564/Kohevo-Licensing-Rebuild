@@ -93,6 +93,7 @@ return [
     'shop_err_order_failed'         => 'Your order could not be created. Please try again.',
     'shop_err_order_link'           => 'This order link is not valid.',
     'shop_err_payment_start'        => 'Payment could not be started. Please try again.',
+    'shop_err_not_payable'          => 'This order is not waiting for payment.',
     'shop_err_payment_unavailable'  => 'Online payment is not available right now. Please contact us to complete your order.',
     'shop_err_postal'               => 'Enter your postal code.',
     'shop_err_prefix_taken'         => 'The content type “%s” already uses this address.',

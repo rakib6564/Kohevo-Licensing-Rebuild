@@ -218,15 +218,27 @@ final class PayPalGateway implements PaymentGateway
                     __('payments_payment_failed', 'The payment failed.'));
 
             case 'PAYMENT.CAPTURE.REFUNDED':
+            case 'PAYMENT.CAPTURE.REVERSED':
+                // The resource is the refund (or, for a reversal, the money
+                // pulled back by PayPal); its "up" link names the capture.
                 $captureId = '';
                 foreach ((array) ($res['links'] ?? []) as $l) {
                     if (($l['rel'] ?? '') === 'up') $captureId = basename((string) parse_url((string) $l['href'], PHP_URL_PATH));
                 }
+                $amt = (array) ($res['amount'] ?? []);
                 $total = (array) ($res['seller_payable_breakdown']['total_refunded_amount'] ?? []);
-                if ($captureId === '' || !$total) return null;
-                $cur = (string) ($total['currency_code'] ?? 'USD');
-                return new PaymentEvent(type: PaymentEvent::REFUNDED, gateway: 'paypal', ref: '', txnId: $captureId,
-                    currency: $cur, raw: $event, refundedCents: PayPalPaymentAPI::minor((string) $total['value'], $cur));
+                return self::refundEvent($event, $captureId, (string) ($res['id'] ?? ''),
+                    (string) ($amt['value'] ?? ''), (string) ($total['value'] ?? ''),
+                    (string) ($total['currency_code'] ?? ($amt['currency_code'] ?? '')), $type === 'PAYMENT.CAPTURE.REVERSED');
+
+            case 'PAYMENT.SALE.REFUNDED':
+            case 'PAYMENT.SALE.REVERSED':
+                // A subscription payment refunded (v1 sale refund object).
+                $amt = (array) ($res['amount'] ?? []);
+                $total = (array) ($res['total_refunded_amount'] ?? []);
+                return self::refundEvent($event, (string) ($res['sale_id'] ?? ''), (string) ($res['id'] ?? ''),
+                    (string) ($amt['total'] ?? ''), (string) ($total['value'] ?? ''),
+                    (string) ($total['currency'] ?? ($amt['currency'] ?? '')), $type === 'PAYMENT.SALE.REVERSED');
 
             case 'BILLING.SUBSCRIPTION.ACTIVATED':
                 return isset($res['id']) ? self::subscriptionActivated($res) : null;
@@ -239,6 +251,28 @@ final class PayPalGateway implements PaymentGateway
     }
 
     // ── Builders ──────────────────────────────────────────────
+
+    /**
+     * Money given back on a capture or sale. $amount is this one refund;
+     * $total, when PayPal sends it, is everything refunded so far. A reversal
+     * (chargeback) without amounts pulls back the whole payment. Each refund
+     * is counted once by its id, so a redelivery or a refund already recorded
+     * from the admin adds nothing.
+     */
+    private static function refundEvent(array $event, string $txnId, string $refundId, string $amount, string $total,
+                                        string $cur, bool $reversal): ?PaymentEvent
+    {
+        if ($txnId === '') return null;
+        $row = PaymentLedger::findByTxn('paypal', $txnId);
+        $cur = strtoupper($cur !== '' ? $cur : (string) ($row['currency'] ?? 'USD'));
+        $one = $amount !== '' ? abs(PayPalPaymentAPI::minor(ltrim($amount, '-'), $cur)) : 0;
+        $sum = $total !== '' ? abs(PayPalPaymentAPI::minor(ltrim($total, '-'), $cur)) : 0;
+        if ($reversal && $one === 0 && $sum === 0 && $row !== null) $sum = (int) $row['amount_cents'];
+        if ($one === 0 && $sum === 0) return null;
+        return new PaymentEvent(type: PaymentEvent::REFUNDED, gateway: 'paypal', ref: '', txnId: $txnId,
+            currency: $cur, raw: $event, refundedCents: $sum,
+            metadata: ['refund_id' => $refundId, 'refund_amount' => $one, 'reversal' => $reversal]);
+    }
 
     private static function fromOrder(array $order): ?PaymentEvent
     {

@@ -11,7 +11,8 @@
  *
  * Events used: CHECKOUT.ORDER.APPROVED (captures an order whose customer
  * never came back), PAYMENT.CAPTURE.COMPLETED / DENIED / DECLINED /
- * REFUNDED, BILLING.SUBSCRIPTION.ACTIVATED, PAYMENT.SALE.COMPLETED.
+ * REFUNDED / REVERSED, BILLING.SUBSCRIPTION.ACTIVATED, PAYMENT.SALE.COMPLETED
+ * / REFUNDED / REVERSED.
  *
  * A failure while recording answers 500, so PayPal retries the delivery.
  */

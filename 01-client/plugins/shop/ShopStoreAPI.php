@@ -1057,6 +1057,10 @@ class ShopStoreAPI {
             self::markPaid((int) $order['id'], 0, (string) $order['currency']);
             return ['ok' => true, 'url' => self::confirmationUrl($order)];
         }
+        $current = self::order((int) $order['id']);
+        if (!$current || $current['status'] !== 'pending_payment') {
+            return ['ok' => false, 'error' => __('shop_err_not_payable', 'This order is not waiting for payment.')];
+        }
         $gw = class_exists('Payments') ? Payments::choose('shop', $gateway) : null;
         if ($gw === null) {
             return ['ok' => false, 'error' => __('shop_err_payment_unavailable', 'Online payment is not available right now. Please contact us to complete your order.')];
@@ -1084,11 +1088,20 @@ class ShopStoreAPI {
             slate_log('Shop: starting payment with ' . $gw->id() . ' failed: ' . $e->getMessage(), 'error');
             return ['ok' => false, 'error' => __('shop_err_payment_start', 'Payment could not be started. Please try again.')];
         }
+        // The order must carry this checkout's reference before the visitor
+        // pays: a payment for any other reference is ignored. Only an order
+        // still waiting for payment takes it (not one paid in another tab).
         Database::update('shop_orders', [
             'payment_gateway'   => $gw->id(),
             'payment_ref'       => $start->ref,
             'stripe_session_id' => $gw->id() === 'stripe' ? $start->ref : null,
-        ], 'id = ? AND tenant_id = ?', [(int) $order['id'], current_tenant_id()]);
+        ], "id = ? AND tenant_id = ? AND status = 'pending_payment'", [(int) $order['id'], current_tenant_id()]);
+        $saved = self::order((int) $order['id']);
+        if (!$saved || $saved['status'] !== 'pending_payment' || (string) $saved['payment_ref'] !== $start->ref
+            || (string) $saved['payment_gateway'] !== $gw->id()) {
+            slate_log('Shop: order ' . $order['id'] . ' could not take its checkout reference; payment not started.', 'error');
+            return ['ok' => false, 'error' => __('shop_err_payment_start', 'Payment could not be started. Please try again.')];
+        }
         return ['ok' => true, 'url' => $start->redirectUrl];
     }
 
@@ -1153,8 +1166,30 @@ class ShopStoreAPI {
         if (!$order) return;
         $expected = (string) ($order['payment_ref'] ?: $order['stripe_session_id']);
         if ($expected === '' || !hash_equals($expected, $event->ref)) return;
+        if ($event->amountCents < (int) $order['total_cents'] || strtoupper($event->currency) !== strtoupper((string) $order['currency'])) {
+            // Less than the order costs (or another currency): never ship it
+            // as paid. The order waits for the shop owner, who sees the note,
+            // the payment in Payments → Transactions, and can refund it there.
+            self::flagUnderpaid($order, $event);
+            return;
+        }
         // The payment layer has already written the ledger row; the order only links it.
         self::markPaid($orderId, $event->amountCents, $event->currency, $event->chargeId);
+    }
+
+    /** A payment that does not cover the order: leave it unpaid, note why, and tell the owner through the audit log. */
+    private static function flagUnderpaid(array $order, PaymentEvent $event): void {
+        $note = sprintf('Payment of %s does not cover the order total %s; not marked paid',
+            self::money($event->amountCents, strtoupper($event->currency)), self::money((int) $order['total_cents'], (string) $order['currency']));
+        $changed = Database::update('shop_orders', ['stock_note' => mb_substr($note, 0, 255)],
+            "id = ? AND tenant_id = ? AND status = 'pending_payment'", [(int) $order['id'], current_tenant_id()]);
+        if ($changed === 1 && class_exists('AuditLog')) {
+            AuditLog::record('shop.payment_mismatch', (string) $order['id'], [
+                'paid_cents' => $event->amountCents, 'paid_currency' => strtoupper($event->currency),
+                'total_cents' => (int) $order['total_cents'], 'charge_id' => $event->chargeId,
+            ]);
+        }
+        slate_log('Shop: ' . $note . ' (order ' . $order['id'] . ')', 'warning');
     }
 
     /**
