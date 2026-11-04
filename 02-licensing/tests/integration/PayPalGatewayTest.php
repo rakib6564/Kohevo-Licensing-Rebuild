@@ -132,6 +132,22 @@ unit('paypal: a declined capture is a failed payment and records nothing', funct
     assert_eq('failed', Payments::session('paypal', $start->ref)['status']);
 });
 
+unit('paypal: a server error during capture is "not known yet", not a failure; the next look settles it', function () use ($PPH): void {
+    $start = Payments::startCheckout('paypal', ppt_request('o-5xx'));
+    fake_paypal_hook($PPH, '/__test/approve/' . $start->ref);
+    fake_paypal_hook($PPH, '/__test/fail_next_capture');
+    assert_null(Payments::confirmReturn('paypal', $start->ref, 'ppt-shop', 'o-5xx'), 'no event while unknown');
+    assert_eq('pending', Payments::session('paypal', $start->ref)['status'], 'the session is not marked failed');
+    $e = Payments::confirmReturn('paypal', $start->ref, 'ppt-shop', 'o-5xx');
+    assert_true($e !== null && $e->type === PaymentEvent::SUCCEEDED, 'the retry captures');
+});
+
+unit('paypal: a part refund in a whole-unit currency (HUF) is refused instead of cut short', function (): void {
+    $r = Payments::gateway('paypal')->refund(['gateway' => 'paypal', 'gateway_txn_id' => 'CAPX', 'currency' => 'HUF', 'meta_json' => null], 150050, 'k');
+    assert_false($r['ok']);
+    assert_false($r['uncertain'], 'nothing was sent');
+});
+
 unit('paypal: partial then full refunds go to the capture, and the ledger keeps the total', function () use ($PPH): void {
     $start = Payments::startCheckout('paypal', ppt_request('o-5'));
     fake_paypal_hook($PPH, '/__test/approve/' . $start->ref);
@@ -186,11 +202,15 @@ unit('paypal: the access token is cached, and a rejected one is replaced once', 
     assert_eq($before + 1, ppt_count($PPH, 'POST', '#^/v1/oauth2/token$#'), 'exactly one refresh');
 });
 
-unit('paypal: webhook deliveries are verified with PayPal against the configured webhook id', function (): void {
+unit('paypal: webhook deliveries are verified with PayPal against the configured webhook id', function () use ($PPH): void {
     $payload = json_encode(ppt_webhook('PAYMENT.CAPTURE.COMPLETED', ['id' => 'X']));
     $h = ['paypal-auth-algo' => 'SHA256withRSA', 'paypal-cert-url' => 'https://api.paypal.com/cert', 'paypal-transmission-id' => 't1',
           'paypal-transmission-sig' => 'good', 'paypal-transmission-time' => gmdate('c')];
     assert_true(PayPalPaymentAPI::verifyWebhook($payload, $h), 'a genuine delivery passes');
+    $odd = '{"id":"WH-1","event_type":"PAYMENT.CAPTURE.COMPLETED","resource":{"id":"X","links":{},"amount":{"value":"10.50"}},"summary":"caf\\u00e9 \\/ ok"}';
+    assert_true(PayPalPaymentAPI::verifyWebhook($odd, $h), 'an event with {} and escapes passes too');
+    $sent = array_values(array_filter(fake_paypal_requests($PPH), fn ($q) => $q['path'] === '/v1/notifications/verify-webhook-signature'));
+    assert_true(str_contains((string) end($sent)['raw'], '"webhook_event":' . $odd . '}'), 'PayPal is asked about the exact bytes received');
     assert_false(PayPalPaymentAPI::verifyWebhook($payload, ['paypal-transmission-sig' => 'bad'] + $h), 'a forged one fails');
     $missing = $h; unset($missing['paypal-cert-url']);
     assert_false(PayPalPaymentAPI::verifyWebhook($payload, $missing), 'missing headers fail without asking PayPal');

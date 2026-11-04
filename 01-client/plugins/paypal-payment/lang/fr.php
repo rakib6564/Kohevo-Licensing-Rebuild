@@ -51,6 +51,7 @@ return [
     'pp_encryption_unavailable' => 'Impossible d\'enregistrer le secret : APP_SECRET n\'est pas configuré, et l\'enregistrement en clair est désactivé.',
     'pp_credentials_rejected' => 'PayPal a refusé ces identifiants %s : %s',
     'pp_err_nothing_to_refund' => 'Ce paiement PayPal n\'a pas encore de capture à rembourser.',
+    'pp_err_refund_whole_units' => 'Les remboursements PayPal dans cette devise doivent être en unités entières.',
     'pp_instrument_declined' => 'PayPal a refusé ce moyen de paiement. Veuillez réessayer avec un autre.',
     'pp_order_voided' => 'La commande PayPal a été annulée.',
     'pp_subscription_not_started' => 'L\'abonnement n\'a pas démarré.',
