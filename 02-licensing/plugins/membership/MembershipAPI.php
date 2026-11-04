@@ -844,7 +844,17 @@ class MembershipAPI {
         if (isset($opts['charge_id']))    $fields['charge_id']    = (int)$opts['charge_id'];
         if (isset($opts['amount_cents'])) $fields['amount_cents'] = (int)$opts['amount_cents'];
 
-        Database::update('membership_subscriptions', $fields, 'id = ? AND tenant_id = ?', [$subId, $tid]);
+        // One caller wins (webhook, return page): the rest stop here, so the
+        // purchase email, wallet entry and notification go out once.
+        $won = Database::update('membership_subscriptions', $fields,
+            "id = ? AND tenant_id = ? AND (status <> 'active' OR starts_at IS NULL)", [$subId, $tid]);
+        if ($won !== 1) {
+            if (!empty($opts['charge_id'])) {
+                Database::update('membership_subscriptions', ['charge_id' => (int)$opts['charge_id']],
+                    'id = ? AND tenant_id = ? AND charge_id IS NULL', [$subId, $tid]);
+            }
+            return true;
+        }
 
         // Renewal: superseding any other still-active term of the SAME plan
         // for this customer. Without this, buying the same plan again (e.g.
