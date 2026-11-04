@@ -165,7 +165,9 @@ final class SeoHead
             return new self(
                 is_string($item['seo_title'] ?? null) && trim($item['seo_title']) !== '' ? trim($item['seo_title']) : trim($item['title']) . ($this->siteName !== '' ? ' | ' . $this->siteName : ''),
                 $description !== '' ? $description : $this->description,
-                $this->robots,
+                // The site's robots, not the template's: a Single template is kept out of search itself (noindex), but
+                // the products it shows are the site's own pages and are in the sitemap.
+                $context->site->seo->robotsFor('index,follow'),
                 $context->site->baseUrl !== '' ? $context->site->absoluteUrl($item['url']) : null,
                 $image ?? $this->ogImageUrl,
                 $this->siteName,

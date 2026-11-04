@@ -91,8 +91,6 @@ RedirectMatch 403 ^/(data|db_backups|includes|src|bin|db|tests|audit|docs|Claude
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # Legacy shop storefront routing
-    RewriteRule ^shop(/.*)?$ plugins/shop/storefront/router.php [QSA,L]
 
     # Headless API: /api/v1/... -> api/v1.php, as in the original rules. Routed
     # through public.php instead, a locked install answers API callers with the
@@ -176,8 +174,6 @@ RedirectMatch 403 ^/(data|db_backups|includes|src|bin|db|tests|audit|docs|Claude
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # Legacy shop storefront routing
-    RewriteRule ^shop(/.*)?$ plugins/shop/storefront/router.php [QSA,L]
 
     # Headless API: /api/v1/... -> api/v1.php, as in the original rules. Routed
     # through public.php instead, a locked install answers API callers with the
