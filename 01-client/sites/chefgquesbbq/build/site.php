@@ -343,7 +343,7 @@ build_page('catering', 'Catering', 'page', 'standalone', [
             BTNS([BTN('Chef Gregory’s Catering', 'https://chefgregory.com/', 'black')]),
             PIC('gq-sandwich-studio.jpg', 'A pulled pork sandwich with coleslaw', '280px', '220px', 'gq-pic gq-framed'),
         ], '14px'), '46%'),
-        W(VBOX([H('Ask about your event', 'h2', '30px', '26px'), B('core.form', ['form_name' => 'Catering enquiry', 'notify_email' => '', 'submit_text' => 'Send it', 'submit_variant' => 'primary', 'success_message' => 'Thanks! We’ll get back to you. We’re probably at the smoker.'], [
+        W(VBOX([H('Ask about your event', 'h2', '30px', '26px'), B('core.form', ['form_name' => 'Catering enquiry', 'notify_email' => getenv('GQ_LIVE') === '1' ? 'chef@chefgregory.com' : '', 'submit_text' => 'Send it', 'submit_variant' => 'primary', 'success_message' => 'Thanks! We’ll get back to you. We’re probably at the smoker.'], [
             $ff('text', 'name', 'Your name', true), $ff('tel', 'phone', 'Phone', true), $ff('email', 'email', 'Email'), $ff('date', 'event_date', 'Event date'), $ff('number', 'guests', 'How many people?'), $ff('textarea', 'message', 'What are you planning?', true),
         ], [], ['classNames' => ['gq-form']])], '14px', ['padding' => ['top' => '26px', 'right' => '26px', 'bottom' => '26px', 'left' => '26px']], ['classNames' => ['gq-ticket']]), '48%'),
     ], '40px', ['justify' => 'between'], ['layout' => ['direction' => 'column', 'gap' => '28px']])], PAPER, '72px', '48px'),

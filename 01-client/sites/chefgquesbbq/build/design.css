@@ -77,9 +77,9 @@ body .gq-boardline .sb-block--theme-post-title a { color: #f2b418 !important; }
 .gq-prose p:last-child { margin-bottom: 0; }
 /* The menu jump list wraps instead of running off a phone. */
 .gq-jump a { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
-.gq-jump { position: sticky; top: 76px; z-index: 20; }
+.gq-jump { position: sticky; top: 96px; z-index: 20; }   /* the header shows 96px once its top strip scrolls away */
 @media (max-width: 1024px) { .gq-jump { position: static; } }
-@media (min-width: 768px) { .gq-sticky { position: sticky; top: 150px; } [id] { scroll-margin-top: 140px; } }
+@media (min-width: 768px) { .gq-sticky { position: sticky; top: 170px; } [id] { scroll-margin-top: 170px; } }
 /* The enquiry form. */
 .gq-form .sb-form { row-gap: 16px; }
 .gq-form input, .gq-form select, .gq-form textarea { width: 100%; box-sizing: border-box; background: #fff8ea; border: 3px solid #151311; border-radius: 0; padding: 13px 14px; font: inherit; color: #151311; }
