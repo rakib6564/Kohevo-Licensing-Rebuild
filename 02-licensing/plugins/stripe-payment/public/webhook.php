@@ -25,8 +25,10 @@
 
 $root = realpath(__DIR__ . '/../../..');
 require $root . '/config.php';
-// An inactive plugin takes no deliveries (Stripe retries them once it is back).
-slate_public_entry('stripe-payment');
+// anti-drift-ignore: ENTRY — deliberately not gated on the plugin being
+// active: a signed delivery for a payment already made (Terminal, inline
+// card, a subscription renewal) must still be recorded after an admin
+// switches the plugin off, or it is lost once Stripe stops retrying.
 
 require_once dirname(__DIR__) . '/StripePaymentAPI.php';
 

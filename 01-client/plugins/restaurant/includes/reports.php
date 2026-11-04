@@ -74,6 +74,7 @@ class RestaurantReports {
 
     /** Every figure for one date range (inclusive). */
     public static function summary(string $from, string $to): array {
+        RestaurantAPI::ensurePaymentColumns();   // the online-payment class reads payment_ref (0.7.0)
         $tid  = current_tenant_id();
         $lo   = $from . ' 00:00:00';
         $hi   = $to . ' 23:59:59';
@@ -448,6 +449,7 @@ class RestaurantReports {
      * partly or fully refunded): gross = amount + tip, net = gross − refunded.
      */
     public static function payments(array $f, int $limit = 50, int $offset = 0): array {
+        RestaurantAPI::ensurePaymentColumns();   // the online-payment class reads payment_ref (0.7.0)
         $where = ['p.tenant_id = ?']; $args = [current_tenant_id()];
         $date  = fn($v) => is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) === 1;
         if ($date($f['from'] ?? null)) { $where[] = 'p.created_at >= ?'; $args[] = $f['from'] . ' 00:00:00'; }

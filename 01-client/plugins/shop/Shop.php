@@ -30,7 +30,13 @@ class Shop extends Plugin {
         // Studio widgets (Add › Components) are declared in studio-widgets.php.
 
         // Mark an order paid when its payment completes, whichever gateway took it (the shared payment layer).
-        Hook::addAction('payment_event', [$this, 'onPaymentEvent']);
+        // Once per process: Hook keeps every registration, and a second boot
+        // (tests, or a re-boot within one request) would handle each event twice.
+        static $paymentsWired = false;
+        if (!$paymentsWired) {
+            $paymentsWired = true;
+            Hook::addAction('payment_event', [$this, 'onPaymentEvent']);
+        }
     }
 
     public function addLangPath(array $paths): array {

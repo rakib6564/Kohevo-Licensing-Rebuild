@@ -1382,20 +1382,30 @@ class BookingAPI {
         if (!$a) return false;
         if (($a['payment_status'] ?? '') === 'paid') return true; // already done
 
-        $deposit = (int)$a['deposit_cents'];
         $total   = (int)$a['price_cents'] + (int)$a['tax_cents'];
-        $paid    = (int)$a['paid_cents'] + max(0, $amountCents);
-        $status  = $paid >= $total ? 'paid' : ($paid > 0 ? 'deposit_paid' : 'pending');
+        $amount  = max(0, $amountCents);
+        $ref     = mb_substr($paymentRef, 0, 120);
 
-        Database::update('booking_appointments', [
-            'status'         => 'confirmed',
-            'payment_status' => $status,
-            'paid_cents'     => $paid,
-            'payment_ref'    => $paymentRef !== '' ? mb_substr($paymentRef, 0, 120) : ($a['payment_ref'] ?? null),
-        ], 'id = ? AND tenant_id = ?', [$apptId, $tid]);
+        // One statement, counted once per payment: a reload of the return
+        // page or the webhook arriving alongside it (the same payment ref)
+        // changes nothing, while a deposit and its balance (two refs) both
+        // count. payment_status is set before paid_cents on purpose: MySQL
+        // applies SET left to right.
+        $won = Database::query(
+            "UPDATE booking_appointments
+                SET status = 'confirmed',
+                    payment_status = CASE WHEN paid_cents + ? >= ? THEN 'paid' WHEN paid_cents + ? > 0 THEN 'deposit_paid' ELSE 'pending' END,
+                    paid_cents = paid_cents + ?,
+                    payment_ref = COALESCE(NULLIF(?, ''), payment_ref)
+              WHERE tenant_id = ? AND id = ? AND payment_status <> 'paid'
+                AND (? = '' OR payment_ref IS NULL OR payment_ref <> ?)",
+            [$amount, $total, $amount, $amount, $ref, $tid, $apptId, $ref, $ref])->rowCount();
+        if ($won !== 1) return true;   // this payment was already counted
 
-        if (!empty($a['coupon_code']))    self::redeemCoupon((string)$a['coupon_code']);
-        if (!empty($a['gift_card_code'])) self::redeemGiftCard((string)$a['gift_card_code'], (int)($a['gift_applied_cents'] ?? 0));
+        // Coupons and gift cards are used once, on the booking's first payment.
+        $firstPayment = !in_array(($a['payment_status'] ?? ''), ['deposit_paid', 'paid'], true);
+        if ($firstPayment && !empty($a['coupon_code']))    self::redeemCoupon((string)$a['coupon_code']);
+        if ($firstPayment && !empty($a['gift_card_code'])) self::redeemGiftCard((string)$a['gift_card_code'], (int)($a['gift_applied_cents'] ?? 0));
 
         AuditLog::record('booking.paid', (string)$apptId, ['amount' => $amountCents, 'ref' => $paymentRef]);
         Hook::doAction('booking_paid', $apptId, $amountCents);
@@ -1445,7 +1455,9 @@ class BookingAPI {
      */
     public static function handlePaymentEvent(PaymentEvent $event): void {
         if ($event->isFor('booking')) {
-            $apptId = (int)$event->sourceId;
+            // An inline PaymentIntent made before source_id was added names
+            // its appointment only in booking_appt_id.
+            $apptId = (int)($event->sourceId !== '' ? $event->sourceId : ($event->metadata['booking_appt_id'] ?? 0));
         } elseif ($event->sourcePlugin === '' && $event->gateway === 'stripe') {
             $apptId = (int)($event->metadata['booking_appt_id'] ?? 0);
         } else {
@@ -1460,9 +1472,14 @@ class BookingAPI {
         if (!$event->isPaid()) return;
 
         if ($event->chargeId) {
-            $link = ['charge_id' => $event->chargeId];
-            if ($event->gateway === 'stripe' && str_starts_with($event->ref, 'cs_')) $link['stripe_session_id'] = $event->ref;
-            Database::update('booking_appointments', $link, 'id = ? AND tenant_id = ?', [$apptId, current_tenant_id()]);
+            // The first payment's charge is the one refunds go against; a
+            // second payment (a balance, or a duplicate) never replaces it.
+            Database::query(
+                "UPDATE booking_appointments SET charge_id = ?,
+                        stripe_session_id = COALESCE(stripe_session_id, ?)
+                  WHERE tenant_id = ? AND id = ? AND charge_id IS NULL",
+                [$event->chargeId, $event->gateway === 'stripe' && str_starts_with($event->ref, 'cs_') ? $event->ref : null,
+                 current_tenant_id(), $apptId]);
         }
         self::markPaid($apptId, $event->amountCents, $event->txnId !== '' ? $event->txnId : $event->ref);
     }
@@ -1484,8 +1501,8 @@ class BookingAPI {
                FROM booking_appointments a
                JOIN booking_services  s ON s.id = a.service_id  AND s.tenant_id = a.tenant_id
                JOIN booking_providers p ON p.id = a.provider_id AND p.tenant_id = a.tenant_id
-              WHERE a.id = ?",
-            [$apptId]
+              WHERE a.tenant_id = ? AND a.id = ?",
+            [current_tenant_id(), $apptId]
         );
         if (!$a) return;
         if ($a['status'] !== 'pending') return; // already resolved one way or another
@@ -1510,7 +1527,7 @@ class BookingAPI {
             'meta'           => ['reason' => $reason],
         ]);
 
-        Database::update('booking_appointments', ['payment_status' => 'failed'], 'id = ?', [$apptId]);
+        Database::update('booking_appointments', ['payment_status' => 'failed'], 'id = ? AND tenant_id = ?', [$apptId, current_tenant_id()]);
         AuditLog::record('booking.payment_failed', (string)$apptId, ['reason' => $reason, 'event' => $eventType]);
         Hook::doAction('booking_payment_failed', $apptId, $reason);
 
@@ -1568,8 +1585,11 @@ class BookingAPI {
         if (!$a) return ['ok' => false, 'error' => __('bk_err_appointment_not_found', 'Appointment not found.')];
         if (empty($a['charge_id'])) return ['ok' => false, 'error' => __('bk_err_no_recorded_charge_to_refund', 'No recorded charge to refund.')];
 
+        // Keyed on what the charge had refunded before, so a retry of this
+        // refund replays it, while a second refund of the same amount is new.
+        $charge = Payments::getCharge((int)$a['charge_id']);
         $res = Payments::refundCharge((int)$a['charge_id'], $amountCents,
-            'booking-refund-' . $apptId . '-' . ($amountCents ?? 'all') . '-' . $a['payment_status']);
+            'booking-refund-' . $apptId . '-' . (int)($charge['refunded_cents'] ?? 0) . '-' . ($amountCents ?? 'all'));
         if (empty($res['ok'])) return ['ok' => false, 'error' => $res['error'] ?? 'Refund failed.'];
 
         $refunded = $amountCents ?? (int)$a['paid_cents'];

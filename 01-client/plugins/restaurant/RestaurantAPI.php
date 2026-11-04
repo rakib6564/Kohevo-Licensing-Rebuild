@@ -1797,9 +1797,17 @@ class RestaurantAPI {
                 AND payment_gateway = ? AND payment_ref IS NOT NULL AND amount_cents = ?
            ORDER BY id DESC LIMIT 1", [$tid, $orderId, $gwId, (int)$order['total_cents']]);
         if ($pending && $gwId === 'stripe') {
-            $open = StripePaymentAPI::getSession((string)$pending['payment_ref']);
-            if ($open && ($open['status'] ?? '') === 'open' && !empty($open['url'])) {
+            $open  = StripePaymentAPI::getSession((string)$pending['payment_ref']);
+            $state = (string)($open['status'] ?? '');
+            if ($state === 'open' && !empty($open['url'])) {
                 return ['ok' => true, 'url' => (string)$open['url'], 'payment_id' => (int)$pending['id'], 'gateway' => $gwId];
+            }
+            if ($state !== 'expired') {
+                // Paid but not settled yet ('complete'), or Stripe did not
+                // answer: never open a second checkout the customer could pay too.
+                return ['ok' => false, 'error' => $state === 'complete'
+                    ? 'This order has already been paid; it will show as paid in a moment.'
+                    : 'Online payment is not available right now. Please try again.'];
             }
             $pending = null;   // expired: a new attempt
         }
@@ -1831,6 +1839,15 @@ class RestaurantAPI {
             return ['ok' => false, 'error' => $e->getMessage()];
         }
 
+        if ($pending && (string)$pending['payment_ref'] !== $start->ref) {
+            // The gateway no longer replays the first checkout and made a new
+            // one: keep the first payment row (it can still be paid and must
+            // still settle) and give the new checkout its own row.
+            $pid = Database::insert('restaurant_payments', [
+                'tenant_id' => $tid, 'order_id' => $orderId, 'method' => 'other', 'amount_cents' => (int)$order['total_cents'],
+                'tip_cents' => 0, 'status' => 'pending', 'payment_gateway' => $gwId,
+            ]);
+        }
         Database::update('restaurant_payments', [
             'payment_ref'       => $start->ref,
             'stripe_session_id' => $gwId === 'stripe' ? $start->ref : null,
@@ -1932,6 +1949,7 @@ class RestaurantAPI {
      * webhook regardless of what the browser does after confirming.
      */
     public static function beginOnlinePaymentIntent(int $orderId): array {
+        self::ensurePaymentColumns();
         if (!class_exists('StripePaymentAPI') || !StripePaymentAPI::isConfigured()) {
             return ['ok' => false, 'error' => 'Online card payment is not available.'];
         }
