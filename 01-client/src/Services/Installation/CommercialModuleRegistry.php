@@ -87,6 +87,16 @@ final class CommercialModuleRegistry
             'sort_order'              => 33,
         ],
         [
+            'module_key'              => 'dance-studio',
+            'display_name'            => 'Dance Studio',
+            'description'             => 'Classes, families, enrolment, tuition, attendance and recitals',
+            'plugin_slug'             => 'studio',
+            'v1_available'            => true,
+            'commercial'              => true,
+            'required_infrastructure' => ['stripe-payment'],
+            'sort_order'              => 34,
+        ],
+        [
             'module_key'              => 'mcp-gateway',
             'display_name'            => 'MCP Gateway',
             'description'             => 'Model Context Protocol gateway and AI assistant hub',
@@ -148,8 +158,8 @@ final class CommercialModuleRegistry
         'stripe-payment' => [
             'slug'         => 'stripe-payment',
             'display_name' => 'Stripe Payment',
-            'description'  => 'Payment gateway infrastructure automatically enabled when Membership, Booking, Shop or Restaurant is selected.',
-            'required_by'  => ['membership', 'booking', 'shop', 'restaurant'],
+            'description'  => 'Payment gateway infrastructure automatically enabled when Membership, Booking, Shop, Restaurant or Dance Studio is selected.',
+            'required_by'  => ['membership', 'booking', 'shop', 'restaurant', 'dance-studio'],
         ],
     ];
 

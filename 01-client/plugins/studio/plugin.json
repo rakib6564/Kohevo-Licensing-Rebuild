@@ -1,0 +1,21 @@
+{
+    "slug": "studio",
+    "name": "Dance Studio",
+    "version": "1.0.0",
+    "description": "Dance/arts studio management on top of core contacts + booking + membership: families and roles, weekly class series with generated occurrences, enrollment and waitlists, tuition with multi-class and sibling discounts, and attendance. Recitals, costumes and the parent portal follow in later batches.",
+    "author": "Kohevo",
+    "requires_core": ">=1.0.0",
+    "commercial_module": {
+        "entitlement": "dance-studio",
+        "label": "Dance Studio",
+        "description": "Classes, families, enrolment, tuition, attendance and recitals",
+        "requires_infrastructure": ["stripe-payment"]
+    },
+    "works_better_with": ["booking", "membership", "stripe-payment", "forms"],
+    "permissions": [
+        {"key": "studio.manage_classes",  "label": "Create / edit class series, occurrences and enrollments"},
+        {"key": "studio.manage_families",  "label": "Manage families, students and roles"},
+        {"key": "studio.manage_recitals", "label": "Manage recitals and costumes"},
+        {"key": "studio.view_reports",    "label": "View studio reports"}
+    ]
+}

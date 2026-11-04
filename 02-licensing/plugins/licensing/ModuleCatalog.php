@@ -8,11 +8,11 @@
  *
  * Classifications:
  *   - V1 Commercial (`commercial = true, v1_available = true, status = 'available'`):
- *       forms, membership, booking, shop, restaurant
+ *       forms, membership, booking, shop, restaurant, dance-studio
  *   - Future / Non-V1 (`commercial = false, v1_available = false, status = 'future'`):
  *       editor, content
  *   - Supporting Infrastructure (`commercial = false, v1_available = false, status = 'infrastructure'`):
- *       stripe-payment (required by membership, booking, shop and restaurant; never a commercial entitlement)
+ *       stripe-payment (required by membership, booking, shop, restaurant and dance-studio; never a commercial entitlement)
  *   - System / Platform (`commercial = false, v1_available = false, status = 'system'`):
  *       media-library, backups, mcp-gateway, multilang-translate, coaching, licensing
  */
@@ -107,6 +107,17 @@ final class ModuleCatalog
             'plugin_identifier' => 'restaurant',
             'dependencies'      => ['stripe-payment'],
             'sort_order'        => 33,
+        ],
+        [
+            'module_key'        => 'dance-studio',
+            'display_name'      => 'Dance Studio',
+            'description'       => 'Dance and arts studio: classes, families, enrolment, tuition, attendance and recitals.',
+            'status'            => 'available',
+            'commercial'        => true,
+            'v1_available'      => true,
+            'plugin_identifier' => 'studio',
+            'dependencies'      => ['stripe-payment'],
+            'sort_order'        => 34,
         ],
         [
             'module_key'        => 'studio-builder',
