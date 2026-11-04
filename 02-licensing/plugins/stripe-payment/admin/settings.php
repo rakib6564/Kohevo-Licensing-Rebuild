@@ -148,8 +148,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newCountries = trim((string)($_POST['allowed_countries'] ?? 'US,CA,GB,AU,BD'));
         $newMode     = in_array(($_POST['mode'] ?? 'test'), ['test', 'live'], true)
                            ? $_POST['mode'] : 'test';
-        $showHosted   = isset($_POST['show_hosted'])   ? '1' : '0';
-        $showEmbedded = isset($_POST['show_embedded']) ? '1' : '0';
 
         // Booking-widget inline payment + wallet toggles. These drive the
         // embedded Payment Element inside the /book widget.
@@ -268,8 +266,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'stripe-payment.secret_key'        => (string)$secretEnc,
                     'stripe-payment.webhook_secret'    => (string)$webhookEnc,
                     'stripe-payment.allowed_countries' => $newCountries,
-                    'stripe-payment.show_hosted'       => $showHosted,
-                    'stripe-payment.show_embedded'    => $showEmbedded,
                     'stripe-payment.booking_embedded'  => $bookingEmbedded,
                     'stripe-payment.wallet_apple_pay'  => $walletApplePay,
                     'stripe-payment.wallet_google_pay' => $walletGooglePay,
@@ -319,8 +315,6 @@ $publishableKey   = StripeAPI::publishableKey();
 $secretKey        = StripeAPI::secretKey();
 $webhookSecret    = StripeAPI::webhookSecret();
 $allowedCountries = Database::setting('stripe-payment.allowed_countries') ?: 'US,CA,GB,AU,BD';
-$showHosted   = (Database::setting('stripe-payment.show_hosted')   ?? '1') !== '0';
-$showEmbedded = (Database::setting('stripe-payment.show_embedded') ?? '1') !== '0';
 
 // Booking-widget inline payment defaults (all on unless explicitly disabled).
 $bookingEmbedded = (Database::setting('stripe-payment.booking_embedded')  ?? '1') !== '0';
@@ -495,39 +489,6 @@ require $root . '/admin/partials/header.php';
                             <?= e(__('stripe_settings_webhook_secret_hint', 'From your Stripe dashboard → Developers → Webhooks → your endpoint → Signing secret.')) ?>
                             <a href="#webhook-setup"><?= e(__('stripe_settings_setup_instructions_link', 'Setup instructions ↓')) ?></a>
                         </div>
-                    </div>
-                </div>
-
-                <!-- ────────── Step 4: Provider toggles ────────── -->
-                <div style="border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1rem;">
-                    <label class="field-label"><?= e(__('stripe_settings_payment_options_label', 'Payment options to show customers')) ?></label>
-                    <div class="field">
-                        <label class="switch-label" style="align-items: flex-start;">
-                            <span class="switch" style="margin-top: 1px;">
-                                <input type="checkbox" name="show_embedded" value="1" <?= $showEmbedded ? 'checked' : '' ?>>
-                                <span class="switch-track"></span>
-                            </span>
-                            <span>
-                                <strong><?= e(__('stripe_settings_embedded_card_label', 'Embedded card form')) ?></strong> <?= e(__('stripe_settings_recommended_suffix', '(recommended)')) ?>
-                                <div class="text-muted text-sm">
-                                    <?= e(__('stripe_settings_embedded_card_desc', 'Card / Apple Pay / Google Pay / Link inline on the checkout page. Customer never leaves.')) ?>
-                                </div>
-                            </span>
-                        </label>
-                    </div>
-                    <div class="field">
-                        <label class="switch-label" style="align-items: flex-start;">
-                            <span class="switch" style="margin-top: 1px;">
-                                <input type="checkbox" name="show_hosted" value="1" <?= $showHosted ? 'checked' : '' ?>>
-                                <span class="switch-track"></span>
-                            </span>
-                            <span>
-                                <strong><?= e(__('stripe_settings_hosted_checkout_label', 'Hosted Stripe Checkout')) ?></strong>
-                                <div class="text-muted text-sm">
-                                    <?= e(__('stripe_settings_hosted_checkout_desc', 'Redirect to stripe.com to pay. Simpler PCI scope; you give up some checkout-page control.')) ?>
-                                </div>
-                            </span>
-                        </label>
                     </div>
                 </div>
 

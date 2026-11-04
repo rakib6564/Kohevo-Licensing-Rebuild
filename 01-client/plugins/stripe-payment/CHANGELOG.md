@@ -1,5 +1,27 @@
 # Stripe Payment Gateway changelog
 
+## 1.3.0 — the old Shop checkout is removed
+
+Every plugin now pays through the shared payment layer (`Payments`), so
+the Shop checkout this plugin used to drive itself is gone. It needed the
+archived `ShopAPI` class and could no longer run:
+
+- the `shop_payment_providers` providers (hosted + embedded) and their
+  handlers in `StripePayment.php`, and `assets/stripe-checkout.js`;
+- the public `success.php`, `return.php` and `create-intent.php` pages;
+- the Shop completion tail of `public/webhook.php`, which now answers
+  `ok` once `dispatchWebhook()` has handed the event to the payment
+  layer and to `stripe_webhook_event` listeners;
+- `StripeAPI`'s cart helpers (`createCheckoutSession`,
+  `createPaymentIntent`, …). `StripeAPI` keeps its key and mode
+  accessors as a shim;
+- the "Payment options to show customers" toggles on the settings page
+  and 35 unused translation strings.
+
+The `stripepayment_sessions` table is left in place for existing data
+and dropped on uninstall. The race tests for the removed pages went with
+them; the webhook endpoint is covered over HTTP in `PaymentsLayerTest`.
+
 ## 1.1.2 — smart paste UX with live validation + auto-verify on save
 
 Adds protection against the #1 setup mistake: pasting publishable
