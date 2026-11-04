@@ -102,10 +102,13 @@ final class StripeGateway implements PaymentGateway
             $resp = StripePaymentAPI::httpRequest('POST', '/v1/refunds', $params, $idempotencyKey);
         } catch (\Throwable $e) {
             $msg = $e->getMessage();
-            // A transport failure or garbled reply may have reached Stripe;
-            // an API error (4xx/5xx with a JSON body) definitely did not refund.
+            // A transport failure, a garbled reply, a server error (5xx) or a
+            // request still running under the same key (409) may have
+            // refunded; any other API error definitely did not.
+            $code = (int) $e->getCode();
             $uncertain = str_starts_with($msg, 'Stripe HTTP transport error')
-                      || str_starts_with($msg, 'Stripe response was not JSON');
+                      || str_starts_with($msg, 'Stripe response was not JSON')
+                      || $code === 409 || $code >= 500;
             return ['ok' => false, 'error' => $msg, 'uncertain' => $uncertain];
         }
         if (empty($resp['id']) || ($resp['status'] ?? '') === 'failed') {

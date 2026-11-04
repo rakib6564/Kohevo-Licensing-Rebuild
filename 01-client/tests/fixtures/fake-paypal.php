@@ -16,6 +16,7 @@
  *   POST /__test/approve/{orderId}        the buyer approves the order (status APPROVED, payer set)
  *   POST /__test/activate/{subId}         the buyer approves the subscription (status ACTIVE)
  *   POST /__test/decline_next_capture     the next capture answers 422 INSTRUMENT_DECLINED
+ *   POST /__test/fail_next_capture        the next capture answers 500 INTERNAL_SERVER_ERROR (nothing captured)
  *   POST /__test/expire_tokens            every issued token now answers 401
  */
 
@@ -47,9 +48,9 @@ $send = function (int $status, array $out) use ($fp): bool {
     flock($fp, LOCK_UN);
     return true;
 };
-$log = function (bool $replay) use ($dir, $method, $path, $reqId, $body): void {
+$log = function (bool $replay) use ($dir, $method, $path, $reqId, $body, $raw): void {
     file_put_contents($dir . '/requests.log', json_encode(['method' => $method, 'path' => $path, 'request_id' => $reqId,
-        'replay' => $replay, 'body' => $body]) . "\n", FILE_APPEND);
+        'replay' => $replay, 'body' => $body] + ($path === '/v1/notifications/verify-webhook-signature' ? ['raw' => $raw] : [])) . "\n", FILE_APPEND);
 };
 $id   = function (string $prefix) use (&$db): string { return $prefix . $db['run'] . str_pad((string) (++$db['seq']), 5, '0', STR_PAD_LEFT); };
 $err  = fn (int $s, string $name, string $issue, string $msg) => [$s, ['name' => $name, 'message' => $msg, 'details' => [['issue' => $issue, 'description' => $msg]]]];
@@ -82,6 +83,9 @@ if ($method === 'POST' && $path === '/v1/oauth2/token') {
 } elseif ($method === 'POST' && preg_match('#^/__test/activate/(I-[A-Z0-9]+)$#', $path, $m) && isset($db['subs'][$m[1]])) {
     $db['subs'][$m[1]]['status'] = 'ACTIVE';
     [$status, $out] = [200, ['ok' => true]];
+} elseif ($method === 'POST' && $path === '/__test/fail_next_capture') {
+    $db['fail_next'] = true;
+    [$status, $out] = [200, ['ok' => true]];
 } elseif ($method === 'POST' && $path === '/__test/decline_next_capture') {
     $db['decline_next'] = true;
     [$status, $out] = [200, ['ok' => true]];
@@ -111,6 +115,9 @@ if ($method === 'POST' && $path === '/v1/oauth2/token') {
         [$status, $out] = $err(422, 'UNPROCESSABLE_ENTITY', 'ORDER_ALREADY_CAPTURED', 'Order already captured.');
     } elseif ($o['status'] !== 'APPROVED') {
         [$status, $out] = $err(422, 'UNPROCESSABLE_ENTITY', 'ORDER_NOT_APPROVED', 'Payer has not yet approved the Order for payment.');
+    } elseif (!empty($db['fail_next'])) {
+        $db['fail_next'] = false;
+        [$status, $out] = $err(500, 'INTERNAL_SERVER_ERROR', 'INTERNAL_SERVICE_ERROR', 'An internal service error has occurred.');
     } elseif ($db['decline_next']) {
         $db['decline_next'] = false;
         [$status, $out] = $err(422, 'UNPROCESSABLE_ENTITY', 'INSTRUMENT_DECLINED', 'The instrument presented was declined.');
