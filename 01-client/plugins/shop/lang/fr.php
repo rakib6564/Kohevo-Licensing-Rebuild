@@ -92,6 +92,7 @@ return [
     'shop_err_order_failed'         => 'Votre commande n\'a pas pu être créée. Veuillez réessayer.',
     'shop_err_order_link'           => 'Ce lien de commande n\'est pas valide.',
     'shop_err_payment_start'        => 'Le paiement n\'a pas pu démarrer. Veuillez réessayer.',
+    'shop_err_not_payable'          => 'Cette commande n\'attend pas de paiement.',
     'shop_err_payment_unavailable'  => 'Le paiement en ligne n\'est pas disponible pour le moment. Contactez-nous pour finaliser votre commande.',
     'shop_err_postal'               => 'Indiquez votre code postal.',
     'shop_err_prefix_taken'         => 'Le type de contenu « %s » utilise déjà cette adresse.',

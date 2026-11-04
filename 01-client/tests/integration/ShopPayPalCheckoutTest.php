@@ -93,6 +93,40 @@ unit('shop + paypal: a buyer who never returns is paid by the webhook', function
     assert_eq('paid', ShopStoreAPI::order((int) $order['id'])['status'], 'the payment_event listener marked it paid');
 });
 
+unit('shop: a payment smaller than the order total does not mark it paid; the full payment does', function () use ($SHPP): void {
+    $order = shpp_order();
+    assert_true(ShopStoreAPI::startPayment($order, 'paypal')['ok']);
+    $order = ShopStoreAPI::order((int) $order['id']);
+    $short = new PaymentEvent(type: PaymentEvent::SUCCEEDED, gateway: 'paypal', ref: (string) $order['payment_ref'],
+        sourcePlugin: 'shop', sourceId: (string) $order['id'], amountCents: 990, currency: 'EUR');
+    ShopStoreAPI::handlePaymentEvent($short);
+    ShopStoreAPI::handlePaymentEvent($short);
+    $o = ShopStoreAPI::order((int) $order['id']);
+    assert_eq('pending_payment', $o['status'], 'not paid');
+    assert_true(str_contains((string) $o['stock_note'], 'does not cover'), 'the owner sees why: ' . $o['stock_note']);
+    assert_eq(1, (int) Database::value("SELECT COUNT(*) FROM audit_log WHERE action = 'shop.payment_mismatch' AND target = ? AND tenant_id = ?",
+        [(string) $order['id'], current_tenant_id()]), 'reported once');
+    ShopStoreAPI::handlePaymentEvent(new PaymentEvent(type: PaymentEvent::SUCCEEDED, gateway: 'paypal', ref: (string) $order['payment_ref'],
+        sourcePlugin: 'shop', sourceId: (string) $order['id'], amountCents: 2490, currency: 'USD'));
+    assert_eq('pending_payment', ShopStoreAPI::order((int) $order['id'])['status'], 'another currency is not paid either');
+
+    ShopStoreAPI::handlePaymentEvent(new PaymentEvent(type: PaymentEvent::SUCCEEDED, gateway: 'paypal', ref: (string) $order['payment_ref'],
+        sourcePlugin: 'shop', sourceId: (string) $order['id'], amountCents: 2490, currency: 'EUR'));
+    assert_eq('paid', ShopStoreAPI::order((int) $order['id'])['status'], 'the full amount is');
+});
+
+unit('shop: an order that is no longer waiting for payment cannot start a new one', function (): void {
+    $order = shpp_order();
+    assert_true(ShopStoreAPI::markPaid((int) $order['id'], 2490, 'EUR'));
+    $before = (int) Database::value('SELECT COUNT(*) FROM payment_sessions WHERE tenant_id = ? AND source_plugin = ? AND source_id = ?',
+        [current_tenant_id(), 'shop', (string) $order['id']]);
+    $r = ShopStoreAPI::startPayment($order, 'paypal');   // the caller's copy still says pending_payment
+    assert_false($r['ok'], 'refused');
+    assert_eq($before, (int) Database::value('SELECT COUNT(*) FROM payment_sessions WHERE tenant_id = ? AND source_plugin = ? AND source_id = ?',
+        [current_tenant_id(), 'shop', (string) $order['id']]), 'no checkout was opened');
+    assert_null(ShopStoreAPI::order((int) $order['id'])['payment_ref'], 'and the order took no reference');
+});
+
 unit('shop checkout form: a "Pay with" choice appears only when more than one gateway is offered', function (): void {
     $totals = ['lines' => [['title' => 'Cap', 'options_label' => null, 'qty' => 1, 'line_cents' => 1990, 'currency' => 'EUR']],
                'currency' => 'EUR', 'subtotal_cents' => 1990, 'delivery' => 'pickup'];
