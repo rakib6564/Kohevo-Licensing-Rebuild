@@ -7,8 +7,12 @@
  * Draft/Published. A product that was ever ordered is unpublished instead of deleted, so order history keeps it.
  *
  * Variants: attributes are written one per line (`Couleur: Blanc, Noir`); saving makes one variant per combination,
- * listed under them with its own SKU, price, sale price, stock and image, each of which may be left to the product's,
- * and an "On sale" switch for a combination the shop does not sell.
+ * listed under them with its own SKU, price, sale price, stock, weight, size and image, each of which may be left to
+ * the product's, and an "On sale" switch for a combination the shop does not sell.
+ *
+ * Also: the product type (physical, digital with files to download, or service), weight and size in the shop's units,
+ * sale dates, a low-stock level, tags, featured, upsells and cross-sells, and a note sent to buyers. The list filters
+ * by type and by low stock (`?stock=low`).
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/ShopStoreAPI.php';
@@ -45,7 +49,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $res = ShopStoreAPI::saveProduct($_POST, $id);
             if ($res['ok']) {
                 AuditLog::record($id > 0 ? 'shop.product_updated' : 'shop.product_created', (string) $res['id']);
-                header('Location: ' . $self . '?edit=' . (int) $res['id'] . '&saved=1');
+                // Files of a digital product: removed ones, then the ones just uploaded.
+                foreach ((array) ($_POST['remove_files'] ?? []) as $fid) {
+                    foreach (ShopStoreAPI::productFiles((int) $res['id']) as $f) {
+                        if ($f['id'] === (int) $fid) { ShopStoreAPI::deleteProductFile($f['id']); AuditLog::record('shop.product_file_removed', (string) $res['id'], ['file' => $f['name']]); }
+                    }
+                }
+                $fileErrors = [];
+                $up = $_FILES['files'] ?? null;
+                if (is_array($up) && is_array($up['name'] ?? null)) {
+                    foreach ($up['name'] as $i => $name) {
+                        if ((int) ($up['error'][$i] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) continue;
+                        if ((int) $up['error'][$i] !== UPLOAD_ERR_OK) { $fileErrors[] = (string) $name . ': ' . __('shop_err_file_upload', 'the upload did not finish.'); continue; }
+                        $added = ShopStoreAPI::addProductFile((int) $res['id'], (string) $up['tmp_name'][$i], (string) $name);
+                        if ($added['ok']) AuditLog::record('shop.product_file_added', (string) $res['id'], ['file' => (string) $name]);
+                        else $fileErrors[] = (string) $name . ': ' . $added['error'];
+                    }
+                }
+                if ($fileErrors) $_SESSION['shop_flash'] = ['type' => 'warning', 'msg' => __('shop_saved', 'Saved.') . ' ' . implode(' ', $fileErrors)];
+                header('Location: ' . $self . '?edit=' . (int) $res['id'] . ($fileErrors ? '' : '&saved=1'));
                 exit;
             }
             $errors = $res['errors'] ?? [];
@@ -82,7 +104,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
     $posted = $_SERVER['REQUEST_METHOD'] === 'POST' && $errors;
     $src = $posted ? $_POST : null;
     $p = $editing ?: ['id' => 0, 'title' => '', 'slug' => '', 'sku' => '', 'price_cents' => 0, 'sale_price_cents' => null, 'currency' => ShopStoreAPI::currency(),
-        'short_description' => '', 'description' => '', 'images_json' => '[]', 'attributes_json' => null, 'stock_qty' => null, 'status' => 'draft', 'sort_order' => 0];
+        'short_description' => '', 'description' => '', 'images_json' => '[]', 'attributes_json' => null, 'stock_qty' => null, 'status' => 'draft', 'sort_order' => 0,
+        'product_type' => 'physical', 'weight' => null, 'length' => null, 'width' => null, 'height' => null, 'sale_starts_at' => null, 'sale_ends_at' => null,
+        'featured' => 0, 'tax_class' => '', 'seo_title' => '', 'seo_description' => '', 'low_stock' => null, 'purchase_note' => '', 'download_limit' => null, 'download_days' => null];
     $v = static function (string $key, string $fromRow) use ($src): string { return e($src !== null ? (string) ($src[$key] ?? '') : $fromRow); };
     $fmt = static fn($c): string => $c === null || $c === '' ? '' : number_format(((int) $c) / 100, 2, '.', '');
     $tracked = $src !== null ? !empty($src['track_stock']) : $p['stock_qty'] !== null;
@@ -92,10 +116,20 @@ require SLATE_ROOT . '/admin/partials/header.php';
     $attributes = ShopStoreAPI::attributes($p);
     $variantRows = $editing && $attributes !== [] ? ShopStoreAPI::variantRows((int) $editing['id']) : [];
     $postedVariants = $src !== null && is_array($src['variants'] ?? null) ? $src['variants'] : [];
+    $type = $src !== null ? (string) ($src['product_type'] ?? 'physical') : ShopStoreAPI::productType($p);
+    $wUnit = ShopStoreAPI::weightUnit();
+    $dUnit = ShopStoreAPI::dimensionUnit();
+    $dt = static fn($v): string => $v === null || $v === '' ? '' : substr(str_replace(' ', 'T', (string) $v), 0, 16);
+    $tagText = $src !== null ? (string) ($src['tags'] ?? '') : implode(', ', array_column(ShopStoreAPI::tagsOf([(int) $p['id']])[(int) $p['id']] ?? [], 'name'));
+    $linkOptions = Database::rows("SELECT id, title FROM shop_products WHERE tenant_id = ? AND id <> ? ORDER BY title LIMIT 1000", [$tid, (int) $p['id']]);
+    $linked = static function (string $kind, string $field) use ($src, $p): array {
+        return $src !== null ? array_map('intval', (array) ($src[$field] ?? [])) : ShopStoreAPI::linkedIds((int) $p['id'], $kind);
+    };
+    $files = $editing ? ShopStoreAPI::productFiles((int) $editing['id']) : [];
 ?>
 <?php slate_editor_css(); ?>
 <?php slate_edit_open(['title_fallback' => __('shop_new_product', 'New product')]); ?>
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <?= csrf_field() ?>
         <input type="hidden" name="_action" value="save">
         <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
@@ -143,10 +177,65 @@ require SLATE_ROOT . '/admin/partials/header.php';
             </div>
         <?php slate_edit_card_close(); ?>
 
+        <?php slate_edit_card_open(['icon' => 'box', 'eyebrow' => __('shop_type_shipping', 'Type & shipping'), 'title' => __('shop_what_you_sell', 'What you sell')]); ?>
+            <div class="field">
+                <span class="field-label"><?= __('shop_product_type', 'Product type') ?></span>
+                <?php foreach (['physical' => [__('shop_type_physical', 'Physical'), __('shop_type_physical_hint', 'Shipped or collected; has a weight and size.')],
+                                'digital'  => [__('shop_type_digital', 'Digital'), __('shop_type_digital_hint', 'Files the buyer downloads after paying.')],
+                                'service'  => [__('shop_type_service', 'Service'), __('shop_type_service_hint', 'Nothing to ship, such as a class or a voucher.')]] as $val => [$label, $hint]): ?>
+                    <label class="field-check"><input type="radio" name="product_type" value="<?= $val ?>" <?= $type === $val ? 'checked' : '' ?> data-shop-type> <?= e($label) ?> <span class="text-muted text-xs">— <?= e($hint) ?></span></label>
+                <?php endforeach; ?>
+            </div>
+            <div data-shop-physical style="<?= $type === 'physical' ? '' : 'display:none;' ?>">
+                <div class="field" style="max-width:220px;">
+                    <label class="field-label" for="weight"><?= __('shop_weight', 'Weight') ?> <span class="text-muted text-xs">(<?= e($wUnit) ?>)</span></label>
+                    <input type="text" inputmode="decimal" id="weight" name="weight" value="<?= $v('weight', ShopStoreAPI::measure($p['weight'])) ?>">
+                    <?= $err('weight') ?>
+                </div>
+                <div class="field-row field-row-3">
+                    <?php foreach (['length' => __('shop_length', 'Length'), 'width' => __('shop_width', 'Width'), 'height' => __('shop_height', 'Height')] as $k => $label): ?>
+                    <div class="field">
+                        <label class="field-label" for="<?= $k ?>"><?= e($label) ?> <span class="text-muted text-xs">(<?= e($dUnit) ?>)</span></label>
+                        <input type="text" inputmode="decimal" id="<?= $k ?>" name="<?= $k ?>" value="<?= $v($k, ShopStoreAPI::measure($p[$k])) ?>">
+                        <?= $err($k) ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="field-hint"><?= __('shop_measures_hint', 'The packed weight and box size. Shipping rates by weight and carrier rates use them. Units are set in Shop settings.') ?></div>
+            </div>
+            <div data-shop-digital style="<?= $type === 'digital' ? '' : 'display:none;' ?>">
+                <span class="field-label"><?= __('shop_files', 'Files to download') ?></span>
+                <?php if ($files): ?>
+                    <ul class="shop-files">
+                    <?php foreach ($files as $f): ?>
+                        <li><?= e($f['name']) ?> <span class="text-muted text-xs"><?= e(number_format($f['size_bytes'] / 1048576, 1)) ?> MB</span>
+                            <label class="field-check" style="display:inline-flex;margin-left:12px;"><input type="checkbox" name="remove_files[]" value="<?= (int) $f['id'] ?>"> <?= __('shop_remove', 'Remove') ?></label></li>
+                    <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+                <div class="field">
+                    <input type="file" name="files[]" multiple aria-label="<?= e(__('shop_add_files', 'Add files')) ?>">
+                    <div class="field-hint"><?= __('shop_files_hint', 'Kept private: buyers get their own download links after paying. PDF, ZIP, audio, video, images and documents.') ?></div>
+                </div>
+                <div class="field-row field-row-2">
+                    <div class="field">
+                        <label class="field-label" for="download_limit"><?= __('shop_download_limit', 'Downloads allowed') ?></label>
+                        <input type="number" id="download_limit" name="download_limit" min="1" step="1" value="<?= $v('download_limit', $p['download_limit'] === null ? '' : (string) (int) $p['download_limit']) ?>" placeholder="<?= e(__('shop_unlimited', 'Unlimited')) ?>">
+                        <?= $err('download_limit') ?>
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="download_days"><?= __('shop_download_days', 'Link works for (days)') ?></label>
+                        <input type="number" id="download_days" name="download_days" min="1" step="1" value="<?= $v('download_days', $p['download_days'] === null ? '' : (string) (int) $p['download_days']) ?>" placeholder="<?= e(__('shop_no_expiry', 'No expiry')) ?>">
+                        <?= $err('download_days') ?>
+                    </div>
+                </div>
+            </div>
+        <?php slate_edit_card_close(); ?>
+
         <?php slate_edit_card_open(['icon' => 'credit-card', 'eyebrow' => __('shop_pricing', 'Pricing'), 'title' => __('shop_price_stock', 'Price & stock')]); ?>
             <div class="field-row field-row-2">
                 <div class="field">
-                    <label class="field-label" for="price"><?= __('shop_price', 'Price') ?> <span class="text-muted text-xs">(<?= e((string) $p['currency']) ?>, <?= __('shop_incl_vat', 'incl. VAT') ?>)</span> <span class="field-required">*</span></label>
+                    <label class="field-label" for="price"><?= __('shop_price', 'Price') ?> <span class="text-muted text-xs">(<?= e((string) $p['currency']) ?><?= ShopTax::mode() === 'inclusive' ? ', ' . e(sprintf(__('shop_incl_tax', 'incl. %s'), ShopTax::label())) : (ShopTax::mode() === 'exclusive' ? ', ' . e(sprintf(__('shop_before_tax', 'before %s'), ShopTax::label())) : '') ?>)</span> <span class="field-required">*</span></label>
                     <input type="text" inputmode="decimal" id="price" name="price" required value="<?= $v('price', $fmt($p['price_cents'])) ?>" placeholder="24.90">
                     <?= $err('price') ?>
                 </div>
@@ -159,6 +248,19 @@ require SLATE_ROOT . '/admin/partials/header.php';
             </div>
             <div class="field-row field-row-2">
                 <div class="field">
+                    <label class="field-label" for="sale_starts_at"><?= __('shop_sale_starts', 'Sale starts') ?></label>
+                    <input type="datetime-local" id="sale_starts_at" name="sale_starts_at" value="<?= $v('sale_starts_at', $dt($p['sale_starts_at'])) ?>">
+                    <?= $err('sale_starts_at') ?>
+                </div>
+                <div class="field">
+                    <label class="field-label" for="sale_ends_at"><?= __('shop_sale_ends', 'Sale ends') ?></label>
+                    <input type="datetime-local" id="sale_ends_at" name="sale_ends_at" value="<?= $v('sale_ends_at', $dt($p['sale_ends_at'])) ?>">
+                    <div class="field-hint"><?= __('shop_sale_dates_hint', 'Optional. Empty: the sale price applies now and until you remove it.') ?></div>
+                    <?= $err('sale_ends_at') ?>
+                </div>
+            </div>
+            <div class="field-row field-row-2">
+                <div class="field">
                     <label class="field-check"><input type="checkbox" name="track_stock" value="1" <?= $tracked ? 'checked' : '' ?> data-shop-track> <?= __('shop_track_stock', 'Track stock') ?></label>
                     <?php if ($attributes !== []): ?><div class="field-hint"><?= __('shop_stock_by_variant', 'This product has variants: each variant keeps its own stock below.') ?></div><?php endif; ?>
                 </div>
@@ -167,6 +269,12 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <input type="number" id="stock_qty" name="stock_qty" min="0" step="1" value="<?= $v('stock_qty', $p['stock_qty'] === null ? '0' : (string) (int) $p['stock_qty']) ?>">
                     <?= $err('stock_qty') ?>
                 </div>
+            </div>
+            <div class="field" style="margin-bottom:0;">
+                <label class="field-label" for="low_stock"><?= __('shop_low_stock_level', 'Low-stock alert at') ?></label>
+                <input type="number" id="low_stock" name="low_stock" min="0" step="1" style="max-width:160px;" value="<?= $v('low_stock', $p['low_stock'] === null ? '' : (string) (int) $p['low_stock']) ?>" placeholder="<?= e(ShopStoreAPI::setting('low_stock')) ?>">
+                <div class="field-hint"><?= __('shop_low_stock_hint', 'You get an email when a sale takes the stock to this number or below. Empty: the shop\'s level from Shop settings.') ?></div>
+                <?= $err('low_stock') ?>
             </div>
         <?php slate_edit_card_close(); ?>
 
@@ -184,7 +292,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <thead><tr>
                         <th><?= __('shop_variant', 'Variant') ?></th><th><?= __('shop_sku', 'SKU') ?></th>
                         <th><?= __('shop_price', 'Price') ?></th><th><?= __('shop_sale_price', 'Sale price') ?></th>
-                        <th><?= __('shop_stock', 'Stock') ?></th><th><?= __('shop_image', 'Image') ?></th><th><?= __('shop_variant_sold', 'On sale') ?></th>
+                        <th><?= __('shop_stock', 'Stock') ?></th><th><?= __('shop_weight', 'Weight') ?> (<?= e($wUnit) ?>)</th><th><?= __('shop_size', 'Size') ?> (<?= e($dUnit) ?>)</th>
+                        <th><?= __('shop_image', 'Image') ?></th><th><?= __('shop_variant_sold', 'On sale') ?></th>
                     </tr></thead>
                     <tbody>
                     <?php foreach ($variantRows as $vr):
@@ -201,6 +310,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
                             <td><input type="text" inputmode="decimal" name="<?= $name ?>[price]" value="<?= $fv('price', $fmt($vr['price_cents'])) ?>" placeholder="<?= e($fmt($p['price_cents'])) ?>" aria-label="<?= e($label . ' — ' . __('shop_price', 'Price')) ?>"></td>
                             <td><input type="text" inputmode="decimal" name="<?= $name ?>[sale_price]" value="<?= $fv('sale_price', $fmt($vr['sale_price_cents'])) ?>" aria-label="<?= e($label . ' — ' . __('shop_sale_price', 'Sale price')) ?>"></td>
                             <td><input type="number" min="0" step="1" name="<?= $name ?>[stock]" value="<?= $fv('stock', $vr['stock_qty'] === null ? '' : (string) (int) $vr['stock_qty']) ?>" placeholder="<?= e(__('shop_not_tracked', 'Not tracked')) ?>" aria-label="<?= e($label . ' — ' . __('shop_stock', 'Stock')) ?>"></td>
+                            <td><input type="text" inputmode="decimal" name="<?= $name ?>[weight]" size="6" value="<?= $fv('weight', ShopStoreAPI::measure($vr['weight'] ?? null)) ?>" placeholder="<?= e(ShopStoreAPI::measure($p['weight'])) ?>" aria-label="<?= e($label . ' — ' . __('shop_weight', 'Weight')) ?>"></td>
+                            <td><input type="text" name="<?= $name ?>[size]" size="10" value="<?= $fv('size', ShopStoreAPI::sizeText($vr)) ?>" placeholder="<?= e(ShopStoreAPI::sizeText($p)) ?>" aria-label="<?= e($label . ' — ' . __('shop_size', 'Size')) ?>"></td>
                             <td><input type="text" name="<?= $name ?>[image]" maxlength="500" value="<?= $fv('image', (string) ($vr['image'] ?? '')) ?>" aria-label="<?= e($label . ' — ' . __('shop_image', 'Image')) ?>"></td>
                             <td><label class="field-check"><input type="checkbox" name="<?= $name ?>[enabled]" value="1" <?= $on ? 'checked' : '' ?>> <span class="sr-only"><?= e($label) ?></span></label></td>
                         </tr>
@@ -208,7 +319,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     </tbody>
                 </table>
                 </div>
-                <div class="field-hint"><?= __('shop_variants_hint', 'Empty price: the product\'s price. Empty stock: not tracked. Untick "On sale" for a combination you do not sell.') ?></div>
+                <div class="field-hint"><?= __('shop_variants_hint2', 'Empty price, weight or size: the product\'s. Empty stock: not tracked. Size as length x width x height. Untick "On sale" for a combination you do not sell.') ?></div>
             <?php endif; ?>
         <?php slate_edit_card_close(); ?>
 
@@ -232,6 +343,42 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <label class="field-check"><input type="checkbox" name="categories[]" value="<?= (int) $c['id'] ?>" <?= in_array($c['id'], $selectedCats, true) ? 'checked' : '' ?>> <?= e($c['name']) ?></label>
                 <?php endforeach; ?>
             </div>
+            <div class="field">
+                <label class="field-label" for="tags"><?= __('shop_tags', 'Tags') ?></label>
+                <input type="text" id="tags" name="tags" maxlength="1000" value="<?= e($tagText) ?>" placeholder="<?= e(__('shop_tags_placeholder', 'Vegan, Gift box')) ?>">
+                <div class="field-hint"><?= __('shop_tags_hint', 'Separated by commas. A Product Grid can show only the products with a tag.') ?></div>
+            </div>
+            <div class="field">
+                <label class="field-label" for="tax_class"><?= __('shop_tax_class', 'Tax class') ?></label>
+                <?php $tc = $src !== null ? (string) ($src['tax_class'] ?? '') : (string) ($p['tax_class'] ?? ''); ?>
+                <select id="tax_class" name="tax_class" style="max-width:220px;"><?php foreach (ShopTax::classLabels() as $k => $label): ?><option value="<?= e($k) ?>" <?= $tc === $k ? 'selected' : '' ?>><?= e($label) ?></option><?php endforeach; ?></select>
+                <div class="field-hint"><?= __('shop_tax_class_hint', 'Which tax rate applies (Shop › Tax). Most products are Standard.') ?></div>
+            </div>
+            <div class="field">
+                <label class="field-check"><input type="checkbox" name="featured" value="1" <?= ($src !== null ? !empty($src['featured']) : !empty($p['featured'])) ? 'checked' : '' ?>> <?= __('shop_featured', 'Featured') ?></label>
+                <div class="field-hint"><?= __('shop_featured_hint', 'A Product Grid set to "Featured" shows only these.') ?></div>
+            </div>
+            <?php if ($linkOptions): ?>
+            <div class="field-row field-row-2">
+                <?php foreach (['upsell' => ['upsells', __('shop_upsells', 'Upsells'), __('shop_upsells_hint', 'Suggested on this product\'s page.')],
+                                'cross_sell' => ['cross_sells', __('shop_cross_sells', 'Cross-sells'), __('shop_cross_sells_hint', 'Suggested with the cart when this product is in it.')]] as $kind => [$field, $label, $hint]):
+                    $chosenLinks = $linked($kind, $field); ?>
+                <div class="field">
+                    <label class="field-label" for="<?= $field ?>"><?= e($label) ?></label>
+                    <input type="hidden" name="<?= $field ?>[]" value="">
+                    <select id="<?= $field ?>" name="<?= $field ?>[]" multiple size="6">
+                        <?php foreach ($linkOptions as $o): ?><option value="<?= (int) $o['id'] ?>" <?= in_array((int) $o['id'], $chosenLinks, true) ? 'selected' : '' ?>><?= e((string) $o['title']) ?></option><?php endforeach; ?>
+                    </select>
+                    <div class="field-hint"><?= e($hint) ?> <?= __('shop_multi_select_hint', 'Ctrl or ⌘ + click to pick several.') ?></div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+            <div class="field">
+                <label class="field-label" for="purchase_note"><?= __('shop_purchase_note', 'Note to buyers') ?></label>
+                <textarea id="purchase_note" name="purchase_note" rows="2" maxlength="2000"><?= $v('purchase_note', (string) ($p['purchase_note'] ?? '')) ?></textarea>
+                <div class="field-hint"><?= __('shop_purchase_note_hint', 'Shown on the order confirmation and in the receipt email, such as how to book a class.') ?></div>
+            </div>
             <div class="field-row field-row-2">
                 <div class="field">
                     <label class="field-label" for="status"><?= __('shop_status', 'Status') ?></label>
@@ -248,6 +395,28 @@ require SLATE_ROOT . '/admin/partials/header.php';
             </div>
         <?php slate_edit_card_close(); ?>
 
+        <?php slate_edit_card_open(['icon' => 'search', 'eyebrow' => __('shop_seo', 'Search engines'), 'title' => __('shop_seo_title_card', 'How the product shows in Google')]); ?>
+            <div class="field">
+                <label class="field-label" for="seo_title"><?= __('shop_seo_title', 'Search title') ?></label>
+                <input type="text" id="seo_title" name="seo_title" maxlength="200" value="<?= $v('seo_title', (string) ($p['seo_title'] ?? '')) ?>" data-shop-seo="title">
+                <div class="field-hint"><?= __('shop_seo_title_hint', 'Empty: the product name and the site name. Google shows about 60 characters.') ?></div>
+            </div>
+            <div class="field">
+                <label class="field-label" for="seo_description"><?= __('shop_seo_description', 'Search description') ?></label>
+                <textarea id="seo_description" name="seo_description" rows="3" maxlength="400" data-shop-seo="description"><?= $v('seo_description', (string) ($p['seo_description'] ?? '')) ?></textarea>
+                <div class="field-hint"><?= __('shop_seo_description_hint', 'Empty: the short description. Google shows about 160 characters.') ?> <span data-shop-seo-count></span></div>
+            </div>
+            <div class="field-hint" style="margin-top:4px;"><?= __('shop_seo_data_hint', 'Product pages also tell Google the price, stock, SKU and photos (structured data), so results can show them.') ?></div>
+        <?php slate_edit_card_close(); ?>
+        <script>
+        // The description's length, as it is typed.
+        (function () {
+          var d = document.querySelector('[data-shop-seo="description"]'), c = document.querySelector('[data-shop-seo-count]');
+          function n() { if (d && c) c.textContent = '(' + d.value.trim().length + ')'; }
+          if (d) { d.addEventListener('input', n); n(); }
+        })();
+        </script>
+
         <?php slate_edit_actionbar([
             'buttons_html' => '<button type="submit" class="btn btn-primary">' . ($editing ? __('shop_save', 'Save changes') : __('shop_create_product', 'Create product')) . '</button>'
                 . '<a href="' . e($self) . '" class="btn btn-ghost">' . __('shop_cancel', 'Cancel') . '</a>',
@@ -259,16 +428,41 @@ require SLATE_ROOT . '/admin/partials/header.php';
 (function () {
     var box = document.querySelector('[data-shop-track]'), field = document.querySelector('[data-shop-stock]');
     if (box && field) box.addEventListener('change', function () { field.style.display = box.checked ? '' : 'none'; });
+    var phys = document.querySelector('[data-shop-physical]'), dig = document.querySelector('[data-shop-digital]');
+    document.querySelectorAll('[data-shop-type]').forEach(function (r) {
+        r.addEventListener('change', function () {
+            if (phys) phys.style.display = r.value === 'physical' ? '' : 'none';
+            if (dig) dig.style.display = r.value === 'digital' ? '' : 'none';
+        });
+    });
 })();
 </script>
 
 <?php else:
-    $products = Database::rows("SELECT * FROM shop_products WHERE tenant_id = ? ORDER BY sort_order, created_at DESC, id DESC LIMIT 500", [$tid]);
+    $typeFilter = in_array($_GET['type'] ?? '', ShopStoreAPI::PRODUCT_TYPES, true) ? (string) $_GET['type'] : '';
+    $lowOnly = ($_GET['stock'] ?? '') === 'low';
+    $low = ShopStoreAPI::lowStock();
+    $lowIds = array_values(array_unique(array_column($low, 'product_id')));
+    $where = 'tenant_id = ?';
+    $args = [$tid];
+    if ($typeFilter !== '') { $where .= ' AND product_type = ?'; $args[] = $typeFilter; }
+    if ($lowOnly) $where .= $lowIds ? ' AND id IN (' . implode(',', array_map('intval', $lowIds)) . ')' : ' AND 0';
+    $products = Database::rows("SELECT * FROM shop_products WHERE $where ORDER BY sort_order, created_at DESC, id DESC LIMIT 500", $args);
     $catsOf = ShopStoreAPI::categoriesOf(array_column($products, 'id'));
+    $typeLabels = ['physical' => __('shop_type_physical', 'Physical'), 'digital' => __('shop_type_digital', 'Digital'), 'service' => __('shop_type_service', 'Service')];
+    $filterLink = static fn(array $q, string $label, bool $on): string => '<a class="btn btn-sm ' . ($on ? 'btn-primary' : 'btn-ghost') . '" href="?' . e(http_build_query($q)) . '">' . e($label) . '</a>';
 ?>
     <div class="page-header">
         <div><h1><?= __('shop_products', 'Products') ?></h1></div>
-        <?php if ($canEdit): ?><a href="?new=1" class="btn btn-primary"><?= __('shop_new_product', 'New product') ?></a><?php endif; ?>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <?php if (Auth::can('shop.manage_products') || Auth::isSuperAdmin()): ?><a href="<?= e(plugin_url('shop', 'admin/import.php')) ?>" class="btn btn-ghost"><?= __('shop_import', 'Import') ?></a><?php endif; ?>
+            <?php if ($canEdit): ?><a href="?new=1" class="btn btn-primary"><?= __('shop_new_product', 'New product') ?></a><?php endif; ?>
+        </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+        <?= $filterLink([], __('shop_all', 'All'), $typeFilter === '' && !$lowOnly) ?>
+        <?php foreach ($typeLabels as $k => $label) echo $filterLink(['type' => $k], $label, $typeFilter === $k); ?>
+        <?= $filterLink(['stock' => 'low'], sprintf(__('shop_low_stock_n', 'Low stock (%d)'), count($lowIds)), $lowOnly) ?>
     </div>
 
     <?php if (!$products): ?>
@@ -294,17 +488,22 @@ require SLATE_ROOT . '/admin/partials/header.php';
             if ($p['status'] === 'published') {
                 $actions .= ' <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="' . e(rtrim((string) SLATE_URL, '/') . ShopStoreAPI::productPath((string) $p['slug'])) . '">' . __('shop_view', 'View') . ' ↗</a>';
             }
+            $ptype = ShopStoreAPI::productType($p);
+            $isLow = in_array((int) $p['id'], $lowIds, true);
             slate_data_row([
                 'avatar'       => mb_substr((string) $p['title'], 0, 1),
                 'avatar_color' => $p['status'] === 'published' ? 'info' : 'muted',
                 'title'        => (string) $p['title'],
-                'meta'         => $price . ' · ' . __('shop_stock', 'Stock') . ': ' . $stock,
+                'meta'         => $price . ' · ' . __('shop_stock', 'Stock') . ': ' . $stock . ($ptype !== 'physical' ? ' · ' . $typeLabels[$ptype] : '') . ($isLow ? ' · ' . __('shop_low_stock', 'Low stock') : ''),
                 'badge'        => $p['status'] === 'published' ? [__('shop_published', 'Published'), 'active'] : [__('shop_draft', 'Draft'), 'inactive'],
                 'detail'       => [
                     __('shop_sku', 'SKU')               => (string) ($p['sku'] ?? '—'),
                     __('shop_price', 'Price')           => $price,
                     __('shop_stock', 'Stock')           => $stock,
                     __('shop_categories', 'Categories') => implode(', ', array_column($catsOf[(int) $p['id']] ?? [], 'name')) ?: '—',
+                    __('shop_product_type', 'Product type') => $typeLabels[$ptype],
+                    __('shop_weight', 'Weight') => ShopStoreAPI::measure($p['weight']) !== '' ? ShopStoreAPI::measure($p['weight']) . ' ' . ShopStoreAPI::weightUnit() : '—',
+                    __('shop_size', 'Size') => ShopStoreAPI::dimensionsText($p) ?: '—',
                 ],
                 'actions'      => $actions,
             ]);

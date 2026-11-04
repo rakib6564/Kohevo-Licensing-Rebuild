@@ -23,6 +23,8 @@ use Slate\Module\StudioBuilder\Runtime\StudioRuntimeAsset;
 use Slate\Module\StudioBuilder\Render\Compile\CompiledPage;
 use Slate\Module\StudioBuilder\Render\Compile\FilledPage;
 use Slate\Module\StudioBuilder\Render\Seo\SeoHead;
+use Slate\Module\StudioBuilder\Render\Seo\StructuredData;
+use Slate\Module\StudioBuilder\Render\Seo\WebFonts;
 
 final class PageDocumentAssembler
 {
@@ -68,6 +70,9 @@ final class PageDocumentAssembler
             . '<meta name="viewport" content="width=device-width, initial-scale=1">'
             . $seo->tags()
             . ($favicon !== '' ? '<link rel="icon" href="' . Html::e($favicon) . '">' : '')
+            // Site & SEO: the web fonts the theme names, and the business and item structured data.
+            . WebFonts::tags($tenantId)
+            . StructuredData::tags($context)
             . '<style>' . str_ireplace('</style', '<\/style', $css) . '</style>'
             . $tenantCss
             . $signatureGuard

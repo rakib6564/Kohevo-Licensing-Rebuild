@@ -51,6 +51,13 @@ unit('listing heads: an archive is titled by its term with its own canonical; se
 
 });
 
+unit('listing heads: an item a plugin keeps (a product) takes the site robots, not its noindex Single template\'s', function (): void {
+    $template = new SeoHead('Product template', 'Template description', 'noindex,nofollow', 'https://acme.test/template-product', null, 'Acme');
+    $item = ['type' => 'product', 'url' => '/product/brittle/', 'title' => 'Brittle', 'description' => '<p>Crunchy &amp; sweet.</p>', 'seo_title' => 'Brittle for search'];
+    $head = $template->forListing(sba5_ctx(['single_item' => $item]));
+    assert_eq(['Brittle for search', 'Crunchy & sweet.', 'index,follow', 'https://acme.test/product/brittle/'], [$head->title, $head->description, $head->robots, $head->canonicalUrl]);
+});
+
 unit('single templates: tag and author conditions, and their excludes, now see the page', function (): void {
     $rules = ['rules' => [
         ['action' => 'include', 'condition' => 'entire_site'],

@@ -1,8 +1,8 @@
 {
     "slug": "shop",
     "name": "Shop",
-    "version": "0.2.0",
-    "description": "Sell physical products from a Kohevo Studio site. Products (price, sale price, images, SKU, stock, categories, and variants such as colour × size, each with its own SKU, stock and price), a cart kept in the visitor's session, guest checkout with a flat shipping rate or pickup, payment through Stripe Checkout via the stripe-payment plugin, and an orders screen with fulfilment and refunds. Prices include VAT. Its Studio widgets (product grid, single product parts, cart, mini cart, checkout and order confirmation) are in Add › Components, and a Single template with the Products condition lays out /product/{slug}.",
+    "version": "0.4.0",
+    "description": "Sell physical, digital and service products from a Kohevo Studio site. Products (price, sale price with dates, images, SKU, stock with low-stock alerts, weight and size, categories, tags, upsells and cross-sells, and variants such as colour × size, each with its own SKU, stock, price, weight and size; digital products deliver their files through private download links), an importer for WooCommerce products, a cart kept in the visitor's session, guest checkout with shipping zones (flat, free, by weight, local pickup, or live carrier rates through EasyPost), tax included in prices or added by address (US sales tax), coupons, payment through the shared payment layer (Stripe, PayPal), and an orders screen with tracking, shipping labels, packing slips, fulfilment emails and refunds. Its Studio widgets (product grid, single product parts, cart, mini cart, checkout and order confirmation) are in Add › Components, and a Single template with the Products condition lays out /product/{slug}.",
     "author": "Kohevo",
     "requires_core": ">=1.0.0",
     "commercial_module": {
@@ -15,6 +15,6 @@
         {"key": "shop.view",            "label": "View products and orders"},
         {"key": "shop.manage_products", "label": "Create, edit and delete products and categories"},
         {"key": "shop.manage_orders",   "label": "Fulfil, cancel and refund orders"},
-        {"key": "shop.manage_settings", "label": "Configure shop settings (shipping, pages, addresses)"}
+        {"key": "shop.manage_settings", "label": "Configure shop settings (shipping, tax, pages, addresses)"}
     ]
 }

@@ -517,6 +517,19 @@ final class StudioBackupService
                 return StudioCodePolicy::gtmId($value) ?? throw new \InvalidArgumentException('Not a GTM id.');
             case StudioBackupFormat::SETTING_OG_MEDIA:
                 return (string) ($mediaMap[(int) $value] ?? '');
+            case \Slate\Module\StudioBuilder\Render\Seo\WebFonts::SETTING:
+                if (\Slate\Module\StudioBuilder\Render\Seo\WebFonts::parse($value)['bad'] !== []) {
+                    throw new \InvalidArgumentException('Not a list of fonts.');
+                }
+                return $value;
+            case \Slate\Module\StudioBuilder\Render\Seo\StructuredData::SETTING:
+                // The business logo is a media id of the backup's site: this site's copy of it, or none.
+                $business = json_decode($value, true);
+                if (!is_array($business)) {
+                    throw new \InvalidArgumentException('Not valid JSON.');
+                }
+                $business['logo_media_id'] = (int) ($mediaMap[(int) ($business['logo_media_id'] ?? 0)] ?? 0);
+                return (string) json_encode(\Slate\Module\StudioBuilder\Render\Seo\StructuredData::clean($business), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         }
         if (in_array($key, self::JSON_SETTINGS, true) && !json_validate($value)) {
             throw new \InvalidArgumentException('Not valid JSON.');

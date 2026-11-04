@@ -11,7 +11,7 @@ const shop = manifest.blocks.filter((b) => b.type.startsWith('shop.'));
 const byType = Object.fromEntries(shop.map((b) => [b.type, b]));
 
 test('every Shop widget is a Component that needs the shop entitlement', () => {
-  assert.equal(shop.length, 12);
+  assert.equal(shop.length, 13);
   for (const b of shop) {
     assert.ok(isComponentBlock(b) && !isElementBlock(b), `${b.type} is in Add › Components`);
     assert.equal(b.required_entitlement, 'shop', b.type);
@@ -25,14 +25,15 @@ test('the Product grid binds to the shop\'s products, whose category is picked f
   const provider = manifest.providers.find((p) => p.key === 'shop.products');
   assert.deepEqual(provider.params.map((p) => p.key), ['category']);
   assert.ok(Array.isArray(provider.params[0].choices), 'a pick-list, filled from the shop\'s categories');
-  assert.deepEqual(grid.field_schema.map((f) => f.key), ['heading', 'columns', 'order', 'per_page', 'show_filter', 'show_pager', 'show_price', 'show_add_to_cart', 'button_label', 'link_label', 'options_label', 'show_icon', 'icon', 'empty_message']);
+  assert.deepEqual(grid.field_schema.map((f) => f.key), ['heading', 'source', 'tag', 'order', 'per_page', 'columns', 'gap', 'row_gap', 'align', 'density', 'card_style', 'card_padding', 'card_radius', 'image_ratio', 'image_fit', 'image_hover', 'show_category', 'title_lines', 'show_excerpt', 'show_price', 'show_badges', 'sale_badge', 'new_days', 'badge_position', 'show_add_to_cart', 'button_placement', 'button_width', 'button_label', 'link_label', 'options_label', 'show_icon', 'icon', 'show_filter', 'filter_style', 'all_label', 'show_search', 'show_sort', 'show_count', 'show_pager', 'pagination', 'load_more_label', 'empty_message']);
 });
 
 test('the widgets an author styles piece by piece list their parts', () => {
   const parts = (type) => byType[type].style_parts.map((p) => p.key);
-  assert.deepEqual(parts('shop.products'), ['card', 'image', 'body', 'icon', 'link', 'title', 'price', 'button', 'badge', 'filter', 'pager', 'grid']);
+  assert.deepEqual(parts('shop.products'), ['card', 'image', 'body', 'icon', 'link', 'title', 'price', 'button', 'badge', 'category', 'excerpt', 'sale_badge', 'toolbar', 'filter', 'filter_active', 'fields', 'count', 'pager', 'more', 'grid']);
+  assert.deepEqual(byType['shop.products'].field_schema.filter((f) => f.per_device).map((f) => f.key), ['columns', 'gap', 'row_gap', 'align', 'card_padding'], 'columns, gaps, alignment and padding per device');
   assert.deepEqual(parts('shop.product_add_to_cart'), ['button', 'options', 'option_labels', 'variant_price', 'quantity', 'message']);
-  assert.deepEqual(parts('shop.cart'), ['table', 'title', 'options', 'totals', 'button', 'continue']);
+  assert.deepEqual(parts('shop.cart'), ['table', 'title', 'options', 'image', 'stepper', 'line_total', 'remove', 'totals', 'button', 'continue']);
   assert.deepEqual(parts('shop.checkout'), ['fields', 'labels', 'summary', 'button']);
   assert.deepEqual(byType['shop.product_title'].style_parts, [], 'a one-element widget is styled as a whole');
 });

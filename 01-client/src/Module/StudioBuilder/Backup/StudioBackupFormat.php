@@ -73,6 +73,8 @@ final class StudioBackupFormat
         'studio_code_head_snippet',
         'studio_code_footer_snippet',
         'studio_code_site_verification',
+        'studio_web_fonts',
+        'studio_seo_business',
     ];
 
     public static function pageEntry(int $number): string

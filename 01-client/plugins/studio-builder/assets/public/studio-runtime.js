@@ -1728,6 +1728,33 @@
     try { return new URL(url, global.location.href).origin === global.location.origin; } catch (e) { return false; }
   }
 
+  /**
+   * `[data-sb-turnstile="<site key>"]`: a Cloudflare Turnstile check (Shop checkout protection). A fragment's scripts
+   * do not run, so the runtime loads Cloudflare's script on first need (explicit rendering) and renders each widget
+   * once; the widget adds its `cf-turnstile-response` field to the form it sits in.
+   */
+  var turnstileQueue = [];
+  function mountChallenges(root) {
+    var boxes = qsa(root || document, '[data-sb-turnstile]').filter(function (el) { return !el.__sbTurnstile; });
+    if (!boxes.length) return;
+    boxes.forEach(function (el) { el.__sbTurnstile = true; turnstileQueue.push(el); });
+    function renderAll() {
+      while (turnstileQueue.length) {
+        var el = turnstileQueue.shift();
+        if (!document.documentElement.contains(el)) continue;
+        try { global.turnstile.render(el, { sitekey: el.getAttribute('data-sb-turnstile') }); } catch (e) { /* the server says what is missing */ }
+      }
+    }
+    if (global.turnstile && global.turnstile.render) { renderAll(); return; }
+    if (document.getElementById('sb-turnstile-api')) return;
+    global.__sbTurnstileReady = renderAll;
+    var s = document.createElement('script');
+    s.id = 'sb-turnstile-api';
+    s.async = true;
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__sbTurnstileReady';
+    document.head.appendChild(s);
+  }
+
   function initFragments(root) {
     var slots = qsa(root, '[data-sb-fragment]');
     var forms = qsa(root, 'form[data-sb-fragment-form]');
@@ -1763,6 +1790,7 @@
           if (slot.__sbFragmentTurn !== turn) return;
           slot.innerHTML = html;
           slot.setAttribute('data-sb-fragment-state', 'ready');
+          mountChallenges(slot);
         })
         .catch(function () { slot.setAttribute('data-sb-fragment-state', 'error'); });
     }
@@ -1798,7 +1826,7 @@
             return;
           }
           var fresh = slot && typeof data.html === 'string' ? slot : null;
-          if (fresh) { nextTurn(fresh); fresh.innerHTML = data.html; }
+          if (fresh) { nextTurn(fresh); fresh.innerHTML = data.html; mountChallenges(fresh); }
           if (note && typeof data.message === 'string') {
             note.textContent = data.message;
             note.setAttribute('data-sb-state', r.ok ? 'ok' : 'error');
@@ -1812,8 +1840,94 @@
         .then(function () { form.removeAttribute('aria-busy'); });
     }
 
+    // `[data-sb-requote]`: changing this field sends its form again with the form's `[data-sb-requote-button]` (a
+    // checkout's address quotes shipping and tax again). Typed text waits until the visitor leaves the field.
+    function onRequote(event) {
+      var field = event.target;
+      if (!field || !field.hasAttribute || !field.hasAttribute('data-sb-requote') || !field.form) return;
+      var form = field.form;
+      if (!form.closest('[data-sb-fragment]') && !form.hasAttribute('data-sb-fragment-form')) return;
+      var button = qs(form, '[data-sb-requote-button]');
+      if (!button || form.getAttribute('aria-busy') === 'true') return;
+      if (typeof form.requestSubmit === 'function') form.requestSubmit(button); else button.click();
+    }
+
     slots.forEach(load);
+    mountChallenges(root);
     mount(on(document, 'submit', onSubmit));
+    mount(on(document, 'change', onRequote));
+  }
+
+  /**
+   * Product grid tools. A `form[data-sb-autosubmit]` (sort, category) is sent as soon as a `[data-sb-autosubmit-field]`
+   * changes; the form is marked `data-sb-autosubmit="on"` so its button, needed without JavaScript, can step aside.
+   * An `a[data-sb-load-more="<grid>"]` (a link to the next page) fetches that page and appends its cards to the grid
+   * `[data-sb-load-grid="<grid>"]`, then points at the page after, or goes when there is none. Without this script both
+   * are a plain form and a plain link.
+   */
+  function initShopGrid(root) {
+    qsa(root, 'form[data-sb-autosubmit]').forEach(function (form) {
+      form.setAttribute('data-sb-autosubmit', 'on');
+      var off = on(form, 'change', function (event) {
+        var t = event.target;
+        if (!t || !t.hasAttribute || !t.hasAttribute('data-sb-autosubmit-field')) return;
+        if (typeof form.requestSubmit === 'function') form.requestSubmit(); else form.submit();
+      });
+      // Empty fields stay out of the address (`?sort=price_asc`, not `?q=&sort=price_asc`).
+      var offSubmit = on(form, 'submit', function () {
+        qsa(form, 'input[name],select[name]').forEach(function (f) {
+          if (f.value === '' && !f.disabled) { f.disabled = true; global.setTimeout(function () { f.disabled = false; }, 0); }
+        });
+      });
+      mount(function () { off(); offSubmit(); form.setAttribute('data-sb-autosubmit', ''); });
+    });
+    // A product's thumbnails: picking one shows it as the main photo.
+    qsa(root, '[data-sb-shop-gallery]').forEach(function (gallery) {
+      var main = qs(gallery, '.sb-shop-gallery__main img');
+      if (!main) return;
+      var off = on(gallery, 'click', function (event) {
+        var thumb = event.target && event.target.closest ? event.target.closest('[data-sb-thumb]') : null;
+        if (!thumb || !gallery.contains(thumb)) return;
+        main.removeAttribute('srcset');
+        main.setAttribute('src', thumb.getAttribute('data-sb-thumb'));
+        qsa(gallery, '[data-sb-thumb]').forEach(function (t) { if (t === thumb) t.setAttribute('aria-current', 'true'); else t.removeAttribute('aria-current'); });
+      });
+      mount(off);
+    });
+    if (!global.fetch || !global.DOMParser) return;
+    qsa(root, 'a[data-sb-load-more]').forEach(function (link) {
+      var off = on(link, 'click', function (event) {
+        var key = link.getAttribute('data-sb-load-more');
+        var grid = key ? qs(document, '[data-sb-load-grid="' + key.replace(/["\\]/g, '') + '"]') : null;
+        var href = link.getAttribute('href');
+        if (!grid || !href || !sameOriginUrl(href)) return;
+        event.preventDefault();
+        if (link.getAttribute('aria-busy') === 'true') return;
+        link.setAttribute('aria-busy', 'true');
+        fetch(href, { credentials: 'same-origin', headers: { Accept: 'text/html' } })
+          .then(function (res) { if (!res.ok) throw new Error('page ' + res.status); return res.text(); })
+          .then(function (html) {
+            var doc = new global.DOMParser().parseFromString(html, 'text/html');
+            var more = qs(doc, '[data-sb-load-grid="' + key.replace(/["\\]/g, '') + '"]');
+            if (!more) throw new Error('no grid');
+            Array.prototype.slice.call(more.children).forEach(function (card) { grid.appendChild(document.importNode(card, true)); });
+            var next = qs(doc, 'a[data-sb-load-more="' + key.replace(/["\\]/g, '') + '"]');
+            if (next) {
+              link.setAttribute('href', next.getAttribute('href'));
+              link.removeAttribute('aria-busy');
+            } else {
+              var wrap = link.closest('.sb-shop-more') || link;
+              wrap.parentNode.removeChild(wrap);
+            }
+          })
+          .catch(function () { global.location.assign(href); });
+      });
+      mount(off);
+    });
+  }
+
+  function sameOriginUrl(url) {
+    try { return new URL(url, global.location.href).origin === global.location.origin; } catch (e) { return false; }
   }
 
   /**
@@ -1821,8 +1935,9 @@
    * {"v": [[id, [value per picker], in stock (1|0), price text], ...]}; each `select[data-sb-variant-attr]` picks one
    * value. A value that leads to no combination in stock (with the other choices) is disabled, the chosen combination's
    * id goes in `input[name=variant_id]`, its price in `[data-sb-variant-price]`, and the submit button stays off until
-   * the choice names a combination in stock. Without this script the form still posts the chosen values and the server
-   * resolves them.
+   * the choice names a combination in stock. A row's fifth entry, when there is one, is that combination's photo: it
+   * takes the place of the main picture of the product's gallery (`[data-sb-shop-gallery="<product id>"]`) until the
+   * choice changes or is reset. Without this script the form still posts the chosen values and the server resolves them.
    */
   function initVariants(root) {
     var forms = qsa(root, 'form[data-sb-variants]');
@@ -1837,6 +1952,19 @@
       var button = qs(form, '[data-sb-variant-submit]');
       var price = qs(form, '[data-sb-variant-price]');
       var reset = qs(form, '[data-sb-variant-reset]');
+      var pid = qs(form, 'input[name="product_id"]');
+      var gallery = pid ? qs(document, '[data-sb-shop-gallery="' + String(pid.value).replace(/[^0-9]/g, '') + '"]') : null;
+      var mainImg = gallery ? qs(gallery, '.sb-shop-gallery__main img') : null;
+      var firstSrc = mainImg ? mainImg.getAttribute('src') : '';
+      var firstSrcset = mainImg ? mainImg.getAttribute('srcset') : null;
+      function showPhoto(src) {
+        if (!mainImg) return;
+        var next = src || firstSrc;
+        if (mainImg.getAttribute('src') === next) return;
+        if (src) mainImg.removeAttribute('srcset'); else if (firstSrcset) mainImg.setAttribute('srcset', firstSrcset);
+        mainImg.setAttribute('src', next);
+        gallery.setAttribute('data-sb-variant-photo', src ? 'on' : 'off');
+      }
       function fits(row, values) {
         for (var i = 0; i < values.length; i++) {
           if (values[i] !== '' && row[1][i] !== values[i]) return false;
@@ -1859,6 +1987,14 @@
         idField.value = ok ? String(match[0]) : '';
         if (button) button.disabled = !ok;
         if (price) { price.textContent = match ? String(match[3]) : ''; price.hidden = !match; }
+        // The photo of the chosen combination, or of the only one left that fits what is chosen so far.
+        var photo = match && match[4] ? match[4] : '';
+        if (!photo && values.join('') !== '') {
+          var fitting = rows.filter(function (r) { return fits(r, values) && r[4]; });
+          var same = fitting.length && fitting.every(function (r) { return r[4] === fitting[0][4]; });
+          if (same) photo = fitting[0][4];
+        }
+        showPhoto(photo);
         if (reset) reset.hidden = values.join('') === '';
         form.setAttribute('data-sb-variant-state', ok ? 'ready' : (match ? 'sold-out' : 'choose'));
       }
@@ -1869,10 +2005,22 @@
           update();
         }));
       }
+      // A link that names a choice (`?option=Maple Bacon`, from a Product Options widget) makes it.
+      try {
+        var wanted = global.URLSearchParams ? new URLSearchParams(global.location.search).get('option') : null;
+        if (wanted) {
+          selects.some(function (sel) {
+            var hit = Array.prototype.some.call(sel.options, function (o) { return o.value === wanted && !o.disabled; });
+            if (hit) sel.value = wanted;
+            return hit;
+          });
+        }
+      } catch (e) { /* a malformed address: nothing chosen */ }
       update();
       mount(function () {
         off.forEach(function (un) { un(); });
         if (button) button.disabled = false;
+        showPhoto('');
         form.removeAttribute('data-sb-variant-state');
       });
     });
@@ -2260,6 +2408,7 @@
     ['forms', initForms],
     ['fragments', initFragments],
     ['variants', initVariants],
+    ['shopGrid', initShopGrid],
     ['currentLinks', initCurrentLinks],
     ['navToggles', initNavToggles],
     ['megaMenus', initMegaMenus],

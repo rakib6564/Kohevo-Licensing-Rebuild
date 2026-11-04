@@ -53,14 +53,6 @@ if (is_file($file)) {
     return false;
 }
 
-// Legacy shop storefront routing
-if ($path === '/shop' || str_starts_with($path, '/shop/')) {
-    $_GET['_path'] = ltrim(substr($path, 5), '/');
-    $_SERVER['SCRIPT_FILENAME'] = __DIR__ . '/plugins/shop/storefront/router.php';
-    require __DIR__ . '/plugins/shop/storefront/router.php';
-    exit;
-}
-
 // Fallback to PublicRouter
 $_GET['_path'] = ltrim($path, '/');
 $_SERVER['SCRIPT_FILENAME'] = __DIR__ . '/public.php';

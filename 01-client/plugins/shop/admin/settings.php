@@ -1,8 +1,9 @@
 <?php
 /**
  * Shop — settings: delivery (flat shipping, free-shipping threshold, pickup), the countries checkout ships to, the
- * addresses of the shop's Studio pages and of a product page, the email that hears about new orders, and a button that
- * creates the Studio pages a shop needs (ShopStudioPages). Payment keys live in each payment gateway's settings.
+ * addresses of the shop's Studio pages and of a product page, the email that hears about new orders, the units of
+ * weight and size, the low-stock level and who hears about it, and a button that creates the Studio pages a shop
+ * needs (ShopStudioPages). Payment keys live in each payment gateway's settings.
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/ShopStoreAPI.php';
@@ -27,6 +28,32 @@ $slugOk = static fn(string $s): bool => (bool) preg_match('#^[a-z0-9-]+(/[a-z0-9
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify()) {
         $flash = ['type' => 'error', 'msg' => __('shop_err_security', 'Security check failed. Please reload the page.')];
+    } elseif (in_array($_POST['_action'] ?? '', ['guard', 'guard_resume'], true)) {
+        require_once dirname(__DIR__) . '/ShopGuard.php';
+        if ($_POST['_action'] === 'guard_resume') {
+            ShopGuard::resume();
+            AuditLog::record('shop.checkout_resumed', 'shop');
+            $_SESSION['shop_flash'] = ['type' => 'success', 'msg' => __('shop_guard_resumed', 'Online checkout is open again.')];
+        } else {
+            foreach (['guard_ip_10min', 'guard_ip_day', 'guard_email_hour', 'guard_pause_hour', 'guard_coupon_10min'] as $k) {
+                $v = trim((string) ($_POST[$k] ?? ''));
+                ShopStoreAPI::setSetting($k, preg_match('/^\d{1,5}$/', $v) ? (string) (int) $v : (string) ShopGuard::defaults()[$k]);
+            }
+            ShopStoreAPI::setSetting('guard_enabled', !empty($_POST['guard_enabled']) ? '1' : '0');
+            $site = trim((string) ($_POST['turnstile_site_key'] ?? ''));
+            ShopStoreAPI::setSetting('turnstile_site_key', preg_match('/^[0-9A-Za-z_-]{10,100}$/', $site) ? $site : '');
+            $msg = ['type' => 'success', 'msg' => __('shop_saved', 'Saved.')];
+            try {
+                if (!empty($_POST['turnstile_forget'])) ShopGuard::setTurnstileSecret('');
+                elseif (trim((string) ($_POST['turnstile_secret'] ?? '')) !== '') ShopGuard::setTurnstileSecret((string) $_POST['turnstile_secret']);
+            } catch (\RuntimeException $e) {
+                $msg = ['type' => 'error', 'msg' => $e->getMessage()];
+            }
+            AuditLog::record('shop.guard_saved', 'shop');
+            $_SESSION['shop_flash'] = $msg;
+        }
+        header('Location: ' . $self . '#checkout-protection');
+        exit;
     } elseif (($_POST['_action'] ?? '') === 'create_pages') {
         try {
             require_once dirname(__DIR__) . '/studio-widgets.php';
@@ -65,6 +92,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $notify = $in('notify_email');
         if ($notify !== '' && !filter_var($notify, FILTER_VALIDATE_EMAIL)) $errors['notify_email'] = __('shop_err_email', 'Enter a valid email address.');
+        $lowStock = $in('low_stock');
+        if ($lowStock !== '' && !preg_match('/^\d{1,6}$/', $lowStock)) $errors['low_stock'] = __('shop_err_whole_number', 'Enter a whole number, or leave it empty.');
+        $lowEmail = $in('low_stock_email');
+        if ($lowEmail !== '' && !filter_var($lowEmail, FILTER_VALIDATE_EMAIL)) $errors['low_stock_email'] = __('shop_err_email', 'Enter a valid email address.');
         $currency = strtoupper($in('currency'));
         if ($currency !== '' && !preg_match('/^[A-Z]{3}$/', $currency)) $errors['currency'] = __('shop_err_currency_code', 'Use a three-letter code such as EUR.');
         if (!$errors) {
@@ -76,6 +107,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ShopStoreAPI::setSetting('countries', $countries !== '' ? $countries : 'BE');
             ShopStoreAPI::setSetting('currency', $currency);
             ShopStoreAPI::setSetting('notify_email', $notify);
+            ShopStoreAPI::setSetting('weight_unit', in_array($in('weight_unit'), ShopStoreAPI::WEIGHT_UNITS, true) ? $in('weight_unit') : 'kg');
+            ShopStoreAPI::setSetting('dimension_unit', in_array($in('dimension_unit'), ShopStoreAPI::DIMENSION_UNITS, true) ? $in('dimension_unit') : 'cm');
+            ShopStoreAPI::setSetting('low_stock', $lowStock);
+            ShopStoreAPI::setSetting('low_stock_email', $lowEmail);
             foreach (['product_prefix', 'cart_page', 'checkout_page', 'thanks_page'] as $k) {
                 ShopStoreAPI::setSetting($k, strtolower(trim($in($k), '/')));
             }
@@ -120,10 +155,15 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php slate_edit_card_open(['icon' => 'truck', 'eyebrow' => __('shop_delivery', 'Delivery'), 'title' => __('shop_shipping_pickup', 'Shipping and pickup')]); ?>
         <?php $shipOn = $posted !== null ? !empty($posted['shipping_enabled']) : ShopStoreAPI::setting('shipping_enabled') !== '0';
               $pickOn = $posted !== null ? !empty($posted['pickup_enabled']) : ShopStoreAPI::setting('pickup_enabled') !== '0'; ?>
-        <div class="field"><label class="field-check"><input type="checkbox" name="shipping_enabled" value="1" <?= $shipOn ? 'checked' : '' ?>> <?= __('shop_offer_shipping', 'Ship orders (flat rate)') ?></label></div>
+        <div class="field"><label class="field-check"><input type="checkbox" name="shipping_enabled" value="1" <?= $shipOn ? 'checked' : '' ?>> <?= __('shop_offer_shipping_any', 'Ship orders') ?></label></div>
+        <?php if (ShopShipping::hasZones()): ?>
+            <div class="alert alert-info" role="status"><?= __('shop_zones_in_use', 'Shipping zones set the rates, so the flat rate and threshold below are not used.') ?> <a href="<?= e(plugin_url('shop', 'admin/shipping.php')) ?>"><?= __('shop_open_shipping', 'Open Shipping') ?></a></div>
+        <?php else: ?>
+            <p class="text-sm text-muted"><?= __('shop_flat_until_zones', 'One flat rate everywhere. For rates by place or weight, or live carrier rates, add zones in Shipping.') ?> <a href="<?= e(plugin_url('shop', 'admin/shipping.php')) ?>"><?= __('shop_open_shipping', 'Open Shipping') ?></a></p>
+        <?php endif; ?>
         <div class="field-row field-row-2">
             <div class="field">
-                <label class="field-label" for="shipping"><?= __('shop_flat_rate', 'Flat shipping rate') ?> <span class="text-muted text-xs">(<?= __('shop_incl_vat', 'incl. VAT') ?>)</span></label>
+                <label class="field-label" for="shipping"><?= __('shop_flat_rate', 'Flat shipping rate') ?> </label>
                 <input type="text" inputmode="decimal" id="shipping" name="shipping" value="<?= $val('shipping', $money('shipping_cents')) ?>">
                 <?= $err('shipping') ?>
             </div>
@@ -196,8 +236,81 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
     <?php slate_edit_card_close(); ?>
 
+    <?php slate_edit_card_open(['icon' => 'package', 'eyebrow' => __('shop_catalogue', 'Catalogue'), 'title' => __('shop_units_stock', 'Units and stock alerts')]); ?>
+        <div class="field-row field-row-2">
+            <div class="field">
+                <label class="field-label" for="weight_unit"><?= __('shop_weight_unit', 'Weight unit') ?></label>
+                <?php $wu = $posted !== null ? (string) ($posted['weight_unit'] ?? '') : ShopStoreAPI::weightUnit(); ?>
+                <select id="weight_unit" name="weight_unit"><?php foreach (ShopStoreAPI::WEIGHT_UNITS as $u): ?><option value="<?= $u ?>" <?= $wu === $u ? 'selected' : '' ?>><?= $u ?></option><?php endforeach; ?></select>
+            </div>
+            <div class="field">
+                <label class="field-label" for="dimension_unit"><?= __('shop_dimension_unit', 'Size unit') ?></label>
+                <?php $du = $posted !== null ? (string) ($posted['dimension_unit'] ?? '') : ShopStoreAPI::dimensionUnit(); ?>
+                <select id="dimension_unit" name="dimension_unit"><?php foreach (ShopStoreAPI::DIMENSION_UNITS as $u): ?><option value="<?= $u ?>" <?= $du === $u ? 'selected' : '' ?>><?= $u ?></option><?php endforeach; ?></select>
+            </div>
+        </div>
+        <div class="field-hint" style="margin:-4px 0 14px;"><?= __('shop_units_hint', 'Products keep the numbers you typed: changing a unit does not convert them.') ?></div>
+        <div class="field-row field-row-2">
+            <div class="field">
+                <label class="field-label" for="low_stock"><?= __('shop_low_stock_level', 'Low-stock alert at') ?></label>
+                <input type="number" id="low_stock" name="low_stock" min="0" step="1" value="<?= $val('low_stock', ShopStoreAPI::setting('low_stock')) ?>">
+                <div class="field-hint"><?= __('shop_low_stock_shop_hint', 'For products that track stock. A product can set its own level. Empty: no alerts.') ?></div>
+                <?= $err('low_stock') ?>
+            </div>
+            <div class="field">
+                <label class="field-label" for="low_stock_email"><?= __('shop_low_stock_email', 'Email low stock to') ?></label>
+                <input type="email" id="low_stock_email" name="low_stock_email" value="<?= $val('low_stock_email', ShopStoreAPI::setting('low_stock_email')) ?>" placeholder="<?= e(ShopStoreAPI::setting('notify_email')) ?>">
+                <div class="field-hint"><?= __('shop_low_stock_email_hint', 'Empty: the address that hears about new orders.') ?></div>
+                <?= $err('low_stock_email') ?>
+            </div>
+        </div>
+    <?php slate_edit_card_close(); ?>
+
     <?php slate_edit_actionbar(['buttons_html' => '<button type="submit" class="btn btn-primary">' . __('shop_save', 'Save changes') . '</button>']); ?>
 </form>
+
+<?php require_once dirname(__DIR__) . '/ShopGuard.php';
+$gOn = ShopGuard::enabled();
+$paused = ShopGuard::pausedUntil() > time();
+$hasSecret = ShopGuard::turnstileSecret() !== '';
+$gnum = static fn(string $k, string $label, string $hint): string => '<div class="field"><label class="field-label" for="' . $k . '">' . e($label) . '</label>'
+    . '<input type="number" id="' . $k . '" name="' . $k . '" min="0" max="99999" step="1" style="max-width:120px;" value="' . e(ShopStoreAPI::setting($k)) . '"><div class="field-hint">' . e($hint) . '</div></div>'; ?>
+<div id="checkout-protection"></div>
+<?php slate_edit_card_open(['icon' => 'shield', 'eyebrow' => __('shop_guard_eyebrow', 'Security'), 'title' => __('shop_guard_title', 'Checkout protection')]); ?>
+    <p class="text-sm"><?= e(__('shop_guard_intro', 'Stops card testers and bots from placing order after order: a hidden trap and a minimum time to fill the form, limits per visitor and per email, and a pause of online checkout when unpaid orders pile up (the notification address is told). Card numbers are typed on the payment page, never here.')) ?></p>
+    <?php if ($paused): ?>
+        <div class="alert alert-warning" role="status"><?= e(sprintf(__('shop_guard_paused_admin', 'Online checkout is paused until %s because many orders were left unpaid in the last hour.'), date('H:i', ShopGuard::pausedUntil()))) ?>
+            <form method="post" style="display:inline;margin-left:8px;"><?= csrf_field() ?><input type="hidden" name="_action" value="guard_resume"><button type="submit" class="btn btn-sm"><?= __('shop_guard_resume', 'Start checkout again') ?></button></form></div>
+    <?php endif; ?>
+    <form method="post" style="margin:0;">
+        <?= csrf_field() ?>
+        <input type="hidden" name="_action" value="guard">
+        <label class="field-check" style="margin-bottom:12px;"><input type="checkbox" name="guard_enabled" value="1" <?= $gOn ? 'checked' : '' ?>> <?= __('shop_guard_on', 'Protect checkout (recommended)') ?></label>
+        <div class="field-row field-row-3">
+            <?= $gnum('guard_ip_10min', __('shop_guard_ip_10min', 'Orders per visitor, 10 minutes'), __('shop_guard_zero_off', '0 switches this limit off.')) ?>
+            <?= $gnum('guard_ip_day', __('shop_guard_ip_day', 'Orders per visitor, a day'), __('shop_guard_zero_off', '0 switches this limit off.')) ?>
+            <?= $gnum('guard_email_hour', __('shop_guard_email_hour', 'Unpaid orders per email, an hour'), __('shop_guard_zero_off', '0 switches this limit off.')) ?>
+        </div>
+        <div class="field-row field-row-3">
+            <?= $gnum('guard_pause_hour', __('shop_guard_pause_hour', 'Pause checkout at unpaid orders, an hour'), __('shop_guard_pause_hint', 'For the whole shop. Set it above your busiest hour.')) ?>
+            <?= $gnum('guard_coupon_10min', __('shop_guard_coupon_10min', 'Discount codes tried per visitor, 10 minutes'), __('shop_guard_zero_off', '0 switches this limit off.')) ?>
+        </div>
+        <div class="field-row field-row-2">
+            <div class="field">
+                <label class="field-label" for="turnstile_site_key"><?= __('shop_turnstile_site', 'Cloudflare Turnstile site key (optional)') ?></label>
+                <input type="text" id="turnstile_site_key" name="turnstile_site_key" autocomplete="off" spellcheck="false" value="<?= e(ShopStoreAPI::setting('turnstile_site_key')) ?>">
+                <div class="field-hint"><?= __('shop_turnstile_hint', 'A free check from Cloudflare that most people never see and scripts cannot pass. Create a widget for this site in the Cloudflare dashboard (Turnstile) and paste both keys.') ?></div>
+            </div>
+            <div class="field">
+                <label class="field-label" for="turnstile_secret"><?= __('shop_turnstile_secret', 'Turnstile secret key') ?></label>
+                <input type="password" id="turnstile_secret" name="turnstile_secret" autocomplete="new-password" placeholder="<?= e($hasSecret ? __('shop_key_kept', 'Saved — leave empty to keep it') : '') ?>">
+                <?php if ($hasSecret): ?><label class="field-check"><input type="checkbox" name="turnstile_forget" value="1"> <?= __('shop_key_forget', 'Remove the saved key') ?></label><?php endif; ?>
+                <div class="field-hint"><?= __('shop_turnstile_secret_hint', 'Stored sealed. Turnstile is used only when both keys are set.') ?></div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary"><?= __('shop_guard_save', 'Save protection') ?></button>
+    </form>
+<?php slate_edit_card_close(); ?>
 
 <?php slate_edit_card_open(['icon' => 'layout', 'eyebrow' => 'Kohevo Studio', 'title' => __('shop_studio_pages', 'Shop pages in Studio')]); ?>
     <p class="text-sm"><?= __('shop_studio_pages_hint', 'Creates and publishes the Cart, Checkout and Order received pages, and the product page template (a Single template for Products), each laid out with the Shop widgets. Pages that already exist are left as they are. Add the Mini Cart widget to your header yourself.') ?></p>

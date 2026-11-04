@@ -1,0 +1,11 @@
+﻿ID,Type,SKU,Name,Published,Is featured?,Visibility in catalog,Short description,Description,Date sale price starts,Date sale price ends,Tax status,Tax class,In stock?,Stock,Low stock amount,Backorders allowed?,Sold individually?,Weight (oz),Length (in),Width (in),Height (in),Allow customer reviews?,Purchase note,Sale price,Regular price,Categories,Tags,Shipping class,Images,Download limit,Download expiry days,Parent,Grouped products,Upsells,Cross-sells,External URL,Button text,Position,Attribute 1 name,Attribute 1 value(s),Attribute 1 visible,Attribute 1 global,Attribute 2 name,Attribute 2 value(s),Attribute 2 visible,Attribute 2 global,Meta: _custom
+9001,variable,TST-BRT,Test Brittle <b>Over 3 flavours</b>,1,1,visible,<p>Hand-made test brittle.</p>,<p>Line one.</p>\n<p>Line &amp; two.</p>,,,,,1,,,,,16,12,7,3,,,,,Test Sweets > Brittles,"Gift, Crunchy",,"https://shop.example.test/img/brittle.jpg, https://shop.example.test/img/brittle-2.jpg",,,,,id:9003,TST-TOF,,,,Flavour,"Regular, Maple\, Bacon, Thai Ginger",1,0,Ingredients,"Peanuts, Sugar",1,0,
+9011,variation,TST-BRT-REG,Test Brittle - Regular,1,,,,,,,,,1,12,,,,16,,,,,,25,29,,,,,,,id:9001,,,,,,,Flavour,Regular,,,,,,,
+9012,variation,,"Test Brittle - Maple, Bacon",1,,,,,,,,,1,,,,,8,8,5,2,,,,32,,,,https://shop.example.test/img/maple.jpg,,,TST-BRT,,,,,,,Flavour,"Maple\, Bacon",,,,,,,
+9013,variation,,Test Brittle - Thai Ginger,1,,,,,,,,,1,,,,,,,,,,,,,,,,,,,id:9001,,,,,,,Flavour,Thai Ginger,,,,,,,
+9002,simple,TST-TOF,Test Toffee,1,,,,,2031-01-01,2031-01-31,,,1,4,2,,,8,,,,,Keep cool.,24.95,29.95,Test Sweets,Gift,,https://shop.example.test/img/toffee.jpg,,,,,,,,,,,,,,,,,,
+9003,"simple, virtual",TST-CLS,Test Cooking Class,0,,,,,,,,,1,,,,,,,,,,,,85,Classes,,,,,,,,,,,,,,,,,,,,,
+9004,"simple, downloadable, virtual",TST-PDF,Test Recipe Book,1,,,,,,,,,1,,,,,,,,,,,,12,Books,,,,3,30,,,,,,,,,,,,,,,,
+9005,grouped,,Test Gift Set,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,id:9002,,,,,,,,,,,,,,
+9006,simple,TST-HID,Test Hidden,1,,hidden,,,,,,,,,,,,,,,,,,,5,,,,,,,,,,,,,,,,,,,,,,
+9007,variation,,Lost variation,1,,,,,,,,,,,,,,,,,,,,,5,,,,,,,id:8888,,,,,,,Flavour,Regular,,,,,,,

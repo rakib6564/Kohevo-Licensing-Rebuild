@@ -34,7 +34,10 @@ interface PluginSingleInterface
     /**
      * One published item by its slug, or null.
      *
-     * @return ?array{id: int, slug: string, title: string, description?: string, image?: string, data?: array<string, mixed>}
+     * `seo_title` / `seo_description` replace the page title and description when set; `schema` is a list of schema.org
+     * JSON-LD objects (a Product, a BreadcrumbList) Studio adds to the page's structured data (Render\Seo\StructuredData).
+     *
+     * @return ?array{id: int, slug: string, title: string, description?: string, image?: string, seo_title?: string, seo_description?: string, schema?: list<array<string, mixed>>, data?: array<string, mixed>}
      */
     public function find(int $tenantId, string $slug): ?array;
 

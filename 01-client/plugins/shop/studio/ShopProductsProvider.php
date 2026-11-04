@@ -19,7 +19,10 @@ use Slate\Tenancy\TenantContext;
 
 final class ShopProductsProvider implements PublicDataProviderInterface, ParamChoicesProviderInterface
 {
-    public const ORDERS = ['menu', 'newest', 'price_asc', 'price_desc', 'title'];
+    public const ORDERS = ['menu', 'newest', 'price_asc', 'price_desc', 'title', 'random'];
+
+    /** What a grid lists: every product, the featured ones, or (on a product's page) its upsells, cross-sells or related products. */
+    public const SOURCES = ['all', 'featured', 'upsell', 'cross_sell', 'related'];
 
     public function key(): string
     {
