@@ -51,8 +51,14 @@ class Booking extends Plugin {
         Hook::addFilter('i18n_lang_paths',           [$this, 'addLangPath']);
         Hook::addAction('frequent_cron',             [$this, 'sendReminders']);
 
-        // React to Stripe payments routed through the stripe-payment plugin.
-        Hook::addAction('stripe_webhook_event', [$this, 'onStripeEvent']);
+        // React to payments from any gateway, through the shared payment layer.
+        // Once per process: Hook keeps every registration, and a second boot
+        // (tests, or a re-boot within one request) would handle each event twice.
+        static $paymentsWired = false;
+        if (!$paymentsWired) {
+            $paymentsWired = true;
+            Hook::addAction('payment_event', [$this, 'onPaymentEvent']);
+        }
 
         // Google Calendar 2-way sync — push on every appointment change,
         // pull (+ watch-channel renewal + failed-push retries) on every
@@ -130,19 +136,19 @@ class Booking extends Plugin {
         }
     }
 
-    /** Confirm a pending appointment when its Stripe payment succeeds. */
-    public function onStripeEvent(array $event): void {
+    /** Confirm a pending appointment when its payment succeeds, whichever gateway took it. */
+    public function onPaymentEvent(PaymentEvent $event): void {
         // Guard the EFFECT, not the webhook receipt (07 §2) — the HTTP 200
-        // ack to Stripe happens in the webhook controller regardless of
+        // ack to the gateway happens in its webhook controller regardless of
         // what listeners do; skipping this listener's side effect here
         // just means an unentitled installation's booking does not get
-        // confirmed, avoiding a Stripe retry storm that acking-then-
-        // rejecting would otherwise cause.
+        // confirmed, avoiding a retry storm that acking-then-rejecting
+        // would otherwise cause.
         if (!ModuleGuard::allows('booking')) return;
         try {
-            BookingAPI::handleStripeEvent($event);
+            BookingAPI::handlePaymentEvent($event);
         } catch (\Throwable $e) {
-            slate_log('Booking: stripe event handling failed: ' . $e->getMessage(), 'error');
+            slate_log('Booking: payment event handling failed: ' . $e->getMessage(), 'error');
         }
     }
 

@@ -381,4 +381,5 @@ return [
     'mb_err_subscription_not_found' => 'Abonnement introuvable.',
     'mb_err_enter_a_non_zero_amount' => 'Saisissez un montant différent de zéro.',
     'mb_err_customer_not_found' => 'Client introuvable.',
+    'membership_pay_with' => 'Payer avec %s',
 ];

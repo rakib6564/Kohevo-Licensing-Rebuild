@@ -1322,12 +1322,14 @@ class BookingAPI {
     }
 
     /**
-     * Create a Stripe checkout session for a pending appointment's amount due
-     * (deposit for deposit-mode, otherwise the full total). Returns the hosted
-     * checkout URL, or ['ok'=>false,'error'=>…].
+     * Start a hosted checkout for a pending appointment's amount due (deposit
+     * for deposit-mode, otherwise the full total) at the chosen gateway, or
+     * the first one offered for Booking. Returns ['ok'=>true,'url'=>…] or
+     * ['ok'=>false,'error'=>…].
      */
-    public static function startPayment(array $appt): array {
-        if (!class_exists('StripePaymentAPI') || !StripePaymentAPI::isConfigured()) {
+    public static function startPayment(array $appt, ?string $gateway = null): array {
+        $gw = class_exists('Payments') ? Payments::choose('booking', $gateway) : null;
+        if ($gw === null) {
             return ['ok' => false, 'error' => __('bk_err_online_payment_is_not_available_right_now', 'Online payment is not available right now.')];
         }
         $due = (int)$appt['deposit_cents'] > 0 ? (int)$appt['deposit_cents'] : ((int)$appt['price_cents'] + (int)$appt['tax_cents']);
@@ -1336,21 +1338,27 @@ class BookingAPI {
 
         $service  = self::getService((int)$appt['service_id']);
         $currency = strtolower((string)($service['currency'] ?? 'usd'));
-        $base = SLATE_URL . '/book/pay';
         try {
-            $sess = StripePaymentAPI::createCheckout(
+            $start = Payments::startCheckout($gw->id(), new CheckoutRequest(
                 [['name' => ($service['name'] ?? 'Appointment') . ' (' . $appt['ref'] . ')', 'amount_cents' => $due]],
                 [
+                    'source_plugin'  => 'booking',
+                    'source_id'      => (string)$appt['id'],
                     'currency'       => $currency,
                     'customer_email' => (string)$appt['customer_email'],
-                    'success_url'    => $base . '/done?token=' . rawurlencode((string)$appt['manage_token']) . '&session_id={CHECKOUT_SESSION_ID}',
+                    'success_url'    => SLATE_URL . '/book/pay/done?token=' . rawurlencode((string)$appt['manage_token'])
+                                        . '&gw=' . rawurlencode($gw->id()) . '&ref={PAYMENT_REF}',
                     'cancel_url'     => SLATE_URL . '/book/manage?token=' . rawurlencode((string)$appt['manage_token']),
                     'metadata'       => ['booking_appt_id' => (string)$appt['id'], 'booking_token' => (string)$appt['manage_token']],
                 ]
-            );
-            return ['ok' => true, 'url' => $sess['url']];
+            ));
+            if ($gw->id() === 'stripe') {
+                Database::update('booking_appointments', ['stripe_session_id' => $start->ref],
+                    'id = ? AND tenant_id = ?', [(int)$appt['id'], current_tenant_id()]);
+            }
+            return ['ok' => true, 'url' => $start->redirectUrl];
         } catch (\Throwable $e) {
-            slate_log('Booking: startPayment failed: ' . $e->getMessage(), 'error');
+            slate_log('Booking: starting payment with ' . $gw->id() . ' failed: ' . $e->getMessage(), 'error');
             return ['ok' => false, 'error' => __('bk_err_could_not_start_payment', 'Could not start payment.')];
         }
     }
@@ -1360,7 +1368,7 @@ class BookingAPI {
      * payment, redeems coupon/gift card, records a charge row, and emails the
      * customer + staff. $amountCents is what was actually collected.
      */
-    public static function markPaid(int $apptId, int $amountCents, string $stripeRef = ''): bool {
+    public static function markPaid(int $apptId, int $amountCents, string $paymentRef = ''): bool {
         $tid = current_tenant_id();
         $a = Database::row(
             "SELECT a.*, s.name AS service_name, s.name_fr AS service_name_fr, s.confirm_subject, s.confirm_body,
@@ -1374,22 +1382,32 @@ class BookingAPI {
         if (!$a) return false;
         if (($a['payment_status'] ?? '') === 'paid') return true; // already done
 
-        $deposit = (int)$a['deposit_cents'];
         $total   = (int)$a['price_cents'] + (int)$a['tax_cents'];
-        $paid    = (int)$a['paid_cents'] + max(0, $amountCents);
-        $status  = $paid >= $total ? 'paid' : ($paid > 0 ? 'deposit_paid' : 'pending');
+        $amount  = max(0, $amountCents);
+        $ref     = mb_substr($paymentRef, 0, 120);
 
-        Database::update('booking_appointments', [
-            'status'         => 'confirmed',
-            'payment_status' => $status,
-            'paid_cents'     => $paid,
-            'payment_ref'    => $stripeRef !== '' ? mb_substr($stripeRef, 0, 120) : ($a['payment_ref'] ?? null),
-        ], 'id = ? AND tenant_id = ?', [$apptId, $tid]);
+        // One statement, counted once per payment: a reload of the return
+        // page or the webhook arriving alongside it (the same payment ref)
+        // changes nothing, while a deposit and its balance (two refs) both
+        // count. payment_status is set before paid_cents on purpose: MySQL
+        // applies SET left to right.
+        $won = Database::query(
+            "UPDATE booking_appointments
+                SET status = 'confirmed',
+                    payment_status = CASE WHEN paid_cents + ? >= ? THEN 'paid' WHEN paid_cents + ? > 0 THEN 'deposit_paid' ELSE 'pending' END,
+                    paid_cents = paid_cents + ?,
+                    payment_ref = COALESCE(NULLIF(?, ''), payment_ref)
+              WHERE tenant_id = ? AND id = ? AND payment_status <> 'paid'
+                AND (? = '' OR payment_ref IS NULL OR payment_ref <> ?)",
+            [$amount, $total, $amount, $amount, $ref, $tid, $apptId, $ref, $ref])->rowCount();
+        if ($won !== 1) return true;   // this payment was already counted
 
-        if (!empty($a['coupon_code']))    self::redeemCoupon((string)$a['coupon_code']);
-        if (!empty($a['gift_card_code'])) self::redeemGiftCard((string)$a['gift_card_code'], (int)($a['gift_applied_cents'] ?? 0));
+        // Coupons and gift cards are used once, on the booking's first payment.
+        $firstPayment = !in_array(($a['payment_status'] ?? ''), ['deposit_paid', 'paid'], true);
+        if ($firstPayment && !empty($a['coupon_code']))    self::redeemCoupon((string)$a['coupon_code']);
+        if ($firstPayment && !empty($a['gift_card_code'])) self::redeemGiftCard((string)$a['gift_card_code'], (int)($a['gift_applied_cents'] ?? 0));
 
-        AuditLog::record('booking.paid', (string)$apptId, ['amount' => $amountCents, 'ref' => $stripeRef]);
+        AuditLog::record('booking.paid', (string)$apptId, ['amount' => $amountCents, 'ref' => $paymentRef]);
         Hook::doAction('booking_paid', $apptId, $amountCents);
 
         // Now that the slot is paid+held, send the confirmation + staff notice.
@@ -1421,80 +1439,49 @@ class BookingAPI {
     }
 
     /**
-     * Webhook entry point (fired by the stripe-payment plugin). Confirms a
-     * pending booking when its checkout session completes. Idempotent — the
-     * stripe plugin de-dupes charges and markPaid() no-ops once paid.
+     * The `payment_event` listener: confirms a pending booking when its
+     * payment succeeds, from any gateway — a hosted checkout, or Stripe's
+     * inline card form. Idempotent: the payment layer writes the ledger row
+     * once and markPaid() no-ops once paid.
      *
-     * Also handles the failure/expiry side of the same flow. This matters
-     * most for async payment methods like Bancontact: the customer is sent
-     * to their bank and back, so a decline doesn't happen on our page at
-     * all — it only ever shows up as a webhook. Before this, nothing
-     * subscribed to those event types, so a declined Bancontact payment
-     * left the appointment on 'pending' forever with no record of what
-     * happened and nothing telling the customer or staff.
+     * Also handles the failure/expiry side. This matters most for async
+     * payment methods like Bancontact: the customer is sent to their bank
+     * and back, so a decline doesn't happen on our page at all — it only
+     * ever shows up as a webhook, and the appointment must not sit on
+     * 'pending' forever with no record of what happened.
+     *
+     * A Stripe checkout started before the payment layer carries only
+     * metadata.booking_appt_id (no source_plugin); it is still recognised.
      */
-    public static function handleStripeEvent(array $event): void {
-        $type = (string)($event['type'] ?? '');
-        $isSession = $type === 'checkout.session.completed' || $type === 'checkout.session.async_payment_succeeded';
-        // payment_intent.succeeded covers the embedded Payment Element flow
-        // used by the inline booking widget (no checkout session involved).
-        $isIntent  = $type === 'payment_intent.succeeded';
-        // Failure/expiry: payment_intent.payment_failed covers a declined
-        // card or embedded-flow attempt; checkout.session.async_payment_failed
-        // and checkout.session.expired cover a Bancontact (or other
-        // redirect-based) session that came back declined or was never
-        // completed before Stripe's checkout session timed out.
-        $isFailure = $type === 'payment_intent.payment_failed'
-                  || $type === 'checkout.session.async_payment_failed'
-                  || $type === 'checkout.session.expired';
-        if (!$isSession && !$isIntent && !$isFailure) {
-            return;
-        }
-        $obj  = $event['data']['object'] ?? [];
-        if (!is_array($obj)) return;
-        $meta   = is_array($obj['metadata'] ?? null) ? $obj['metadata'] : [];
-        $apptId = (int)($meta['booking_appt_id'] ?? 0);
-        if ($apptId <= 0) return; // not a booking payment
-
-        if ($isFailure) {
-            self::handleFailedPayment($apptId, $obj, $type);
-            return;
-        }
-
-        if ($isIntent) {
-            // PaymentIntent object: amount_received + the PI id itself.
-            $amount = (int)($obj['amount_received'] ?? $obj['amount'] ?? 0);
-            $piId   = (string)($obj['id'] ?? '');
-            $sessId = '';
-            $email  = (string)($obj['receipt_email'] ?? '');
+    public static function handlePaymentEvent(PaymentEvent $event): void {
+        if ($event->isFor('booking')) {
+            // An inline PaymentIntent made before source_id was added names
+            // its appointment only in booking_appt_id.
+            $apptId = (int)($event->sourceId !== '' ? $event->sourceId : ($event->metadata['booking_appt_id'] ?? 0));
+        } elseif ($event->sourcePlugin === '' && $event->gateway === 'stripe') {
+            $apptId = (int)($event->metadata['booking_appt_id'] ?? 0);
         } else {
-            $amount = (int)($obj['amount_total'] ?? 0);
-            $piId   = (string)($obj['payment_intent'] ?? '');
-            $sessId = (string)($obj['id'] ?? '');
-            $email  = (string)($obj['customer_details']['email'] ?? ($obj['customer_email'] ?? ''));
+            return;
         }
+        if ($apptId <= 0) return;
 
-        $chargeId = null;
-        if (class_exists('StripePaymentAPI')) {
-            $chargeId = StripePaymentAPI::recordCharge([
-                'source_plugin'            => 'booking',
-                'source_id'                => (string)$apptId,
-                'stripe_session_id'        => $sessId,
-                'stripe_payment_intent_id' => $piId,
-                'customer_email'           => $email,
-                'amount_cents'             => $amount,
-                'currency'                 => strtoupper((string)($obj['currency'] ?? 'USD')),
-                'status'                   => 'succeeded',
-            ]);
+        if ($event->type === PaymentEvent::FAILED) {
+            self::handleFailedPayment($apptId, $event);
+            return;
         }
-        if ($chargeId) {
-            try {
-                Database::update('booking_appointments',
-                    ['charge_id' => $chargeId, 'stripe_session_id' => $sessId],
-                    'id = ?', [$apptId]);
-            } catch (\Throwable $e) { /* columns guaranteed by migration */ }
+        if (!$event->isPaid()) return;
+
+        if ($event->chargeId) {
+            // The first payment's charge is the one refunds go against; a
+            // second payment (a balance, or a duplicate) never replaces it.
+            Database::query(
+                "UPDATE booking_appointments SET charge_id = ?,
+                        stripe_session_id = COALESCE(stripe_session_id, ?)
+                  WHERE tenant_id = ? AND id = ? AND charge_id IS NULL",
+                [$event->chargeId, $event->gateway === 'stripe' && str_starts_with($event->ref, 'cs_') ? $event->ref : null,
+                 current_tenant_id(), $apptId]);
         }
-        self::markPaid($apptId, $amount, $piId);
+        self::markPaid($apptId, $event->amountCents, $event->txnId !== '' ? $event->txnId : $event->ref);
     }
 
     /**
@@ -1508,37 +1495,39 @@ class BookingAPI {
      * appointment has moved past 'awaiting payment' (paid, cancelled, etc.)
      * so it can never clobber a later, better outcome.
      */
-    private static function handleFailedPayment(int $apptId, array $obj, string $eventType): void {
+    private static function handleFailedPayment(int $apptId, PaymentEvent $event): void {
         $a = Database::row(
             "SELECT a.*, s.name AS service_name, s.name_fr AS service_name_fr, p.name AS provider_name, p.email AS provider_email
                FROM booking_appointments a
                JOIN booking_services  s ON s.id = a.service_id  AND s.tenant_id = a.tenant_id
                JOIN booking_providers p ON p.id = a.provider_id AND p.tenant_id = a.tenant_id
-              WHERE a.id = ?",
-            [$apptId]
+              WHERE a.tenant_id = ? AND a.id = ?",
+            [current_tenant_id(), $apptId]
         );
         if (!$a) return;
         if ($a['status'] !== 'pending') return; // already resolved one way or another
         if (!in_array(($a['payment_status'] ?? ''), ['pending', 'none', 'failed'], true)) return;
 
-        $reason = self::stripeFailureReason($obj, $eventType);
-        $isSessionObj = strpos($eventType, 'checkout.session') === 0;
+        $reason = $event->failureMessage !== '' ? $event->failureMessage
+                : __('booking_email_payment_declined', 'Payment was declined.');
+        $eventType = $event->gateway . '.payment_failed';
 
-        if (class_exists('StripePaymentAPI')) {
-            StripePaymentAPI::recordCharge([
-                'source_plugin'            => 'booking',
-                'source_id'                => (string)$apptId,
-                'stripe_session_id'        => $isSessionObj ? (string)($obj['id'] ?? '') : '',
-                'stripe_payment_intent_id' => $isSessionObj ? (string)($obj['payment_intent'] ?? '') : (string)($obj['id'] ?? ''),
-                'customer_email'           => (string)($obj['receipt_email'] ?? ($obj['customer_details']['email'] ?? ($obj['customer_email'] ?? ''))),
-                'amount_cents'             => (int)($obj['amount'] ?? $obj['amount_total'] ?? 0),
-                'currency'                 => strtoupper((string)($obj['currency'] ?? 'USD')),
-                'status'                   => 'failed',
-                'meta'                     => ['reason' => $reason, 'event_type' => $eventType],
-            ]);
-        }
+        // Keep a trace of the attempt in the ledger, as a failed row.
+        \Slate\Services\Payments\PaymentLedger::record([
+            'gateway'        => $event->gateway,
+            'mode'           => Payments::gateway($event->gateway)?->mode() ?? 'test',
+            'source_plugin'  => 'booking',
+            'source_id'      => (string)$apptId,
+            'txn_id'         => $event->txnId,
+            'ref'            => $event->ref,
+            'customer_email' => $event->customerEmail,
+            'amount_cents'   => $event->amountCents,
+            'currency'       => $event->currency,
+            'status'         => 'failed',
+            'meta'           => ['reason' => $reason],
+        ]);
 
-        Database::update('booking_appointments', ['payment_status' => 'failed'], 'id = ?', [$apptId]);
+        Database::update('booking_appointments', ['payment_status' => 'failed'], 'id = ? AND tenant_id = ?', [$apptId, current_tenant_id()]);
         AuditLog::record('booking.payment_failed', (string)$apptId, ['reason' => $reason, 'event' => $eventType]);
         Hook::doAction('booking_payment_failed', $apptId, $reason);
 
@@ -1567,18 +1556,6 @@ class BookingAPI {
         }
     }
 
-    /** Best-effort human-readable reason for a Stripe payment failure event. */
-    private static function stripeFailureReason(array $obj, string $eventType): string {
-        if ($eventType === 'checkout.session.expired') {
-            return __('booking_email_payment_session_expired', 'The payment session expired before the payment was completed.');
-        }
-        $lastErr = $obj['last_payment_error']['message'] ?? null;
-        if (is_string($lastErr) && $lastErr !== '') return $lastErr; // Stripe's own message, passed through as-is
-        $declineCode = $obj['last_payment_error']['decline_code'] ?? null;
-        if (is_string($declineCode) && $declineCode !== '') return sprintf(__('booking_email_payment_declined_code', 'Declined (%s).'), $declineCode);
-        return __('booking_email_payment_declined', 'Payment was declined.');
-    }
-
     /** Email the customer that their payment attempt didn't go through. */
     public static function sendPaymentFailedNotice(array $a, string $reason = ''): bool {
         $manageUrl = defined('SLATE_URL') && !empty($a['manage_token'])
@@ -1598,17 +1575,21 @@ class BookingAPI {
     }
 
     /**
-     * Refund a paid appointment via the Stripe plugin's recorded charge.
+     * Refund a paid appointment through the gateway that took its charge.
      * Returns ['ok'=>bool, 'error'=>?string].
      */
     public static function refundAppointment(int $apptId, ?int $amountCents = null): array {
-        if (!class_exists('StripePaymentAPI')) return ['ok' => false, 'error' => __('bk_err_stripe_plugin_not_active', 'Stripe plugin not active.')];
+        if (!class_exists('Payments')) return ['ok' => false, 'error' => __('bk_err_no_payment_gateway', 'No payment gateway is active.')];
         $tid = current_tenant_id();
         $a = Database::row("SELECT * FROM booking_appointments WHERE id = ? AND tenant_id = ?", [$apptId, $tid]);
         if (!$a) return ['ok' => false, 'error' => __('bk_err_appointment_not_found', 'Appointment not found.')];
         if (empty($a['charge_id'])) return ['ok' => false, 'error' => __('bk_err_no_recorded_charge_to_refund', 'No recorded charge to refund.')];
 
-        $res = StripePaymentAPI::refundCharge((int)$a['charge_id'], $amountCents);
+        // Keyed on what the charge had refunded before, so a retry of this
+        // refund replays it, while a second refund of the same amount is new.
+        $charge = Payments::getCharge((int)$a['charge_id']);
+        $res = Payments::refundCharge((int)$a['charge_id'], $amountCents,
+            'booking-refund-' . $apptId . '-' . (int)($charge['refunded_cents'] ?? 0) . '-' . ($amountCents ?? 'all'));
         if (empty($res['ok'])) return ['ok' => false, 'error' => $res['error'] ?? 'Refund failed.'];
 
         $refunded = $amountCents ?? (int)$a['paid_cents'];

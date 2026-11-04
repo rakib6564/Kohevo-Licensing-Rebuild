@@ -89,7 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'buy') {
             $planId = (int)($_POST['plan_id'] ?? 0);
-            $res = MembershipAPI::purchase($cid, $planId, !empty($_POST['add_insurance']));
+            $res = MembershipAPI::purchase($cid, $planId, !empty($_POST['add_insurance']),
+                isset($_POST['gateway']) ? (string)$_POST['gateway'] : null);
             if (!empty($res['ok']) && !empty($res['url'])) { header('Location: ' . $res['url']); exit; }
             if (!empty($res['ok']) && !empty($res['free'])) {
                 membership_maybe_return($cid);
@@ -194,17 +195,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ── Stripe return: verify the session, activate if the webhook hasn't yet ──
+// ── Payment return: confirm with the gateway, activate if the webhook hasn't yet ──
+// The ref must be this subscription's own checkout, and the subscription the
+// signed-in customer's. (`session_id=` is the same for a Stripe checkout
+// started before the payment layer.)
 if ($view === 'return') {
     $subId   = (int)($_GET['sub'] ?? 0);
-    $session = (string)($_GET['session_id'] ?? '');
+    $ref     = (string)($_GET['ref'] ?? ($_GET['session_id'] ?? ''));
+    $gateway = (string)($_GET['gw'] ?? 'stripe');
     $sub     = MembershipAPI::subscription($subId);
     if ($sub && (int)$sub['customer_id'] === $cid) {
-        if (($sub['status'] ?? '') !== 'active' && $session !== '' && class_exists('StripePaymentAPI')) {
-            $s = StripePaymentAPI::getSession($session);
-            if ($s && ($s['payment_status'] ?? '') === 'paid') {
-                MembershipAPI::activateSubscription($subId, ['amount_cents' => (int)($s['amount_total'] ?? $sub['amount_cents'])]);
-            }
+        $expected = (string)(($sub['payment_ref'] ?? '') ?: ($sub['stripe_session_id'] ?? ''));
+        if (($sub['status'] ?? '') !== 'active' && $ref !== '' && $expected !== '' && hash_equals($expected, $ref)
+            && $gateway === (string)(($sub['payment_gateway'] ?? '') ?: 'stripe') && class_exists('Payments')) {
+            // A paid checkout fires payment_event, whose listener activates it.
+            Payments::confirmReturn($gateway, $ref, 'membership', (string)$subId);
         }
         $sub   = MembershipAPI::subscription($subId);
         $active = $sub && $sub['status'] === 'active';

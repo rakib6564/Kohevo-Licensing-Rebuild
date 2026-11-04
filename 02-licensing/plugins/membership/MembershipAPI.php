@@ -7,7 +7,7 @@
  * the active-membership gate without knowing anything about our tables.
  *
  * Identity is core `customers`; everything here hangs off `customer_id`.
- * Payment money lives in the shared `stripepayment_charges` ledger.
+ * Payment money lives in the shared payments ledger (Payments; table `stripepayment_charges`).
  *
  * Phase 1 scope: schema self-heal, plan reads, subscription status reads,
  * profile/wallet provisioning, and i18n-aware formatting helpers. Purchase /
@@ -51,6 +51,12 @@ class MembershipAPI {
             'INT UNSIGNED NOT NULL DEFAULT 0 AFTER insurance_included');
         self::ensureColumn('membership_plans', 'session_quota',
             'INT UNSIGNED NOT NULL DEFAULT 0 AFTER duration_days');
+        // The gateway that took the payment and its checkout reference (any
+        // gateway; stripe_session_id stays for Stripe and older rows).
+        self::ensureColumn('membership_subscriptions', 'payment_gateway',
+            'VARCHAR(32) NULL AFTER stripe_session_id');
+        self::ensureColumn('membership_subscriptions', 'payment_ref',
+            'VARCHAR(255) NULL AFTER payment_gateway');
 
         // One-time backfill: legacy requires_insurance=1 → insurance_mode='required'.
         try {
@@ -696,18 +702,19 @@ class MembershipAPI {
         return [date($fmt, $startTs), date($fmt, $expires), date($fmt, $grcUntil)];
     }
 
-    // ── Purchase (online, via Stripe) ────────────────────────────────────
+    // ── Purchase (online, via the shared payment layer) ────────────────────────────────────
 
     /**
      * Begin an online purchase of a plan for a customer. Creates a pending
-     * subscription, opens a Stripe Checkout session, and returns its URL.
+     * subscription, opens a checkout at the chosen gateway (or the first one
+     * offered for Membership), and returns its URL.
      *
-     * Free plans (price 0) are activated immediately with no Stripe round-trip.
+     * Free plans (price 0) are activated immediately with no payment round-trip.
      *
      * Returns ['ok'=>true,'url'=>…]  or  ['ok'=>true,'free'=>true,'sub_id'=>…]
      *      or ['ok'=>false,'error'=>…].
      */
-    public static function purchase(int $customerId, int $planId, bool $addInsurance = false): array {
+    public static function purchase(int $customerId, int $planId, bool $addInsurance = false, ?string $gateway = null): array {
         self::ensureSchema();
         $tid  = current_tenant_id();
         $plan = self::plan($planId);
@@ -732,7 +739,8 @@ class MembershipAPI {
             return ['ok' => true, 'free' => true, 'sub_id' => $subId];
         }
 
-        if (!class_exists('StripePaymentAPI') || !StripePaymentAPI::isConfigured()) {
+        $gw = class_exists('Payments') ? Payments::choose('membership', $gateway) : null;
+        if ($gw === null) {
             return ['ok' => false, 'error' => __('mb_err_online_payment_is_not_available_right_now', 'Online payment is not available right now.')];
         }
 
@@ -761,26 +769,24 @@ class MembershipAPI {
         }
 
         try {
-            $sess = StripePaymentAPI::createCheckout(
-                $lineItems,
-                [
-                    'currency'       => $currency,
-                    'customer_email' => (string)($cust['email'] ?? ''),
-                    'success_url'    => $base . '?view=return&sub=' . $subId . '&session_id={CHECKOUT_SESSION_ID}',
-                    'cancel_url'     => $base . '?view=plans&cancelled=1',
-                    'metadata'       => [
-                        'source_plugin'     => 'membership',
-                        'membership_sub_id' => (string)$subId,
-                        'customer_id'       => (string)$customerId,
-                    ],
-                ]
-            );
-            Database::update('membership_subscriptions',
-                ['stripe_session_id' => $sess['session_id']],
-                'id = ? AND tenant_id = ?', [$subId, $tid]);
-            return ['ok' => true, 'url' => $sess['url'], 'sub_id' => $subId];
+            $start = Payments::startCheckout($gw->id(), new CheckoutRequest($lineItems, [
+                'source_plugin'   => 'membership',
+                'source_id'       => (string)$subId,
+                'currency'        => $currency,
+                'customer_email'  => (string)($cust['email'] ?? ''),
+                'success_url'     => $base . '?view=return&sub=' . $subId . '&gw=' . rawurlencode($gw->id()) . '&ref={PAYMENT_REF}',
+                'cancel_url'      => $base . '?view=plans&cancelled=1',
+                'idempotency_key' => 'membership-sub-' . $subId,
+                'metadata'        => ['membership_sub_id' => (string)$subId, 'customer_id' => (string)$customerId],
+            ]));
+            Database::update('membership_subscriptions', [
+                'payment_gateway'   => $gw->id(),
+                'payment_ref'       => $start->ref,
+                'stripe_session_id' => $gw->id() === 'stripe' ? $start->ref : null,
+            ], 'id = ? AND tenant_id = ?', [$subId, $tid]);
+            return ['ok' => true, 'url' => $start->redirectUrl, 'sub_id' => $subId];
         } catch (\Throwable $e) {
-            slate_log('Membership: purchase checkout failed: ' . $e->getMessage(), 'error');
+            slate_log('Membership: starting payment with ' . $gw->id() . ' failed: ' . $e->getMessage(), 'error');
             return ['ok' => false, 'error' => __('mb_err_could_not_start_payment', 'Could not start payment.')];
         }
     }
@@ -816,7 +822,13 @@ class MembershipAPI {
         $sub = self::subscription($subId);
         if (!$sub) return false;
         if (($sub['status'] ?? '') === 'active' && !empty($sub['starts_at'])) {
-            return true; // already activated — webhook retry / double click
+            // Already activated (webhook retry / double click / the return
+            // page got there first): only link the charge if it is missing.
+            if (!empty($opts['charge_id']) && empty($sub['charge_id'])) {
+                Database::update('membership_subscriptions', ['charge_id' => (int)$opts['charge_id']],
+                    'id = ? AND tenant_id = ? AND charge_id IS NULL', [$subId, $tid]);
+            }
+            return true;
         }
 
         $plan = self::plan((int)$sub['plan_id']);
@@ -832,7 +844,17 @@ class MembershipAPI {
         if (isset($opts['charge_id']))    $fields['charge_id']    = (int)$opts['charge_id'];
         if (isset($opts['amount_cents'])) $fields['amount_cents'] = (int)$opts['amount_cents'];
 
-        Database::update('membership_subscriptions', $fields, 'id = ? AND tenant_id = ?', [$subId, $tid]);
+        // One caller wins (webhook, return page): the rest stop here, so the
+        // purchase email, wallet entry and notification go out once.
+        $won = Database::update('membership_subscriptions', $fields,
+            "id = ? AND tenant_id = ? AND (status <> 'active' OR starts_at IS NULL)", [$subId, $tid]);
+        if ($won !== 1) {
+            if (!empty($opts['charge_id'])) {
+                Database::update('membership_subscriptions', ['charge_id' => (int)$opts['charge_id']],
+                    'id = ? AND tenant_id = ? AND charge_id IS NULL', [$subId, $tid]);
+            }
+            return true;
+        }
 
         // Renewal: superseding any other still-active term of the SAME plan
         // for this customer. Without this, buying the same plan again (e.g.
@@ -946,31 +968,27 @@ class MembershipAPI {
         return true;
     }
 
-    // ── Stripe webhook entry point ───────────────────────────────────────
+    // ── Payment events (any gateway) ─────────────────────────────────────
 
     /**
-     * Fired by the stripe-payment plugin for every webhook event. Activates a
-     * pending membership when its checkout session completes. Idempotent: the
-     * Stripe plugin de-dupes the charge and activateSubscription() no-ops once
-     * active.
+     * The `payment_event` listener: activates a pending membership when its
+     * payment succeeds, from whichever gateway took it, and records a failed
+     * payment. Only the subscription's own checkout counts (its payment_ref).
+     * Idempotent: the ledger row is written once by the payment layer, and
+     * activateSubscription() no-ops once active.
      */
-    public static function handleStripeEvent(array $event): void {
-        $type = (string)($event['type'] ?? '');
-        $ok   = in_array($type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded'], true);
-        $failed = in_array($type, ['checkout.session.async_payment_failed', 'payment_intent.payment_failed'], true);
-        if (!$ok && !$failed) return;
-
-        $obj  = $event['data']['object'] ?? [];
-        if (!is_array($obj)) return;
-        $meta = is_array($obj['metadata'] ?? null) ? $obj['metadata'] : [];
-        if (($meta['source_plugin'] ?? '') !== 'membership') return;
-        $subId = (int)($meta['membership_sub_id'] ?? 0);
-        if ($subId <= 0) return;
-
-        $sub = self::subscription($subId);
+    public static function handlePaymentEvent(PaymentEvent $event): void {
+        if (!$event->isFor('membership')) return;
+        if (!$event->isPaid() && $event->type !== PaymentEvent::FAILED) return;
+        // A Stripe checkout started before the payment layer names its
+        // subscription only in metadata.membership_sub_id.
+        $subId = (int)($event->sourceId !== '' ? $event->sourceId : ($event->metadata['membership_sub_id'] ?? 0));
+        $sub = $subId > 0 ? self::subscription($subId) : null;
         if (!$sub) return;
+        $expected = (string)(($sub['payment_ref'] ?? '') ?: ($sub['stripe_session_id'] ?? ''));
+        if ($expected !== '' && !hash_equals($expected, $event->ref)) return;
 
-        if ($failed) {
+        if ($event->type === PaymentEvent::FAILED) {
             self::walletAdjust((int)$sub['customer_id'], 0, 'failed',
                 'Payment failed — ' . self::planName($sub), 'sub#' . $subId);
             AuditLog::record('membership.payment_failed', (string)$subId);
@@ -988,29 +1006,31 @@ class MembershipAPI {
             return;
         }
 
-        $amount = (int)($obj['amount_total'] ?? $sub['amount_cents']);
-        $piId   = (string)($obj['payment_intent'] ?? '');
-        $sessId = (string)($obj['id'] ?? '');
-        $email  = (string)($obj['customer_details']['email'] ?? ($obj['customer_email'] ?? ''));
-
-        $chargeId = null;
-        if (class_exists('StripePaymentAPI')) {
-            $chargeId = StripePaymentAPI::recordCharge([
-                'source_plugin'            => 'membership',
-                'source_id'                => (string)$subId,
-                'stripe_session_id'        => $sessId,
-                'stripe_payment_intent_id' => $piId,
-                'customer_email'           => $email,
-                'amount_cents'             => $amount,
-                'currency'                 => strtoupper((string)($obj['currency'] ?? $sub['currency'] ?? 'USD')),
-                'status'                   => 'succeeded',
-            ]);
-        }
-
         self::activateSubscription($subId, [
-            'charge_id'    => $chargeId,
-            'amount_cents' => $amount,
+            'charge_id'    => $event->chargeId,
+            'amount_cents' => $event->amountCents ?: (int)$sub['amount_cents'],
         ]);
+    }
+
+    /**
+     * The submit buttons of a "buy" form: one per gateway offered for
+     * Membership, the preferred one with the form's own label, any other as
+     * "Pay with <gateway>" (each posts `gateway`). With one gateway, or none,
+     * it is just the one button, as before.
+     */
+    public static function payButtons(string $label, string $class, string $altClass): string {
+        $gateways = class_exists('Payments') ? Payments::choices('membership') : [];
+        if (count($gateways) < 2) {
+            return '<button type="submit" class="' . e($class) . '">' . e($label) . '</button>';
+        }
+        $html = '';
+        foreach ($gateways as $id => $name) {
+            $html .= $html === ''
+                ? '<button type="submit" name="gateway" value="' . e($id) . '" class="' . e($class) . '">' . e($label) . '</button>'
+                : '<button type="submit" name="gateway" value="' . e($id) . '" class="' . e($altClass) . '" style="margin-top:8px;">'
+                    . e(sprintf(__('membership_pay_with', 'Pay with %s'), $name)) . '</button>';
+        }
+        return $html;
     }
 
     // ── Emails ───────────────────────────────────────────────────────────

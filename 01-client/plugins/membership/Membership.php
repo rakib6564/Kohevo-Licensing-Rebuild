@@ -9,7 +9,7 @@
  * stamped per-version so it only replays after an upgrade.
  *
  * Phase 1 surfaces: Plans CRUD, Settings, and the overview index. Purchase /
- * Stripe checkout, the onboarding wizard, and the Booking gate land in later
+ * online checkout, the onboarding wizard, and the Booking gate land in later
  * phases on top of MembershipAPI.
  */
 
@@ -38,9 +38,15 @@ class Membership extends Plugin {
 
         // Studio widgets (Add › Components) are declared in studio-widgets.php.
 
-        // Activate a membership when its Stripe checkout completes (routed
-        // through the stripe-payment plugin, same pattern as Booking).
-        Hook::addAction('stripe_webhook_event', [$this, 'onStripeEvent']);
+        // Activate a membership when its payment completes, whichever
+        // gateway took it (the shared payment layer, same as Booking and Shop).
+        // Once per process: Hook keeps every registration, and a second boot
+        // (tests, or a re-boot within one request) would handle each event twice.
+        static $paymentsWired = false;
+        if (!$paymentsWired) {
+            $paymentsWired = true;
+            Hook::addAction('payment_event', [$this, 'onPaymentEvent']);
+        }
 
         // Booking integration: enforce the active-membership / profile / insurance
         // gate on self-service bookings. Inert until Booking fires the filter.
@@ -106,16 +112,16 @@ class Membership extends Plugin {
         return $routes;
     }
 
-    public function onStripeEvent(array $event): void {
+    public function onPaymentEvent(PaymentEvent $event): void {
         // Guard the EFFECT, not the webhook receipt (07 §2) — mirrors
-        // Booking::onStripeEvent(). The HTTP ack to Stripe happens in the
-        // webhook controller regardless; this only stops an unentitled
-        // installation from activating a membership subscription.
+        // Booking. The gateway's controller acknowledges the delivery
+        // regardless; this only stops an unentitled installation from
+        // activating a membership subscription.
         if (!ModuleGuard::allows('membership')) return;
         try {
-            MembershipAPI::handleStripeEvent($event);
+            MembershipAPI::handlePaymentEvent($event);
         } catch (\Throwable $e) {
-            slate_log('Membership: stripe event handling failed: ' . $e->getMessage(), 'error');
+            slate_log('Membership: payment event handling failed: ' . $e->getMessage(), 'error');
         }
     }
 

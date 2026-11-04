@@ -77,7 +77,7 @@ if (!$hasIns && $insPlan && $locked):
                             </label>
                         <?php endif; ?>
                     <?php endif; ?>
-                    <button type="submit" class="mbtn <?= $feat ? 'mbtn-primary' : 'mbtn-ghost' ?> mbtn-block"><?= __('membership_buy', 'Buy') ?></button>
+                    <?= MembershipAPI::payButtons(__('membership_buy', 'Buy'), 'mbtn ' . ($feat ? 'mbtn-primary' : 'mbtn-ghost') . ' mbtn-block', 'mbtn mbtn-ghost mbtn-block') ?>
                 </form>
             <?php else: ?>
                 <a href="<?= e(SLATE_URL) ?>/customer/register.php?next=<?= rawurlencode('/member?view=plans') ?>" class="mbtn mbtn-primary mbtn-block"><?= __('membership_buy', 'Buy') ?></a>

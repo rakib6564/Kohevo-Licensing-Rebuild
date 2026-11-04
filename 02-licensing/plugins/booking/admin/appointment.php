@@ -183,7 +183,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 </form>
             <?php endif; ?>
             <?php if (Auth::can('booking.manage_payments') && in_array(($row['payment_status'] ?? 'none'), ['paid','deposit_paid','partially_refunded'], true)): ?>
-                <form method="post" style="display:inline;margin:0;" onsubmit="return confirm('<?= e(__('booking_confirm_refund_stripe', 'Refund this payment via Stripe?')) ?>')">
+                <form method="post" style="display:inline;margin:0;" onsubmit="return confirm('<?= e(__('booking_confirm_refund_gateway', 'Refund this payment through the payment provider that took it?')) ?>')">
                     <?= csrf_field() ?>
                     <input type="hidden" name="_action" value="refund">
                     <button class="btn btn-danger"><?= e(__('booking_refund', 'Refund')) ?></button>

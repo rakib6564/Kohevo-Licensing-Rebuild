@@ -168,10 +168,29 @@ final class PaymentLedger
         $txn = trim((string) ($args['txn_id'] ?? ''));
         $ref = trim((string) ($args['ref'] ?? ''));
 
-        $existing = self::findExisting($tid, $gateway, $txnCol, $txn, $refCol, $ref);
-        if ($existing !== null) return ['id' => $existing, 'new' => false];
-
         $status = (string) ($args['status'] ?? 'succeeded');
+        $existing = self::findExisting($tid, $gateway, $txnCol, $txn, $refCol, $ref);
+        if ($existing !== null) {
+            // A declined attempt that was retried and then paid (same intent):
+            // the row becomes the successful charge, and counts as new.
+            if ($status === 'succeeded') {
+                $upgrade = ['status' => 'succeeded', 'amount_cents' => max(0, (int) ($args['amount_cents'] ?? 0))];
+                // The paying attempt's details replace the declined one's.
+                if (!empty($args['currency']))       $upgrade['currency']       = strtoupper((string) $args['currency']);
+                if (!empty($args['customer_email'])) $upgrade['customer_email'] = mb_substr((string) $args['customer_email'], 0, 200);
+                $upgraded = \Database::update(self::TABLE, $upgrade, "id = ? AND tenant_id = ? AND status = 'failed'", [$existing, $tid]);
+                if ($upgraded === 1) {
+                    try {
+                        \Hook::doAction('payment_charge_recorded', $existing, $args);
+                    } catch (\Throwable $e) {
+                        slate_log('payment_charge_recorded listener failed: ' . $e->getMessage(), 'error');
+                    }
+                    return ['id' => $existing, 'new' => true];
+                }
+            }
+            return ['id' => $existing, 'new' => false];
+        }
+
         $meta   = $args['meta'] ?? null;
         try {
             $id = \Database::insert(self::TABLE, [
