@@ -43,7 +43,9 @@ final class ImageRenderer implements BlockRendererInterface
         $ratio   = self::RATIOS[$scope->string('aspect_ratio', 'auto')] ?? 'auto';
         $caption = $scope->string('caption');
 
-        $img = self::img($image->url, $alt, $image->width, $image->height, $ref, true, $image->srcset);
+        // A picture at the top of the page (the likely largest paint) loads at once and first, not lazily.
+        $priority = $scope->bool('priority', false);
+        $img = self::img($image->url, $alt, $image->width, $image->height, $ref, !$priority, $image->srcset, $priority);
         // Link: none, the image file itself, or a custom address (after the URL allowlist).
         $linkTo = $scope->string('link_to', 'none');
         $href = match ($linkTo) {
@@ -64,8 +66,9 @@ final class ImageRenderer implements BlockRendererInterface
     /**
      * @param mixed $ref normalized media_ref (focal point used for object-position)
      * @param array<int, string> $srcset width => URL of smaller copies (the library's WebP sizes)
+     * @param bool $priority load first: no lazy loading and `fetchpriority="high"` (the page's main picture)
      */
-    public static function img(string $url, string $alt, ?int $width, ?int $height, mixed $ref, bool $lazy = true, array $srcset = []): string
+    public static function img(string $url, string $alt, ?int $width, ?int $height, mixed $ref, bool $lazy = true, array $srcset = [], bool $priority = false): string
     {
         $position = '';
         if (is_array($ref) && is_array($ref['focal_point'] ?? null) && count($ref['focal_point']) === 2) {
@@ -80,7 +83,7 @@ final class ImageRenderer implements BlockRendererInterface
         return '<img src="' . Html::e($url) . '"' . self::srcsetAttrs($url, $width, $srcset, $lazy) . ' alt="' . Html::e($alt) . '"'
             . ($width !== null ? ' width="' . $width . '"' : '')
             . ($height !== null ? ' height="' . $height . '"' : '')
-            . ($lazy ? ' loading="lazy"' : '') . ' decoding="async"' . $position . '>';
+            . ($lazy && !$priority ? ' loading="lazy"' : '') . ($priority ? ' fetchpriority="high"' : '') . ' decoding="async"' . $position . '>';
     }
 
     /**

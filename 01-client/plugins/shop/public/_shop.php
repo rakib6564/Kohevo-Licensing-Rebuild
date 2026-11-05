@@ -95,8 +95,11 @@ function shop_money(int $cents, string $currency): string {
 }
 
 /** The mini cart: a link to the cart page with the item count (and subtotal); `$label` is the widget's own label. */
-function shop_view_mini(array $totals, bool $showTotal = true, string $label = ''): string {
+function shop_view_mini(array $totals, bool $showTotal = true, string $label = '', bool $hideEmpty = false): string {
     $count = (int) $totals['count'];
+    if ($hideEmpty && $count < 1) {
+        return '';
+    }
     $items = $count === 1 ? __('shop_one_item', '1 item') : sprintf(__('shop_n_items', '%d items'), $count);
     $name = $label !== '' ? $label : __('shop_cart', 'Cart');
     return '<a class="sb-shop-mini__link" href="' . e(ShopStoreAPI::pageUrl('cart_page')) . '" aria-label="' . e($name . ', ' . $items) . '">'

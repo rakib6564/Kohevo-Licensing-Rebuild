@@ -64,6 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'type' => (string) ($_POST['biz_type'] ?? ''), 'name' => (string) ($_POST['biz_name'] ?? ''), 'alternate_name' => (string) ($_POST['biz_alternate'] ?? ''),
             'description' => (string) ($_POST['biz_description'] ?? ''), 'logo_media_id' => (int) ($_POST['biz_logo_media_id'] ?? 0),
             'founder' => (string) ($_POST['biz_founder'] ?? ''), 'same_as' => (string) ($_POST['biz_same_as'] ?? ''),
+            'telephone' => (string) ($_POST['biz_telephone'] ?? ''), 'email' => (string) ($_POST['biz_email'] ?? ''), 'vat_id' => (string) ($_POST['biz_vat_id'] ?? ''),
+            'street' => (string) ($_POST['biz_street'] ?? ''), 'postal_code' => (string) ($_POST['biz_postal_code'] ?? ''), 'locality' => (string) ($_POST['biz_locality'] ?? ''), 'country' => (string) ($_POST['biz_country'] ?? ''),
         ]);
         \Slate\Module\StudioBuilder\Render\Seo\StructuredData::save($tenantId, $business);
         sb_flash_redirect('seo.php', ['type' => 'success', 'msg' => __('studio_business_saved', 'Saved. Every public page tells search engines about the business from its next visit.')]);
@@ -357,6 +359,36 @@ require SLATE_ROOT . '/admin/partials/header.php';
                             'placeholder' => __('studio_business_logo_placeholder', 'Choose from the Media library'),
                             'help' => __('studio_business_logo_help', 'A square or wide logo of at least 112px; Google may show it beside your results.'),
                         ]) ?>
+                    </div>
+                    <div class="sb-form-grid">
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-biz-phone"><?= e(__('studio_business_telephone', 'Telephone (optional)')) ?></label>
+                            <input type="text" name="biz_telephone" id="seo-biz-phone" maxlength="40" class="form-control" value="<?= e($business['telephone']) ?>" placeholder="+32 …">
+                        </div>
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-biz-email"><?= e(__('studio_business_email', 'Email (optional)')) ?></label>
+                            <input type="email" name="biz_email" id="seo-biz-email" maxlength="160" class="form-control" value="<?= e($business['email']) ?>">
+                        </div>
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-biz-vat"><?= e(__('studio_business_vat', 'VAT number (optional)')) ?></label>
+                            <input type="text" name="biz_vat_id" id="seo-biz-vat" maxlength="40" class="form-control" value="<?= e($business['vat_id']) ?>" placeholder="BE0123456789">
+                        </div>
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-biz-street"><?= e(__('studio_business_street', 'Street and number (optional)')) ?></label>
+                            <input type="text" name="biz_street" id="seo-biz-street" maxlength="160" class="form-control" value="<?= e($business['street']) ?>">
+                        </div>
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-biz-postal"><?= e(__('studio_business_postal_code', 'Postal code (optional)')) ?></label>
+                            <input type="text" name="biz_postal_code" id="seo-biz-postal" maxlength="20" class="form-control" value="<?= e($business['postal_code']) ?>">
+                        </div>
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-biz-city"><?= e(__('studio_business_locality', 'Town or city (optional)')) ?></label>
+                            <input type="text" name="biz_locality" id="seo-biz-city" maxlength="100" class="form-control" value="<?= e($business['locality']) ?>">
+                        </div>
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-biz-country"><?= e(__('studio_business_country', 'Country (optional)')) ?></label>
+                            <input type="text" name="biz_country" id="seo-biz-country" maxlength="60" class="form-control" value="<?= e($business['country']) ?>" placeholder="BE">
+                        </div>
                     </div>
                     <div class="sb-field">
                         <label class="sb-field__label" for="seo-biz-same"><?= e(__('studio_business_same_as', 'The business elsewhere (optional)')) ?></label>

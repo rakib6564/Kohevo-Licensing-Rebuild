@@ -3391,6 +3391,7 @@
                 "link_to": "none",
                 "media": null,
                 "new_tab": false,
+                "priority": false,
                 "rounded": true,
                 "url": null
             },
@@ -3455,6 +3456,13 @@
                     "key": "new_tab",
                     "type": "boolean",
                     "label": "Open in a new tab",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "priority",
+                    "type": "boolean",
+                    "label": "Load First (main picture)",
                     "required": false,
                     "default": false
                 }
@@ -5615,6 +5623,7 @@
                 "privacy": true,
                 "source": "youtube",
                 "start": 0,
+                "title": "",
                 "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
             },
             "description": "YouTube, Vimeo or self-hosted video, played on the page",
@@ -5749,6 +5758,14 @@
                     "label": "Lightbox",
                     "required": false,
                     "default": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "label": "Title (read by screen readers)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 200
                 }
             ],
             "icon": "video",
@@ -7384,6 +7401,7 @@
             "binding_slots": [],
             "category": "business",
             "default_props": {
+                "hide_when_empty": false,
                 "label": "",
                 "show_total": false
             },
@@ -7401,6 +7419,13 @@
                     "key": "show_total",
                     "type": "boolean",
                     "label": "Show the cart total",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "hide_when_empty",
+                    "type": "boolean",
+                    "label": "Hide until the cart has an item",
                     "required": false,
                     "default": false
                 }

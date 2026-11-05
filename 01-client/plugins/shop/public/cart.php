@@ -31,7 +31,7 @@ if ($method === 'GET') {
     }
     if ($view === 'mini') {
         $label = is_string($_GET['label'] ?? null) ? mb_substr(trim($_GET['label']), 0, 40) : '';
-        shop_html(shop_view_mini($totals, ($_GET['total'] ?? '1') !== '0', $label));
+        shop_html(shop_view_mini($totals, ($_GET['total'] ?? '1') !== '0', $label, ($_GET['hide_empty'] ?? '0') === '1'));
     }
     $html = shop_view_cart($totals);
     shop_html(shop_is_fragment() ? $html : shop_page(__('shop_cart', 'Cart'), $html));

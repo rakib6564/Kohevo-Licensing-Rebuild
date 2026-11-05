@@ -205,6 +205,7 @@ final class BlockRegistry
                 ['key' => 'link_to', 'type' => 'enum', 'label' => 'Link', 'required' => false, 'allowed_values' => ['none', 'media', 'custom'], 'default' => 'none'],
                 ['key' => 'url', 'type' => 'url', 'label' => 'Link URL', 'required' => false],
                 ['key' => 'new_tab', 'type' => 'boolean', 'label' => 'Open in a new tab', 'required' => false, 'default' => false],
+                ['key' => 'priority', 'type' => 'boolean', 'label' => 'Load First (main picture)', 'required' => false, 'default' => false],
             ]),
             allowsChildren: false,
             allowedBindingProviders: ['content.posts'],
@@ -862,6 +863,7 @@ final class BlockRegistry
                 ['key' => 'overlay_image', 'type' => 'media_ref', 'label' => 'Overlay Image', 'required' => false, 'default' => null],
                 ['key' => 'play_icon', 'type' => 'boolean', 'label' => 'Play Icon', 'required' => false, 'default' => true],
                 ['key' => 'lightbox', 'type' => 'boolean', 'label' => 'Lightbox', 'required' => false, 'default' => false],
+                ['key' => 'title', 'type' => 'string', 'label' => 'Title (read by screen readers)', 'required' => false, 'default' => '', 'max_length' => 200],
             ]),
             allowsChildren: false,
         ));

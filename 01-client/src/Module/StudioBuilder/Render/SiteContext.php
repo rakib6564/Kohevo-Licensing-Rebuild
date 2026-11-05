@@ -56,7 +56,10 @@ final class SiteContext
         $this->baseUrl    = $baseUrl;
         $this->logoUrl    = self::safeAssetUrl($logoUrl);
         $this->faviconUrl = self::safeAssetUrl($faviconUrl);
-        $this->locale     = preg_match('/^[a-z]{2}([_-][A-Za-z]{2})?$/', $locale) === 1 ? $locale : 'en';
+        // A BCP 47 tag for <html lang>: language lower case, region upper case, a hyphen between (fr_be -> fr-BE).
+        $this->locale     = preg_match('/^[a-z]{2}([_-][A-Za-z]{2})?$/', $locale) === 1
+            ? preg_replace_callback('/^([A-Za-z]{2})(?:[_-]([A-Za-z]{2}))?$/', static fn(array $m): string => strtolower($m[1]) . (isset($m[2]) ? '-' . strtoupper($m[2]) : ''), $locale)
+            : 'en';
         $this->seo        = $seo ?? SiteSeoDefaults::none();
     }
 
@@ -64,6 +67,17 @@ final class SiteContext
      * Build from the running install: `SLATE_URL` + the CURRENT tenant's branding.
      * Every read is best-effort — branding can never break a render.
      */
+    /** The language with a region (fr + fr-BE = fr-BE), when the region belongs to that same language; else the language. */
+    public static function withRegion(string $locale, string $tag): string
+    {
+        $tag = trim($tag);
+        if (preg_match('/^([A-Za-z]{2})[_-]([A-Za-z]{2})$/', $tag, $m) === 1
+            && strtolower($m[1]) === strtolower(substr($locale, 0, 2))) {
+            return strtolower($m[1]) . '-' . strtoupper($m[2]);
+        }
+        return $locale;
+    }
+
     public static function fromEnvironment(): self
     {
         $base = self::configuredBaseUrl(defined('SLATE_URL') ? (string) \SLATE_URL : '');
@@ -82,6 +96,11 @@ final class SiteContext
             if (class_exists('I18n')) {
                 $locale = (string) \I18n::currentLocale();
             }
+        } catch (\Throwable $ignored) {
+        }
+        // Optional region for <html lang> (setting `site_html_lang`, e.g. fr-BE): only on top of the site's own language.
+        try {
+            $locale = self::withRegion($locale, (string) (\Database::setting('site_html_lang') ?? ''));
         } catch (\Throwable $ignored) {
         }
         return new self($base, $name, $logo, $favicon, $locale, self::DEFAULT_SITE_KEY, SiteSeoDefaults::fromSettings());
