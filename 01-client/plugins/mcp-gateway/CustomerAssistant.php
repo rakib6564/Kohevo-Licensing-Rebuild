@@ -135,7 +135,7 @@ class CustomerAssistant {
         $lines = [];
         foreach ($plans as $p) {
             $price = ((int)($p['price_cents'] ?? 0)) > 0
-                ? MembershipAPI::money((int)$p['price_cents'], $p['currency'] ?? 'USD')
+                ? MembershipAPI::money((int)$p['price_cents'], $p['currency'] ?? slate_default_currency())
                 : 'Free';
             $lines[] = '- ' . MembershipAPI::planName($p) . ' (' . $price . ' / ' . (int)($p['duration_days'] ?? 0) . ' days)'
                 . (!empty($p['session_quota']) ? ', ' . (int)$p['session_quota'] . ' sessions included' : '')

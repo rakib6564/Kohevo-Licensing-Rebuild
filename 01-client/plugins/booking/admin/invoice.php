@@ -43,8 +43,8 @@ if ($invoiceNo === '') {
     catch (\Throwable $e) { /* column guaranteed by migration */ }
 }
 
-$cur      = $appt['currency'] ?: 'USD';
-$money    = fn($cents) => $cur . ' ' . number_format(((int)$cents) / 100, 2);
+$cur      = $appt['currency'] ?: slate_default_currency();
+$money    = fn($cents) => slate_format_price_plain((int)$cents, $cur);
 $addons   = json_decode((string)($appt['addons_json'] ?? '[]'), true) ?: [];
 $party    = max(1, (int)($appt['party_size'] ?? 1));
 
