@@ -144,6 +144,7 @@ return [
         $block('shop.mini_cart', 'Mini Cart', 'A cart link with the item count, for your header', 'box', [
             $text('label', 'Label', 40),
             $bool('show_total', 'Show the cart total', false),
+            $bool('hide_when_empty', 'Hide until the cart has an item', false),
         ]),
         $block('shop.cart', 'Cart', 'The visitor\'s cart, for your Cart page', 'table', []),
         $block('shop.checkout', 'Checkout', 'Details, delivery and payment, for your Checkout page', 'form', []),

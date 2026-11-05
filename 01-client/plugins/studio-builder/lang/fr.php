@@ -2797,6 +2797,7 @@ return [
     'studio_block_shop_mini_cart_title' => 'Mini panier',
     'studio_block_shop_mini_cart_desc' => 'Un lien vers le panier avec le nombre d’articles, pour votre en-tête',
     'studio_field_show_the_cart_total' => 'Afficher le total du panier',
+    'studio_field_hide_until_the_cart_has_an_item' => 'Masquer tant que le panier est vide',
     'studio_field_count' => 'Nombre',
     'studio_field_total' => 'Total',
     'studio_block_shop_cart_title' => 'Panier',

@@ -7401,6 +7401,7 @@
             "binding_slots": [],
             "category": "business",
             "default_props": {
+                "hide_when_empty": false,
                 "label": "",
                 "show_total": false
             },
@@ -7418,6 +7419,13 @@
                     "key": "show_total",
                     "type": "boolean",
                     "label": "Show the cart total",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "hide_when_empty",
+                    "type": "boolean",
+                    "label": "Hide until the cart has an item",
                     "required": false,
                     "default": false
                 }

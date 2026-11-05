@@ -19,6 +19,7 @@ use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
+use Slate\Module\StudioBuilder\Render\RenderMode;
 
 /**
  * `shop.products`: a grid of product cards, with a compact filter bar (category chips, underlined tabs or a dropdown,
@@ -654,8 +655,14 @@ final class ShopMiniCartRenderer implements BlockRendererInterface
     {
         $cartUrl = class_exists('ShopStoreAPI') ? \ShopStoreAPI::pageUrl('cart_page') : $scope->site()->absoluteUrl('cart');
         $label = $scope->string('label') !== '' ? $scope->string('label') : Html::t('shop_cart', 'Cart');
+        $hideEmpty = $scope->bool('hide_when_empty', false);
         $fallback = '<a class="sb-shop-mini__link" href="' . Html::e($cartUrl) . '"><span class="sb-shop-mini__label">' . Html::e($label) . '</span></a>';
-        $url = ShopStudio::endpoint($scope, 'cart.php') . '?view=mini&total=' . ($scope->bool('show_total', false) ? '1' : '0')
+        // Hidden until the cart has an item: the page itself shows nothing (the editor still shows the link); the fragment
+        // brings the link in as soon as the visitor's cart is not empty.
+        if ($hideEmpty && $scope->mode() !== RenderMode::Editor) {
+            $fallback = '';
+        }
+        $url = ShopStudio::endpoint($scope, 'cart.php') . '?view=mini&total=' . ($scope->bool('show_total', false) ? '1' : '0') . ($hideEmpty ? '&hide_empty=1' : '')
             . ($scope->string('label') !== '' ? '&label=' . rawurlencode($scope->string('label')) : '');
         return ShopStudio::fragment($scope, 'sb-shop-mini', $url, $fallback, 'shop-cart');
     }
