@@ -118,6 +118,12 @@ final class GalleryRenderer implements BlockRendererInterface
         }
         if ($linkTo !== 'lightbox') {
             $attrs .= ' data-sb-no-lightbox';
+        } else {
+            // The viewer is built by the runtime, which reads its (translated) labels from here.
+            $attrs .= ' data-sb-label-viewer="' . Html::e(Html::t('studio_lightbox_viewer', 'Image viewer')) . '"'
+                . ' data-sb-label-prev="' . Html::e(Html::t('studio_lightbox_prev', 'Previous image')) . '"'
+                . ' data-sb-label-next="' . Html::e(Html::t('studio_lightbox_next', 'Next image')) . '"'
+                . ' data-sb-label-close="' . Html::e(Html::t('studio_lightbox_close', 'Close')) . '"';
         }
 
         $html = '<div' . Html::classAttr($classes) . ' style="' . $vars . '"' . $attrs . '>';

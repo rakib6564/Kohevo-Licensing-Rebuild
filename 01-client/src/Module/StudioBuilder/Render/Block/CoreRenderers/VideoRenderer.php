@@ -70,7 +70,8 @@ final class VideoRenderer implements BlockRendererInterface
             return '<div' . Html::classAttr($classes) . '><div class="sb-video__placeholder" style="background:#1f2937;color:#9ca3af;display:flex;align-items:center;justify-content:center;height:100%;">' . Html::e(Html::t('studio_video_unavailable', 'Video unavailable')) . '</div></div>';
         }
 
-        $title = Html::t('studio_video', 'Video');
+        // The player's accessible name: what the author wrote, else the generic word.
+        $title = trim($scope->string('title')) !== '' ? trim($scope->string('title')) : Html::t('studio_video', 'Video');
         $lazy = $scope->bool('lazy_load', true);
 
         $poster = $scope->bool('overlay', false) ? self::poster($scope, $player) : null;
@@ -83,7 +84,7 @@ final class VideoRenderer implements BlockRendererInterface
         $classes[] = 'sb-video--overlay';
         $lightbox = $scope->bool('lightbox', false);
 
-        return '<div' . Html::classAttr($classes) . ' data-sb-video data-sb-video-aspect="' . Html::e($aspectClass) . '"' . ($lightbox ? ' data-sb-video-lightbox' : '') . '>'
+        return '<div' . Html::classAttr($classes) . ' data-sb-video data-sb-video-aspect="' . Html::e($aspectClass) . '"' . ($lightbox ? ' data-sb-video-lightbox data-sb-label-video="' . Html::e($title) . '" data-sb-label-close="' . Html::e(Html::t('studio_lightbox_close', 'Close')) . '"' : '') . '>'
             . '<button type="button" class="sb-video__overlay" data-sb-video-play aria-label="' . Html::e(Html::t('studio_video_play', 'Play video')) . '"' . ($lightbox ? ' aria-haspopup="dialog"' : '') . '>'
             . ImageRenderer::img($poster['url'], $poster['alt'], $poster['width'], $poster['height'], $poster['ref'], $lazy, $poster['srcset'])
             . ($scope->bool('play_icon', true) ? '<span class="sb-video__play" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" focusable="false"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg></span>' : '')

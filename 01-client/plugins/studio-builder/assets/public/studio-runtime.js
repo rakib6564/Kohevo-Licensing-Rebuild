@@ -902,16 +902,22 @@
     lb.setAttribute('data-sb-lightbox', '');
     lb.setAttribute('role', 'dialog');
     lb.setAttribute('aria-modal', 'true');
-    lb.setAttribute('aria-label', 'Image viewer');
+    // Labels come from the gallery (translated by the server); the English ones are for markup that has none.
+    var galleryEl = figures[0].closest ? figures[0].closest('.sb-gallery') : null;
+    var glabel = function (name, fallback) {
+      var v = (galleryEl && galleryEl.getAttribute('data-sb-label-' + name)) || fallback;
+      return String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    };
+    lb.setAttribute('aria-label', (galleryEl && galleryEl.getAttribute('data-sb-label-viewer')) || 'Image viewer');
     lb.setAttribute('data-sb-overlay', '');
     lb.innerHTML =
-      '<button type="button" class="sb-lightbox__nav sb-lightbox__nav--prev" data-sb-lb-prev aria-label="Previous image">&lsaquo;</button>'
+      '<button type="button" class="sb-lightbox__nav sb-lightbox__nav--prev" data-sb-lb-prev aria-label="' + glabel('prev', 'Previous image') + '">&lsaquo;</button>'
       + '<figure class="sb-lightbox__figure">'
       + '<img class="sb-lightbox__image" alt="">'
       + '<figcaption class="sb-lightbox__caption" data-sb-lightbox-caption></figcaption>'
       + '</figure>'
-      + '<button type="button" class="sb-lightbox__nav sb-lightbox__nav--next" data-sb-lb-next aria-label="Next image">&rsaquo;</button>'
-      + '<button type="button" class="sb-lightbox__close" data-sb-close aria-label="Close">&times;</button>';
+      + '<button type="button" class="sb-lightbox__nav sb-lightbox__nav--next" data-sb-lb-next aria-label="' + glabel('next', 'Next image') + '">&rsaquo;</button>'
+      + '<button type="button" class="sb-lightbox__close" data-sb-close aria-label="' + glabel('close', 'Close') + '">&times;</button>';
     (doc.body || root).appendChild(lb);
 
     // Hand the freshly built container to the existing lightbox feature.
@@ -1084,11 +1090,15 @@
       lb.className = 'sb-lightbox sb-video-lightbox';
       lb.setAttribute('role', 'dialog');
       lb.setAttribute('aria-modal', 'true');
-      lb.setAttribute('aria-label', 'Video');
+      var vlabel = function (name, fallback) {
+        var v = blocks[0].getAttribute('data-sb-label-' + name) || fallback;
+        return String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      };
+      lb.setAttribute('aria-label', blocks[0].getAttribute('data-sb-label-video') || 'Video');
       lb.setAttribute('aria-hidden', 'true');
       lb.setAttribute('data-sb-overlay', '');
       lb.innerHTML = '<div class="sb-video-wrapper sb-video-lightbox__frame" data-sb-video-frame></div>'
-        + '<button type="button" class="sb-lightbox__close" data-sb-close aria-label="Close">&times;</button>';
+        + '<button type="button" class="sb-lightbox__close" data-sb-close aria-label="' + vlabel('close', 'Close') + '">&times;</button>';
       (doc.body || root).appendChild(lb);
       lb.addEventListener('click', function (e) {
         if (e.target.closest('[data-sb-close]') || e.target === lb) {

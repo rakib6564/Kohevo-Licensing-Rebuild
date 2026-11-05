@@ -47,6 +47,32 @@ unit('seo native: the graph names the business and the site, and adds an item\'s
     assert_eq([], StructuredData::graph($b, '', 'Site Name', null), 'no site address: nothing');
 });
 
+unit('seo native: the business carries its address, telephone, email and VAT number into the graph, cleaned', function (): void {
+    $b = StructuredData::clean(['type' => 'NGO', 'name' => 'FightxLife', 'telephone' => '+32 483 12 72 98<script>', 'email' => 'contact@example.test', 'vat_id' => 'BE0720965564"x',
+        'street' => 'Rue Gabrielle Petit 32', 'postal_code' => '1080', 'locality' => 'Molenbeek', 'country' => 'BE']);
+    assert_eq('NGO', $b['type']);
+    assert_eq(['+32 483 12 72 98', 'BE0720965564x'], [$b['telephone'], $b['vat_id']], 'only phone and VAT characters stay');
+    assert_eq('', StructuredData::clean(['email' => 'not an email'])['email'], 'a bad email is dropped');
+    $g = StructuredData::graph($b, 'https://fxl.test', 'Site', null);
+    assert_eq(['NGO', 'WebSite'], array_column($g, '@type'));
+    assert_eq(['+32 483 12 72 98', 'contact@example.test', 'BE0720965564x'], [$g[0]['telephone'], $g[0]['email'], $g[0]['vatID']]);
+    assert_eq(['@type' => 'PostalAddress', 'streetAddress' => 'Rue Gabrielle Petit 32', 'postalCode' => '1080', 'addressLocality' => 'Molenbeek', 'addressCountry' => 'BE'], $g[0]['address']);
+    $bare = StructuredData::graph(StructuredData::clean(['type' => 'Organization', 'name' => 'X']), 'https://fxl.test', 'Site', null);
+    assert_true(!isset($bare[0]['address']) && !isset($bare[0]['telephone']), 'nothing entered, nothing written');
+});
+
+unit('site context: the page language is a valid BCP 47 tag', function (): void {
+    $tag = static fn(string $l): string => (new \Slate\Module\StudioBuilder\Render\SiteContext('https://x.test', 'X', '', '', $l))->locale;
+    assert_eq(['fr', 'fr-BE', 'fr-BE', 'en'], [$tag('fr'), $tag('fr_be'), $tag('fr-BE'), $tag('nonsense')]);
+});
+
+unit('image block: a priority picture loads first, a normal one lazily', function (): void {
+    $lazy = \Slate\Module\StudioBuilder\Render\Block\CoreRenderers\ImageRenderer::img('/a.jpg', '', 10, 10, null, true, [], false);
+    $first = \Slate\Module\StudioBuilder\Render\Block\CoreRenderers\ImageRenderer::img('/a.jpg', '', 10, 10, null, false, [], true);
+    assert_true(str_contains($lazy, 'loading="lazy"') && !str_contains($lazy, 'fetchpriority'));
+    assert_true(str_contains($first, 'fetchpriority="high"') && !str_contains($first, 'loading="lazy"'));
+});
+
 unit('seo native: descriptions are cut at a whole word or sentence, with no markup', function (): void {
     assert_eq('Short & sweet.', SeoHead::excerpt('<p>Short &amp; sweet.</p>', 300));
     $long = 'Our Old Fashioned Peanut Brittle is a special treat. Each batch is hand-made with care and attention to detail, ensuring that every piece is perfectly crunchy.';

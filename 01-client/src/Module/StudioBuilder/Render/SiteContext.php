@@ -56,7 +56,10 @@ final class SiteContext
         $this->baseUrl    = $baseUrl;
         $this->logoUrl    = self::safeAssetUrl($logoUrl);
         $this->faviconUrl = self::safeAssetUrl($faviconUrl);
-        $this->locale     = preg_match('/^[a-z]{2}([_-][A-Za-z]{2})?$/', $locale) === 1 ? $locale : 'en';
+        // A BCP 47 tag for <html lang>: language lower case, region upper case, a hyphen between (fr_be -> fr-BE).
+        $this->locale     = preg_match('/^[a-z]{2}([_-][A-Za-z]{2})?$/', $locale) === 1
+            ? preg_replace_callback('/^([A-Za-z]{2})(?:[_-]([A-Za-z]{2}))?$/', static fn(array $m): string => strtolower($m[1]) . (isset($m[2]) ? '-' . strtoupper($m[2]) : ''), $locale)
+            : 'en';
         $this->seo        = $seo ?? SiteSeoDefaults::none();
     }
 

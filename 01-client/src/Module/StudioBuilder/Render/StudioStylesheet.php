@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '66';
+    public const VERSION = '67';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -669,7 +669,7 @@ final class StudioStylesheet
             // Marquee ── two identical groups, moved by half the track, so the loop has no seam.
             . '.sb-marquee{overflow:hidden;max-width:100%}'
             . '.sb-marquee__track{display:flex;width:max-content;direction:ltr;animation:sb-marquee 30s linear infinite}'
-            . '.sb-marquee--right .sb-marquee__track{animation-direction:reverse}.sb-marquee--pause:hover .sb-marquee__track{animation-play-state:paused}'
+            . '.sb-marquee--right .sb-marquee__track{animation-direction:reverse}.sb-marquee--pause:hover .sb-marquee__track,.sb-marquee--pause:focus-within .sb-marquee__track{animation-play-state:paused}'
             . '.sb-marquee__group{display:flex;flex:none}.sb-marquee__text{flex:none;padding-inline-end:1em;white-space:nowrap}'
             . '@keyframes sb-marquee{to{translate:-50%}}'
             . '@media (prefers-reduced-motion:reduce){.sb-marquee__track{width:auto;justify-content:center;animation:none}.sb-marquee [aria-hidden="true"]{display:none}.sb-marquee__group{flex:0 1 auto;min-width:0}.sb-marquee__text{flex:0 1 auto;padding-inline-end:0;white-space:normal;text-align:center}}'

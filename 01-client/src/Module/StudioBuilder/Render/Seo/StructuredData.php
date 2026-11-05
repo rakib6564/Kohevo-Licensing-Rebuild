@@ -26,6 +26,7 @@ final class StructuredData
     /** schema.org types the screen offers. */
     public const TYPES = [
         'Organization'        => 'Organisation or company',
+        'NGO'                 => 'Non-profit organisation',
         'LocalBusiness'       => 'Local business',
         'OnlineStore'         => 'Online store',
         'Store'               => 'Shop with a counter',
@@ -38,7 +39,7 @@ final class StructuredData
     /**
      * The business as saved: only known keys, trimmed and bounded.
      *
-     * @return array{type: string, name: string, alternate_name: string, description: string, logo_media_id: int, founder: string, same_as: list<string>}
+     * @return array<string, mixed> type, name, alternate_name, description, logo_media_id, founder, same_as, telephone, email, vat_id, street, postal_code, locality, country
      */
     public static function clean(array $in): array
     {
@@ -63,6 +64,14 @@ final class StructuredData
             'logo_media_id'  => max(0, (int) ($in['logo_media_id'] ?? 0)),
             'founder'        => $str('founder', 160),
             'same_as'        => array_slice(array_values($links), 0, 12),
+            // How to reach the business: shown to search engines, never on the page itself.
+            'telephone'      => preg_replace('/[^0-9+()\\-. ]/', '', $str('telephone', 40)) ?? '',
+            'email'          => filter_var($str('email', 160), FILTER_VALIDATE_EMAIL) ?: '',
+            'vat_id'         => preg_replace('/[^A-Za-z0-9 .\\-]/', '', $str('vat_id', 40)) ?? '',
+            'street'         => $str('street', 160),
+            'postal_code'    => $str('postal_code', 20),
+            'locality'       => $str('locality', 100),
+            'country'        => $str('country', 60),
         ];
     }
 
@@ -105,6 +114,17 @@ final class StructuredData
             if ($logoUrl !== null && $logoUrl !== '') $org['logo'] = $logoUrl;
             if ($business['founder'] !== '') $org['founder'] = ['@type' => 'Person', 'name' => $business['founder']];
             if ($business['same_as'] !== []) $org['sameAs'] = $business['same_as'];
+            if ($business['telephone'] !== '') $org['telephone'] = $business['telephone'];
+            if ($business['email'] !== '') $org['email'] = $business['email'];
+            if ($business['vat_id'] !== '') $org['vatID'] = $business['vat_id'];
+            if ($business['street'] !== '' || $business['locality'] !== '' || $business['postal_code'] !== '' || $business['country'] !== '') {
+                $address = ['@type' => 'PostalAddress'];
+                if ($business['street'] !== '') $address['streetAddress'] = $business['street'];
+                if ($business['postal_code'] !== '') $address['postalCode'] = $business['postal_code'];
+                if ($business['locality'] !== '') $address['addressLocality'] = $business['locality'];
+                if ($business['country'] !== '') $address['addressCountry'] = $business['country'];
+                $org['address'] = $address;
+            }
             $nodes[] = $org;
         }
         if ($name !== '') {
