@@ -435,7 +435,9 @@ final class ShopProductImageRenderer implements BlockRendererInterface
             return ShopStudio::none($scope);
         }
         $ratio = in_array($scope->string('ratio', 'square'), ['square', 'portrait', 'landscape', 'natural'], true) ? $scope->string('ratio', 'square') : 'square';
-        $images = $p['images'];
+        // Site-absolute addresses: the thumbnail swap (data-sb-thumb) and the lightbox set a photo's address from script, and
+        // Studio only rebases src/href attributes, so a bare `/uploads/…` would load from the parent site on a sub-folder install.
+        $images = array_map(static fn($i): string => \ShopStoreAPI::assetUrl((string) $i), (array) $p['images']);
         if ($images === []) {
             return '<div class="sb-shop-gallery sb-shop-gallery--' . $ratio . '"><div class="sb-shop-gallery__main sb-shop-gallery__main--empty"></div></div>';
         }
