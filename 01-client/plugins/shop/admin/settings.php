@@ -28,6 +28,16 @@ $slugOk = static fn(string $s): bool => (bool) preg_match('#^[a-z0-9-]+(/[a-z0-9
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify()) {
         $flash = ['type' => 'error', 'msg' => __('shop_err_security', 'Security check failed. Please reload the page.')];
+    } elseif (($_POST['_action'] ?? '') === 'selling') {
+        $closedOn = !empty($_POST['closed']);
+        ShopStoreAPI::setSetting('closed', $closedOn ? '1' : '0');
+        ShopStoreAPI::setSetting('closed_message', mb_substr(trim(str_replace(["\r", "\n"], ' ', (string) ($_POST['closed_message'] ?? ''))), 0, 200));
+        if (class_exists('AuditLog')) AuditLog::record($closedOn ? 'shop.selling_off' : 'shop.selling_on', 'shop');
+        $_SESSION['shop_flash'] = ['type' => 'success', 'msg' => $closedOn
+            ? __('shop_selling_off_saved', 'Selling is off: products stay visible, nothing can be ordered.')
+            : __('shop_selling_on_saved', 'Selling is on: customers can order again.')];
+        header('Location: ' . $self);
+        exit;
     } elseif (in_array($_POST['_action'] ?? '', ['guard', 'guard_resume'], true)) {
         require_once dirname(__DIR__) . '/ShopGuard.php';
         if ($_POST['_action'] === 'guard_resume') {
@@ -148,6 +158,19 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
 <?php slate_editor_css(); ?>
 <?php slate_edit_open(['title_fallback' => __('shop_settings', 'Shop settings')]); ?>
+<?php $closedNow = ShopStoreAPI::closed(); ?>
+<?php slate_edit_card_open(['icon' => 'tag', 'eyebrow' => __('shop_selling', 'Selling'), 'title' => __('shop_selling_title', 'Online ordering')]); ?>
+    <form method="post">
+        <?= csrf_field() ?>
+        <input type="hidden" name="_action" value="selling">
+        <?php if ($closedNow): ?><div class="alert alert-warning" role="status"><?= e(__('shop_selling_is_off', 'Selling is off. Products are visible but cannot be added to the cart or ordered.')) ?></div><?php endif; ?>
+        <label class="field-check" style="margin-bottom:12px;"><input type="checkbox" name="closed" value="1" <?= $closedNow ? 'checked' : '' ?>> <?= __('shop_selling_off', 'Pause selling (out of season, not producing)') ?></label>
+        <p class="field-hint" style="margin:-6px 0 12px;"><?= __('shop_selling_off_hint', 'Product pages, prices and photos stay online. Add to cart is replaced by the line below, and the cart and checkout refuse orders. Search engines are told the products are out of stock.') ?></p>
+        <label class="field-label" for="closed_message"><?= __('shop_closed_message', 'Line shown instead of Add to cart') ?></label>
+        <input type="text" id="closed_message" name="closed_message" maxlength="200" value="<?= e(ShopStoreAPI::setting('closed_message')) ?>" placeholder="<?= e(__('shop_closed_default', 'Currently not available.')) ?>">
+        <p style="margin-top:14px;"><button type="submit" class="btn btn-primary"><?= __('shop_selling_save', 'Save') ?></button></p>
+    </form>
+<?php slate_edit_card_close(); ?>
 <form method="post">
     <?= csrf_field() ?>
     <input type="hidden" name="_action" value="save">

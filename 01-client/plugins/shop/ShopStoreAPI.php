@@ -168,6 +168,10 @@ class ShopStoreAPI {
             'turnstile_secret'   => '',
             'guard_paused_until' => '',
             'guard_alerted_at'   => '',
+            // 0.4.1 — selling switched off on purpose (out of season, not producing): the catalogue stays visible,
+            // nothing can be added to the cart or ordered, and the message shows where Add to cart was.
+            'closed'             => '0',
+            'closed_message'     => '',
             'weight_unit'       => 'kg',
             'dimension_unit'    => 'cm',
             'low_stock'         => '2',
@@ -238,6 +242,17 @@ class ShopStoreAPI {
         if (!preg_match('/^\d{1,7}([.,]\d{1,3})?$/', $s)) return false;
         $n = (float) str_replace(',', '.', $s);
         return $n <= $max ? $n : false;
+    }
+
+    /** Is selling switched off (Shop settings > Selling)? Products stay visible; cart and checkout refuse. */
+    public static function closed(): bool {
+        return self::setting('closed') === '1';
+    }
+
+    /** The line shown instead of Add to cart while selling is off. */
+    public static function closedMessage(): string {
+        $m = trim(self::setting('closed_message'));
+        return $m !== '' ? $m : __('shop_closed_default', 'Currently not available.');
     }
 
     public static function setting(string $key): string {
@@ -1225,6 +1240,7 @@ class ShopStoreAPI {
      * @return array{ok: bool, error?: string, qty?: int}
      */
     public static function cartAdd(int $productId, int $qty = 1, int $variantId = 0, array $options = []): array {
+        if (self::closed()) return ['ok' => false, 'error' => self::closedMessage()];
         $product = self::publishedProduct($productId);
         if (!$product) return ['ok' => false, 'error' => __('shop_err_unavailable', 'This product is not available.')];
         $variant = null;
@@ -1562,6 +1578,7 @@ class ShopStoreAPI {
      */
     public static function placeOrder(array $in, ?int $customerId = null, ?callable $guard = null): array {
         self::ensureSchema();
+        if (self::closed()) return ['ok' => false, 'errors' => ['_' => self::closedMessage()], 'status' => 409];
         $errors = [];
         $str = static fn(string $k, int $max): string => mb_substr(trim(str_replace(["\r", "\n", "\0"], ' ', (string) ($in[$k] ?? ''))), 0, $max);
         $email = strtolower($str('email', 190));

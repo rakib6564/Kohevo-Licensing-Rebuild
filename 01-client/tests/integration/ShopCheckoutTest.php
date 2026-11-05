@@ -205,6 +205,28 @@ try {
         assert_true(isset($placed['errors']['shipping_rate']));
     });
 
+    unit('shop checkout: with selling paused nothing can be added or ordered, and the line says why', function () use ($scoCart, $scoSet, $brittle): void {
+        $scoCart([$brittle => 1]);                       // in the cart from before the pause
+        $scoSet('closed', '1');
+        $scoSet('closed_message', '');
+        try {
+            assert_true(ShopStoreAPI::closed());
+            $add = ShopStoreAPI::cartAdd($brittle, 1);
+            assert_false($add['ok']);
+            assert_eq('Currently not available.', $add['error']);
+            $scoSet('closed_message', 'Back in spring.');
+            assert_eq('Back in spring.', ShopStoreAPI::cartAdd($brittle, 1)['error']);
+            $placed = ShopStoreAPI::placeOrder(['email' => 'sco@example.test', 'name' => 'Sco Buyer', 'delivery' => 'pickup']);
+            assert_false($placed['ok']);
+            assert_eq('Back in spring.', $placed['errors']['_'] ?? '');
+            assert_eq(409, $placed['status'] ?? 0);
+        } finally {
+            $scoSet('closed', '0');
+        }
+        assert_false(ShopStoreAPI::closed());
+        assert_true(ShopStoreAPI::cartAdd($brittle, 1)['ok'], 'selling on again: Add to cart works');
+    });
+
     unit('shop checkout: a US address needs its state', function () use ($scoCart, $brittle): void {
         $scoCart([$brittle => 1]);
         $placed = ShopStoreAPI::placeOrder(['email' => 'sco@example.test', 'name' => 'Sco Buyer', 'delivery' => 'shipping', 'address_line1' => '1 Test Way', 'postal_code' => '93446', 'city' => 'Paso Robles', 'country' => 'US']);
