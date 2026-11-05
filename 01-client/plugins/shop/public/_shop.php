@@ -115,6 +115,10 @@ function shop_view_continue(): string {
 /** The cart with quantity and remove controls (each a small CSRF-protected form). */
 function shop_view_cart(array $totals, string $notice = '', string $couponError = '', string $couponValue = ''): string {
     $totals = shop_totals_defaults($totals);
+    if (ShopStoreAPI::closed()) {
+        // Selling is off: say so, whatever is still in the cart from before (checkout refuses it anyway).
+        return '<div class="sb-shop-cart sb-shop-cart--closed"><p class="sb-shop-notice" role="status">' . e(ShopStoreAPI::closedMessage()) . '</p>' . shop_view_continue() . '</div>';
+    }
     if ($totals['lines'] === []) {
         return '<div class="sb-shop-cart sb-shop-cart--empty">'
             . ($notice !== '' ? '<p class="sb-shop-notice" role="status">' . e($notice) . '</p>' : '')
@@ -250,6 +254,9 @@ function shop_view_coupon(array $totals, string $error = '', string $value = '')
  */
 function shop_view_checkout(array $totals, array $errors = [], array $old = [], string $notice = ''): string {
     $totals = shop_totals_defaults($totals);
+    if (ShopStoreAPI::closed()) {
+        return '<div class="sb-shop-checkout sb-shop-checkout--closed"><p class="sb-shop-notice" role="status">' . e(ShopStoreAPI::closedMessage()) . '</p>' . shop_view_continue() . '</div>';
+    }
     if ($totals['lines'] === []) {
         return '<div class="sb-shop-checkout sb-shop-checkout--empty"><p class="sb-shop-cart__empty">' . e(__('shop_cart_empty', 'Your cart is empty.')) . '</p>'
             . '<p class="sb-button-row"><a class="sb-button" href="' . e(ShopStoreAPI::pageUrl('cart_page')) . '">' . e(__('shop_back_to_cart', 'Back to cart')) . '</a></p></div>';

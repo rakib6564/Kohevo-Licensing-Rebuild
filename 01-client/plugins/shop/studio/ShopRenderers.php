@@ -224,7 +224,7 @@ final class ShopProductsRenderer implements BlockRendererInterface
         $iconHtml = $icon !== '' ? '<span class="sb-shop-card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">' . $icon . '</svg></span>' : '';
         $add = '';
         if ($showAdd) {
-            $add = $p['has_variants'] && $p['in_stock']
+            $add = $p['has_variants'] && $p['in_stock'] && !\ShopStoreAPI::closed()
                 // Options are chosen on the product's page.
                 ? '<p class="sb-shop-add sb-shop-card__add"><a class="sb-button sb-button--primary sb-shop-add__button sb-shop-card__choose" href="' . Html::e($url) . '">' . Html::e($scope->string('options_label') !== '' ? $scope->string('options_label') : Html::t('shop_choose_options', 'Choose options')) . '</a></p>'
                 : ShopStudio::addToCartForm($scope, $p, $label, false, false, 'sb-shop-card__add');
@@ -577,6 +577,9 @@ final class ShopProductStockRenderer implements BlockRendererInterface
         $p = ShopStudio::current($scope);
         if ($p === null) {
             return ShopStudio::none($scope);
+        }
+        if (\ShopStoreAPI::closed()) {
+            return '';
         }
         $low = max(0, (int) $scope->prop('low_stock', 5));
         if (!$p['in_stock']) {

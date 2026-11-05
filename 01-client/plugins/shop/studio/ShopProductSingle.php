@@ -72,7 +72,7 @@ final class ShopProductSingle implements PluginSingleInterface
         }
         $url = $base . (string) $p['url'];
         $price = static fn(int $cents): string => number_format($cents / 100, 2, '.', '');
-        $availability = 'https://schema.org/' . (!empty($p['in_stock']) ? 'InStock' : 'OutOfStock');
+        $availability = 'https://schema.org/' . (!\ShopStoreAPI::closed() && !empty($p['in_stock']) ? 'InStock' : 'OutOfStock');
         $currency = strtoupper((string) $p['currency']);
         if (!empty($p['has_variants']) && (int) $p['min_cents'] !== (int) $p['max_cents']) {
             $offers = ['@type' => 'AggregateOffer', 'priceCurrency' => $currency, 'lowPrice' => $price((int) $p['min_cents']), 'highPrice' => $price((int) $p['max_cents']),

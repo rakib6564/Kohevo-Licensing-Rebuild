@@ -121,6 +121,10 @@ final class ShopStudio
      */
     public static function addToCartForm(BlockRenderScope $scope, array $product, string $label, bool $quantity, bool $goToCart, string $class = ''): string
     {
+        if (\ShopStoreAPI::closed()) {
+            // Selling is off: the Sold out look, with the shop's own line.
+            return '<p class="sb-shop-add sb-shop-add--sold-out sb-shop-add--closed' . ($class !== '' ? ' ' . $class : '') . '"><span class="sb-button sb-shop-add__button" aria-disabled="true">' . Html::e(\ShopStoreAPI::closedMessage()) . '</span></p>';
+        }
         if (empty($product['in_stock'])) {
             return '<p class="sb-shop-add sb-shop-add--sold-out' . ($class !== '' ? ' ' . $class : '') . '"><span class="sb-button sb-shop-add__button" aria-disabled="true">' . Html::e(Html::t('shop_sold_out', 'Sold out')) . '</span></p>';
         }
