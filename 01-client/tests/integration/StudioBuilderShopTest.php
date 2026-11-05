@@ -405,6 +405,12 @@ unit('shop: catalogue, cart, checkout, payment and the Studio storefront (real M
             assert_true(str_contains($html, 'sb-shop-price--sale') && str_contains($html, 'sb-shop-stock--out'), 'sale price and stock (sold out after the order)');
             assert_true(str_contains($html, '<title>Club &lt;b&gt;T-shirt&lt;/b&gt;'), 'the page title is the product');
             assert_true(str_contains($html, 'sb-shop-gallery__thumb') && str_contains($html, 'https://cdn.example.test/ts-back.jpg'), 'its other images');
+            // The thumbnail swap sets the main photo from data-sb-thumb in script, which Studio's src/href rebasing never touches:
+            // a site-path photo must already carry the install's address, or it loads from the parent site (a broken photo).
+            assert_true(preg_match('/data-sb-thumb="\/(?!\/)/', $html) === 0, 'no thumbnail address is a bare site path');
+            if ($base !== '') {
+                assert_true(str_contains($html, 'data-sb-thumb="' . $base . '/uploads/media/ts-front.jpg"'), 'a site-path photo is made site-absolute for the thumbnail swap');
+            }
             assert_true(str_contains($html, '<p>Second &lt;para&gt;.</p>'), 'the description, escaped, in paragraphs');
             if ($base !== '') {
                 assert_true(str_contains($html, '<link rel="canonical" href="' . $base . '/product/club-b-t-shirt-b">'), 'canonical is the product address');
