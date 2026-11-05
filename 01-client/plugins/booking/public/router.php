@@ -1477,7 +1477,7 @@ function bookpub_render_success(string $ref, array $args, bool $embed, string $s
 function bookpub_render_payment(array $appt, bool $embed): void {
     $service  = BookingAPI::getService((int)$appt['service_id']);
     $provider = Database::row("SELECT name FROM booking_providers WHERE id = ?", [(int)$appt['provider_id']]);
-    $currency = strtoupper((string)($service['currency'] ?? 'USD'));
+    $currency = strtoupper((string)($service['currency'] ?? '') ?: slate_default_currency());
     $token    = (string)$appt['manage_token'];
 
     $due = (int)$appt['deposit_cents'] > 0

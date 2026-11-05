@@ -68,7 +68,7 @@ try {
           WHERE a.tenant_id = ? AND a.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01') AND a.status != 'cancelled'
        GROUP BY s.currency ORDER BY COUNT(*) DESC LIMIT 1",
         [$tid]
-    ) ?: 'USD');
+    ) ?: slate_default_currency());
 
     // Past-7-days daily appointment counts, zero-filled so the sparkline's
     // shape is real (a day with zero bookings is a real dip, not a gap).
@@ -137,7 +137,7 @@ try {
 } catch (\Throwable $e) {
     $totalCustomers = $totalCustomers ?? 0;
     $revenueThisMonth = $revenueThisMonth ?? 0;
-    $revenueCurrency = $revenueCurrency ?? 'USD';
+    $revenueCurrency = $revenueCurrency ?? slate_default_currency();
     $todaySpark = $todaySpark ?? [];
     $weekSpark = $weekSpark ?? [];
     $revenueSpark = $revenueSpark ?? [];

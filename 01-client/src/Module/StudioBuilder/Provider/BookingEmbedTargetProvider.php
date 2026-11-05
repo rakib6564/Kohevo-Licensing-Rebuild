@@ -74,7 +74,7 @@ final class BookingEmbedTargetProvider implements PublicDataProviderInterface, P
             'description'      => \BookingAPI::serviceDescription($service),
             'duration_minutes' => (int) ($service['duration_min'] ?? 0),
             'price_cents'      => (int) ($service['price_cents'] ?? 0),
-            'currency'         => (string) ($service['currency'] ?? 'USD'),
+            'currency'         => (string) ($service['currency'] ?? '') ?: slate_default_currency(),
         ]];
     }
 

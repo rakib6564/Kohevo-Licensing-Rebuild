@@ -204,7 +204,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <div class="card-header"><h2><?= e(__('booking_details', 'Details')) ?></h2></div>
             <?php
             $actualMin = (int) round((strtotime($row['ends_at']) - strtotime($row['starts_at'])) / 60);
-            $cur       = $row['service_currency'] ?: 'USD';
+            $cur       = $row['service_currency'] ?: slate_default_currency();
             $addons    = json_decode((string)($row['addons_json'] ?? '[]'), true) ?: [];
             $customVals= json_decode((string)($row['custom_json'] ?? '[]'), true) ?: [];
             $payLabels = [
@@ -230,10 +230,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <li class="kv-row"><span class="kv-label"><?= e(__('booking_addons', 'Add-ons')) ?></span> <span class="kv-value"><?= e(implode(', ', array_map(fn($a) => $a['name'] ?? '', $addons))) ?></span></li>
                 <?php endif; ?>
                 <?php if ((int)($row['price_cents'] ?? 0) > 0): ?>
-                    <li class="kv-row"><span class="kv-label"><?= e(__('booking_price', 'Price')) ?></span>   <span class="kv-value kv-mono"><?= e($cur) ?> <?= e(number_format(((int)$row['price_cents'] + (int)($row['tax_cents'] ?? 0))/100, 2)) ?><?php if ((int)($row['tax_cents'] ?? 0) > 0): ?> <span class="text-muted">(<?= e(__('booking_incl_tax', 'incl. tax')) ?>)</span><?php endif; ?></span></li>
+                    <li class="kv-row"><span class="kv-label"><?= e(__('booking_price', 'Price')) ?></span>   <span class="kv-value kv-mono"><?= e(slate_format_price_plain((int)$row['price_cents'] + (int)($row['tax_cents'] ?? 0), $cur)) ?><?php if ((int)($row['tax_cents'] ?? 0) > 0): ?> <span class="text-muted">(<?= e(__('booking_incl_tax', 'incl. tax')) ?>)</span><?php endif; ?></span></li>
                 <?php endif; ?>
                 <?php if (($row['payment_status'] ?? 'none') !== 'none'): ?>
-                    <li class="kv-row"><span class="kv-label"><?= e(__('booking_payment_label', 'Payment')) ?></span> <span class="kv-value"><?= e($payLabels[$row['payment_status']] ?? $row['payment_status']) ?><?php if ((int)($row['deposit_cents'] ?? 0) > 0): ?> · <?= e(__('booking_deposit_lc', 'deposit')) ?> <?= e($cur) ?> <?= e(number_format(((int)$row['deposit_cents'])/100, 2)) ?><?php endif; ?></span></li>
+                    <li class="kv-row"><span class="kv-label"><?= e(__('booking_payment_label', 'Payment')) ?></span> <span class="kv-value"><?= e($payLabels[$row['payment_status']] ?? $row['payment_status']) ?><?php if ((int)($row['deposit_cents'] ?? 0) > 0): ?> · <?= e(__('booking_deposit_lc', 'deposit')) ?> <?= e(slate_format_price_plain((int)$row['deposit_cents'], $cur)) ?><?php endif; ?></span></li>
                 <?php endif; ?>
                 <?php foreach ($customVals as $ck => $cv): if ($cv === '' || $cv === null) continue; ?>
                     <li class="kv-row"><span class="kv-label"><?= e($ck) ?></span> <span class="kv-value"><?= e(is_array($cv) ? implode(', ', $cv) : (string)$cv) ?></span></li>

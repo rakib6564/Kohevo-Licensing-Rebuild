@@ -179,7 +179,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 'avatar'       => mb_substr($g['code'], 0, 1),
                 'avatar_color' => ($g['is_active'] && !$depleted) ? 'accent' : 'muted',
                 'title'        => $g['code'],
-                'meta'         => sprintf(__('booking_giftcard_meta', '%s of %s'), slate_format_price_plain((int)$g['balance_cents'], $g['currency']), number_format($g['initial_cents']/100, 2)),
+                'meta'         => sprintf(__('booking_giftcard_meta', '%s of %s'), slate_format_price_plain((int)$g['balance_cents'], $g['currency']), slate_format_price_plain((int)$g['initial_cents'], $g['currency'])),
                 'badge'        => $depleted ? [__('booking_empty', 'Empty'), 'inactive'] : ($g['is_active'] ? [__('active', 'Active'), 'active'] : [__('inactive', 'Inactive'), 'inactive']),
                 'detail'       => [
                     __('booking_balance', 'Balance') => slate_format_price_plain((int)$g['balance_cents'], $g['currency']),

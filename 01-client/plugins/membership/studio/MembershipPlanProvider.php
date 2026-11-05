@@ -64,7 +64,7 @@ final class MembershipPlanProvider implements PublicDataProviderInterface, Param
                 'name'          => \MembershipAPI::planName($row),
                 'description'   => \MembershipAPI::planDescription($row),
                 'price_cents'   => (int) ($row['price_cents'] ?? 0),
-                'currency'      => (string) ($row['currency'] ?? 'USD'),
+                'currency'      => (string) ($row['currency'] ?? '') ?: slate_default_currency(),
                 'duration_days' => (int) ($row['duration_days'] ?? 0),
             ]];
         }

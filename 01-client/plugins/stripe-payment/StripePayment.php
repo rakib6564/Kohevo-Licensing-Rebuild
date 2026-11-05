@@ -110,14 +110,14 @@ class StripePayment extends Plugin {
                 "SELECT COUNT(*) FROM stripepayment_charges
                   WHERE tenant_id = ? AND status IN ('succeeded','partial_refund','refunded')", [$tid]);
             $cur = (string) (Database::value(
-                "SELECT currency FROM stripepayment_charges WHERE tenant_id = ? ORDER BY id DESC LIMIT 1", [$tid]) ?: 'USD');
+                "SELECT currency FROM stripepayment_charges WHERE tenant_id = ? ORDER BY id DESC LIMIT 1", [$tid]) ?: slate_default_currency());
             $latest = Database::rows(
                 "SELECT amount_cents, refunded_cents, currency, customer_email, status, created_at
                    FROM stripepayment_charges WHERE tenant_id = ? ORDER BY id DESC LIMIT 5", [$tid]);
         } catch (\Throwable $e) {
             return $widgets;
         }
-        $volStr = number_format($todayVol / 100, 2) . ' ' . strtoupper($cur);
+        $volStr = slate_format_price_plain((int) $todayVol, $cur);
         $chargesUrl = $this->url('admin/charges.php');
 
         ob_start(); ?>

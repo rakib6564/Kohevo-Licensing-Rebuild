@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $service) {
 
 $allServices = Database::rows("SELECT id, name FROM booking_services WHERE tenant_id = ? ORDER BY name", [$tid]);
 $addons = $service ? BookingAPI::getServiceAddons($serviceId, false) : [];
-$currency = $service['currency'] ?? 'USD';
+$currency = (string) ($service['currency'] ?? '') ?: slate_default_currency();
 
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>

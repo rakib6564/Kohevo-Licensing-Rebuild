@@ -66,7 +66,7 @@ final class BookingServicesProvider implements PublicDataProviderInterface
                 'description'       => \BookingAPI::serviceDescription($row),
                 'duration_minutes'  => (int) ($row['duration_min'] ?? 0),
                 'price_cents'       => (int) ($row['price_cents'] ?? 0),
-                'currency'          => (string) ($row['currency'] ?? 'USD'),
+                'currency'          => (string) ($row['currency'] ?? '') ?: slate_default_currency(),
             ];
         }
         return $out;

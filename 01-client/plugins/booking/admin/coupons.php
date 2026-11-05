@@ -96,7 +96,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     $c = $editing ?: ['id'=>0,'code'=>'','type'=>'percent','value'=>0,'min_total_cents'=>0,'max_uses'=>null,'expires_at'=>null,'is_active'=>1];
     $valDisplay = $c['type'] === 'fixed' ? number_format(((int)$c['value'])/100, 2, '.', '') : (string)(int)$c['value'];
     $cInitials  = ($editing && trim((string)$editing['code']) !== '') ? mb_strtoupper(mb_substr($editing['code'], 0, 2)) : '%';
-    $cDiscount  = $c['type'] === 'fixed' ? number_format(((int)$c['value'])/100, 2) : (int)$c['value'] . '<small>%</small>';
+    $cDiscount  = $c['type'] === 'fixed' ? slate_format_price_plain((int)$c['value']) : (int)$c['value'] . '<small>%</small>';
     $cExpired   = !empty($c['expires_at']) && strtotime($c['expires_at']) < time();
 ?>
 <?php booking_editor_css(); ?>
@@ -193,7 +193,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php else: ?>
     <div class="data-list" data-single-open>
         <?php foreach ($coupons as $c):
-            $val = $c['type'] === 'fixed' ? number_format(((int)$c['value'])/100, 2) : (int)$c['value'] . '%';
+            $val = $c['type'] === 'fixed' ? slate_format_price_plain((int)$c['value']) : (int)$c['value'] . '%';
             $expired = !empty($c['expires_at']) && strtotime($c['expires_at']) < time();
             $actions = '<a href="?edit=' . (int)$c['id'] . '" class="btn btn-sm">' . e(__('edit', 'Edit')) . '</a> '
                      . '<form method="post" style="display:inline;margin:0;" onsubmit="return confirm(\'' . e(__('booking_confirm_delete_coupon', 'Delete this coupon?')) . '\')">'
@@ -208,7 +208,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 'badge'        => $expired ? [__('booking_expired', 'Expired'), 'inactive'] : ($c['is_active'] ? [__('active', 'Active'), 'active'] : [__('inactive', 'Inactive'), 'inactive']),
                 'detail'       => [
                     __('booking_discount', 'Discount')   => $c['type'] === 'fixed' ? __('booking_fixed_amount_type', 'Fixed amount') . ' ' . $val : $val,
-                    __('booking_min_order', 'Min order')  => (int)$c['min_total_cents'] > 0 ? number_format($c['min_total_cents']/100, 2) : '—',
+                    __('booking_min_order', 'Min order')  => (int)$c['min_total_cents'] > 0 ? slate_format_price_plain((int)$c['min_total_cents']) : '—',
                     __('booking_uses', 'Uses')       => (int)$c['used_count'] . (($c['max_uses'] !== null) ? ' / ' . (int)$c['max_uses'] : ' (' . __('booking_unlimited', 'unlimited') . ')'),
                     __('booking_expires', 'Expires')    => !empty($c['expires_at']) ? I18n::localDate('j M Y', strtotime($c['expires_at'])) : '—',
                 ],
