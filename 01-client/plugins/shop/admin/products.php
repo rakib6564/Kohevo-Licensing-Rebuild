@@ -136,6 +136,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
 <?php endif; ?>
 <link rel="stylesheet" href="<?= e(SLATE_URL) ?>/plugins/shop/assets/admin/product-media.css?v=<?= e($assetV('shop/assets/admin/product-media.css')) ?>">
 <script src="<?= e(SLATE_URL) ?>/plugins/shop/assets/admin/product-media.js?v=<?= e($assetV('shop/assets/admin/product-media.js')) ?>" defer></script>
+<link rel="stylesheet" href="<?= e(SLATE_URL) ?>/plugins/shop/assets/admin/product-variants.css?v=<?= e($assetV('shop/assets/admin/product-variants.css')) ?>">
+<script src="<?= e(SLATE_URL) ?>/plugins/shop/assets/admin/product-variants.js?v=<?= e($assetV('shop/assets/admin/product-variants.js')) ?>" defer></script>
 <?php slate_editor_css(); ?>
 <?php slate_edit_open(['title_fallback' => __('shop_new_product', 'New product')]); ?>
     <form method="post" enctype="multipart/form-data">
@@ -294,39 +296,77 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <div class="field-hint"><?= __('shop_attributes_hint', 'One per line: the name, a colon, then the values separated by commas. Leave empty for a product without options. Saving makes one variant per combination.') ?></div>
                 <?= $err('attributes') ?>
             </div>
-            <?php if ($variantRows): ?>
+            <?php if ($variantRows):
+                // One collapsible row per variant (photo, name, price and stock at a glance; every field inside), grouped under the first
+                // attribute when there are two or more (each colour, say). Every input stays in the form, open or closed, with the same names.
+                $cur = (string) $p['currency'];
+                $groups = [];
+                foreach ($variantRows as $vr) {
+                    $vals = ShopStoreAPI::variantValues($vr);
+                    $groups[count($attributes) > 1 ? (string) ($vals[0] ?? '') : ''][] = $vr;
+                }
+                $openAll = isset($errors['variants']) || $postedVariants !== [];
+                $renderVariant = static function (array $vr) use ($postedVariants, $fmt, $p, $wUnit, $dUnit, $cur, $openAll): string {
+                    $key = (string) $vr['options_key'];
+                    $f = is_array($postedVariants[$key] ?? null) ? $postedVariants[$key] : null;
+                    $fv = static fn(string $k, string $fromRow): string => e($f !== null ? (string) ($f[$k] ?? '') : $fromRow);
+                    $label = ShopStoreAPI::optionsLabel(ShopStoreAPI::variantValues($vr));
+                    $name = 'variants[' . e($key) . ']';
+                    $on = $f !== null ? !empty($f['enabled']) : (int) $vr['enabled'] === 1;
+                    $img = $f !== null ? (string) ($f['image'] ?? '') : (string) ($vr['image'] ?? '');
+                    $priceCents = ($vr['price_cents'] !== null && $vr['price_cents'] !== '') ? (int) $vr['price_cents'] : (int) $p['price_cents'];
+                    $stockQty = $f !== null ? trim((string) ($f['stock'] ?? '')) : ($vr['stock_qty'] === null ? '' : (string) (int) $vr['stock_qty']);
+                    ob_start(); ?>
+                    <details class="shop-variant" data-shop-variant<?= $openAll ? ' open' : '' ?>>
+                        <summary class="shop-variant__sum">
+                            <span class="shop-variant__thumb" data-vs-thumb><?php if ($img !== ''): ?><img src="<?= e(ShopStoreAPI::assetUrl($img)) ?>" alt="" loading="lazy"><?php endif; ?></span>
+                            <span class="shop-variant__label"><?= e($label) ?></span>
+                            <span class="shop-variant__chips">
+                                <span class="shop-chip" data-vs="price"><?= e(slate_format_price_plain($priceCents, $cur)) ?></span>
+                                <span class="shop-chip" data-vs="stock"><?= $stockQty === '' ? e(__('shop_not_tracked', 'Not tracked')) : e(__('shop_stock', 'Stock') . ': ' . $stockQty) ?></span>
+                                <span class="shop-chip shop-chip--off" data-vs="off"<?= $on ? ' hidden' : '' ?>><?= e(__('shop_variant_off', 'Not sold')) ?></span>
+                            </span>
+                        </summary>
+                        <div class="shop-variant__body">
+                            <div class="field"><label class="field-label"><?= __('shop_sku', 'SKU') ?></label>
+                                <input type="text" name="<?= $name ?>[sku]" maxlength="64" value="<?= $fv('sku', (string) ($vr['sku'] ?? '')) ?>" aria-label="<?= e($label . ' — ' . __('shop_sku', 'SKU')) ?>"></div>
+                            <div class="field"><label class="field-label"><?= __('shop_price', 'Price') ?></label>
+                                <input type="text" inputmode="decimal" name="<?= $name ?>[price]" data-vs-in="price" value="<?= $fv('price', $fmt($vr['price_cents'])) ?>" placeholder="<?= e($fmt($p['price_cents'])) ?>" aria-label="<?= e($label . ' — ' . __('shop_price', 'Price')) ?>"></div>
+                            <div class="field"><label class="field-label"><?= __('shop_sale_price', 'Sale price') ?></label>
+                                <input type="text" inputmode="decimal" name="<?= $name ?>[sale_price]" value="<?= $fv('sale_price', $fmt($vr['sale_price_cents'])) ?>" aria-label="<?= e($label . ' — ' . __('shop_sale_price', 'Sale price')) ?>"></div>
+                            <div class="field"><label class="field-label"><?= __('shop_stock', 'Stock') ?></label>
+                                <input type="number" min="0" step="1" name="<?= $name ?>[stock]" data-vs-in="stock" value="<?= $fv('stock', $vr['stock_qty'] === null ? '' : (string) (int) $vr['stock_qty']) ?>" placeholder="<?= e(__('shop_not_tracked', 'Not tracked')) ?>" aria-label="<?= e($label . ' — ' . __('shop_stock', 'Stock')) ?>"></div>
+                            <div class="field"><label class="field-label"><?= __('shop_weight', 'Weight') ?> (<?= e($wUnit) ?>)</label>
+                                <input type="text" inputmode="decimal" name="<?= $name ?>[weight]" value="<?= $fv('weight', ShopStoreAPI::measure($vr['weight'] ?? null)) ?>" placeholder="<?= e(ShopStoreAPI::measure($p['weight'])) ?>" aria-label="<?= e($label . ' — ' . __('shop_weight', 'Weight')) ?>"></div>
+                            <div class="field"><label class="field-label"><?= __('shop_size', 'Size') ?> (<?= e($dUnit) ?>)</label>
+                                <input type="text" name="<?= $name ?>[size]" value="<?= $fv('size', ShopStoreAPI::sizeText($vr)) ?>" placeholder="<?= e(ShopStoreAPI::sizeText($p)) ?>" aria-label="<?= e($label . ' — ' . __('shop_size', 'Size')) ?>"></div>
+                            <div class="field shop-variant__wide"><label class="field-label"><?= __('shop_image', 'Image') ?></label>
+                                <input type="text" name="<?= $name ?>[image]" maxlength="500" data-vs-in="image" value="<?= $fv('image', (string) ($vr['image'] ?? '')) ?>" aria-label="<?= e($label . ' — ' . __('shop_image', 'Image')) ?>" data-shop-variant-image="<?= e($label) ?>"></div>
+                            <div class="field shop-variant__wide"><label class="field-check"><input type="checkbox" name="<?= $name ?>[enabled]" value="1" data-vs-in="enabled" <?= $on ? 'checked' : '' ?>> <span><?= __('shop_variant_sold', 'On sale') ?></span></label></div>
+                        </div>
+                    </details>
+                    <?php return (string) ob_get_clean();
+                };
+                ?>
                 <?= $err('variants') ?>
-                <div class="table-wrap">
-                <table class="table shop-variants">
-                    <thead><tr>
-                        <th><?= __('shop_variant', 'Variant') ?></th><th><?= __('shop_sku', 'SKU') ?></th>
-                        <th><?= __('shop_price', 'Price') ?></th><th><?= __('shop_sale_price', 'Sale price') ?></th>
-                        <th><?= __('shop_stock', 'Stock') ?></th><th><?= __('shop_weight', 'Weight') ?> (<?= e($wUnit) ?>)</th><th><?= __('shop_size', 'Size') ?> (<?= e($dUnit) ?>)</th>
-                        <th><?= __('shop_image', 'Image') ?></th><th><?= __('shop_variant_sold', 'On sale') ?></th>
-                    </tr></thead>
-                    <tbody>
-                    <?php foreach ($variantRows as $vr):
-                        $key = (string) $vr['options_key'];
-                        $f = is_array($postedVariants[$key] ?? null) ? $postedVariants[$key] : null;
-                        $fv = static fn(string $k, string $fromRow): string => e($f !== null ? (string) ($f[$k] ?? '') : $fromRow);
-                        $label = ShopStoreAPI::optionsLabel(ShopStoreAPI::variantValues($vr));
-                        $name = 'variants[' . e($key) . ']';
-                        $on = $f !== null ? !empty($f['enabled']) : (int) $vr['enabled'] === 1;
-                    ?>
-                        <tr>
-                            <th scope="row"><?= e($label) ?></th>
-                            <td><input type="text" name="<?= $name ?>[sku]" maxlength="64" value="<?= $fv('sku', (string) ($vr['sku'] ?? '')) ?>" aria-label="<?= e($label . ' — ' . __('shop_sku', 'SKU')) ?>"></td>
-                            <td><input type="text" inputmode="decimal" name="<?= $name ?>[price]" value="<?= $fv('price', $fmt($vr['price_cents'])) ?>" placeholder="<?= e($fmt($p['price_cents'])) ?>" aria-label="<?= e($label . ' — ' . __('shop_price', 'Price')) ?>"></td>
-                            <td><input type="text" inputmode="decimal" name="<?= $name ?>[sale_price]" value="<?= $fv('sale_price', $fmt($vr['sale_price_cents'])) ?>" aria-label="<?= e($label . ' — ' . __('shop_sale_price', 'Sale price')) ?>"></td>
-                            <td><input type="number" min="0" step="1" name="<?= $name ?>[stock]" value="<?= $fv('stock', $vr['stock_qty'] === null ? '' : (string) (int) $vr['stock_qty']) ?>" placeholder="<?= e(__('shop_not_tracked', 'Not tracked')) ?>" aria-label="<?= e($label . ' — ' . __('shop_stock', 'Stock')) ?>"></td>
-                            <td><input type="text" inputmode="decimal" name="<?= $name ?>[weight]" size="6" value="<?= $fv('weight', ShopStoreAPI::measure($vr['weight'] ?? null)) ?>" placeholder="<?= e(ShopStoreAPI::measure($p['weight'])) ?>" aria-label="<?= e($label . ' — ' . __('shop_weight', 'Weight')) ?>"></td>
-                            <td><input type="text" name="<?= $name ?>[size]" size="10" value="<?= $fv('size', ShopStoreAPI::sizeText($vr)) ?>" placeholder="<?= e(ShopStoreAPI::sizeText($p)) ?>" aria-label="<?= e($label . ' — ' . __('shop_size', 'Size')) ?>"></td>
-                            <td><input type="text" name="<?= $name ?>[image]" maxlength="500" value="<?= $fv('image', (string) ($vr['image'] ?? '')) ?>" aria-label="<?= e($label . ' — ' . __('shop_image', 'Image')) ?>" data-shop-variant-image="<?= e($label) ?>"></td>
-                            <td><label class="field-check"><input type="checkbox" name="<?= $name ?>[enabled]" value="1" <?= $on ? 'checked' : '' ?>> <span class="sr-only"><?= e($label) ?></span></label></td>
-                        </tr>
+                <div class="shop-vlist" data-shop-vlist data-base="<?= e(rtrim((string) SLATE_URL, '/')) ?>" data-pos="<?= e(slate_currency_position()) ?>" data-sym="<?= e(slate_currency_symbol($cur)) ?>"
+                     data-label-stock="<?= e(__('shop_stock', 'Stock')) ?>" data-label-untracked="<?= e(__('shop_not_tracked', 'Not tracked')) ?>">
+                    <div class="shop-vlist__bar">
+                        <span class="shop-vlist__count"><?= e(sprintf(__('shop_n_variants', '%d variants'), count($variantRows))) ?></span>
+                        <span class="shop-vlist__actions">
+                            <button type="button" class="btn btn-sm" data-vl="open"><?= e(__('shop_expand_all', 'Expand all')) ?></button>
+                            <button type="button" class="btn btn-sm" data-vl="close"><?= e(__('shop_collapse_all', 'Collapse all')) ?></button>
+                        </span>
+                    </div>
+                    <?php foreach ($groups as $groupName => $rows): ?>
+                        <?php if (count($attributes) > 1): ?>
+                            <details class="shop-vgroup" data-shop-vgroup<?= $openAll ? ' open' : '' ?>>
+                                <summary class="shop-vgroup__sum"><span class="shop-vgroup__name"><?= e((string) $groupName) ?></span>
+                                    <span class="shop-chip"><?= e(sprintf(__('shop_n_variants', '%d variants'), count($rows))) ?></span></summary>
+                                <div class="shop-vgroup__body"><?php foreach ($rows as $vr) echo $renderVariant($vr); ?></div>
+                            </details>
+                        <?php else: foreach ($rows as $vr) echo $renderVariant($vr); endif; ?>
                     <?php endforeach; ?>
-                    </tbody>
-                </table>
                 </div>
                 <div class="field-hint"><?= __('shop_variants_hint2', 'Empty price, weight or size: the product\'s. Empty stock: not tracked. Size as length x width x height. Untick "On sale" for a combination you do not sell.') ?></div>
             <?php endif; ?>
