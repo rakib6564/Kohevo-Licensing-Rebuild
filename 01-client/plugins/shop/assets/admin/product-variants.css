@@ -1,0 +1,40 @@
+/* Shop — variants as collapsible rows (admin product form). Native <details>: works without JavaScript. */
+.shop-vlist { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.shop-vlist__bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.shop-vlist__count { font-size: 13px; font-weight: 600; color: var(--muted, #64748b); }
+.shop-vlist__actions { display: flex; gap: 6px; }
+
+.shop-vgroup, .shop-variant { border: 1px solid var(--border, #e2e8f0); border-radius: var(--radius, 10px); background: var(--surface, #fff); }
+.shop-vgroup > summary, .shop-variant > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: inherit; }
+.shop-vgroup > summary::-webkit-details-marker, .shop-variant > summary::-webkit-details-marker { display: none; }
+.shop-vgroup > summary::before, .shop-variant > summary::before { content: ""; flex: 0 0 8px; width: 8px; height: 8px; border-right: 2px solid var(--muted, #64748b); border-bottom: 2px solid var(--muted, #64748b);
+    transform: rotate(-45deg); transition: transform .15s ease; margin-right: 2px; }
+.shop-vgroup[open] > summary::before, .shop-variant[open] > summary::before { transform: rotate(45deg); }
+.shop-vgroup > summary:hover, .shop-variant > summary:hover { background: var(--surface-2, #f8fafc); }
+.shop-vgroup > summary:focus-visible, .shop-variant > summary:focus-visible { outline: 2px solid var(--primary, #4f46e5); outline-offset: -2px; }
+.shop-vgroup[open] > summary, .shop-variant[open] > summary { border-bottom: 1px solid var(--border, #e2e8f0); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+
+.shop-vgroup { background: var(--surface-2, #f8fafc); }
+.shop-vgroup__name { font-weight: 700; font-size: 14px; flex: 1; }
+.shop-vgroup__body { display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+
+.shop-variant__thumb { flex: 0 0 34px; width: 34px; height: 34px; border-radius: 6px; overflow: hidden; background: var(--surface-2, #f1f5f9); border: 1px solid var(--border, #e2e8f0); }
+.shop-variant__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shop-variant__label { flex: 1; min-width: 0; font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shop-variant__chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.shop-chip { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.6; background: var(--surface-2, #f1f5f9); color: var(--muted, #475569); border: 1px solid var(--border, #e2e8f0); white-space: nowrap; }
+.shop-chip--off { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.shop-chip[hidden] { display: none; }
+.shop-variant:has(.shop-chip--off:not([hidden])) .shop-variant__label { opacity: .6; }
+
+.shop-variant__body { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; padding: 14px; }
+.shop-variant__body .field { margin: 0; }
+.shop-variant__wide { grid-column: 1 / -1; }
+@media (max-width: 720px) {
+    .shop-variant__body { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .shop-variant__chips .shop-chip:not(.shop-chip--off):nth-child(2) { display: none; }
+}
+@media (max-width: 460px) {
+    .shop-variant__body { grid-template-columns: 1fr; }
+    .shop-variant__chips { display: none; }
+}

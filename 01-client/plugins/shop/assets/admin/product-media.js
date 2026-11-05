@@ -235,7 +235,7 @@
                 b.setAttribute('aria-label', (L.choose || 'Choose image') + ' — ' + input.getAttribute('data-shop-variant-image'));
                 b.addEventListener('click', function (e) {
                     e.preventDefault();
-                    window.SlateMedia.open({ types: 'image', onPick: function (item) { input.value = norm(item.path || item.url); show(); } });
+                    window.SlateMedia.open({ types: 'image', onPick: function (item) { input.value = norm(item.path || item.url); show(); input.dispatchEvent(new Event('input', { bubbles: true })); } });
                 });
                 wrap.appendChild(b);
             }
