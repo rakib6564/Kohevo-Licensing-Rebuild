@@ -66,6 +66,11 @@ unit('site context: the page language is a valid BCP 47 tag', function (): void 
     assert_eq(['fr', 'fr-BE', 'fr-BE', 'en'], [$tag('fr'), $tag('fr_be'), $tag('fr-BE'), $tag('nonsense')]);
 });
 
+unit('site context: a region only applies on top of the site\'s own language', function (): void {
+    $w = static fn(string $l, string $t): string => \Slate\Module\StudioBuilder\Render\SiteContext::withRegion($l, $t);
+    assert_eq(['fr-BE', 'fr-BE', 'fr', 'fr', 'en'], [$w('fr', 'fr-BE'), $w('fr', 'fr_be'), $w('fr', 'en-GB'), $w('fr', ''), $w('en', 'fr-BE')]);
+});
+
 unit('image block: a priority picture loads first, a normal one lazily', function (): void {
     $lazy = \Slate\Module\StudioBuilder\Render\Block\CoreRenderers\ImageRenderer::img('/a.jpg', '', 10, 10, null, true, [], false);
     $first = \Slate\Module\StudioBuilder\Render\Block\CoreRenderers\ImageRenderer::img('/a.jpg', '', 10, 10, null, false, [], true);

@@ -67,6 +67,17 @@ final class SiteContext
      * Build from the running install: `SLATE_URL` + the CURRENT tenant's branding.
      * Every read is best-effort — branding can never break a render.
      */
+    /** The language with a region (fr + fr-BE = fr-BE), when the region belongs to that same language; else the language. */
+    public static function withRegion(string $locale, string $tag): string
+    {
+        $tag = trim($tag);
+        if (preg_match('/^([A-Za-z]{2})[_-]([A-Za-z]{2})$/', $tag, $m) === 1
+            && strtolower($m[1]) === strtolower(substr($locale, 0, 2))) {
+            return strtolower($m[1]) . '-' . strtoupper($m[2]);
+        }
+        return $locale;
+    }
+
     public static function fromEnvironment(): self
     {
         $base = self::configuredBaseUrl(defined('SLATE_URL') ? (string) \SLATE_URL : '');
@@ -85,6 +96,11 @@ final class SiteContext
             if (class_exists('I18n')) {
                 $locale = (string) \I18n::currentLocale();
             }
+        } catch (\Throwable $ignored) {
+        }
+        // Optional region for <html lang> (setting `site_html_lang`, e.g. fr-BE): only on top of the site's own language.
+        try {
+            $locale = self::withRegion($locale, (string) (\Database::setting('site_html_lang') ?? ''));
         } catch (\Throwable $ignored) {
         }
         return new self($base, $name, $logo, $favicon, $locale, self::DEFAULT_SITE_KEY, SiteSeoDefaults::fromSettings());
