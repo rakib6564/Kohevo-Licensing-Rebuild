@@ -24,7 +24,11 @@ final class EntitlementService
 
     public static function canAccess(int $tenantId, string $featureKey): bool
     {
-        if (!\PluginLoader::isActive($featureKey)) return false;
+        // A module key can differ from its plugin slug (dance-studio is plugins/studio).
+        $pluginSlug = class_exists(\Slate\Services\Installation\CommercialModuleRegistry::class)
+            ? \Slate\Services\Installation\CommercialModuleRegistry::pluginSlugFor($featureKey)
+            : $featureKey;
+        if (!\PluginLoader::isActive($pluginSlug)) return false;
         return self::licensedForFeature($tenantId, $featureKey);
     }
 

@@ -357,3 +357,40 @@ unit('module guard: background jobs — ModuleGuard::allows() denies an unentitl
         mg_clear();
     }
 });
+
+// ── A module key that differs from its plugin slug ──────────────────────
+
+unit('module guard: dance-studio is gated by its licence key although the plugin lives at plugins/studio', function () {
+    $before = Database::row("SELECT status FROM plugins WHERE slug = 'studio'");
+    if ($before === null) PluginLoader::installFromDisk('studio');
+    PluginLoader::activate('studio');
+    mg_clear();
+    try {
+        mg_seed(['dance-studio']);
+        assert_eq(200, mg_admin('plugins/studio/admin/index.php')['status'], 'entitled by key, active by slug: must open');
+        assert_eq('ALLOW', mg_cron('dance-studio'));
+
+        mg_seed(['studio-builder']);
+        assert_eq(403, mg_admin('plugins/studio/admin/index.php')['status'], 'another module must not unlock it');
+        assert_eq('DENY', mg_cron('dance-studio'));
+    } finally {
+        mg_clear();
+        if ($before === null) {
+            PluginLoader::deactivate('studio');
+            Database::query("DELETE FROM plugins WHERE slug = 'studio'");
+        } elseif ($before['status'] !== 'active') {
+            PluginLoader::deactivate('studio');
+        }
+    }
+});
+
+unit('commercial registry: module keys and plugin slugs map both ways, other keys pass through', function () {
+    $r = \Slate\Services\Installation\CommercialModuleRegistry::class;
+    assert_eq('studio', $r::pluginSlugFor('dance-studio'));
+    assert_eq('forms', $r::pluginSlugFor('forms'));
+    assert_eq('some-feature', $r::pluginSlugFor('some-feature'));
+    assert_eq('dance-studio', $r::moduleKeyForPlugin('studio'));
+    assert_eq('restaurant', $r::moduleKeyForPlugin('restaurant'));
+    assert_eq(null, $r::moduleKeyForPlugin('stripe-payment'));
+    assert_eq(null, $r::moduleKeyForPlugin('editor'), 'future modules are not commercial yet');
+});

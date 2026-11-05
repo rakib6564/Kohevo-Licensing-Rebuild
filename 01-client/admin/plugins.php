@@ -38,8 +38,9 @@ if (!function_exists('slate_is_client_managed_plugin')) {
         // Payment gateways: the client chooses which ones to run.
         if ($slug === 'stripe-payment' || $slug === 'paypal-payment') return true;
         if (class_exists('\Slate\Services\Installation\CommercialModuleRegistry')) {
+            $moduleKey = \Slate\Services\Installation\CommercialModuleRegistry::moduleKeyForPlugin($slug);
             $comm = \Slate\Services\Installation\CommercialModuleRegistry::definitions();
-            if (isset($comm[$slug])) return true;
+            if ($moduleKey !== null && isset($comm[$moduleKey])) return true;
         }
         return false;
     }
@@ -253,12 +254,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $flash = ['type' => 'error', 'msg' => __('missing_slug', 'Missing plugin slug.')];
                 } else {
                     $isCommercial = false;
+                    $moduleKey = $slug;
                     if (class_exists('\Slate\Services\Installation\CommercialModuleRegistry')) {
+                        // Licences name the module key, which can differ from the plugin slug.
+                        $moduleKey = \Slate\Services\Installation\CommercialModuleRegistry::moduleKeyForPlugin($slug) ?? $slug;
                         $comm = \Slate\Services\Installation\CommercialModuleRegistry::definitions();
-                        $isCommercial = isset($comm[$slug]);
+                        $isCommercial = isset($comm[$moduleKey]);
                     }
                     if ($isCommercial && class_exists('\Slate\Services\Licensing\EntitlementService') && \Slate\Services\Licensing\EntitlementService::remoteConfigured()) {
-                        if (!\Slate\Services\Licensing\EntitlementService::canAccessCapability((int) TENANT_ID, $slug)) {
+                        if (!\Slate\Services\Licensing\EntitlementService::canAccessCapability((int) TENANT_ID, $moduleKey)) {
                             $flash = ['type' => 'error', 'msg' => sprintf(__('module_not_licensed', 'Plugin "%s" is not included in your active license. Please update your license in Central.'), $slug)];
                             $res = ['ok' => false];
                         } else {

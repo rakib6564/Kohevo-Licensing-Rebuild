@@ -283,6 +283,32 @@ final class CommercialModuleRegistry
     }
 
     /**
+     * Plugin slug that implements a V1 commercial module key, e.g. `dance-studio` → `studio`.
+     * Any other key is returned unchanged, so plain feature keys keep meaning their own plugin.
+     * Reads the registry constant only: no disk scan, cheap enough for every guard check.
+     */
+    public static function pluginSlugFor(string $moduleKey): string
+    {
+        foreach (self::AUTHORITATIVE_MODULES as $entry) {
+            if ($entry['module_key'] === $moduleKey && $entry['commercial'] && $entry['v1_available']) {
+                return $entry['plugin_slug'];
+            }
+        }
+        return $moduleKey;
+    }
+
+    /** V1 commercial module key a plugin slug implements, or null when the plugin is not a commercial module. */
+    public static function moduleKeyForPlugin(string $pluginSlug): ?string
+    {
+        foreach (self::AUTHORITATIVE_MODULES as $entry) {
+            if ($entry['plugin_slug'] === $pluginSlug && $entry['commercial'] && $entry['v1_available']) {
+                return $entry['module_key'];
+            }
+        }
+        return null;
+    }
+
+    /**
      * Return active V1 commercial module definitions verified against plugins on disk.
      *
      * - Explicitly checks all discovered plugins for duplicate `commercial_module.entitlement`
