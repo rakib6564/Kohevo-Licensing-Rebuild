@@ -270,6 +270,32 @@ class PluginLoader {
         }
     }
 
+    /**
+     * Whether a plugin's folder holds its manifest. A site can keep a `plugins` row for something that is not really there:
+     * a client install ships only plugins/licensing/client (the check-in library), never the licence-server plugin, yet that
+     * plugin's row from the first install stays and could not be activated ("plugin.json missing on disk").
+     *
+     * @param string|null $root the plugins directory; the site's by default
+     */
+    public static function hasManifestOnDisk(string $slug, ?string $root = null): bool {
+        if (!preg_match('/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/', $slug)) return false;
+        $root ??= SLATE_ROOT . '/plugins';
+        return is_file(rtrim($root, '/') . '/' . $slug . '/plugin.json');
+    }
+
+    /**
+     * The rows the Extensions screen should list: drops the ones that are not active and have no plugin.json on disk,
+     * because nothing can be done with them. An ACTIVE plugin whose manifest is gone stays, so that real fault is seen.
+     *
+     * @param list<array<string, mixed>> $rows from listAll()
+     * @return list<array<string, mixed>>
+     */
+    public static function listableRows(array $rows, ?string $root = null): array {
+        return array_values(array_filter($rows, static function (array $row) use ($root): bool {
+            return ($row['status'] ?? '') === self::STATUS_ACTIVE || self::hasManifestOnDisk((string) ($row['slug'] ?? ''), $root);
+        }));
+    }
+
     // ── Admin: install ────────────────────────────────────────
 
     /**
