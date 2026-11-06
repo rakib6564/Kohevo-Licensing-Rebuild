@@ -416,7 +416,8 @@ if (class_exists('\Slate\Services\Licensing\EntitlementService') && \Slate\Servi
     }
 }
 
-$plugins         = PluginLoader::listAll();
+// Rows with nothing on disk to activate (and not active) are not listed: see PluginLoader::listableRows().
+$plugins         = PluginLoader::listableRows(PluginLoader::listAll());
 $canUpload       = Auth::isPlatformSuperAdmin();
 $canUninstall    = Auth::isPlatformSuperAdmin();
 $hasExampleZip   = file_exists(SLATE_ROOT . '/plugins/_dist/hello-world-v1.0.0.zip');
