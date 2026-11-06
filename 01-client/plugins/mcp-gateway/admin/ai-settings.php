@@ -13,6 +13,7 @@ require_once dirname(__DIR__) . '/McpGatewayAPI.php';
 require_once dirname(__DIR__) . '/AiProviderClient.php';
 
 Auth::require();
+ModuleGuard::require('mcp-gateway');
 Auth::requirePerm('mcp-gateway.manage');
 McpGatewayAPI::ensureSchema();
 

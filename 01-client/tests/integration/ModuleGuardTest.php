@@ -144,6 +144,47 @@ unit('module guard: no entitlements — Forms, Membership, and Booking admin are
     }
 });
 
+// A module taken off a licence must stop opening — Coaching's admin pages and customer area and the MCP Gateway's admin pages
+// once had no guard at all, so they kept working on an install that was no longer licensed for them.
+unit('module guard: no entitlements — every Coaching admin page, the Coaching customer area and the MCP Gateway admin are blocked', function () {
+    mg_clear();
+    try {
+        mg_seed([]);
+        foreach (['chat', 'client', 'clients', 'feed', 'index', 'library', 'motivation', 'settings'] as $page) {
+            $res = mg_admin('plugins/coaching/admin/' . $page . '.php');
+            assert_eq(403, $res['status'], "coaching admin/$page.php must be blocked");
+            assert_true(str_contains($res['body'], 'not included in your current license'), "coaching admin/$page.php: the Module Guard's own message");
+        }
+        foreach (['index', 'chat', 'ai-settings'] as $page) {
+            assert_eq(403, mg_admin('plugins/mcp-gateway/admin/' . $page . '.php')['status'], "mcp-gateway admin/$page.php must be blocked");
+        }
+        assert_eq(404, mg_public('plugins/coaching/customer/router.php')['status'], 'the Coaching customer area is hidden like any public module route');
+    } finally {
+        mg_clear();
+    }
+});
+
+unit('module guard: Coaching entitled and active — its admin is not blocked by the Module Guard', function () {
+    mg_clear();
+    // Access needs the plugin active as well as licensed; the suite's database has Coaching installed but off.
+    $before = Database::value("SELECT status FROM plugins WHERE slug = 'coaching'");
+    try {
+        if ($before === null || $before === false) {
+            return; // plugin row not present in this database: nothing to probe
+        }
+        Database::query("UPDATE plugins SET status = 'active' WHERE slug = 'coaching'");
+        mg_seed(['coaching']);
+        $res = mg_admin('plugins/coaching/admin/index.php');
+        assert_true(!str_contains($res['body'], 'not included in your current license') && $res['status'] !== 403,
+            'an entitled, active module must pass the Module Guard');
+    } finally {
+        if ($before !== null && $before !== false) {
+            Database::query("UPDATE plugins SET status = ? WHERE slug = 'coaching'", [(string) $before]);
+        }
+        mg_clear();
+    }
+});
+
 unit('module guard: no entitlements — the blocked admin page body names the license reason, not a generic error', function () {
     mg_clear();
     try {
