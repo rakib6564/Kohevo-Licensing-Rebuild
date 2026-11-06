@@ -13,6 +13,7 @@ require_once dirname(__DIR__) . '/CoachingAPI.php';
 require_once dirname(__DIR__) . '/includes/assets.php';
 
 Auth::require();
+ModuleGuard::require('coaching');
 Auth::requirePerm('coaching.reply_chat');
 CoachingAPI::ensureSchema();
 

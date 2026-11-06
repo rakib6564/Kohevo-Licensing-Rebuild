@@ -42,6 +42,7 @@ if (!headers_sent()) {
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 }
 
+ModuleGuard::requirePublic('coaching');
 Auth::requireCustomer();
 $cid  = (int) Auth::customerId();
 $view = (string)($_GET['view'] ?? 'home');

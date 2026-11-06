@@ -9,6 +9,7 @@ require_once dirname(__DIR__) . '/CoachingAPI.php';
 require_once dirname(__DIR__) . '/includes/assets.php';
 
 Auth::require();
+ModuleGuard::require('coaching');
 if (!Auth::can('coaching.view_clients')
     && !Auth::can('coaching.manage_clients')
     && !Auth::isSuperAdmin()) {
