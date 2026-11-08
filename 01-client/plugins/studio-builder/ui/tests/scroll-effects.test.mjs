@@ -28,3 +28,9 @@ test('interactions: a trigger change keeps sticky and parallax, and turning them
   assert.deepEqual(normalizeInteractions({ ...now, sticky: null, parallax: null }), { trigger: 'hover' });
   assert.equal(hasMotion({ interactions: { sticky: { edge: 'top' } } }), true);
 });
+
+test('sticky: "over the page" is kept for a top edge only', () => {
+  assert.deepEqual(normalizeSticky({ edge: 'top', overlay: true }), { edge: 'top', overlay: true });
+  assert.deepEqual(normalizeSticky({ edge: 'bottom', overlay: true }), { edge: 'bottom' });
+  assert.deepEqual(normalizeSticky({ edge: 'top', overlay: 'yes' }), { edge: 'top' });
+});

@@ -101,7 +101,7 @@ const SERVER_PAINTED_FIELDS = ['style_states', 'style_parts', 'dynamic', 'tag', 
  * Blocks whose markup is built only on the server (no heuristic live patch exists for them): any
  * property edit repaints the canvas from the server instead of being patched in place.
  */
-export const SERVER_RENDERED_TYPES = new Set(['core.dual_heading', 'core.icon', 'core.list', 'core.quote', 'core.link', 'core.card', 'core.table', 'core.countdown', 'core.divider', 'core.spacer', 'core.nav_menu', 'core.map', 'layout.mega_menu', 'layout.mega_item']);
+export const SERVER_RENDERED_TYPES = new Set(['core.dual_heading', 'core.icon', 'core.list', 'core.quote', 'core.link', 'core.card', 'core.table', 'core.countdown', 'core.divider', 'core.spacer', 'core.nav_menu', 'core.map', 'layout.mega_menu', 'layout.mega_item', 'layout.tabs', 'layout.tab', 'layout.accordion', 'layout.accordion_item', 'layout.timeline', 'core.progress', 'core.circle_text', 'core.message_widget', 'core.local_time']);
 
 /**
  * Whether a block's markup is built only by the server, so any property edit repaints it from the server: the core types listed

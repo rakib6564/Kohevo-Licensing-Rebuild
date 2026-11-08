@@ -174,6 +174,8 @@ function StickyHeaderSetting({ value, onChange }) {
           <Check label={t('sticky_shadow')} checked={sticky.shadow === true} onChange={(e) => put({ ...sticky, shadow: e.target.checked })} />
           <Check label={t('sticky_hide_on_scroll')} checked={sticky.hide_on_scroll === true} onChange={(e) => put({ ...sticky, hide_on_scroll: e.target.checked })} />
           <Check label={t('sticky_shrink')} checked={sticky.shrink === true} onChange={(e) => put({ ...sticky, shrink: e.target.checked })} />
+          <Check label={t('sticky_overlay')} checked={sticky.overlay === true} onChange={(e) => put({ ...sticky, overlay: e.target.checked })} />
+          <p className="sbx-hint">{t('sticky_overlay_hint')}</p>
         </>
       )}
     </section>

@@ -85,7 +85,7 @@ final class PageMetaForm
                 foreach ($list as $f) {
                     $fk = (string) ($f['key'] ?? '');
                     $id = 'sb-m-' . $key . '-' . $fk;
-                    $wide = in_array(MetaFieldTypes::normalize((string) ($f['type'] ?? 'text')), ['textarea', 'richtext', 'repeater', 'gallery', 'list', 'keyvalue', 'checkboxes', 'multiselect', 'relations'], true);
+                    $wide = in_array(MetaFieldTypes::normalize((string) ($f['type'] ?? 'text')), ['textarea', 'richtext', 'repeater', 'gallery', 'list', 'keyvalue', 'checkboxes', 'terms', 'multiselect', 'relations'], true);
                     $out .= '<div class="sb-field' . ($wide ? ' sb-field--wide' : '') . '"><label class="sb-field__label" id="' . $h($id) . '-l" for="' . $h($id) . '">' . $h((string) ($f['label'] ?? $fk))
                         . (!empty($f['required']) ? ' <span style="color:#ef4444;">*</span>' : '') . '</label>'
                         . self::input($f, $key === $current ? ($values[$fk] ?? null) : null, $id, $relationPages[(string) ($f['options']['target'] ?? '')] ?? [], $canEdit);
@@ -225,7 +225,7 @@ HTML;
         $name = $inputName ?? 'meta[' . (string) ($f['key'] ?? '') . ']';
         $opt = is_array($f['options'] ?? null) ? $f['options'] : [];
         $ph = ' placeholder="' . $h($f['placeholder'] ?? '') . '"';
-        $req = !empty($f['required']) && !in_array($type, ['boolean', 'multiselect', 'checkboxes', 'gallery', 'list', 'relations', 'keyvalue', 'daterange', 'richtext', 'repeater'], true) ? ' required' : '';
+        $req = !empty($f['required']) && !in_array($type, ['boolean', 'multiselect', 'checkboxes', 'terms', 'gallery', 'list', 'relations', 'keyvalue', 'daterange', 'richtext', 'repeater'], true) ? ' required' : '';
         $dis = $canEdit ? '' : ' disabled';
         $base = ' id="' . $h($id) . '" name="' . $h($name) . '"' . $req . $dis;
         $attr = '';
@@ -278,6 +278,7 @@ HTML;
                 }
                 return $o . '</select>';
             case 'checkboxes':
+            case 'terms':
                 $o = '';
                 foreach ($choices as $c) {
                     $o .= '<label class="sb-check"><input type="checkbox" name="' . $h($name) . '[]" value="' . $h($c['value'] ?? '') . '"' . (in_array((string) ($c['value'] ?? ''), array_map('strval', $arr), true) ? ' checked' : '') . $dis . '> ' . $h($c['label'] ?? $c['value'] ?? '') . '</label> ';

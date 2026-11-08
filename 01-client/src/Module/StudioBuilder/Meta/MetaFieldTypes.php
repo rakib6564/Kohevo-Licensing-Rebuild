@@ -56,6 +56,7 @@ final class MetaFieldTypes
             'multiselect' => ['group' => 'choice', 'label' => 'Multi-select', 'hint' => 'Several choices from a list', 'options' => ['choices']],
             'checkboxes'  => ['group' => 'choice', 'label' => 'Checkboxes', 'hint' => 'Several choices shown as ticks', 'options' => ['choices']],
             'boolean'     => ['group' => 'choice', 'label' => 'Toggle', 'hint' => 'True or false', 'options' => []],
+            'terms'       => ['group' => 'choice', 'label' => 'Taxonomy', 'hint' => 'Terms that group items, like Branding or Web; Query Loops can filter by them', 'options' => ['choices']],
 
             'image'       => ['group' => 'media', 'label' => 'Image', 'hint' => 'One media-library image', 'options' => []],
             'gallery'     => ['group' => 'media', 'label' => 'Gallery', 'hint' => 'Several images', 'options' => []],

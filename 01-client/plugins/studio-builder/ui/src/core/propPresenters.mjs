@@ -44,7 +44,9 @@ export const PROP_PRESENTERS = Object.freeze({
   // The menu button's options mean nothing without a button, and the dropdown's width only applies to a dropdown.
   'core.nav_menu': navPresenter,
   'layout.mega_menu': { ...navPresenter, panel_width: { pills: true } },
+  'core.circle_text': { direction: { pills: true } },
   'core.button': {
+    copied_label: { showIf: (p) => typeof p.copy_text === 'string' && p.copy_text.trim() !== '' },
     icon_position: { pills: true, showIf: (p) => !!p.icon && p.icon !== 'none' },
     icon_spacing: { showIf: (p) => !!p.icon && p.icon !== 'none' },
   },
@@ -69,6 +71,12 @@ export const PROP_PRESENTERS = Object.freeze({
     align: { showIf: () => false },
     color_token: { showIf: (p) => !!p.color_token },
     columns_gap: { showIf: (p) => typeof p.columns === 'number' && p.columns > 1 },
+  },
+  // Tabs with blocks: pausing means nothing until the tabs turn by themselves.
+  'layout.tabs': {
+    position: { pills: true },
+    look: { pills: true },
+    pause_on_hover: { showIf: (p) => typeof p.autoplay_ms === 'number' && p.autoplay_ms > 0 },
   },
   'core.dual_heading': {
     new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
@@ -114,7 +122,19 @@ export const PROP_PRESENTERS = Object.freeze({
     card_variant: { showIf: (p) => p.loop_template === 'none' || !p.loop_template },
     title_level: { showIf: (p) => p.loop_template === 'none' || !p.loop_template },
     read_more_text: { showIf: (p) => p.loop_template === 'none' || !p.loop_template },
+    pagination_style: { pills: true, showIf: (p) => p.enable_pagination !== false },
+    // The chips' own words matter only once a field to filter by is named.
+    filter_all_label: { showIf: (p) => typeof p.filter_field === 'string' && p.filter_field.trim() !== '' },
+    filter_counts: { showIf: (p) => typeof p.filter_field === 'string' && p.filter_field.trim() !== '' },
+    open_in: { pills: true },
   },
+  // The message widget: the hours matter for its online dot; its fields' labels only when it asks for them.
+  'core.message_widget': {
+    position: { pills: true },
+    name_label: { showIf: (p) => p.ask_name !== false },
+    topics_label: { showIf: (p) => typeof p.topics === 'string' && p.topics.trim() !== '' },
+  },
+  'core.local_time': { format: { pills: true } },
   'core.icon_list': {
     layout: { pills: true },
     apply_link: { showIf: (p) => asList(p.items).some((i) => i && i.url) },

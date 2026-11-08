@@ -73,6 +73,47 @@ final class PostsProvider implements PublicDataProviderInterface
         $limit    = max(1, min(self::MAX_RESULTS, (int) ($params['limit'] ?? 6)));
         $page     = max(1, (int) ($params['page'] ?? 1));
         $offset   = ($page - 1) * $limit;
+        $matched  = self::matching($tenantId, $params, $offset + $limit);
+
+        $out = [];
+        foreach (array_slice($matched, $offset, $limit) as [$row, $seo, $settings, $postCategory]) {
+            $pubDate = !empty($row['published_at']) ? (string) $row['published_at'] : (string) $row['created_at'];
+            $timestamp = strtotime($pubDate) ?: time();
+
+            // The SEO description when it has text, else the page's own excerpt (an empty description is the default).
+            $description = trim(is_string($seo['description'] ?? null) ? $seo['description'] : '');
+            $excerpt = $description !== '' ? $description : (is_string($settings['excerpt'] ?? null) ? $settings['excerpt'] : '');
+            if ($excerpt === '') {
+                $excerpt = str_replace('%s', (string) $row['title'], \Slate\Module\StudioBuilder\Render\Html::t('studio_read_full_story', 'Read the full story: %s'));
+            }
+
+            $out[] = [
+                'id'             => (int) $row['id'],
+                'title'          => (string) $row['title'],
+                'slug'           => (string) $row['slug'],
+                'url'            => \Slate\Module\StudioBuilder\Meta\PageRoutes::path($tenantId, (int) $row['id'], (string) $row['slug'], ''),
+                'excerpt'        => mb_substr($excerpt, 0, 200, 'UTF-8'),
+                'category'       => $postCategory,
+                'author_name'    => (string) ($row['author_name'] ?? 'Staff Author'),
+                'author_id'      => (int) ($row['created_by'] ?? 1),
+                'published_at'   => $pubDate,
+                'date_formatted' => \Slate\Module\StudioBuilder\Render\Html::date($timestamp),
+                'featured_image' => self::featuredImage($settings, is_array($seo) ? $seo : [], $tenants),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * The rows a query selects, in order: [row, seo, settings, category] each, the first `$want` of them (null: all
+     * of them, up to MAX_SCANNED rows read).
+     *
+     * @param array<string, mixed> $params
+     * @return list<array{0: array<string, mixed>, 1: mixed, 2: array<string, mixed>, 3: string}>
+     */
+    private static function matching(int $tenantId, array $params, ?int $want): array
+    {
         $orderBy  = in_array($params['order_by'] ?? null, ['published_at', 'title', 'created_at'], true) ? (string) $params['order_by'] : 'published_at';
         $order    = strtolower((string) ($params['order'] ?? 'desc')) === 'asc' ? 'ASC' : 'DESC';
         $authorId = (int) ($params['author_id'] ?? 0);
@@ -116,6 +157,19 @@ final class PostsProvider implements PublicDataProviderInterface
             }
             $sql .= ' AND p.id IN (' . implode(',', array_map('intval', $ids)) . ')';
         }
+        // A term of a content type's taxonomy (a choice field): only the items that have it.
+        $termField = trim((string) ($params['term_field'] ?? ''));
+        $term = trim((string) ($params['term'] ?? ''));
+        if ($termField !== '' && $termField !== 'category' && $term !== '') {
+            $ids = PageMeta::pageIdsWithTerm($tenantId, $termField, $term);
+            if ($ids === []) {
+                return [];
+            }
+            $sql .= ' AND p.id IN (' . implode(',', array_map('intval', $ids)) . ')';
+        }
+        if ($termField === 'category' && $term !== '') {
+            $category = $term;
+        }
         $unlisted = PageMeta::unlistedPageIds($tenantId, $search !== '');
         if ($unlisted !== []) {
             $sql .= ' AND p.id NOT IN (' . implode(',', array_map('intval', $unlisted)) . ')';
@@ -124,11 +178,10 @@ final class PostsProvider implements PublicDataProviderInterface
         $sql .= " ORDER BY p.{$orderBy} {$order}, p.id {$order}";
 
         // Category and featured live in the published settings, so they are filtered after decoding. Rows are
-        // read in batches and reading stops once this page is filled, so page 1 never reads the whole site;
-        // a very deep page stops after MAX_SCANNED rows.
-        $want = $offset + $limit;
+        // read in batches and reading stops once `$want` rows matched, so page 1 never reads the whole site;
+        // a very deep page (or a count) stops after MAX_SCANNED rows.
         $matched = [];
-        for ($scanned = 0; $scanned < self::MAX_SCANNED && count($matched) < $want; $scanned += self::BATCH) {
+        for ($scanned = 0; $scanned < self::MAX_SCANNED && ($want === null || count($matched) < $want); $scanned += self::BATCH) {
             $rawRows = Database::rows($sql . ' LIMIT ' . self::BATCH . ' OFFSET ' . $scanned, $sqlParams);
             if ($rawRows === []) {
                 break;
@@ -151,7 +204,7 @@ final class PostsProvider implements PublicDataProviderInterface
                     continue;
                 }
                 $matched[] = [$row, $live['seo'], $settings, $postCategory];
-                if (count($matched) >= $want) {
+                if ($want !== null && count($matched) >= $want) {
                     break;
                 }
             }
@@ -160,34 +213,39 @@ final class PostsProvider implements PublicDataProviderInterface
             }
         }
 
-        $out = [];
-        foreach (array_slice($matched, $offset, $limit) as [$row, $seo, $settings, $postCategory]) {
-            $pubDate = !empty($row['published_at']) ? (string) $row['published_at'] : (string) $row['created_at'];
-            $timestamp = strtotime($pubDate) ?: time();
+        return $matched;
+    }
 
-            // The SEO description when it has text, else the page's own excerpt (an empty description is the default).
-            $description = trim(is_string($seo['description'] ?? null) ? $seo['description'] : '');
-            $excerpt = $description !== '' ? $description : (is_string($settings['excerpt'] ?? null) ? $settings['excerpt'] : '');
-            if ($excerpt === '') {
-                $excerpt = str_replace('%s', (string) $row['title'], \Slate\Module\StudioBuilder\Render\Html::t('studio_read_full_story', 'Read the full story: %s'));
-            }
+    /** How many items a query selects, for a numbered pager (counting stops after MAX_SCANNED rows read). */
+    public static function total(TenantContext $tenants, array $params): int
+    {
+        return $tenants->id() > 0 ? count(self::matching($tenants->id(), $params, null)) : 0;
+    }
 
-            $out[] = [
-                'id'             => (int) $row['id'],
-                'title'          => (string) $row['title'],
-                'slug'           => (string) $row['slug'],
-                'url'            => \Slate\Module\StudioBuilder\Meta\PageRoutes::path($tenantId, (int) $row['id'], (string) $row['slug'], ''),
-                'excerpt'        => mb_substr($excerpt, 0, 200, 'UTF-8'),
-                'category'       => $postCategory,
-                'author_name'    => (string) ($row['author_name'] ?? 'Staff Author'),
-                'author_id'      => (int) ($row['created_by'] ?? 1),
-                'published_at'   => $pubDate,
-                'date_formatted' => \Slate\Module\StudioBuilder\Render\Html::date($timestamp),
-                'featured_image' => self::featuredImage($settings, is_array($seo) ? $seo : [], $tenants),
-            ];
+    /**
+     * Filter chips: of the items the query selects without a term, how many there are and how many have each term
+     * of `$field` (a choice field of the content type, or `category`).
+     *
+     * @param array<string, mixed> $params
+     * @return array{all: int, terms: array<string, int>}
+     */
+    public static function termCounts(TenantContext $tenants, array $params, string $field): array
+    {
+        $tenantId = $tenants->id();
+        if ($tenantId <= 0) {
+            return ['all' => 0, 'terms' => []];
         }
-
-        return $out;
+        unset($params['term'], $params['term_field']);
+        $matched = self::matching($tenantId, $params, null);
+        $values = $field === 'category' ? [] : PageMeta::termsByPage($tenantId, $field);
+        $terms = [];
+        foreach ($matched as [$row, , , $category]) {
+            $list = $field === 'category' ? [$category] : ($values[(int) $row['id']] ?? []);
+            foreach (array_unique($list) as $t) {
+                $terms[$t] = ($terms[$t] ?? 0) + 1;
+            }
+        }
+        return ['all' => count($matched), 'terms' => $terms];
     }
 
     /**

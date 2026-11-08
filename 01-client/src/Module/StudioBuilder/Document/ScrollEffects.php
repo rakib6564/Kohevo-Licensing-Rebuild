@@ -8,21 +8,29 @@ namespace Slate\Module\StudioBuilder\Document;
  * Sticky and parallax, the two scroll effects a block may carry in its `interactions`.
  *
  *   interactions.sticky   = {edge: top|bottom, offset: 0-400 (px), devices: [desktop, tablet, mobile],
- *                            shadow: bool, background: colour, hide_on_scroll: bool, shrink: bool}
+ *                            shadow: bool, background: colour, hide_on_scroll: bool, shrink: bool,
+ *                            overlay: bool (top edge: the page starts under it, as a transparent header needs)}
  *   interactions.parallax = {layer: background|element, speed: 5-80 (% of the scroll), direction: up|down,
  *                            devices: [desktop, tablet, mobile]}
  *   interactions.scroll   = {vertical, horizontal, rotate, scale: -10 to 10; transparency, blur: 0 to 10;
  *                            devices: [desktop, tablet, mobile]}  each follows the node's way through the viewport
  *   interactions.mouse    = {track: -10 to 10, tilt: 0 to 10, magnet: 0 to 10}  the node follows the pointer, tilts
  *                            towards it, or is pulled towards it while it is near; desktop only
- *   interactions.page_colors = {background, text: colour}  the page takes these colours while the node is in the middle
+ *   interactions.page_colors = {background, text, muted, line, accent: colour}  the page takes these colours while the node is in the middle
  *                            of the screen, with a short blend
  *   interactions.adapt    = true  the node takes the page colours of the section beneath its bottom edge (a header)
+ *                         = 'text' only the text and theme colours: the node stays see-through, and once its sticky
+ *                           header is stuck it is frosted glass in the colour of that section (--sb-adapt-bg)
+ *   interactions.spy      = true  of the node's links to sections of this page, the one whose section is on screen is
+ *                            marked current (a chapter nav)
  *   interactions.progress = {edge: top|bottom, color: colour, height: 1-12 (px)}  a bar along that edge that fills as
  *                            the page scrolls
  *   interactions.text     = {effect: light_words|lines, dim: 5-60 (%), step_ms: 0-400}  light_words lights the words up
  *                            one by one as the node crosses the screen (the rest at `dim` opacity); lines raises each
  *                            line from a mask as the node comes into view, `step_ms` apart
+ *   interactions.text     = {effect: wave, low: 100-900, high: 100-900, radius: 40-600 (px)}  each letter of a
+ *                            variable font grows from the `low` weight to the `high` one as the pointer comes within
+ *                            `radius` of it; on a touch screen the weight rolls through the letters by itself
  *   interactions.stagger  = {step_ms: 20-600}  the entrance animations inside the node play in turn, `step_ms` apart,
  *                            once the node comes into view
  *   interactions.glow     = {color: colour, size: 80-800 (px)}  a soft light follows the pointer over the node
@@ -50,7 +58,12 @@ final class ScrollEffects
     /** Scrolling and mouse effects: the attribute letter of each, and the lowest level it takes (the highest is 10). */
     public const SCROLL_FIELDS = ['vertical' => ['y', -10], 'horizontal' => ['x', -10], 'rotate' => ['r', -10], 'scale' => ['s', -10], 'transparency' => ['o', 0], 'blur' => ['b', 0]];
     public const MOUSE_FIELDS  = ['track' => ['t', -10], 'tilt' => ['i', 0], 'magnet' => ['m', 0]];
-    public const TEXT_EFFECTS  = ['light_words', 'lines'];
+    public const TEXT_EFFECTS  = ['light_words', 'lines', 'wave'];
+
+    /** interactions.page_colors keys and the custom property suffix each travels as (`--sb-page-<suffix>`). */
+    public const PAGE_COLOURS = ['background' => 'bg', 'text' => 'fg', 'muted' => 'muted', 'line' => 'line', 'accent' => 'accent'];
+    public const WAVE_WEIGHT   = [100, 900];
+    public const WAVE_RADIUS   = [40, 600];
     public const DIM_RANGE     = [5, 60];
     public const TEXT_STEP     = [0, 400];
     public const STAGGER_STEP  = [20, 600];
@@ -81,13 +94,18 @@ final class ScrollEffects
         if (array_key_exists('mouse', $interactions)) {
             self::levelIssues($interactions['mouse'], self::MOUSE_FIELDS, "{$path}.mouse", $errors);
         }
-        if (array_key_exists('adapt', $interactions) && !is_bool($interactions['adapt'])) {
-            $errors[] = self::issue("{$path}.adapt", 'adapt must be true or false.');
+        if (array_key_exists('adapt', $interactions) && !is_bool($interactions['adapt']) && $interactions['adapt'] !== 'text') {
+            $errors[] = self::issue("{$path}.adapt", "adapt must be true, false or 'text'.");
+        }
+        foreach (['spy'] as $flag) {
+            if (array_key_exists($flag, $interactions) && !is_bool($interactions[$flag])) {
+                $errors[] = self::issue("{$path}.{$flag}", "{$flag} must be true or false.");
+            }
         }
         $shapes = [
-            'page_colors' => ['background' => 'colour', 'text' => 'colour'],
+            'page_colors' => ['background' => 'colour', 'text' => 'colour', 'muted' => 'colour', 'line' => 'colour', 'accent' => 'colour'],
             'progress'    => ['edge' => self::EDGES, 'color' => 'colour', 'height' => self::PROGRESS_HEIGHT],
-            'text'        => ['effect' => self::TEXT_EFFECTS, 'dim' => self::DIM_RANGE, 'step_ms' => self::TEXT_STEP],
+            'text'        => ['effect' => self::TEXT_EFFECTS, 'dim' => self::DIM_RANGE, 'step_ms' => self::TEXT_STEP, 'low' => self::WAVE_WEIGHT, 'high' => self::WAVE_WEIGHT, 'radius' => self::WAVE_RADIUS],
             'stagger'     => ['step_ms' => self::STAGGER_STEP],
             'glow'        => ['color' => 'colour', 'size' => self::GLOW_SIZE],
             'marquee'     => ['speed' => self::MARQUEE_SPEED, 'direction' => self::MARQUEE_DIRECTIONS, 'scroll' => 'bool', 'pause' => 'bool', 'width' => self::ITEM_WIDTH],
@@ -214,7 +232,7 @@ final class ScrollEffects
                 'edge'           => in_array($value, self::EDGES, true),
                 'offset'         => is_int($value) && $value >= 0 && $value <= self::MAX_OFFSET,
                 'devices'        => self::devicesValid($value),
-                'shadow', 'hide_on_scroll', 'shrink' => is_bool($value),
+                'shadow', 'hide_on_scroll', 'shrink', 'overlay' => is_bool($value),
                 'background'     => StyleValueGuard::isColor($value),
                 default          => null,
             };
@@ -292,6 +310,10 @@ final class ScrollEffects
             if ($edge === 'top' && ($sticky['shrink'] ?? false) === true) {
                 $effects[] = 'shrink';
             }
+            // Over the page: the next section starts under it (studio-runtime.js measures it into --sb-sticky-h).
+            if ($edge === 'top' && ($sticky['overlay'] ?? false) === true) {
+                $classes[] = 'sb-sticky--overlay';
+            }
             $attrs .= ' data-sb-sticky="' . $edge . '"';
             if ($effects !== []) {
                 $attrs .= ' data-sb-sticky-effect="' . implode(' ', $effects) . '"';
@@ -337,21 +359,29 @@ final class ScrollEffects
         }
 
         // Colours travel as custom properties on the node, in its one style attribute; the runtime reads them back.
+        // The attribute lists the colours the node sets, so the stylesheet only points theme colours at ones that exist.
         $page = $interactions['page_colors'] ?? null;
-        $bg = self::field($page, 'background', 'colour');
-        $fg = self::field($page, 'text', 'colour');
-        if ($bg !== null || $fg !== null) {
-            $attrs .= ' data-sb-page-colors';
-            if ($bg !== null) {
-                $vars[] = '--sb-page-bg:' . StyleSurface::colourCss((string) $bg);
+        $set = [];
+        foreach (self::PAGE_COLOURS as $key => $name) {
+            $value = self::field($page, $key, 'colour');
+            if ($value !== null) {
+                $set[] = $name;
+                $vars[] = '--sb-page-' . $name . ':' . StyleSurface::colourCss((string) $value);
             }
-            if ($fg !== null) {
-                $vars[] = '--sb-page-fg:' . StyleSurface::colourCss((string) $fg);
-            }
+        }
+        if ($set !== []) {
+            $attrs .= ' data-sb-page-colors="' . implode(' ', $set) . '"';
         }
         if (($interactions['adapt'] ?? false) === true) {
             $classes[] = 'sb-adapt';
             $attrs .= ' data-sb-adapt';
+        } elseif (($interactions['adapt'] ?? null) === 'text') {
+            $classes[] = 'sb-adapt';
+            $classes[] = 'sb-adapt--text';
+            $attrs .= ' data-sb-adapt="text"';
+        }
+        if (($interactions['spy'] ?? false) === true) {
+            $attrs .= ' data-sb-spy';
         }
 
         $progress = $interactions['progress'] ?? null;
@@ -374,6 +404,12 @@ final class ScrollEffects
             $attrs .= ' data-sb-text="words:' . (self::field($text, 'dim', self::DIM_RANGE) ?? 18) . '"';
         } elseif ($effect === 'lines') {
             $attrs .= ' data-sb-text="lines:' . (self::field($text, 'step_ms', self::TEXT_STEP) ?? 100) . '"';
+        } elseif ($effect === 'wave') {
+            $low = self::field($text, 'low', self::WAVE_WEIGHT) ?? 300;
+            $high = self::field($text, 'high', self::WAVE_WEIGHT) ?? 800;
+            $attrs .= ' data-sb-wave="' . $low . ',' . $high . ',' . (self::field($text, 'radius', self::WAVE_RADIUS) ?? 160) . '"';
+            $vars[] = '--sb-wave-low:' . $low;
+            $vars[] = '--sb-wave-high:' . $high;
         }
 
         $step = self::field($interactions['stagger'] ?? null, 'step_ms', self::STAGGER_STEP);
