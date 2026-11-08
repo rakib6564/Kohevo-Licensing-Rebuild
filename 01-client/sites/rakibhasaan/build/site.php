@@ -26,6 +26,8 @@ Database::setSetting(StudioCodePolicy::SETTING_HEAD_SNIPPET, StudioCodePolicy::p
 $css = StudioCodePolicy::prepareCustomCss((string) file_get_contents(__DIR__ . '/site.css'));
 Database::setSetting(StudioCodePolicy::SETTING_CUSTOM_CSS, $css['css'], $tid);
 Database::setSetting('studio_smooth_scroll', '1', $tid);
+// No scroll bar on the page or in the menus (Site & SEO › Scrolling › Scroll bar: Hidden); the page still scrolls.
+Database::setSetting('studio_scrollbar', 'hidden', $tid);
 foreach (['site_name' => 'Rakib Hasan', 'brand_accent_color' => ORANGE] as $key => $value) { Database::setSetting($key, $value, $tid); }
 say('  + theme');
 
@@ -104,7 +106,7 @@ $mServices = $megaItem('Services', '/services/', 3, [
     $col([ROW([$megaEye('Services'), $megaMore('All services', '/services/')], '12px', [], ['justify' => 'between', 'align' => 'center'], []), $megaLoop('service', 'template-loop-service-mega', 6, 2)], '10px', ['rk-mega-span2']),
     $col([
         B('layout.flex', ['direction' => 'column', 'gap' => 'none'], [
-            PIC('rakib-portrait-blue.jpg', 'Rakib Hasan', '100%', '', '16px'),
+            PIC('b131e2de14c018247fe2c08587aa79d2.webp', 'Redkey Logistics website on a tablet', '100%', '', '16px'),
         ], ['dimensions' => ['height' => '150px', 'overflow' => 'hidden'], 'border' => ['radius' => '16px']], ['classNames' => ['rk-mpromo-pic']]),
         P('Free website audit', BONE, '18px', ['weight' => '500']),
         P('Send your site. I review it by hand and reply within 12 hours with the top five fixes.', '#A39D93', '13px'),

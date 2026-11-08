@@ -192,7 +192,7 @@
 .rk-mega .rk-clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .rk-mega .rk-mreview { background: rgba(237, 232, 223, .035); }
 .rk-mega .rk-mpromo-pic img, .rk-mega .rk-mabout-pic img { height: 100% !important; }
-.rk-mega .rk-mpromo-pic img { object-position: 78% 30%; }
+.rk-mega .rk-mpromo-pic img { object-position: 50% 45%; }
 .rk-mega .rk-mabout-pic img { object-position: 70% 30%; }
 .rk-mega .rk-mabout-pic::after { content: ""; position: absolute; inset: 40% 0 0; background: linear-gradient(transparent, rgba(8, 8, 9, .85)); pointer-events: none; }
 .rk-mega .rk-mabout-pic > :last-child { z-index: 1; }

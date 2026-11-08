@@ -209,6 +209,29 @@ function S_BAND(array $s): array
     ], ['padding' => ['top' => '20px', 'right' => '28px', 'bottom' => '40px', 'left' => '28px'], 'layout' => ['display' => 'flex', 'direction' => 'column', 'content_width' => 'boxed', 'content_max' => '1440px']],
         ['interactions' => THEME('ink'), 'responsive' => ['mobile' => ['style' => ['padding' => ['top' => '10px', 'right' => '16px', 'bottom' => '24px', 'left' => '16px']]]]]);
 }
+/**
+ * A note from Rakib: the band's line set large, with no photo, for a page whose hero is already a photo of him, so the
+ * page never shows two big portraits in a row. Name and role on the left, the line and what it means on the right.
+ */
+function S_NOTE(array $s): array
+{
+    $more = [
+        'One person plans, designs and builds your site' => 'No account managers, no juniors and no hand-offs: the person you talk to is the person who plans, designs and builds your site.',
+        'Every message is read and answered by me' => 'No ticket queues and no assistants: you write straight to the person who builds your site, and I reply within 12 hours.',
+    ][$s['cap']] ?? '';
+    $sign = VBOX([
+        EYE('A note from Rakib', MUTED),
+        ROW([B('core.icon', ['name' => 'circle', 'size' => 'sm'], [], ['color' => ORANGE, 'dimensions' => ['width' => '10px']], ['classNames' => ['rk-dot']]), P('Rakib Hasan', BONE, '16px', ['weight' => '500'])], '10px', ['margin' => ['top' => '18px']], ['align' => 'center'], []),
+        EYE('Designer + developer · Dhaka', MUTED),
+    ], '6px');
+    $line = VBOX(array_values(array_filter([
+        B('core.heading', ['text' => $s['cap'] . '.', 'level' => 'h2'], [], ['color' => BONE, 'typography' => ['size' => '60px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '1.02', 'letter_spacing' => '-2.6px']],
+            ['interactions' => ['text' => ['effect' => 'light_words', 'dim' => 22]], 'responsive' => ['tablet' => ['style' => ['typography' => ['size' => '46px']]], 'mobile' => ['style' => ['typography' => ['size' => '32px', 'letter_spacing' => '-1.2px']]]]]),
+        $more !== '' ? P($more, 'rgba(237,232,223,0.7)', '18px', [], ['style' => ['dimensions' => ['max_width' => '620px']]]) : null,
+    ])), '28px');
+    return SEC('Note', [ROW([W($sign, '28%'), W($line, '66%')], '48px', ['padding' => ['top' => '56px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => LINE]], ['justify' => 'between', 'align' => 'start'])],
+        '90px', '120px', [], ['interactions' => THEME('ink')], '56px', '80px');
+}
 function S_WORLD(string $label): array
 {
     $c = TC('navy');
@@ -399,6 +422,7 @@ function ITEMS(array $items, array $cases, array $data): array
             case 'cta': $out[] = S_CTA($it); break;
             case 'cta_form': $out[] = S_CTA($it, true); break;
             case 'band': $out[] = S_BAND($it); break;
+            case 'note': $out[] = S_NOTE($it); break;
             case 'world': $out[] = S_WORLD($it['label']); break;
             case 'recent': $out[] = S_RECENT($cases); break;
             case 'contact': $out[] = S_CONTACT($it['n']); break;
@@ -506,6 +530,10 @@ foreach ($DATA['pages'] as $slug => $p) {
     if ($slug === 'free-audit') { $side = AUDITFORM('I reply within 12 hours. Your details are only used to send your audit.'); }
     // About and Contact open on a photo of Rakib behind the words.
     $photo = ['about' => 'rakib-portrait-studio.jpg', 'contact' => 'rakib-portrait-blue.jpg'][$slug] ?? null;
+    // Under a photo hero the photo band becomes a note from Rakib (no second big portrait).
+    if ($photo !== null) {
+        foreach ($p['items'] as $k => $it) { if (($it['kind'] ?? '') === 'band') { $p['items'][$k]['kind'] = 'note'; } }
+    }
     if ($slug === 'construction') { $side = VBOX([EYE('Built for', MUTED), ROW(array_map(static fn(string $t): array => P($t, BONE, '13px', [], ['classNames' => ['rk-chip']]), $p['chips']), '8px', [], ['wrap' => 'wrap'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']])], '12px'); $below = true; }
     if ($slug === 'work') { $side = ROW(array_map(static fn(array $x): array => VBOX([H($x[0], 'div', '48px', '36px', BONE), EYE($x[1], MUTED)], '4px', ['dimensions' => ['width' => 'auto']]), [['250+', 'Websites shipped'], ['25', 'Case studies'], ['14', 'Countries']]), '36px', [], ['justify' => 'end'], []); $below = true; }
     $intro = $p;
