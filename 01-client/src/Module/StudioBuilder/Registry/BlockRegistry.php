@@ -1374,6 +1374,7 @@ final class BlockRegistry
                 ['key' => 'aria_label', 'type' => 'string', 'label' => 'Menu name (for screen readers)', 'required' => false, 'default' => 'Menu', 'max_length' => 80],
                 ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => NavChrome::ALIGNS, 'default' => 'left'],
                 ['key' => 'panel_width', 'type' => 'enum', 'label' => 'Panel content width', 'required' => false, 'allowed_values' => MegaMenuRenderer::WIDTHS, 'default' => 'content'],
+                ['key' => 'panel_look', 'type' => 'enum', 'label' => 'Panel look', 'required' => false, 'allowed_values' => MegaMenuRenderer::LOOKS, 'default' => 'solid'],
                 ['key' => 'pointer', 'type' => 'enum', 'label' => 'Hover pointer', 'required' => false, 'allowed_values' => NavChrome::POINTERS, 'default' => 'none'],
                 ['key' => 'pointer_animation', 'type' => 'enum', 'label' => 'Pointer animation', 'required' => false, 'allowed_values' => NavChrome::ANIMATIONS, 'default' => 'fade'],
                 ['key' => 'pointer_color', 'type' => 'token_ref', 'label' => 'Pointer colour', 'required' => false, 'default' => null],

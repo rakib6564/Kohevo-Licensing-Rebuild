@@ -3942,6 +3942,7 @@
 
   /* ── Feature: mega menu panels ───────────────────────────────────────────
    * A panel starts at the header's bottom edge and spans the window. Without this file it keeps the menu's own width.
+   * `--sb-mega-bridge` is the gap between the menu's row and the panel: the panel's hover bridge fills just that gap.
    */
   function initMegaMenus(root) {
     var off = [];
@@ -3951,7 +3952,12 @@
         var rect = nav.getBoundingClientRect();
         var header = nav.closest('.sb-site-header');
         var section = header && (nav.closest('.sb-top') || header);
-        if (section) nav.style.setProperty('--sb-mega-top', (section.getBoundingClientRect().bottom - rect.top) + 'px');
+        if (section) {
+          var bottom = section.getBoundingClientRect().bottom;
+          nav.style.setProperty('--sb-mega-top', (bottom - rect.top) + 'px');
+          // The hover bridge spans only the gap under the menu's row, so it never covers the other links.
+          nav.style.setProperty('--sb-mega-bridge', Math.max(0, bottom - rect.bottom) + 'px');
+        }
         nav.style.setProperty('--sb-mega-left', (-rect.left) + 'px');
         nav.style.setProperty('--sb-mega-vw', document.documentElement.clientWidth + 'px');
       }
@@ -3963,7 +3969,7 @@
     if (navs.length) {
       mount(function () {
         off.forEach(function (un) { un(); });
-        navs.forEach(function (nav) { ['--sb-mega-top', '--sb-mega-left', '--sb-mega-vw'].forEach(function (name) { nav.style.removeProperty(name); }); });
+        navs.forEach(function (nav) { ['--sb-mega-top', '--sb-mega-bridge', '--sb-mega-left', '--sb-mega-vw'].forEach(function (name) { nav.style.removeProperty(name); }); });
       });
     }
   }

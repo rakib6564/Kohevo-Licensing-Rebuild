@@ -1062,6 +1062,7 @@ const EN = {
   opt_bottom_left: 'Bottom left',
   opt_bottom_right: 'Bottom right',
   opt_solid: 'Solid',
+  opt_glass: 'Glass',
   opt_dashed: 'Dashed',
   opt_dotted: 'Dotted',
   opt_double: 'Double',

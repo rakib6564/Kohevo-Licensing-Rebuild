@@ -7957,6 +7957,7 @@
             "default_props": {
                 "align": "left",
                 "aria_label": "Menu",
+                "panel_look": "solid",
                 "panel_width": "content",
                 "pointer": "none",
                 "pointer_animation": "fade",
@@ -8002,6 +8003,17 @@
                     "allowed_values": [
                         "full",
                         "content"
+                    ]
+                },
+                {
+                    "key": "panel_look",
+                    "type": "enum",
+                    "label": "Panel look",
+                    "required": false,
+                    "default": "solid",
+                    "allowed_values": [
+                        "solid",
+                        "glass"
                     ]
                 },
                 {

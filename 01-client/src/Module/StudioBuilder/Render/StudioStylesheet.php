@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '80';
+    public const VERSION = '81';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -108,6 +108,9 @@ final class StudioStylesheet
             // A linked image: the link takes the picture's place in the box, so sizes and fit still reach the picture.
             . '.sb-image__link{display:block}.sb-block--core-image>.sb-image>.sb-image__link{flex:1 1 auto;min-height:0;object-fit:inherit;object-position:inherit}'
             . '.sb-block--core-image>.sb-image>.sb-image__link>img{height:100%;object-fit:inherit;object-position:inherit}'
+            // A corner radius set on the Image block rounds the picture itself (the block's box is not clipped, so a
+            // badge or shadow can still spill out of it); the caption under it stays square.
+            . '.sb-block--core-image>.sb-image,.sb-block--core-image>.sb-image>img,.sb-block--core-image>.sb-image>.sb-image__link,.sb-block--core-image>.sb-image>.sb-image__link>img{border-radius:inherit}'
             // A Container's layers, behind its children: a background video, the overlay (custom properties its style sets,
             // so a hover state can change them), then the shape dividers, which can be brought in front instead.
             . '.sb-block--core-container::before{content:"";display:var(--sb-ov-display,none);position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background:var(--sb-ov-bg,transparent);opacity:var(--sb-ov-op,1);mix-blend-mode:var(--sb-ov-blend,normal);transition:inherit}'
@@ -295,6 +298,7 @@ final class StudioStylesheet
             . '.sb-main--loop{max-width:440px;margin-inline:auto}'
             . '.sb-post-image,.sb-post-image a{display:block;height:100%}'
             . '.sb-post-image img{display:block;width:100%;height:100%;object-fit:cover}'
+            . '.sb-block--theme-post-image>.sb-post-image,.sb-block--theme-post-image>.sb-post-image>a,.sb-block--theme-post-image>.sb-post-image img{border-radius:inherit}'
             . '.sb-post-excerpt{margin:0}'
             . '.sb-post-title a,.sb-post-link{color:inherit;text-decoration:none}'
             . '.sb-post-title a:hover,.sb-post-link:hover{text-decoration:underline}'
@@ -865,11 +869,14 @@ final class StudioStylesheet
         // Mega menu: a panel opens from the menu's row, and the runtime stretches it to the window under the header.
         $css .= '.sb-nav--mega .sb-nav__item{position:static}.sb-nav--mega{position:relative}'
             . '.sb-nav--horizontal.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__mega{top:var(--sb-mega-top,100%);left:var(--sb-mega-left,0);right:auto;width:var(--sb-mega-vw,100%);box-sizing:border-box;padding:1.75rem 1.5rem;border-radius:0}'
-            . '.sb-nav--mega .sb-nav__mega::before{top:-3rem;height:3rem}'
+            . '.sb-nav--mega .sb-nav__mega::before{top:calc(-1 * var(--sb-mega-bridge,3rem));height:var(--sb-mega-bridge,3rem)}'
             . '.sb-nav--mega .sb-nav__mega .sb-nav__link{box-sizing:border-box;width:100%;white-space:normal}'
             . '.sb-mega__grid{display:grid;grid-template-columns:repeat(var(--sb-mega-cols,3),minmax(0,1fr));gap:1.5rem 2rem;margin:0 auto}'
             . '.sb-nav--mega-content .sb-mega__grid{max-width:var(--sb-layout-content,80rem)}'
             . '.sb-mega__empty{margin:0;padding:.75rem;border:1px dashed var(--sb-border-default)}'
+            // Glass panels: see-through in the page's colours, blurring what scrolls behind them.
+            . '.sb-nav--mega-glass>.sb-nav__list>.sb-nav__item>.sb-nav__mega{background:var(--sb-mega-glass,color-mix(in srgb,var(--sb-surface-page,#fff) 66%,transparent));-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:0;border-top:1px solid color-mix(in srgb,var(--sb-text-body,#1a1a1a) 10%,transparent);border-bottom:1px solid color-mix(in srgb,var(--sb-text-body,#1a1a1a) 14%,transparent);box-shadow:0 40px 80px -40px rgba(0,0,0,.55)}'
+            . '@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sb-nav--mega-glass>.sb-nav__list>.sb-nav__item>.sb-nav__mega{background:var(--sb-surface-page,#fff)}}'
             // The button at the end of a folded menu; hidden while the links show in a row.
             . '.sb-nav__cta{display:none}.sb-nav__cta-link{display:block;padding:.8rem 1.25rem;text-align:center;font-weight:700;text-decoration:none;color:#fff;background:var(--sb-color-accent);border-radius:.5rem}'
             . '.sb-body .sb-nav a.sb-nav__cta-link{color:#fff}'
@@ -932,7 +939,7 @@ final class StudioStylesheet
             . $full . ' .sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent){font-size:1.35rem}'
             . $full . ' .sb-nav__bar:has(.sb-nav__check:checked){z-index:10001}'
             . $n . ' .sb-nav__cta{display:block;padding:1rem 0 .5rem}' . $n . ' .sb-nav__list>.sb-nav__item.sb-nav__cta{border-top:0;padding:1rem 0 .5rem}'
-            . $n . '.sb-nav--horizontal.sb-nav--mega .sb-nav__list>.sb-nav__item>.sb-nav__mega{top:auto;left:auto;width:auto;padding:.25rem 0 .75rem!important;border:0!important;border-radius:0!important;box-shadow:none!important}' . $n . '.sb-nav--mega .sb-mega__grid{grid-template-columns:minmax(0,1fr)!important}'
+            . $n . '.sb-nav--horizontal.sb-nav--mega .sb-nav__list>.sb-nav__item>.sb-nav__mega{top:auto;left:auto;width:auto;padding:.25rem 0 .75rem!important;border:0!important;border-radius:0!important;box-shadow:none!important}' . $n . '.sb-nav--mega-glass .sb-nav__list>.sb-nav__item>.sb-nav__mega{background:none;-webkit-backdrop-filter:none;backdrop-filter:none}' . $n . '.sb-nav--mega .sb-mega__grid{grid-template-columns:minmax(0,1fr)!important}'
             // A Nav menu inside a panel is not the list this rule set folds.
             . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__item{display:block}' . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__list>.sb-nav__item+.sb-nav__item{border-top:0}' . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__link{width:100%}'
             . $n . '.sb-nav--horizontal.sb-nav--mega .sb-nav__mega .sb-nav__list{display:flex;position:static;left:auto;width:auto;min-width:0;max-height:none;padding:0;overflow:visible;background:none;box-shadow:none}' . $n . ' .sb-nav__item{position:relative}'

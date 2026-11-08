@@ -1622,6 +1622,7 @@ $sbBoot = [
         'opt_bottom_left' => __('studio_ui_opt_bottom_left', 'Bottom left'),
         'opt_bottom_right' => __('studio_ui_opt_bottom_right', 'Bottom right'),
         'opt_solid' => __('studio_ui_opt_solid', 'Solid'),
+        'opt_glass' => __('studio_ui_opt_glass', 'Glass'),
         'opt_dashed' => __('studio_ui_opt_dashed', 'Dashed'),
         'opt_dotted' => __('studio_ui_opt_dotted', 'Dotted'),
         'opt_double' => __('studio_ui_opt_double', 'Double'),
