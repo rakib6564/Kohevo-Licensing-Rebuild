@@ -357,7 +357,7 @@ function S_REVIEWS(array $reviews, array $featured): array
 }
 
 /** The inner hero: breadcrumb, H1 rising line by line, intro, the proof row, and the page's own side piece. */
-function HERO(array $p, array $crumbs, ?array $side = null, bool $sideBelow = false): array
+function HERO(array $p, array $crumbs, ?array $side = null, bool $sideBelow = false, ?string $photo = null): array
 {
     $c = TC('ink');
     $crumb = [];
@@ -368,7 +368,8 @@ function HERO(array $p, array $crumbs, ?array $side = null, bool $sideBelow = fa
     array_pop($crumb);
     $proof = ROW(array_map(static fn(array $x): array => RICH('<p><strong>' . $x[0] . '</strong> ' . $x[1] . '</p>', MUTED, '12px', ['classNames' => ['rk-rich', 'rk-proof']]), [['5.0', 'from 101 reviews'], ['250+', 'sites shipped'], ['~1 hr', 'average reply'], ['14', 'countries']]), '0px',
         ['padding' => ['top' => '20px'], 'margin' => ['top' => '48px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => LINE]], ['wrap' => 'wrap', 'align' => 'center'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap', 'gap' => '10px']], ['classNames' => ['rk-proofs']]);
-    $title = B('core.heading', ['text' => $p['h1'], 'level' => 'h1'], [], ['color' => BONE, 'typography' => ['size' => '104px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.96', 'letter_spacing' => '-5.6px'], 'dimensions' => ['max_width' => '1180px']],
+    // Over a photo the heading keeps to the left, clear of the face.
+    $title = B('core.heading', ['text' => $p['h1'], 'level' => 'h1'], [], ['color' => BONE, 'typography' => ['size' => '104px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.96', 'letter_spacing' => '-5.6px'], 'dimensions' => ['max_width' => $photo !== null ? '820px' : '1180px']],
         ['responsive' => ['tablet' => ['style' => ['typography' => ['size' => '72px']]], 'mobile' => ['style' => ['typography' => ['size' => '46px']]]], 'interactions' => ['text' => ['effect' => 'lines', 'step_ms' => 90]]]);
     // The intro reads at body size, as the original's (16-17px, not a lead).
     $intro = VBOX(BLKS($p['intro'], ['muted' => 'rgba(237,232,223,.82)'] + $c, false), '14px');
@@ -376,10 +377,13 @@ function HERO(array $p, array $crumbs, ?array $side = null, bool $sideBelow = fa
         ? ROW([W(VBOX([$title, $intro], '32px'), '58%'), W($side, '36%')], '48px', ['margin' => ['top' => '40px']], ['justify' => 'between', 'align' => 'end'])
         : VBOX(array_values(array_filter([$title, $side !== null ? ROW([W($intro, '56%'), W($side, '38%')], '40px', [], ['justify' => 'between', 'align' => 'end']) : W($intro, '62%')])), '32px', ['margin' => ['top' => '40px']]);
     return CTOP('Hero', [
+        // The wide photo on desktop and tablet; on a phone, a portrait crop of it (the face above the words).
+        ...($photo !== null ? [BGPIC($photo, 'right', true, ['md', 'lg']), BGPIC(str_replace('.jpg', '-m.jpg', $photo), 'top', false, ['base', 'sm'])] : []),
         ROW([ROW($crumb, '10px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], []), EYE('Available from December 2026', BONE, 'right')], '16px', [], ['justify' => 'between'], ['layout' => ['direction' => 'column', 'gap' => '8px']]),
         $body, $proof,
     ], ['background' => ['gradient' => 'radial-gradient(circle at 75% 20%, #2a140a, #0B0B0C 60%)'], 'padding' => ['top' => '150px', 'right' => '28px', 'bottom' => '56px', 'left' => '28px'], 'layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '0px', 'content_width' => 'boxed', 'content_max' => '1440px']],
-        ['interactions' => THEME('ink') + ['glow' => ['color' => 'rgba(255,90,31,0.16)', 'size' => 560]], 'responsive' => ['mobile' => ['style' => ['padding' => ['top' => '110px', 'right' => '20px', 'bottom' => '40px', 'left' => '20px']]]]]);
+        ['interactions' => THEME('ink') + ['glow' => ['color' => 'rgba(255,90,31,0.16)', 'size' => 560]], 'classNames' => $photo !== null ? ['rk-photo-hero'] : [],
+         'responsive' => ['mobile' => ['style' => ['padding' => ['top' => $photo !== null ? '300px' : '110px', 'right' => '20px', 'bottom' => '40px', 'left' => '20px']]]]]);
 }
 
 function ITEMS(array $items, array $cases, array $data): array
@@ -414,7 +418,8 @@ require __DIR__ . '/project.php';
 // ── Reviews: a content type with no pages of its own; the Testimonial grid reads its items ──
 PageMeta::savePostTypes($tid, array_replace(PageMeta::postTypes($tid), ['review' => [
     'key' => 'review', 'singular' => 'Review', 'plural' => 'Reviews', 'route' => '', 'is_system' => false, 'description' => 'Client reviews, copied from Fiverr', 'show_in_menu' => true,
-    'public' => false, 'publicly_queryable' => false, 'rewrite' => false, 'has_archive' => false, 'exclude_from_search' => true, 'show_in_nav_menus' => false,
+    // Listed (so a Query Loop can show them, as the menu's About panel does) but with no pages of their own, as the FAQs.
+    'public' => true, 'publicly_queryable' => false, 'rewrite' => false, 'has_archive' => false, 'exclude_from_search' => true, 'show_in_nav_menus' => false,
     'hide_field_names' => false, 'edit_link' => true, 'menu_icon' => 'star', 'menu_position' => 2,
     'columns' => [['label' => 'Country', 'source' => 'country', 'prefix' => '', 'suffix' => '', 'sortable' => true], ['label' => 'Stars', 'source' => 'rating', 'prefix' => '', 'suffix' => '', 'sortable' => true]],
     'filters' => [],
@@ -497,10 +502,11 @@ foreach ($DATA['pages'] as $slug => $p) {
     $side = null;
     $below = false;
     if ($slug === 'free-audit') { $side = AUDITFORM('I reply within 12 hours. Your details are only used to send your audit.'); }
-    if ($slug === 'about') { $side = PIC('6fbbcd188e6864012d87c634f944c25d.jpg', 'Rakib Hasan, freelance web designer and developer', '560px', '420px', '20px'); }
+    // About and Contact open on a photo of Rakib behind the words.
+    $photo = ['about' => 'rakib-portrait-studio.jpg', 'contact' => 'rakib-portrait-blue.jpg'][$slug] ?? null;
     if ($slug === 'construction') { $side = VBOX([EYE('Built for', MUTED), ROW(array_map(static fn(string $t): array => P($t, BONE, '13px', [], ['classNames' => ['rk-chip']]), $p['chips']), '8px', [], ['wrap' => 'wrap'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']])], '12px'); $below = true; }
     if ($slug === 'work') { $side = ROW(array_map(static fn(array $x): array => VBOX([H($x[0], 'div', '48px', '36px', BONE), EYE($x[1], MUTED)], '4px', ['dimensions' => ['width' => 'auto']]), [['250+', 'Websites shipped'], ['25', 'Case studies'], ['14', 'Countries']]), '36px', [], ['justify' => 'end'], []); $below = true; }
     $intro = $p;
     if ($slug === 'free-audit') { $intro['intro'] = array_values(array_filter($p['intro'], static fn(array $b): bool => $b['k'] !== 'note')); }
-    build_page($slug, $p['name'], 'page', 'standalone', [HERO($intro, $crumbs, $side, $below), ...ITEMS($p['items'], $DATA['cases'], $DATA)], ['seo_title' => $p['seo_title'], 'seo_desc' => $p['meta']]);
+    build_page($slug, $p['name'], 'page', 'standalone', [HERO($intro, $crumbs, $side, $below, $photo), ...ITEMS($p['items'], $DATA['cases'], $DATA)], ['seo_title' => $p['seo_title'], 'seo_desc' => $p['meta']]);
 }

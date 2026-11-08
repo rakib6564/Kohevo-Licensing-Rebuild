@@ -272,6 +272,15 @@ function PIC(string $file, string $alt, string $h, string $mh = '', string $radi
 {
     return B('core.image', ['media' => IMGREF($file, $alt), 'aspect_ratio' => 'auto', 'rounded' => false], [], ['dimensions' => ['width' => '100%', 'height' => $h, 'object_fit' => 'cover'], 'border' => ['radius' => $radius]], $mh !== '' ? ['responsive' => ['mobile' => ['style' => ['dimensions' => ['height' => $mh]]]]] : []);
 }
+/**
+ * A photo behind a hero's words (the hero takes the class rk-photo-hero; site.css lays the photo under it with a shade).
+ * Decorative: the words say it all. `$devices` shows it on some widths only, so a phone can get a picture of its own.
+ */
+function BGPIC(string $file, string $pos, bool $priority, array $devices = ['base', 'sm', 'md', 'lg']): array
+{
+    return B('core.image', ['media' => IMGREF($file, ''), 'aspect_ratio' => 'auto', 'rounded' => false, 'priority' => $priority], [], ['dimensions' => ['width' => '100%', 'height' => '100%', 'object_fit' => 'cover']],
+        ['classNames' => ['rk-bgpic', 'rk-bgpic--' . $pos], 'devices' => $devices]);
+}
 /** Section padding: 28px gutters, boxed at 1440px. */
 function SEC(string $label, array $kids, string $top, string $bottom, array $more = [], array $extra = [], string $mtop = '72px', string $mbottom = '72px'): array
 {

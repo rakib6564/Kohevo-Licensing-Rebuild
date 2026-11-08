@@ -170,3 +170,49 @@
   .rk-band .rk-band-face { width: 36px !important; }
   .rk-band .rk-band-cap .sb-block--core-text, .rk-band .rk-band-cap .sb-text { font-size: 10px !important; letter-spacing: 1px !important; }
 }
+
+/* ── Mega menu: frosted-glass panels under the header ───────────────────────────────── */
+.rk-mega { --sb-mega-glass: rgba(16, 16, 18, .8); }
+.rk-mega .rk-tag ul, .rk-mega .rk-tag li { list-style: none; margin: 0; padding: 0; }
+.rk-mega .rk-tag .sb-field-value { padding: 5px 9px; }
+.rk-mega .rk-mega-loop:has(.rk-mrow) { margin: 0 -16px; }
+.rk-mega .sb-nav__mega { color: #EDE8DF; border-radius: 0 0 22px 22px !important; }
+.rk-mega .sb-mega__grid { gap: 28px 36px; }
+.rk-mega .rk-mega-span3 { grid-column: span 3; }
+.rk-mega .rk-mega-span2 { grid-column: span 2; }
+.rk-mega .rk-mega-loop .sb-loop__grid, .rk-mega .rk-mega-loop .sb-query-loop__grid { gap: 18px; }
+/* Each card and row is one big link: its title's link covers it. */
+.rk-mega .rk-stretch a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.rk-mega .rk-mlink, .rk-mega .rk-mrow { transition: background-color .2s ease; }
+.rk-mega .rk-mlink:hover, .rk-mega .rk-mrow:hover, .rk-mega .rk-mlink:focus-within, .rk-mega .rk-mrow:focus-within { background-color: rgba(237, 232, 223, .07); }
+.rk-mega .rk-mcard .rk-pcard-img img { transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
+.rk-mega .rk-mcard:hover .rk-pcard-img img { transform: scale(1.04); }
+.rk-mega .rk-mcard:hover h3 a { color: #FF5A1F; }
+.rk-mega .rk-clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rk-mega .rk-clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.rk-mega .rk-mreview { background: rgba(237, 232, 223, .035); }
+.rk-mega .rk-mpromo-pic img, .rk-mega .rk-mabout-pic img { height: 100% !important; }
+.rk-mega .rk-mpromo-pic img { object-position: 78% 30%; }
+.rk-mega .rk-mabout-pic img { object-position: 70% 30%; }
+.rk-mega .rk-mabout-pic::after { content: ""; position: absolute; inset: 40% 0 0; background: linear-gradient(transparent, rgba(8, 8, 9, .85)); pointer-events: none; }
+.rk-mega .rk-mabout-pic > :last-child { z-index: 1; }
+.rk-mega .rk-mega-more a { white-space: nowrap; }
+/* The panel's links keep their own colours whatever section the header is over. */
+.rk-mega .sb-nav__mega a.sb-nav__link, .rk-mega .sb-nav__mega a { opacity: 1 !important; }
+
+/* ── Photo heroes: a full-bleed photo behind the hero's words ───────────────────────── */
+.rk-photo-hero { position: relative; overflow: hidden; isolation: isolate; }
+.rk-photo-hero > .rk-bgpic { position: absolute !important; inset: 0; z-index: -1; margin: 0 !important; width: auto !important; max-width: none !important; }
+.rk-photo-hero > .rk-bgpic img { width: 100% !important; height: 100% !important; object-fit: cover; }
+.rk-photo-hero::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(90deg, rgba(11, 11, 12, .82) 0%, rgba(11, 11, 12, .45) 42%, rgba(11, 11, 12, 0) 68%), linear-gradient(0deg, rgba(11, 11, 12, .9) 0%, rgba(11, 11, 12, 0) 38%); }
+.rk-bgpic--right img { object-position: 78% 35% !important; }
+.rk-bgpic--top img { object-position: 50% 0% !important; }
+@media (max-width: 767px) {
+  .rk-photo-hero::after { background: linear-gradient(0deg, rgba(11, 11, 12, .96) 0%, rgba(11, 11, 12, .7) 45%, rgba(11, 11, 12, .1) 75%); }
+  /* The tall portrait has a dark band along its top edge: it sits above the hero, out of sight. */
+  /* On a phone the portrait fills the top of the hero and fades out under the words. */
+  .rk-photo-hero > .rk-bgpic--top { bottom: auto !important; height: 500px !important; -webkit-mask-image: linear-gradient(#000 62%, transparent); mask-image: linear-gradient(#000 62%, transparent); }
+  .rk-photo-hero > .rk-bgpic--top img { object-position: 50% 12% !important; }
+  .rk-photo-hero > .rk-bgpic--top:has(img[src*="portrait-tall"]) { top: -56px !important; height: 556px !important; }
+  .rk-photo-hero > .rk-bgpic--top:has(img[src*="portrait-tall"]) img { object-position: 50% 0% !important; }
+}

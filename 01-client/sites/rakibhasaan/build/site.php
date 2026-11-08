@@ -61,9 +61,78 @@ $brandRow = static fn(): array => ROW([
 ], '8px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], []);
 // In the header the name follows the colours of what it passes over (the header adapts); in the full menu it stays light.
 $brand = follow_page($brandRow(), [strtolower(BONE) => 'text.body', strtolower(ORANGE) => 'text.accent']);
-$nav = B('core.nav_menu', ['menu' => 'header', 'items' => [], 'layout' => 'horizontal', 'align' => 'center', 'aria_label' => 'Main', 'toggle_breakpoint' => 'none'], [], ['typography' => ['size' => '14px', 'font_family' => SANS, 'weight' => '400']], ['classNames' => ['rk-nav'], 'style_parts' => [
+// The mega menu: Work, Services and About open wide frosted-glass panels drawn from the content types, so a new
+// project, service or review shows in the menu by itself. Each panel's cards are Loop Items of their own (compact).
+$tplUuid = static fn(string $slug): string => (string) Database::value("SELECT uuid FROM studiobuilder_pages WHERE tenant_id = ? AND slug = ? AND status <> 'archived'", [$tid, $slug]);
+$megaEye = static fn(string $t): array => EYE($t, '#8F897F');
+$megaMore = static fn(string $label, string $href): array => B('core.link', ['link' => L($label, $href), 'style' => 'arrow'], [], ['color' => BONE, 'typography' => ['size' => '13px', 'weight' => '500']], ['classNames' => ['rk-mega-more']]);
+$megaLoop = static fn(string $type, string $tpl, int $n, int $cols, array $more = []): array => B('core.query_loop', array_replace(['source' => 'posts', 'content_type' => $type, 'loop_template' => $tplUuid($tpl), 'per_page' => $n, 'columns' => $cols, 'gap' => 'md',
+    'order_by' => 'published_at', 'order' => 'desc', 'show_featured_image' => false, 'show_date' => false, 'show_author' => false, 'show_category' => false, 'show_excerpt' => false, 'enable_pagination' => false, 'empty_message' => ''], $more), [], [], ['classNames' => ['rk-loop', 'rk-mega-loop']]);
+
+// Loop Items for the panels.
+build_page('template-loop-project-mega', 'Loop Item: Project (menu)', 'system', 'standalone', [CTOP('Card', [
+    B('layout.flex', ['direction' => 'column', 'gap' => 'none'], [
+        B('theme.post_image', [], [], ['dimensions' => ['height' => '150px', 'width' => '100%', 'overflow' => 'hidden'], 'border' => ['radius' => '12px']], ['classNames' => ['rk-pcard-img']]),
+        FV('industry', INK, '10px', 'span', ['typography' => ['size' => '10px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1px', 'line_height' => '1.3'], 'position' => ['mode' => 'absolute', 'top' => '10px', 'left' => '10px']], ['bg_field' => 'color'], ['classNames' => ['rk-tag']]),
+    ], ['position' => ['mode' => 'relative']]),
+    B('theme.post_title', ['level' => 'h3', 'link_to_post' => true], [], ['color' => BONE, 'margin' => ['top' => '12px'], 'typography' => ['size' => '17px', 'font_family' => SANS, 'weight' => '500', 'line_height' => '1.25', 'letter_spacing' => '-0.2px']], ['classNames' => ['rk-stretch']]),
+    FV('tagline', '#A39D93', '13px', 'p', ['typography' => ['line_height' => '1.45']], [], ['when_field' => 'tagline', 'classNames' => ['rk-clamp2']]),
+], ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '4px', 'content_width' => 'full', 'padding_y' => 'none'], 'position' => ['mode' => 'relative']], ['classNames' => ['rk-mcard']])], ['settings' => ['template_type' => 'loop']]);
+build_page('template-loop-service-mega', 'Loop Item: Service (menu)', 'system', 'standalone', [CTOP('Row', [
+    B('theme.post_title', ['level' => 'h3', 'link_to_post' => true], [], ['color' => BONE, 'typography' => ['size' => '16px', 'font_family' => SANS, 'weight' => '500', 'line_height' => '1.3']], ['classNames' => ['rk-stretch']]),
+    FV('summary', '#A39D93', '13px', 'p', ['typography' => ['line_height' => '1.45']], [], ['classNames' => ['rk-clamp2']]),
+], ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '4px', 'content_width' => 'full', 'padding_y' => 'none'], 'padding' => ['top' => '14px', 'right' => '16px', 'bottom' => '14px', 'left' => '16px'], 'border' => ['radius' => '14px'], 'position' => ['mode' => 'relative']], ['classNames' => ['rk-mrow']])], ['settings' => ['template_type' => 'loop']]);
+build_page('template-loop-review-mega', 'Loop Item: Review (menu)', 'system', 'standalone', [CTOP('Review', [
+    P('★★★★★', ORANGE, '12px', [], ['classNames' => ['rk-stars']]),
+    FV('text', BONE, '14px', 'p', ['typography' => ['line_height' => '1.5']], [], ['classNames' => ['rk-clamp3']]),
+    ROW([B('theme.post_title', ['level' => 'h4'], [], ['color' => BONE, 'typography' => ['size' => '12px', 'font_family' => SANS, 'weight' => '500']]), FVM('country', '#8F897F', ['before' => '· '])], '6px', [], ['align' => 'baseline'], []),
+], ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '8px', 'content_width' => 'full', 'padding_y' => 'none'], 'padding' => ['top' => '16px', 'right' => '16px', 'bottom' => '16px', 'left' => '16px'], 'border' => ['width' => '1px', 'style' => 'solid', 'color' => 'rgba(237,232,223,0.10)', 'radius' => '14px']], ['classNames' => ['rk-mreview']])], ['settings' => ['template_type' => 'loop']]);
+
+$INDUSTRY_TERMS = ['Construction & trades' => '/construction/', 'Logistics & transport' => '', 'Cleaning & sterilisation' => '', 'Hospitality & rentals' => '', 'Professional services' => '', 'Creative & wellness' => ''];
+$megaLink = static fn(string $label, string $href, string $desc = ''): array => VBOX(array_values(array_filter([
+    B('core.link', ['link' => L($label, $href), 'style' => 'plain'], [], ['color' => BONE, 'typography' => ['size' => '16px', 'weight' => '400', 'line_height' => '1.3']], ['classNames' => ['rk-stretch']]),
+    $desc !== '' ? P($desc, '#8F897F', '13px') : null,
+])), '2px', ['padding' => ['top' => '10px', 'right' => '12px', 'bottom' => '10px', 'left' => '12px'], 'border' => ['radius' => '12px'], 'position' => ['mode' => 'relative']], ['classNames' => ['rk-mlink']]);
+$col = static fn(array $kids, string $gap = '14px', array $classes = []): array => VBOX($kids, $gap, [], $classes !== [] ? ['classNames' => $classes] : []);
+$megaItem = static fn(string $label, string $url, int $cols, array $panel): array => B('layout.mega_item', ['label' => $label, 'url' => $url, 'columns' => $cols], $panel);
+
+$mWork = $megaItem('Work', '/work/', 4, [
+    $col([$megaEye('By industry'), VBOX(array_map(static fn(string $t, string $u): array => $megaLink($t, $u !== '' ? $u : '/work/?filter=' . rawurlencode($t)), array_keys($INDUSTRY_TERMS), $INDUSTRY_TERMS), '0px', ['margin' => ['left' => '-12px']]), $megaMore('All case studies', '/work/')], '12px'),
+    $col([ROW([$megaEye('Latest case studies'), $megaMore('See all work', '/work/')], '12px', [], ['justify' => 'between', 'align' => 'center'], []), $megaLoop('project', 'template-loop-project-mega', 3, 3)], '14px', ['rk-mega-span3']),
+]);
+$mServices = $megaItem('Services', '/services/', 3, [
+    $col([ROW([$megaEye('Services'), $megaMore('All services', '/services/')], '12px', [], ['justify' => 'between', 'align' => 'center'], []), $megaLoop('service', 'template-loop-service-mega', 6, 2)], '10px', ['rk-mega-span2']),
+    $col([
+        B('layout.flex', ['direction' => 'column', 'gap' => 'none'], [
+            PIC('rakib-portrait-blue.jpg', 'Rakib Hasan', '100%', '', '16px'),
+        ], ['dimensions' => ['height' => '150px', 'overflow' => 'hidden'], 'border' => ['radius' => '16px']], ['classNames' => ['rk-mpromo-pic']]),
+        P('Free website audit', BONE, '18px', ['weight' => '500']),
+        P('Send your site. I review it by hand and reply within 12 hours with the top five fixes.', '#A39D93', '13px'),
+        PILL('Get my free audit  →', '/free-audit/', ORANGE, INK, ['style_parts' => ['button' => ['padding' => ['top' => '10px', 'right' => '18px', 'bottom' => '10px', 'left' => '18px'], 'typography' => ['size' => '13px']]]]),
+    ], '10px', ['rk-mpromo']),
+]);
+$mAbout = $megaItem('About', '/about/', 3, [
+    $col([
+        B('layout.flex', ['direction' => 'column', 'gap' => 'none'], [
+            PIC('rakib-portrait-studio.jpg', 'Rakib Hasan, freelance web designer and developer', '100%', '', '16px'),
+            VBOX([P('Rakib Hasan', BONE, '15px', ['weight' => '500']), EYE('Designer + developer · Dhaka', '#BDB7AD')], '2px', ['position' => ['mode' => 'absolute', 'left' => '16px', 'bottom' => '14px']]),
+        ], ['dimensions' => ['height' => '250px', 'overflow' => 'hidden'], 'position' => ['mode' => 'relative'], 'border' => ['radius' => '16px']], ['classNames' => ['rk-mabout-pic']]),
+    ]),
+    $col([$megaEye('Get to know me'), VBOX([
+        $megaLink('About', '/about/', 'One person, start to finish'),
+        $megaLink('Process', '/process/', 'Audit, staging, verified live'),
+        $megaLink('FAQ', '/faq/', 'Cost, timelines, ownership'),
+        $megaLink('Contact', '/contact/', 'Replies within about an hour'),
+    ], '0px', ['margin' => ['left' => '-12px']])], '12px'),
+    $col([ROW([$megaEye('★ 5.0 · 101 reviews'), $megaMore('All reviews', '/reviews/')], '12px', [], ['justify' => 'between', 'align' => 'center'], []), $megaLoop('review', 'template-loop-review-mega', 2, 1)], '14px'),
+]);
+$nav = B('layout.mega_menu', ['aria_label' => 'Main', 'align' => 'center', 'panel_width' => 'content', 'panel_look' => 'glass', 'toggle_breakpoint' => 'none'], [
+    $mWork, $mServices, $mAbout,
+    B('layout.mega_item', ['label' => 'Process', 'url' => '/process/']),
+    B('layout.mega_item', ['label' => 'Reviews', 'url' => '/reviews/']),
+], ['typography' => ['size' => '14px', 'font_family' => SANS, 'weight' => '400']], ['classNames' => ['rk-nav', 'rk-mega'], 'style_parts' => [
     'link' => ['color' => 'text.body'], 'current' => ['color' => 'text.body'],
-    'submenu' => ['background' => ['color' => '#141416'], 'border' => ['radius' => '14px']], 'sublink' => ['color' => BONE],
+    'submenu' => ['color' => BONE],
 ], 'devices' => ['lg']]);
 // The full-screen menu: the brand where the header's is, two columns of numbered links with a line under each,
 // the hovered link's picture on the right, and a row of contact links along the bottom.

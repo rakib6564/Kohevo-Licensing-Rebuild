@@ -18,6 +18,9 @@ $stat = static fn(string $n, string $label): array => VBOX([
     EYE($label, MUTED, 'right'),
 ], '6px', ['dimensions' => ['width' => 'auto']]);
 $hero = CTOP('Hero', [
+    // Rakib in the ember light on wide screens; on a phone the tall portrait, his face above the words.
+    BGPIC('rakib-hero-ember.jpg', 'right', true, ['md', 'lg']),
+    BGPIC('rakib-portrait-tall.jpg', 'top', false, ['base', 'sm']),
     ROW([EYE('Freelance designer + developer', BONE), EYE('Available from December 2026', BONE, 'right')], '16px', [], ['justify' => 'between'], ['layout' => ['direction' => 'column', 'gap' => '6px']]),
     B('core.dual_heading', ['before' => 'Websites built for', 'colored' => 'contractors', 'rotate_words' => 'truckers, cleaners, villas, lawyers, artists', 'rotate_ms' => 2200, 'after' => '', 'level' => 'h1'], [],
         ['typography' => ['size' => '138px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.95', 'letter_spacing' => '-7.6px'], 'dimensions' => ['max_width' => '900px'], 'margin' => ['top' => '24px']],
@@ -27,11 +30,11 @@ $hero = CTOP('Hero', [
         P('250+ websites for real businesses in 14 countries, each designed the way its industry actually wins work.', BONE, '18px', [], ['style' => ['dimensions' => ['max_width' => '470px']]]),
         ROW([$stat('5.0', '101 reviews'), $stat('250+', 'Sites shipped')], '44px', ['dimensions' => ['width' => 'auto']], ['align' => 'end'], []),
     ], '32px', ['margin' => ['top' => '56px']], ['justify' => 'between', 'align' => 'end'], ['layout' => ['direction' => 'column', 'gap' => '28px']]),
-], ['background' => ['gradient' => 'radial-gradient(circle at 70% 35%, #3a1a0c, #0B0B0C 65%)'], 'dimensions' => ['min_height' => '700px'],
+], ['background' => ['color' => INK], 'dimensions' => ['min_height' => '780px'],
     'padding' => ['top' => '200px', 'right' => '28px', 'bottom' => '64px', 'left' => '28px'],
     'layout' => ['display' => 'flex', 'direction' => 'column', 'justify' => 'end', 'gap' => '0px', 'content_width' => 'boxed', 'content_max' => '1440px']],
-    ['interactions' => THEME('ink') + ['glow' => ['color' => 'rgba(255,90,31,0.22)', 'size' => 620]],
-     'responsive' => ['mobile' => ['style' => ['dimensions' => ['min_height' => '560px'], 'padding' => ['top' => '120px', 'right' => '20px', 'bottom' => '40px', 'left' => '20px']]]]]);
+    ['interactions' => THEME('ink') + ['glow' => ['color' => 'rgba(255,90,31,0.18)', 'size' => 620]], 'classNames' => ['rk-photo-hero'],
+     'responsive' => ['mobile' => ['style' => ['dimensions' => ['min_height' => '760px'], 'padding' => ['top' => '320px', 'right' => '20px', 'bottom' => '40px', 'left' => '20px']]]]]);
 
 // ── 2. Manifesto ───────────────────────────────────────────────────────────────
 $manifesto = SEC('The idea', [
