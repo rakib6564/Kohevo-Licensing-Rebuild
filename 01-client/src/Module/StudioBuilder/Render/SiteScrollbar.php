@@ -6,9 +6,11 @@
  *  - thin     the browser's thin scroll bar
  *  - branded  a thin rounded bar in the site's colours: the thumb in the accent (or a colour of its own), on a track
  *             that is see-through (or a colour of its own)
- *  - hidden   no scroll bar; the page still scrolls with the wheel, touch, keyboard and its links
+ *  - hidden   no scroll bar; the page still scrolls with the wheel, touch, keyboard and its links. The site's own menu
+ *             panels (an off-canvas or full-screen menu, a folded Nav menu's panel) hide theirs too, so an open menu
+ *             shows no bar either
  *
- * Only the page's bar (the <html> element) is styled: a scrolling box inside a page keeps the browser's. Colours are
+ * Otherwise only the page's bar (the <html> element) is styled: a scrolling box inside a page keeps the browser's. Colours are
  * written as #rrggbb only, so nothing else can reach the stylesheet.
  */
 
@@ -43,7 +45,8 @@ final class SiteScrollbar
         $track = self::colour($track) ?: 'transparent';
         return match (self::style($style)) {
             'thin' => 'html{scrollbar-width:thin}',
-            'hidden' => 'html{scrollbar-width:none}html::-webkit-scrollbar{display:none;width:0;height:0}',
+            'hidden' => 'html{scrollbar-width:none}html::-webkit-scrollbar{display:none;width:0;height:0}'
+                . ':is(.sb-offcanvas__body,.sb-nav__list){scrollbar-width:none}:is(.sb-offcanvas__body,.sb-nav__list)::-webkit-scrollbar{display:none;width:0;height:0}',
             // scrollbar-color is inherited: the page's bar takes it from <html>, and <body> hands the browser's back
             // to every scrolling box inside the page (a chat panel, a table) so only the page's bar is branded.
             'branded' => 'html{scrollbar-width:thin;scrollbar-color:' . $thumb . ' ' . $track . '}body{scrollbar-color:auto}'

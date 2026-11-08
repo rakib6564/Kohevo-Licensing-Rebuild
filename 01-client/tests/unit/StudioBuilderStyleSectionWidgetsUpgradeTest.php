@@ -132,6 +132,8 @@ unit('site scroll bar: default emits nothing; thin, branded (accent or own colou
     assert_eq('html{scrollbar-width:thin}', \Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('thin'));
     $hidden = \Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('hidden');
     assert_true(str_contains($hidden, 'html{scrollbar-width:none}') && str_contains($hidden, 'html::-webkit-scrollbar{display:none'), $hidden);
+    assert_true(str_contains($hidden, ':is(.sb-offcanvas__body,.sb-nav__list){scrollbar-width:none}'), 'an open menu panel shows no bar either');
+    assert_false(str_contains(\Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('thin'), 'sb-offcanvas__body'), 'only hidden reaches the menu panels');
     $accent = \Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('branded');
     assert_true(str_contains($accent, 'scrollbar-color:var(--sb-color-accent,#888) transparent'), $accent);
     $own = \Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('branded', '#FF5A1F', '#0B0B0C');
