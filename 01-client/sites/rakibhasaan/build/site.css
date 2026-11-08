@@ -231,3 +231,10 @@
 .sb-flex:has(> .rk-badge) img { filter: grayscale(1) contrast(1.12) brightness(.96); transition: filter .6s ease, transform .8s ease; object-position: 50% 20%; }
 .sb-flex:has(> .rk-badge):hover img { filter: grayscale(0) contrast(1) brightness(1); }
 @media (hover: none) { .sb-flex:has(> .rk-badge) img { filter: grayscale(1) contrast(1.12); } }
+
+/* Review "Read full review" dialog: Studio takes its background from the site page colour (black) but its text from the
+   section it opens in (dark on the light Reviews section), so the review was black on black. Pin it: light on black. */
+.sb-tgrid__dialog { background: #0B0B0C; color: #EDE8DF; border: 1px solid #2A2926; }
+.sb-tgrid__dialog .sb-tgrid__full { color: #EDE8DF; }
+.sb-tgrid__dialog .sb-tgrid__dialog-who { color: #8F8A82; opacity: 1; }
+.sb-tgrid__dialog .sb-tgrid__close { color: #EDE8DF; }
