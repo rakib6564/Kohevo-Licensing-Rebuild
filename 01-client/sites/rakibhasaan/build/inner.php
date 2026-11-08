@@ -382,7 +382,9 @@ function HERO(array $p, array $crumbs, ?array $side = null, bool $sideBelow = fa
         ROW([ROW($crumb, '10px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], []), EYE('Available from December 2026', BONE, 'right')], '16px', [], ['justify' => 'between'], ['layout' => ['direction' => 'column', 'gap' => '8px']]),
         $body, $proof,
     ], ['background' => ['gradient' => 'radial-gradient(circle at 75% 20%, #2a140a, #0B0B0C 60%)'], 'padding' => ['top' => '150px', 'right' => '28px', 'bottom' => '56px', 'left' => '28px'], 'layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '0px', 'content_width' => 'boxed', 'content_max' => '1440px']],
-        ['interactions' => THEME('ink') + ['glow' => ['color' => 'rgba(255,90,31,0.16)', 'size' => 560]], 'classNames' => $photo !== null ? ['rk-photo-hero'] : [],
+        // The hero paints its own dark background and pins its own light colours (rk-own-dark): it is still a page-colour
+        // section, so the header over it knows it is dark, but the page's colours never reach its words.
+        ['interactions' => THEME('ink') + ['glow' => ['color' => 'rgba(255,90,31,0.16)', 'size' => 560]], 'classNames' => $photo !== null ? ['rk-photo-hero', 'rk-own-dark'] : ['rk-own-dark'],
          'responsive' => ['mobile' => ['style' => ['padding' => ['top' => $photo !== null ? '300px' : '110px', 'right' => '20px', 'bottom' => '40px', 'left' => '20px']]]]]);
 }
 

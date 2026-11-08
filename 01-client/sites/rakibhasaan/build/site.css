@@ -200,6 +200,10 @@
 /* The panel's links keep their own colours whatever section the header is over. */
 .rk-mega .sb-nav__mega a.sb-nav__link, .rk-mega .sb-nav__mega a { opacity: 1 !important; }
 
+/* Heroes paint their own dark background, so they pin their own light theme colours: the page's colours (which the body
+   takes from the section in the middle of the screen) never reach them, even while a light section is mid-screen. */
+.rk-own-dark { color: #EDE8DF; --sb-text-heading: #EDE8DF; --sb-text-body: #EDE8DF; --sb-text-primary: #EDE8DF; --sb-text-muted: #8F8A82; --sb-border-default: #2A2926; --sb-color-accent: #FF5A1F; --sb-text-accent: #FF5A1F; }
+
 /* ── Photo heroes: a full-bleed photo behind the hero's words ───────────────────────── */
 .rk-photo-hero { position: relative; overflow: hidden; isolation: isolate; }
 .rk-photo-hero > .rk-bgpic { position: absolute !important; inset: 0; z-index: -1; margin: 0 !important; width: auto !important; max-width: none !important; }
@@ -211,10 +215,10 @@
   .rk-photo-hero::after { background: linear-gradient(0deg, rgba(11, 11, 12, .96) 0%, rgba(11, 11, 12, .7) 45%, rgba(11, 11, 12, .1) 75%); }
   /* The tall portrait has a dark band along its top edge: it sits above the hero, out of sight. */
   /* On a phone the portrait fills the top of the hero and fades out under the words. */
-  /* The header is see-through and lies over the hero: the photo starts just under it. */
-  .rk-photo-hero > .rk-bgpic--top { top: 48px !important; bottom: auto !important; height: 500px !important; -webkit-mask-image: linear-gradient(#000 62%, transparent); mask-image: linear-gradient(#000 62%, transparent); }
+  /* The photo fills the hero from its very top, behind the see-through header. */
+  .rk-photo-hero > .rk-bgpic--top { top: 0 !important; bottom: auto !important; height: 560px !important; -webkit-mask-image: linear-gradient(#000 62%, transparent); mask-image: linear-gradient(#000 62%, transparent); }
   .rk-photo-hero > .rk-bgpic--top img { object-position: 50% 12% !important; }
-  /* The tall portrait's dark top band sits behind the header. */
-  .rk-photo-hero > .rk-bgpic--top:has(img[src*="portrait-tall"]) { top: 0 !important; height: 548px !important; }
+  /* The tall portrait has a dark band along its top edge: it is pushed up out of the hero, so the photo meets the top. */
+  .rk-photo-hero > .rk-bgpic--top:has(img[src*="portrait-tall"]) { top: -40px !important; height: 620px !important; }
   .rk-photo-hero > .rk-bgpic--top:has(img[src*="portrait-tall"]) img { object-position: 50% 0% !important; }
 }

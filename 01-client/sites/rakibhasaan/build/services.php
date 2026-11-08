@@ -93,7 +93,8 @@ $hero = CTOP('Hero', [
             'style_parts' => ['button' => ['background' => ['color' => 'rgba(0,0,0,0)'], 'color' => BONE, 'border' => ['width' => '1px', 'style' => 'solid', 'color' => LINE, 'radius' => '999px']]]]),
     ], '10px', ['margin' => ['top' => '24px']], ['wrap' => 'wrap'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']]),
 ], ['background' => ['gradient' => 'radial-gradient(circle at 75% 20%, #2a140a, #0B0B0C 60%)'], 'padding' => ['top' => '150px', 'right' => '28px', 'bottom' => '80px', 'left' => '28px'], 'layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '0px', 'content_width' => 'boxed', 'content_max' => '1440px']],
-    ['interactions' => THEME('ink') + ['glow' => ['color' => 'rgba(255,90,31,0.16)', 'size' => 560]], 'responsive' => ['mobile' => ['style' => ['padding' => ['top' => '110px', 'right' => '20px', 'bottom' => '48px', 'left' => '20px']]]]]);
+    // Its own dark background: it pins its own light colours (rk-own-dark), whatever colours the page has taken.
+    ['interactions' => THEME('ink') + ['glow' => ['color' => 'rgba(255,90,31,0.16)', 'size' => 560]], 'classNames' => ['rk-own-dark'], 'responsive' => ['mobile' => ['style' => ['padding' => ['top' => '110px', 'right' => '20px', 'bottom' => '48px', 'left' => '20px']]]]]);
 
 $highlights = SEC('Highlights', [
     $twoCol($sHead('01', 'highlights', $cB, 'Who this is for'),

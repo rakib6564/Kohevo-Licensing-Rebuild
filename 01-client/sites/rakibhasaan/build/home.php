@@ -33,7 +33,9 @@ $hero = CTOP('Hero', [
 ], ['background' => ['color' => INK], 'dimensions' => ['min_height' => '780px'],
     'padding' => ['top' => '200px', 'right' => '28px', 'bottom' => '64px', 'left' => '28px'],
     'layout' => ['display' => 'flex', 'direction' => 'column', 'justify' => 'end', 'gap' => '0px', 'content_width' => 'boxed', 'content_max' => '1440px']],
-    ['interactions' => THEME('ink') + ['glow' => ['color' => 'rgba(255,90,31,0.18)', 'size' => 620]], 'classNames' => ['rk-photo-hero'],
+    // The hero paints its own dark background and pins its own light colours (rk-own-dark): it is still a page-colour
+    // section, so the header over it knows it is dark, but the page's colours never reach its words.
+    ['interactions' => THEME('ink') + ['glow' => ['color' => 'rgba(255,90,31,0.18)', 'size' => 620]], 'classNames' => ['rk-photo-hero', 'rk-own-dark'],
      'responsive' => ['mobile' => ['style' => ['dimensions' => ['min_height' => '760px'], 'padding' => ['top' => '320px', 'right' => '20px', 'bottom' => '40px', 'left' => '20px']]]]]);
 
 // ── 2. Manifesto ───────────────────────────────────────────────────────────────
