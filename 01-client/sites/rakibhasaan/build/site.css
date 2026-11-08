@@ -1,0 +1,51 @@
+/* rakibhasaan.com: the little the block styles cannot say. Classes come from the build (rk-*). */
+
+/* The brand dot is a filled circle. */
+.rk-dot svg { fill: currentColor; }
+
+/* Manifesto: the industry words in the accent colour, upright. */
+.rk-manifesto em { font-style: normal; color: var(--sb-color-accent); font-weight: 400; }
+
+/* Mono labels never wrap ("8 sites"). */
+.rk-ind-row .sb-block--core-text { white-space: nowrap; }
+.rk-ind-row .sb-block--core-image { flex: 0 0 200px; }
+.rk-ind-row .sb-block--core-image img { height: 120px; }
+.rk-arrow a { display: inline-grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; border: 1px solid #2A2926; text-decoration: none; }
+
+/* Selected work: the industry tag sits on the picture. */
+.rk-card-media { position: relative; }
+.rk-tag { position: absolute; top: 14px; left: 14px; z-index: 1; }
+
+/* Three rules: big thin titles, the "when" as a small mono label. */
+.rk-rules .sb-tabset__title { font-size: 48px; font-weight: 200; letter-spacing: -2px; line-height: 1.05; }
+.rk-rules .sb-tabset__tab[aria-selected="false"] .sb-tabset__title { opacity: .55; }
+.rk-rules .sb-tabset__sub { font: 500 12px/1.4 "Geist Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: 1.4px; opacity: .7; }
+.rk-rules .sb-tabset__tab::before { font: 500 12px "Geist Mono", ui-monospace, monospace; }
+.rk-ok p, .rk-fix p { display: inline-block; padding: 3px 8px; border-radius: 999px; }
+.rk-ok p { background: rgba(34, 197, 94, .14); }
+.rk-fix p { background: rgba(255, 90, 31, .16); }
+
+/* About: the badge overlaps the portrait's corner. */
+.rk-badge { position: absolute; right: -34px; bottom: -34px; z-index: 1; }
+
+/* Footer chips. */
+.rk-chip p { display: inline-block; padding: 7px 11px; border: 1px solid #2A2926; border-radius: 999px; }
+.rk-online p::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 10px; border-radius: 50%; background: #22C55E; vertical-align: 1px; }
+.rk-top a { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid #2A2926; text-decoration: none; }
+
+/* Worldwide: the country list as chips. */
+.rk-country p { display: inline-block; padding: 6px 10px; border: 1px solid #24335A; border-radius: 999px; }
+
+/* Free audit: "Start here" sits in the middle of the turning words. */
+.rk-start-wrap { position: relative; display: grid; place-items: center; width: 190px; height: 190px; }
+.rk-start-wrap > .sb-block { grid-area: 1 / 1; }
+.rk-start a { width: 118px; height: 118px; border-radius: 50%; display: grid; place-items: center; padding: 0; }
+
+/* Message widget: a light pill with the photo, like the original. */
+.rk-chat .sb-msg__launcher[data-sb-msg-open] { background: #FBF9F5; color: #0B0B0C; box-shadow: 0 10px 30px rgba(0, 0, 0, .25); }
+.rk-chat .sb-msg__dot { box-shadow: 0 0 0 2px #FBF9F5; }
+
+@media (max-width: 767.98px) {
+  .rk-ind-row .sb-block--core-image { display: none; }
+  .rk-badge { right: 10px; bottom: 10px; }
+}
