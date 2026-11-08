@@ -29,7 +29,7 @@ const NAVY = INK; // was navy #0D1A3A; the user asked for black instead (2026-11
 const ORANGE = '#FF5A1F';
 const RUST = '#AE3A0B'; // the original #D9480F darkened to 4.6:1 on the light cards (5:1 on BONE), so small accent text reads
 // Share card version: build/og/make-og.cjs writes og-<slug>OG_V.png (keep in step with OG_V there).
-const OG_V = '-v3';
+const OG_V = '-v4';
 const PERI = ORANGE; // was periwinkle #8EA2FF; the user asked for no blue on the site (2026-11-08)
 const MUTED = '#8F8A82';
 const MUTED_BONE = '#625D55'; // a shade darker than the original #6B665E, for 4.5:1 on the light cards too

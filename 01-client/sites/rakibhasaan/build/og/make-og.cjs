@@ -12,28 +12,28 @@ const { chromium } = req('@playwright/test');
 
 const MEDIA = path.resolve(__dirname, '../../media');
 // Bumped when the cards change, so the file name changes and Facebook, LinkedIn and X fetch the new picture (keep in step with OG_V in lib.php).
-const OG_V = '-v3';
+const OG_V = '-v4';
 const img = (f) => 'data:' + (f.endsWith('.png') ? 'image/png' : f.endsWith('.webp') ? 'image/webp' : 'image/jpeg') + ';base64,' + fs.readFileSync(path.join(MEDIA, f)).toString('base64');
 
 // slug, the small label, the line, the picture on the right (and where its subject sits).
 const CARDS = [
-  ['default', 'Freelance designer + developer', 'Websites built for your industry', 'rakib-hero-golden.jpg', '70% 35%'],
-  ['home', 'Freelance designer + developer', 'Websites built for your industry', 'rakib-hero-golden.jpg', '70% 35%'],
+  ['default', 'Freelance designer + developer', 'Websites built for your industry', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['home', 'Freelance designer + developer', 'Websites built for your industry', 'rakib-photo-orange-clean.jpg', '74% 30%'],
   ['about', 'About', 'One person plans, designs and builds your site', 'rakib-hero-teal-clean.jpg', '78% 30%'],
   ['contact', 'Contact', 'Let’s talk about your website', 'rakib-headshot.jpg', '50% 28%'],
-  ['work', 'Work', 'A web design portfolio, one site from every world', 'rakib-photo-orange-clean.jpg', '72% 30%'],
-  ['services', 'Services', 'Web design, development and SEO services', 'rakib-hero-grey.jpg', '80% 30%'],
-  ['wordpress-websites', 'WordPress & Elementor websites', 'WordPress websites built for your business', 'rakib-photo-brown.jpg', '68% 30%'],
-  ['custom-development', 'Custom WordPress development', 'Custom plugins and themes, built to your workflow', 'rakib-hero-golden.jpg', '70% 35%'],
-  ['seo', 'SEO audit & fixes', 'Why your site is, or isn’t, on Google', 'rakib-hero-teal-clean.jpg', '78% 30%'],
-  ['apps', 'Web & mobile apps', 'Web and mobile apps for small businesses', 'rakib-photo-orange-clean.jpg', '72% 30%'],
-  ['platforms', 'Shopify, Wix & Squarespace', 'Shopify, Wix and Squarespace sites, built and fixed', 'rakib-hero-grey.jpg', '80% 30%'],
-  ['branding', 'Branding, social media & video', 'Branding and content that support your website', 'rakib-photo-brown.jpg', '68% 30%'],
-  ['free-audit', 'Free website audit', 'Your top five fixes, reviewed by hand, free', 'rakib-photo-orange-clean.jpg', '72% 30%'],
-  ['process', 'Process', 'Audit, staging, verified live', 'rakib-hero-golden.jpg', '70% 35%'],
-  ['reviews', 'Reviews', '5.0 from 101 client reviews', 'rakib-hero-teal-clean.jpg', '78% 30%'],
-  ['faq', 'FAQ', 'Cost, timelines and who owns what', 'rakib-hero-grey.jpg', '80% 30%'],
-  ['construction', 'Construction & trades', 'Websites for builders that win more quote requests', 'rakib-photo-brown.jpg', '68% 30%'],
+  ['work', 'Work', 'A web design portfolio, one site from every world', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['services', 'Services', 'Web design, development and SEO services', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['wordpress-websites', 'WordPress & Elementor websites', 'WordPress websites built for your business', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['custom-development', 'Custom WordPress development', 'Custom plugins and themes, built to your workflow', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['seo', 'SEO audit & fixes', 'Why your site is, or isn’t, on Google', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['apps', 'Web & mobile apps', 'Web and mobile apps for small businesses', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['platforms', 'Shopify, Wix & Squarespace', 'Shopify, Wix and Squarespace sites, built and fixed', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['branding', 'Branding, social media & video', 'Branding and content that support your website', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['free-audit', 'Free website audit', 'Your top five fixes, reviewed by hand, free', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['process', 'Process', 'Audit, staging, verified live', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['reviews', 'Reviews', '5.0 from 101 client reviews', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['faq', 'FAQ', 'Cost, timelines and who owns what', 'rakib-photo-orange-clean.jpg', '74% 30%'],
+  ['construction', 'Construction & trades', 'Websites for builders that win more quote requests', 'rakib-photo-orange-clean.jpg', '74% 30%'],
 ];
 
 const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
