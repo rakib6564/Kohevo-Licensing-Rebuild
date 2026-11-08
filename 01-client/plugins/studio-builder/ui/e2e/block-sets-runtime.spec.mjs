@@ -65,6 +65,9 @@ test('accordion with blocks: rows start as the server set them and open one at a
   await expect(panels.nth(0)).toContainText('One');
   await expect(buttons.nth(1)).toHaveAttribute('aria-expanded', 'false');
   await expect(panels.nth(1)).toBeHidden();
+  // A closed answer is inert (its links leave the tab order); an open one is not.
+  expect(await panels.nth(1).evaluate((el) => el.inert)).toBe(true);
+  expect(await panels.nth(0).evaluate((el) => el.inert)).toBe(false);
 });
 
 test('the timeline fills with the scroll and marks the steps it passes', async ({ page }) => {

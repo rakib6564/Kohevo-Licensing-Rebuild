@@ -15,7 +15,7 @@ import { asObject } from '../../core/doc.mjs';
 import {
   ANIMATION_TYPES, DELAY_RANGE, DURATION_RANGE, EASINGS, GLOW_SIZE, HOVER_IMAGE_SIZE, INTERACTION_TRIGGERS, ITEM_WIDTH, MARQUEE_SPEED, PANEL_WIDTH,
   MOTION_PRESETS, MOUSE_LEVELS, PARALLAX_SPEED, PROGRESS_HEIGHT, SCROLL_LEVELS, SCROLL_DEVICES, STAGGER_STEP, STICKY_OFFSET,
-  TEXT_DIM, TEXT_EFFECT_TYPES, TEXT_STEP, clampMs, motionLabel, normalizeAnimation, normalizeInteractions,
+  TEXT_DIM, TEXT_EFFECT_TYPES, TEXT_STEP, WAVE_RADIUS, WAVE_WEIGHT, clampMs, motionLabel, normalizeAnimation, normalizeInteractions,
 } from '../../core/motion.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
@@ -363,6 +363,7 @@ function PageEffectsGroup({ idPrefix, type, interactions, tokens, onChange }) {
                 { value: '', label: t('sticky_off') },
                 { value: 'light_words', label: t('text_effect_light_words') },
                 { value: 'lines', label: t('text_effect_lines') },
+                { value: 'wave', label: t('text_effect_wave') },
               ]}
               onChange={(v) => set('text', v ? { effect: v } : null)}
             />
@@ -373,7 +374,14 @@ function PageEffectsGroup({ idPrefix, type, interactions, tokens, onChange }) {
           {text && text.effect === 'lines' && (
             <SliderField id={`${idPrefix}-text-step`} label={t('text_step')} value={text.step_ms} min={TEXT_STEP.min} max={TEXT_STEP.max} step={10} unit="ms" neutral={TEXT_STEP.default} onChange={(v) => set('text', { ...text, step_ms: v })} />
           )}
-          {text && <p className="sbx-hint">{t(text.effect === 'lines' ? 'text_effect_lines_hint' : 'text_effect_light_words_hint')}</p>}
+          {text && text.effect === 'wave' && (
+            <>
+              <SliderField id={`${idPrefix}-wave-low`} label={t('wave_low')} value={text.low} min={WAVE_WEIGHT.min} max={WAVE_WEIGHT.max} step={50} neutral={WAVE_WEIGHT.low} onChange={(v) => set('text', { ...text, low: v })} />
+              <SliderField id={`${idPrefix}-wave-high`} label={t('wave_high')} value={text.high} min={WAVE_WEIGHT.min} max={WAVE_WEIGHT.max} step={50} neutral={WAVE_WEIGHT.high} onChange={(v) => set('text', { ...text, high: v })} />
+              <SliderField id={`${idPrefix}-wave-radius`} label={t('wave_radius')} value={text.radius} min={WAVE_RADIUS.min} max={WAVE_RADIUS.max} step={10} unit="px" neutral={WAVE_RADIUS.default} onChange={(v) => set('text', { ...text, radius: v })} />
+            </>
+          )}
+          {text && <p className="sbx-hint">{t(text.effect === 'lines' ? 'text_effect_lines_hint' : text.effect === 'wave' ? 'text_effect_wave_hint' : 'text_effect_light_words_hint')}</p>}
         </>
       )}
 
@@ -382,6 +390,9 @@ function PageEffectsGroup({ idPrefix, type, interactions, tokens, onChange }) {
           <SwitchSection id={`${idPrefix}-page-colors`} title={t('page_colors')} value={pageColors} onOff={() => set('page_colors', null)} testId="page-colors">
             <ThemeColor id={`${idPrefix}-page-bg`} label={t('page_colors_background')} value={pageColors && pageColors.background} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), background: v })} />
             <ThemeColor id={`${idPrefix}-page-fg`} label={t('page_colors_text')} value={pageColors && pageColors.text} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), text: v })} />
+            <ThemeColor id={`${idPrefix}-page-muted`} label={t('page_colors_muted')} value={pageColors && pageColors.muted} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), muted: v })} />
+            <ThemeColor id={`${idPrefix}-page-line`} label={t('page_colors_line')} value={pageColors && pageColors.line} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), line: v })} />
+            <ThemeColor id={`${idPrefix}-page-accent`} label={t('page_colors_accent')} value={pageColors && pageColors.accent} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), accent: v })} />
             <p className="sbx-hint">{t('page_colors_hint')}</p>
           </SwitchSection>
           <Check label={t('adapt_colors')} checked={interactions.adapt === true} onChange={(e) => set('adapt', e.target.checked ? true : undefined)} />

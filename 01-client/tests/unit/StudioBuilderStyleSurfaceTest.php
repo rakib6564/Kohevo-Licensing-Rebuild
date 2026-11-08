@@ -829,8 +829,8 @@ unit('text colours: post excerpt and content use variables the theme defines', f
     // section's custom width, --sb-shop-* by a Shop widget (a Product grid's columns), --sb-nav-* by a Nav menu, and --sb-gal-* by a Gallery (each image's shape, the row height), not by the theme.
     // The page-level motion sets the rest: --sb-paged-* and --sb-page-progress on <html>, --sb-progress-*, --sb-stagger-*,
     // --sb-glow-*, --sb-mx/--sb-my, --sb-line*, --sb-item-*, --sb-hs-* and --sb-hover-* on the node or word (ScrollEffects,
-    // studio-runtime.js).
-    $perElement = ['--sb-slide', '--sb-gal-', '--sb-il-', '--sb-anim-', '--sb-nav-', '--sb-mega-', '--sb-ov-', '--sb-shape-', '--sb-pbg-', '--sb-parallax-', '--sb-sticky-', '--sb-stuck-', '--sb-dc-', '--sb-tc-', '--sb-pv', '--sb-fw-', '--sb-cw', '--sb-shop-', '--sb-paged-', '--sb-page-progress', '--sb-progress-', '--sb-stagger-', '--sb-glow-', '--sb-mx', '--sb-my', '--sb-line', '--sb-item-', '--sb-hs-', '--sb-hover-', '--sb-tl-', '--sb-pg-', '--sb-ct-'];
+    // studio-runtime.js). --sb-wave-* is a wave text's two weights, and --sb-page-* a themed section's own colours, set on the node.
+    $perElement = ['--sb-slide', '--sb-gal-', '--sb-il-', '--sb-anim-', '--sb-nav-', '--sb-mega-', '--sb-ov-', '--sb-shape-', '--sb-pbg-', '--sb-parallax-', '--sb-sticky-', '--sb-stuck-', '--sb-dc-', '--sb-tc-', '--sb-pv', '--sb-fw-', '--sb-cw', '--sb-shop-', '--sb-paged-', '--sb-page-progress', '--sb-progress-', '--sb-stagger-', '--sb-glow-', '--sb-mx', '--sb-my', '--sb-line', '--sb-item-', '--sb-hs-', '--sb-hover-', '--sb-tl-', '--sb-pg-', '--sb-ct-', '--sb-wave-', '--sb-page-', '--sb-tg-', '--sb-msg-'];
     $missing = array_values(array_filter(array_diff(array_unique($m[1]), $defined), static function (string $v) use ($perElement): bool {
         foreach ($perElement as $prefix) {
             if (str_starts_with($v, $prefix)) {

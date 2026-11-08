@@ -5,6 +5,10 @@
  * Each child is a `layout.mega_item`. It speaks the Nav menu's markup (`.sb-nav__item`, `.sb-nav__sub`), so the stylesheet's
  * hover and keyboard rules, the pointer, the menu button and studio-runtime.js's submenu code all work unchanged; folded,
  * the panels become accordion rows. The list is a `<div>` because every block sits in its own wrapper `<div>`.
+ *
+ * `panel_look`: `solid` panels take the site's surface colour; `glass` panels are see-through and blur what is behind
+ * them (frosted glass), in the colours of the page (`--sb-mega-glass` changes the tint). Folded behind the menu
+ * button, the panels are accordion rows either way.
  */
 
 declare(strict_types=1);
@@ -18,6 +22,7 @@ use Slate\Module\StudioBuilder\Render\Html;
 final class MegaMenuRenderer implements BlockRendererInterface
 {
     public const WIDTHS = ['full', 'content'];
+    public const LOOKS = ['solid', 'glass'];
 
     public function type(): string
     {
@@ -43,6 +48,9 @@ final class MegaMenuRenderer implements BlockRendererInterface
         [$pointer, $style] = NavChrome::pointer($scope);
         [$toggle, $bar] = NavChrome::toggle($scope, $listId);
         $classes = ['sb-nav', 'sb-nav--horizontal', 'sb-nav--' . $align, 'sb-nav--plain', 'sb-nav--mega', 'sb-nav--mega-' . $width, ...$pointer, ...$toggle];
+        if (NavChrome::pick($scope->string('panel_look', 'solid'), self::LOOKS, 'solid') === 'glass') {
+            $classes[] = 'sb-nav--mega-glass';
+        }
 
         return '<nav' . Html::classAttr($classes)
             . ($name !== '' ? ' aria-label="' . Html::e($name) . '"' : '') . $style . ($toggle !== [] ? ' data-sb-nav-toggle' : '') . ' data-sb-mega>'

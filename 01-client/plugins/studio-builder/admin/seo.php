@@ -36,6 +36,9 @@ $seoBingVerification   = $verifyTokens['bing'];
 $webFonts = (string) (Database::setting(\Slate\Module\StudioBuilder\Render\Seo\WebFonts::SETTING, $tenantId) ?: '');
 $business = \Slate\Module\StudioBuilder\Render\Seo\StructuredData::business($tenantId);
 $smoothScroll = (string) (Database::setting(\Slate\Module\StudioBuilder\Render\PageDocumentAssembler::SMOOTH_SCROLL_SETTING, $tenantId) ?: '') === '1';
+$scrollbar = \Slate\Module\StudioBuilder\Render\SiteScrollbar::style((string) Database::setting(\Slate\Module\StudioBuilder\Render\SiteScrollbar::SETTING, $tenantId));
+$scrollbarThumb = \Slate\Module\StudioBuilder\Render\SiteScrollbar::colour((string) Database::setting(\Slate\Module\StudioBuilder\Render\SiteScrollbar::THUMB_SETTING, $tenantId));
+$scrollbarTrack = \Slate\Module\StudioBuilder\Render\SiteScrollbar::colour((string) Database::setting(\Slate\Module\StudioBuilder\Render\SiteScrollbar::TRACK_SETTING, $tenantId));
 // The name the live pages use for %site_name%.
 try {
     $siteName = \Slate\Services\Content\TenantBranding::siteName();
@@ -63,6 +66,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (($_POST['_form'] ?? '') === 'scrolling') {
         $smoothScroll = ($_POST['smooth_scroll'] ?? '') === '1';
         Database::setSetting(\Slate\Module\StudioBuilder\Render\PageDocumentAssembler::SMOOTH_SCROLL_SETTING, $smoothScroll ? '1' : '0', $tenantId);
+        // The page's scroll bar: a known style, and colours as #rrggbb or empty (the accent, a see-through track).
+        $bar = \Slate\Module\StudioBuilder\Render\SiteScrollbar::class;
+        $thumbIn = trim((string) ($_POST['scrollbar_thumb'] ?? ''));
+        $trackIn = trim((string) ($_POST['scrollbar_track'] ?? ''));
+        if (($thumbIn !== '' && $bar::colour($thumbIn) === '') || ($trackIn !== '' && $bar::colour($trackIn) === '')) {
+            sb_flash_redirect('seo.php', ['type' => 'error', 'msg' => __('studio_code_nothing_saved', 'Nothing was saved.') . ' ' . __('studio_scrollbar_bad_colour', 'Write a colour as # and six digits, like #FF5A1F, or leave it empty.')]);
+        }
+        Database::setSetting($bar::SETTING, $bar::style((string) ($_POST['scrollbar'] ?? 'default')), $tenantId);
+        Database::setSetting($bar::THUMB_SETTING, $bar::colour($thumbIn), $tenantId);
+        Database::setSetting($bar::TRACK_SETTING, $bar::colour($trackIn), $tenantId);
         sb_flash_redirect('seo.php', ['type' => 'success', 'msg' => __('studio_scrolling_saved', 'Saved. Every page scrolls this way from its next visit.')]);
     } elseif (($_POST['_form'] ?? '') === 'business') {
         $business = \Slate\Module\StudioBuilder\Render\Seo\StructuredData::clean([
@@ -317,6 +330,21 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <span><?= e(__('studio_scrolling_label', 'Ease the page as visitors scroll with a mouse wheel')) ?></span>
                 </label>
                 <p class="sb-field__hint"><?= e(__('studio_scrolling_hint', 'Touch screens, the keyboard and the scroll bar keep their own scrolling, and visitors who ask their device for less motion never get it.')) ?></p>
+                <div class="sb-field">
+                    <label class="sb-field__label" for="seo-scrollbar"><?= e(__('studio_scrollbar_label', 'Scroll bar')) ?></label>
+                    <select name="scrollbar" id="seo-scrollbar" class="form-control">
+                        <?php foreach (['default' => __('studio_scrollbar_default', 'The browser\'s own'), 'thin' => __('studio_scrollbar_thin', 'Thin'), 'branded' => __('studio_scrollbar_branded', 'Branded: thin and rounded, in the site\'s colours'), 'hidden' => __('studio_scrollbar_hidden', 'Hidden')] as $v => $l): ?>
+                            <option value="<?= e($v) ?>" <?= $scrollbar === $v ? 'selected' : '' ?>><?= e($l) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="sb-field__hint"><?= e(__('studio_scrollbar_hint', 'For the page\'s own scroll bar only. Hidden keeps scrolling with the wheel, touch screens and the keyboard, but visitors lose the bar\'s sense of where they are on long pages.')) ?></p>
+                </div>
+                <div class="sb-field" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <label><span class="sb-field__label"><?= e(__('studio_scrollbar_thumb', 'Branded bar colour')) ?></span>
+                        <input type="text" name="scrollbar_thumb" class="form-control" value="<?= e($scrollbarThumb) ?>" placeholder="<?= e(__('studio_scrollbar_thumb_ph', 'The accent colour')) ?>" pattern="#[0-9A-Fa-f]{6}" maxlength="7" spellcheck="false"></label>
+                    <label><span class="sb-field__label"><?= e(__('studio_scrollbar_track', 'Branded track colour')) ?></span>
+                        <input type="text" name="scrollbar_track" class="form-control" value="<?= e($scrollbarTrack) ?>" placeholder="<?= e(__('studio_scrollbar_track_ph', 'See-through')) ?>" pattern="#[0-9A-Fa-f]{6}" maxlength="7" spellcheck="false"></label>
+                </div>
                 <div class="sb-card-actions">
                     <button type="submit" class="btn btn-primary"><?= sb_svg('save', 14) ?> <?= e(__('studio_scrolling_save', 'Save scrolling')) ?></button>
                 </div>

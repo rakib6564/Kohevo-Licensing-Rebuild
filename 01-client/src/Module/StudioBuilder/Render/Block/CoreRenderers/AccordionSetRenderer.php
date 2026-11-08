@@ -31,7 +31,7 @@ final class AccordionSetRenderer implements BlockRendererInterface
         if (trim($rows) === '') {
             return $scope->showsDiagnostics() ? '<p class="sb-accordion__empty">' . Html::e(Html::t('studio_accordion_empty', 'Add an Accordion row')) . '</p>' : '';
         }
-        return '<div class="sb-accordion-block sb-accordion-block--blocks" data-sb-accordion' . ($scope->bool('allow_multiple') ? ' data-sb-allow-multiple' : '') . '>'
+        return '<div' . Html::classAttr(['sb-accordion-block', 'sb-accordion-block--blocks', ...AccordionRenderer::lookClasses($scope)]) . ' data-sb-accordion' . ($scope->bool('allow_multiple') ? ' data-sb-allow-multiple' : '') . '>'
             . '<div class="sb-accordion">' . $rows . '</div></div>';
     }
 }

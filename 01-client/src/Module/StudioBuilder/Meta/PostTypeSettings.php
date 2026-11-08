@@ -304,7 +304,7 @@ final class PostTypeSettings
                 $errors[] = self::t('studio_tf_field_required', 'Field label and field key are required.');
             } elseif (isset($seen[$key])) {
                 $errors[] = sprintf(self::t('studio_tf_field_exists', "A field with the key '%1\$s' already exists on %2\$s."), $key, $postType);
-            } elseif (in_array($fieldType, ['select', 'radio', 'multiselect', 'checkboxes'], true) && empty($options['choices'])) {
+            } elseif (in_array($fieldType, ['select', 'radio', 'multiselect', 'checkboxes', 'terms'], true) && empty($options['choices'])) {
                 $errors[] = sprintf('%s: %s', $label, self::t('studio_tf_field_choices', 'Add at least one choice (one per line, as value or value : Label).'));
             } elseif (in_array($fieldType, ['relation', 'relations'], true) && empty($options['target'])) {
                 $errors[] = sprintf('%s: %s', $label, self::t('studio_tf_field_target', 'Pick the post type this relation links to.'));

@@ -36,8 +36,10 @@ final class ProgressRenderer implements BlockRendererInterface
                 continue;
             }
             $shown = rtrim(rtrim(number_format($value, 1, '.', ''), '0'), '.');
+            // A row may show its own value ("72" clients) instead of the share it draws.
+            $note = is_array($item) ? trim((string) ($item['note'] ?? '')) : '';
             $rows .= '<div class="sb-progress__item"><div class="sb-progress__head"><span class="sb-progress__label">' . Html::e($label) . '</span>'
-                . ($scope->bool('show_value', true) ? '<span class="sb-progress__value">' . $shown . '%</span>' : '') . '</div>'
+                . ($scope->bool('show_value', true) ? '<span class="sb-progress__value">' . ($note !== '' ? Html::e($note) : $shown . '%') . '</span>' : '') . '</div>'
                 . '<div class="sb-progress__track" role="progressbar" aria-label="' . Html::e($label) . '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' . $shown . '">'
                 . '<span class="sb-progress__bar" style="--sb-pg-v:' . rtrim(rtrim(number_format($value / 100, 4, '.', ''), '0'), '.') . '"></span></div></div>';
         }
@@ -55,6 +57,6 @@ final class ProgressRenderer implements BlockRendererInterface
         if (is_numeric($height)) {
             $vars[] = '--sb-pg-h:' . max(2, min(40, (int) $height)) . 'px';
         }
-        return '<div class="sb-progress" data-sb-progress-bars' . ($vars !== [] ? ' style="' . Html::e(implode(';', $vars)) . '"' : '') . '>' . $rows . '</div>';
+        return '<div class="sb-progress' . ($scope->string('layout', 'stacked') === 'inline' ? ' sb-progress--inline' : '') . '" data-sb-progress-bars' . ($vars !== [] ? ' style="' . Html::e(implode(';', $vars)) . '"' : '') . '>' . $rows . '</div>';
     }
 }

@@ -3,6 +3,14 @@
  * Kohevo Studio — `theme.field_value` renderer: one custom field of the page being shown (Types & fields, set on the
  * page's settings screen), written the way its type reads best: an image as an image, an address as a link, a list as a
  * list. The value is already cleaned by `PageMeta::clean`; it is escaped again here and an address is checked again.
+ *
+ * Presentation: `before` / `after` wrap a value in plain text ("Year 2023", "97/100"); a list, choices or terms can
+ * read as `chips` or as a `ticker` the marquee runtime scrolls (data-sb-ticker); an address can show its domain
+ * (rtjrentals.com ↗) or a fixed text instead of the whole address; an image takes its alt text from another field,
+ * and the value can sit on a background taken from a colour field of the same item (`bg_field`).
+ *
+ * An image from the media library is drawn like the Image block's: its width and height (no layout shift when it
+ * loads), its WebP sizes as a srcset, lazy unless `priority` asks for it first (the page's main picture).
  */
 
 declare(strict_types=1);
@@ -13,6 +21,7 @@ use Slate\Module\StudioBuilder\Meta\MetaFieldTypes;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
 use Slate\Module\StudioBuilder\Render\Html;
+use Slate\Module\StudioBuilder\Render\Media\ResolvedMedia;
 
 final class FieldValueRenderer implements BlockRendererInterface
 {
@@ -43,8 +52,13 @@ final class FieldValueRenderer implements BlockRendererInterface
                 break;
             }
         }
-        $value = is_array($meta['values'] ?? null) && $key !== '' ? ($meta['values'][$key] ?? null) : null;
+        $values = is_array($meta['values'] ?? null) ? $meta['values'] : [];
+        $value = $key !== '' ? ($values[$key] ?? null) : null;
         $body = $field !== null ? self::format($field, $value) : '';
+        $type = MetaFieldTypes::normalize((string) ($field['type'] ?? 'text'));
+        if ($body !== '' && $field !== null) {
+            $body = $this->present($scope, $type, $body, $value, $values);
+        }
 
         if ($body === '') {
             $fallback = $scope->string('fallback');
@@ -66,7 +80,75 @@ final class FieldValueRenderer implements BlockRendererInterface
             $body = '<a class="sb-field-value__link" href="' . Html::e($postUrl) . '">' . $body . '</a>';
         }
         $fit = in_array($scope->string('fit'), ['cover', 'contain'], true) ? ' sb-field-value--' . $scope->string('fit') : '';
-        return '<' . $tag . ' class="sb-field-value sb-field-value--' . Html::e(MetaFieldTypes::normalize((string) ($field['type'] ?? 'text'))) . $fit . '">' . $label . $body . '</' . $tag . '>';
+        $before = $scope->string('before');
+        $after = $scope->string('after');
+        if ($body !== '' && ($before !== '' || $after !== '')) {
+            $body = ($before !== '' ? '<span class="sb-field-value__before">' . Html::e($before) . '</span>' : '') . $body
+                . ($after !== '' ? '<span class="sb-field-value__after">' . Html::e($after) . '</span>' : '');
+        }
+        // A background from a colour field of the same item (an industry's own colour on its tag, say).
+        $bgKey = $scope->string('bg_field');
+        $bg = $bgKey !== '' && is_string($values[$bgKey] ?? null) && preg_match('/^#[0-9a-fA-F]{6}$/', $values[$bgKey]) === 1 ? ' style="background-color:' . $values[$bgKey] . '"' : '';
+        return '<' . $tag . ' class="sb-field-value sb-field-value--' . Html::e($type) . $fit . '"' . $bg . '>' . $label . $body . '</' . $tag . '>';
+    }
+
+    /**
+     * The value as the block asks to show it: list items as chips or a ticker, an address as its domain or a text,
+     * an image with the alt text of another field.
+     *
+     * @param array<string, mixed> $values every field value of the item, for the alt text
+     */
+    private function present(BlockRenderScope $scope, string $type, string $body, mixed $value, array $values): string
+    {
+        $lists = ['list', 'multiselect', 'checkboxes', 'terms', 'repeater'];
+        $style = $scope->string('list_style', 'list');
+        if (in_array($type, $lists, true) && in_array($style, ['chips', 'ticker'], true) && str_starts_with($body, '<ul>')) {
+            $speed = is_int($v = $scope->prop('ticker_speed')) && $v >= 1 && $v <= 10 ? $v : 3;
+            return '<ul class="sb-field-chips' . ($style === 'ticker' ? ' sb-field-chips--ticker" data-sb-ticker="' . $speed . ' left' : '') . '">' . substr($body, 4);
+        }
+        if ($type === 'url' && is_string($value)) {
+            $mode = $scope->string('url_label', 'full');
+            $text = $mode === 'domain'
+                ? (string) preg_replace('#^https?://(www\.)?#i', '', rtrim($value, '/'))
+                : ($mode === 'text' ? $scope->string('link_text') : '');
+            if ($text !== '') {
+                return (string) preg_replace('#>[^<]*</a>$#', '>' . Html::e($text) . ($scope->bool('link_arrow') ? ' ↗' : '') . '</a>', $body);
+            }
+        }
+        if (in_array($type, ['image', 'gallery'], true) && $body !== '') {
+            $altKey = $scope->string('alt_field');
+            $alt = $altKey !== '' && is_scalar($values[$altKey] ?? null) ? trim((string) $values[$altKey]) : '';
+            $priority = $scope->bool('priority', false);
+            $out = '';
+            foreach ($type === 'image' ? [$value] : (is_array($value) ? array_values($value) : []) as $url) {
+                if (!is_string($url) || preg_match('~^(https?://[^\s"\'<>]+|/[^/\s"\'<>][^\s"\'<>]*)$~i', $url) !== 1) {
+                    continue;
+                }
+                $first = $priority && $out === '';
+                $image = self::libraryImage($scope, $url);
+                $out .= $image !== null
+                    ? ImageRenderer::img($image->url, $alt !== '' ? $alt : $image->alt, $image->width, $image->height, null, !$first, $image->srcset, $first)
+                    : '<img src="' . Html::e($url) . '" alt="' . Html::e($alt) . '"' . ($first ? ' fetchpriority="high"' : ' loading="lazy"') . ' decoding="async">';
+            }
+            return $out !== '' ? $out : $body;
+        }
+        return $body;
+    }
+
+    /** The library's record of an image field's file (by its path under /uploads/), resolved as the Image block resolves one, or null. */
+    private static function libraryImage(BlockRenderScope $scope, string $url): ?ResolvedMedia
+    {
+        $path = (string) parse_url($url, PHP_URL_PATH);
+        $at = strpos($path, '/uploads/');
+        if ($at === false || !function_exists('current_tenant_id') || !class_exists('Database')) {
+            return null;
+        }
+        try {
+            $id = \Database::value('SELECT id FROM media_files WHERE tenant_id = ? AND path = ? LIMIT 1', [current_tenant_id(), substr($path, $at)]);
+        } catch (\Throwable $ignored) {
+            return null;
+        }
+        return is_numeric($id) && (int) $id > 0 ? $scope->image(['media_id' => (int) $id]) : null;
     }
 
     /** @param array<string, mixed> $field */
@@ -112,6 +194,7 @@ final class FieldValueRenderer implements BlockRendererInterface
                 return $e($choices[(string) $value] ?? $value);
             case 'multiselect':
             case 'checkboxes':
+            case 'terms':
                 return $list(array_map(static fn($v): string => $e($choices[(string) $v] ?? $v), is_array($value) ? $value : []));
             case 'list':
                 return $list(array_map($e, is_array($value) ? $value : []));

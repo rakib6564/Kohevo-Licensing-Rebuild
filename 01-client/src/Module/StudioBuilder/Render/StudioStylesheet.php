@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '71';
+    public const VERSION = '81';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -108,6 +108,9 @@ final class StudioStylesheet
             // A linked image: the link takes the picture's place in the box, so sizes and fit still reach the picture.
             . '.sb-image__link{display:block}.sb-block--core-image>.sb-image>.sb-image__link{flex:1 1 auto;min-height:0;object-fit:inherit;object-position:inherit}'
             . '.sb-block--core-image>.sb-image>.sb-image__link>img{height:100%;object-fit:inherit;object-position:inherit}'
+            // A corner radius set on the Image block rounds the picture itself (the block's box is not clipped, so a
+            // badge or shadow can still spill out of it); the caption under it stays square.
+            . '.sb-block--core-image>.sb-image,.sb-block--core-image>.sb-image>img,.sb-block--core-image>.sb-image>.sb-image__link,.sb-block--core-image>.sb-image>.sb-image__link>img{border-radius:inherit}'
             // A Container's layers, behind its children: a background video, the overlay (custom properties its style sets,
             // so a hover state can change them), then the shape dividers, which can be brought in front instead.
             . '.sb-block--core-container::before{content:"";display:var(--sb-ov-display,none);position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background:var(--sb-ov-bg,transparent);opacity:var(--sb-ov-op,1);mix-blend-mode:var(--sb-ov-blend,normal);transition:inherit}'
@@ -295,9 +298,12 @@ final class StudioStylesheet
             . '.sb-main--loop{max-width:440px;margin-inline:auto}'
             . '.sb-post-image,.sb-post-image a{display:block;height:100%}'
             . '.sb-post-image img{display:block;width:100%;height:100%;object-fit:cover}'
+            . '.sb-block--theme-post-image>.sb-post-image,.sb-block--theme-post-image>.sb-post-image>a,.sb-block--theme-post-image>.sb-post-image img{border-radius:inherit}'
             . '.sb-post-excerpt{margin:0}'
             . '.sb-post-title a,.sb-post-link{color:inherit;text-decoration:none}'
             . '.sb-post-title a:hover,.sb-post-link:hover{text-decoration:underline}'
+            // A linked item title keeps the title's colour: the generic link colour above outweighs `.sb-post-title a`.
+            . '.sb-body .sb-post-title a:not(.sb-button):not(.sb-heading__link),.sb-body a.sb-post-link:not(.sb-button):not(.sb-heading__link){color:inherit}'
             . '.sb-repeater__list{margin:0;padding:0;list-style:none}'
             . '.sb-unavailable{padding:.75rem 1rem;border:1px dashed #b45309;color:#92400e;background:#fffbeb;border-radius:6px;font-size:.875rem}'
             . '.sb-preview-banner{position:sticky;top:0;z-index:10;padding:.5rem 1rem;background:#1e293b;color:#fff;font:600 .8rem/1.4 system-ui,sans-serif;text-align:center}'
@@ -366,6 +372,8 @@ final class StudioStylesheet
             . '.sb-button--md{padding:.7rem 1.3rem;font-size:1rem}'
             . '.sb-button--lg{padding:.9rem 1.8rem;font-size:1.125rem}'
             . '.sb-font-normal{font-weight:400}.sb-font-medium{font-weight:500}.sb-font-semibold{font-weight:600}.sb-font-bold{font-weight:700}.sb-font-extrabold{font-weight:800}'
+            // The numeric weights the schema also accepts (a variable font's thin 200, a heavy 900).
+            . implode('', array_map(static fn(int $w): string => '.sb-font-' . $w . '{font-weight:' . $w . '}', range(100, 900, 100)))
             . self::typographyInheritCss()
             . '.sb-uppercase{text-transform:uppercase}.sb-lowercase{text-transform:lowercase}.sb-capitalize{text-transform:capitalize}.sb-normal-case{text-transform:none}'
             . '.sb-leading-tight{line-height:1.25}.sb-leading-snug{line-height:1.375}.sb-leading-normal{line-height:1.5}.sb-leading-relaxed{line-height:1.625}.sb-leading-loose{line-height:2}'
@@ -514,6 +522,12 @@ final class StudioStylesheet
             . '.sb-accordion__icon{flex:none;transition:transform .2s ease}'
             . '.sb-accordion__button[aria-expanded="true"] .sb-accordion__icon{transform:rotate(180deg)}'
             . '.sb-accordion__panel{padding:0 1.25rem 1.25rem;overflow:hidden}'
+            // Lines: no box, a line under each row, the text flush with the column. Plus: a + that turns to a cross.
+            . '.sb-accordion-block--lines .sb-accordion{border:0;border-radius:0;overflow:visible}'
+            . '.sb-accordion-block--lines .sb-accordion__item{border-bottom:1px solid var(--sb-border-default,#e2e8f0)}.sb-accordion-block--lines .sb-accordion__item+.sb-accordion__item{border-top:0}'
+            . '.sb-accordion-block--lines .sb-accordion__button{padding:1.1rem 0}.sb-accordion-block--lines .sb-accordion__panel{padding:0 0 1.25rem}'
+            . '.sb-accordion-block--plus .sb-accordion__icon{font-size:0;line-height:1}.sb-accordion-block--plus .sb-accordion__icon::before{content:"+";font-size:1.25rem;font-weight:300}'
+            . '.sb-accordion-block--plus .sb-accordion__button[aria-expanded="true"] .sb-accordion__icon{transform:rotate(45deg)}'
             // Without script, `[hidden]` keeps the browser's default `display:none`
             // — the closed rows really are gone for everyone, including screen
             // readers. Once the runtime boots it swaps in a height-0 state so it can
@@ -587,9 +601,20 @@ final class StudioStylesheet
             . '.sb-offcanvas__close{background:none;border:none;font-size:1.5rem;text-decoration:none;cursor:pointer;line-height:1;color:#6b7280}'
             . '.sb-offcanvas__body{padding:1.25rem;flex:1;overflow-y:auto}'
             . '.sb-offcanvas__header--bare{justify-content:flex-end;border-bottom:0;padding-bottom:0}'
+            // Full screen: the panel covers the window and fades in; its close button sits in the top corner, beside the
+            // first row of the drawer's own blocks (a logo, say), as a page's header would.
+            . '@keyframes sb-oc-fade{from{opacity:0}}'
+            . '.sb-offcanvas--fullscreen .sb-offcanvas__backdrop{display:none}'
+            . '.sb-offcanvas--fullscreen .sb-offcanvas__panel{inset:0;width:auto;max-width:none;box-shadow:none;animation:sb-oc-fade .3s ease}'
+            . '.sb-offcanvas--fullscreen .sb-offcanvas__header{position:absolute;top:0;right:0;z-index:1;border-bottom:0}'
+            . '.sb-offcanvas--fullscreen .sb-offcanvas__body{display:flex;flex-direction:column}'
+            . '.sb-offcanvas__close--text{display:inline-flex;align-items:center;gap:.5rem;font-size:.875rem;line-height:1;padding:.6rem 1rem;border-radius:999px;color:inherit}'
+            . '.sb-offcanvas__close--text svg{flex:none}'
+            . '@media (prefers-reduced-motion:reduce){.sb-offcanvas--fullscreen .sb-offcanvas__panel{animation:none}}'
             // The drawer trigger: an icon (a hamburger) with or without its text; `plain` drops the button chrome.
             . '.sb-offcanvas-trigger--icon{display:inline-flex;align-items:center;gap:.5rem;line-height:1}'
             . '.sb-offcanvas-trigger__icon{flex:none;display:block}'
+            . '@media (max-width:767.98px){.sb-offcanvas-trigger--icon-sm .sb-offcanvas-trigger__label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}'
             . '.sb-button.sb-button--plain{background:none;border:0;padding:0;border-radius:0;color:inherit}'
             . '.sb-form{display:flex;flex-flow:row wrap;gap:1rem}.sb-form>*{flex:0 0 100%;min-width:0}'
             . '.sb-form-group{display:flex;flex-direction:column;gap:.375rem}'
@@ -702,6 +727,7 @@ final class StudioStylesheet
         $css .= '@media (max-width:767.98px){.sb-hide-mobile{display:none!important}}';
         $css .= self::scrollEffectsCss();
         $css .= self::blockSetsCss();
+        $css .= self::widgetsCss();
         $css .= self::deviceCountsCss();
         $css .= self::formCss();
         $css .= self::shopCss();
@@ -843,11 +869,14 @@ final class StudioStylesheet
         // Mega menu: a panel opens from the menu's row, and the runtime stretches it to the window under the header.
         $css .= '.sb-nav--mega .sb-nav__item{position:static}.sb-nav--mega{position:relative}'
             . '.sb-nav--horizontal.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__mega{top:var(--sb-mega-top,100%);left:var(--sb-mega-left,0);right:auto;width:var(--sb-mega-vw,100%);box-sizing:border-box;padding:1.75rem 1.5rem;border-radius:0}'
-            . '.sb-nav--mega .sb-nav__mega::before{top:-3rem;height:3rem}'
+            . '.sb-nav--mega .sb-nav__mega::before{top:calc(-1 * var(--sb-mega-bridge,3rem));height:var(--sb-mega-bridge,3rem)}'
             . '.sb-nav--mega .sb-nav__mega .sb-nav__link{box-sizing:border-box;width:100%;white-space:normal}'
             . '.sb-mega__grid{display:grid;grid-template-columns:repeat(var(--sb-mega-cols,3),minmax(0,1fr));gap:1.5rem 2rem;margin:0 auto}'
             . '.sb-nav--mega-content .sb-mega__grid{max-width:var(--sb-layout-content,80rem)}'
             . '.sb-mega__empty{margin:0;padding:.75rem;border:1px dashed var(--sb-border-default)}'
+            // Glass panels: see-through in the page's colours, blurring what scrolls behind them.
+            . '.sb-nav--mega-glass>.sb-nav__list>.sb-nav__item>.sb-nav__mega{background:var(--sb-mega-glass,color-mix(in srgb,var(--sb-surface-page,#fff) 66%,transparent));-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:0;border-top:1px solid color-mix(in srgb,var(--sb-text-body,#1a1a1a) 10%,transparent);border-bottom:1px solid color-mix(in srgb,var(--sb-text-body,#1a1a1a) 14%,transparent);box-shadow:0 40px 80px -40px rgba(0,0,0,.55)}'
+            . '@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sb-nav--mega-glass>.sb-nav__list>.sb-nav__item>.sb-nav__mega{background:var(--sb-surface-page,#fff)}}'
             // The button at the end of a folded menu; hidden while the links show in a row.
             . '.sb-nav__cta{display:none}.sb-nav__cta-link{display:block;padding:.8rem 1.25rem;text-align:center;font-weight:700;text-decoration:none;color:#fff;background:var(--sb-color-accent);border-radius:.5rem}'
             . '.sb-body .sb-nav a.sb-nav__cta-link{color:#fff}'
@@ -856,6 +885,27 @@ final class StudioStylesheet
             . '.sb-nav--open-fade .sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list{animation:sb-nav-fade .22s ease}'
             . '.sb-nav--open-slide .sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list{animation:sb-nav-slide .25s ease}'
             . '@media (prefers-reduced-motion:reduce){[class*="sb-nav--open-"] .sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list{animation:none}}';
+
+        // A big menu (a full-screen one): numbers, descriptions, an arrow, columns, a preview picture, links that rise in.
+        $big = '.sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)';
+        $css .= $big . ':has(>.sb-nav__text){display:flex;align-items:center;gap:1rem}'
+            . '.sb-nav__text{display:flex;flex-direction:column;flex:1;min-width:0}'
+            . '.sb-nav__num{flex:none;min-width:1.75rem;font-size:.72rem;font-weight:500;letter-spacing:.08em;line-height:1;opacity:.55;font-variant-numeric:tabular-nums}'
+            . '.sb-nav__desc{margin-top:.45rem;font-size:.66rem;font-weight:500;letter-spacing:.14em;line-height:1.4;text-transform:uppercase;opacity:.55}'
+            . '.sb-nav__arrow{flex:none;margin-left:auto;font-size:.5em;line-height:1;opacity:0;translate:-.35em .35em;transition:opacity .25s ease,translate .25s ease}'
+            . $big . ':is(:hover,:focus-visible)>.sb-nav__arrow{opacity:1;translate:none}'
+            . '.sb-nav--vertical.sb-nav--cols-2 .sb-nav__list,.sb-nav--vertical.sb-nav--cols-3 .sb-nav__list{display:grid;column-gap:2.5rem}'
+            . '.sb-nav--vertical.sb-nav--cols-2 .sb-nav__list{grid-template-columns:repeat(2,minmax(0,1fr))}.sb-nav--vertical.sb-nav--cols-3 .sb-nav__list{grid-template-columns:repeat(3,minmax(0,1fr))}'
+            . '.sb-nav--preview{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:clamp(1.5rem,4vw,4rem);align-items:start}'
+            . '.sb-nav__preview{display:grid}'
+            . '.sb-nav__shot{grid-area:1/1;margin:0;opacity:0;transition:opacity .35s ease}.sb-nav__shot[data-on]{opacity:1}'
+            . '.sb-nav__shot img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:inherit}'
+            . '.sb-nav__preview{border-radius:14px}.sb-nav__shot{border-radius:inherit}'
+            . '.sb-nav__preview-caption{margin-top:.9rem;font-size:.7rem;font-weight:500;letter-spacing:.14em;text-transform:uppercase;opacity:.6}'
+            . '@media (max-width:767.98px){.sb-nav--vertical:is(.sb-nav--cols-2,.sb-nav--cols-3) .sb-nav__list{grid-template-columns:minmax(0,1fr)}.sb-nav--preview{display:block}.sb-nav__preview{display:none}}'
+            . '@keyframes sb-nav-rise{from{opacity:0;translate:0 1.2rem}}'
+            . ':is(.sb-offcanvas:target,.sb-offcanvas[data-sb-open]) .sb-nav--reveal .sb-nav__list>.sb-nav__item{animation:sb-nav-rise .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(.12s + var(--i,0)*50ms)}'
+            . '@media (prefers-reduced-motion:reduce){.sb-nav__arrow,.sb-nav__shot{transition:none}:is(.sb-offcanvas:target,.sb-offcanvas[data-sb-open]) .sb-nav--reveal .sb-nav__list>.sb-nav__item{animation:none}}';
 
         foreach (['always' => null, 'tablet' => '(max-width:1023.98px)', 'mobile' => '(max-width:767.98px)'] as $when => $query) {
             $rules = self::navFoldedCss('.sb-nav--toggle-' . $when);
@@ -889,7 +939,7 @@ final class StudioStylesheet
             . $full . ' .sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent){font-size:1.35rem}'
             . $full . ' .sb-nav__bar:has(.sb-nav__check:checked){z-index:10001}'
             . $n . ' .sb-nav__cta{display:block;padding:1rem 0 .5rem}' . $n . ' .sb-nav__list>.sb-nav__item.sb-nav__cta{border-top:0;padding:1rem 0 .5rem}'
-            . $n . '.sb-nav--horizontal.sb-nav--mega .sb-nav__list>.sb-nav__item>.sb-nav__mega{top:auto;left:auto;width:auto;padding:.25rem 0 .75rem!important;border:0!important;border-radius:0!important;box-shadow:none!important}' . $n . '.sb-nav--mega .sb-mega__grid{grid-template-columns:minmax(0,1fr)!important}'
+            . $n . '.sb-nav--horizontal.sb-nav--mega .sb-nav__list>.sb-nav__item>.sb-nav__mega{top:auto;left:auto;width:auto;padding:.25rem 0 .75rem!important;border:0!important;border-radius:0!important;box-shadow:none!important}' . $n . '.sb-nav--mega-glass .sb-nav__list>.sb-nav__item>.sb-nav__mega{background:none;-webkit-backdrop-filter:none;backdrop-filter:none}' . $n . '.sb-nav--mega .sb-mega__grid{grid-template-columns:minmax(0,1fr)!important}'
             // A Nav menu inside a panel is not the list this rule set folds.
             . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__item{display:block}' . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__list>.sb-nav__item+.sb-nav__item{border-top:0}' . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__link{width:100%}'
             . $n . '.sb-nav--horizontal.sb-nav--mega .sb-nav__mega .sb-nav__list{display:flex;position:static;left:auto;width:auto;min-width:0;max-height:none;padding:0;overflow:visible;background:none;box-shadow:none}' . $n . ' .sb-nav__item{position:relative}'
@@ -969,6 +1019,10 @@ final class StudioStylesheet
             . '.sb-progress__head{display:flex;justify-content:space-between;gap:1rem;margin-bottom:.4rem;font-size:.9em}'
             . '.sb-progress__value{font-variant-numeric:tabular-nums;opacity:.75}'
             . '.sb-progress__track{height:var(--sb-pg-h,8px);border-radius:999px;background:var(--sb-pg-track,var(--sb-border-default,#e2e8f0));overflow:hidden}'
+            // Inline: the label, the bar and the value on one line (a chart of counts, say).
+            . '.sb-progress--inline .sb-progress__item{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) auto;align-items:center;column-gap:16px}'
+            . '.sb-progress--inline .sb-progress__head{display:contents}.sb-progress--inline .sb-progress__label{grid-column:1;grid-row:1}'
+            . '.sb-progress--inline .sb-progress__track{grid-column:2;grid-row:1;margin:0}.sb-progress--inline .sb-progress__value{grid-column:3;grid-row:1;min-width:2ch;text-align:right}'
             . '.sb-progress__bar{display:block;height:100%;border-radius:inherit;background:var(--sb-pg-bar,var(--sb-color-accent,currentColor));transform-origin:0 50%;transform:scaleX(var(--sb-pg-v,0));transition:transform 1.2s cubic-bezier(.2,.8,.2,1)}'
             . 'html[data-sb-ready] [data-sb-progress-bars]:not(.is-in) .sb-progress__bar{transform:scaleX(0);transition:none}'
             // The list look (a picker): numbered rows with an arrow that turns towards the chosen answer.
@@ -992,10 +1046,160 @@ final class StudioStylesheet
     }
 
     /**
+     * Phase 3 widgets: the message widget (a launcher in a corner and its panel; `:target` opens it without the
+     * runtime) and the local time.
+     */
+    public static function widgetsCss(): string
+    {
+        return '.sb-msg{position:fixed;z-index:60;bottom:1.25rem;display:flex;flex-direction:column;align-items:flex-end;gap:.75rem;max-width:calc(100vw - 2rem)}'
+            . '.sb-msg--right{right:1.25rem}.sb-msg--left{left:1.25rem;align-items:flex-start}'
+            . '.sb-msg__launcher{display:inline-flex;align-items:center;gap:.5rem;position:relative;padding:.75rem 1.1rem;border-radius:999px;background:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff);text-decoration:none;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.18);transition:transform .2s ease}'
+            . '.sb-msg__launcher:hover{transform:translateY(-2px)}'
+            // The button's text column: the label, and the lines that take turns under it (fading between them).
+            . '.sb-msg__launcher-text{display:flex;flex-direction:column;min-width:0;max-width:18rem;line-height:1.2;white-space:nowrap;overflow:hidden;transition:max-width .35s ease,opacity .25s ease}'
+            . '.sb-msg__launcher-label{font-size:.88rem}.sb-msg__launcher-sub{font-size:.7rem;font-weight:400;opacity:.72;transition:filter .3s ease}.sb-msg__launcher-sub[data-fade]{filter:opacity(0)}'
+            . '.sb-msg__launcher--photo{padding:.3rem .95rem .3rem .3rem;gap:.6rem}'
+            . '.sb-msg__launcher-photo{position:relative;flex:none;display:block;width:38px;height:38px}'
+            . '.sb-msg__launcher-photo img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}'
+            . '.sb-msg__launcher-photo .sb-msg__dot{top:auto;bottom:1px;right:1px}'
+            // Shrunk while the visitor scrolls down: only the photo or icon is left, until they scroll up or open it.
+            . '.sb-msg.is-compact:not(.is-open) .sb-msg__launcher-text{max-width:0;opacity:0}'
+            . '.sb-msg.is-compact:not(.is-open) .sb-msg__launcher{gap:0}'
+            . '.sb-msg.is-compact:not(.is-open) .sb-msg__launcher--photo{padding:.3rem}'
+            // The launcher and the close button are links: the site's link colour must not reach them.
+            . '.sb-body .sb-msg .sb-msg__launcher[data-sb-msg-open]{color:var(--sb-text-inverse,#fff)}.sb-body .sb-msg .sb-msg__close[data-sb-msg-close]{color:inherit}'
+            . '.sb-msg__dot,.sb-msg__status-dot{width:.55rem;height:.55rem;border-radius:50%;background:#9ca3af;flex:none}'
+            . '.sb-msg__dot{position:absolute;top:.2rem;right:.2rem;box-shadow:0 0 0 2px var(--sb-color-accent,#111)}'
+            . '.sb-msg.is-online .sb-msg__dot,.sb-msg.is-online .sb-msg__status-dot{background:#22c55e}'
+            . '.sb-msg__panel{width:min(360px,calc(100vw - 2rem));max-height:min(620px,calc(100vh - 7rem));overflow:auto;background:var(--sb-surface-page,#fff);color:var(--sb-text-body,#111);border-radius:1rem;box-shadow:0 24px 60px rgba(0,0,0,.22);border:1px solid var(--sb-border-default,#e5e7eb)}'
+            . '.sb-msg__panel:target{display:block}'
+            . '.sb-msg__panel:not([hidden]){animation:sb-msg-in .25s ease}'
+            . '@keyframes sb-msg-in{from{opacity:0;translate:0 8px;scale:.98}}'
+            . '.sb-msg__head{display:flex;align-items:center;gap:.6rem;padding:.75rem .85rem .65rem;border-bottom:1px solid var(--sb-border-default,#e5e7eb)}'
+            . '.sb-msg__avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:none}'
+            . '.sb-msg__who{flex:1;min-width:0}.sb-msg__title{font-size:.92rem;margin:0;line-height:1.25}'
+            . '.sb-msg__status{display:flex;align-items:center;gap:.4rem;margin:.1rem 0 0;font-size:.74rem;opacity:.75}'
+            . '.sb-msg__close{display:inline-grid;place-items:center;width:2rem;height:2rem;border-radius:50%;color:inherit}'
+            . '.sb-msg__close:hover{background:color-mix(in srgb,currentColor 10%,transparent)}'
+            . '.sb-msg__body{padding:.8rem .85rem .9rem}.sb-msg__intro{margin:0 0 .6rem;font-size:.84rem;line-height:1.45}'
+            . '.sb-msg__form{gap:.6rem}'
+            . '.sb-msg__topics .sb-form-choices{flex-direction:row;flex-wrap:wrap;gap:.35rem}'
+            . '.sb-msg__topics legend{width:100%}'
+            . '.sb-msg__chip{position:relative;display:inline-flex}'
+            . '.sb-msg__chip input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}'
+            . '.sb-msg__chip span{display:block;padding:.28rem .65rem;border-radius:999px;border:1px solid var(--sb-border-default,#d1d5db);font-size:.78rem;line-height:1.3}'
+            . '.sb-msg__chip input:checked+span{background:var(--sb-color-accent,#111);border-color:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff)}'
+            . '.sb-msg__chip input:focus-visible+span{outline:2px solid var(--sb-color-accent,#111);outline-offset:2px}'
+            // The panel's fields take its colours and the site's font: a faint wash of the text colour, a border of it.
+            . '.sb-msg__panel .sb-form-group input:not([type="checkbox"]):not([type="radio"]),.sb-msg__panel .sb-form-group textarea,.sb-msg__panel .sb-form-group select{font:inherit;font-size:.9rem;color:inherit;background:var(--sb-msg-field,color-mix(in srgb,currentColor 5%,transparent));border:1px solid var(--sb-msg-line,color-mix(in srgb,currentColor 18%,transparent));border-radius:.55rem;padding:.48rem .7rem;line-height:1.4}'
+            . '.sb-msg__panel .sb-form-group :is(input,textarea)::placeholder{color:inherit;opacity:.5}'
+            // A compact panel: small labels, a short message box, a small Send button; it scrolls (when it must) with
+            // no bar of its own, and the focus the widget moves into it draws no ring around the whole panel.
+            . '.sb-msg__panel .sb-form-group label,.sb-msg__panel .sb-form-choices legend{font-size:.78rem;margin-bottom:.25rem}'
+            . '.sb-msg__panel .sb-form-group{gap:.25rem}.sb-msg__panel .sb-form-group input:not([type="checkbox"]):not([type="radio"]),.sb-msg__panel .sb-form-group textarea{font-size:.86rem}'
+            . '.sb-msg__panel .sb-form-group textarea{min-height:4.25rem}'
+            . '.sb-msg__panel .sb-form__actions button,.sb-msg__panel button[type="submit"]{padding:.5rem 1.05rem;font-size:.84rem;border-radius:.55rem}'
+            . '.sb-msg__panel{scrollbar-width:none}.sb-msg__panel::-webkit-scrollbar{display:none}.sb-msg__panel:focus{outline:none}'
+            . '.sb-msg__panel .sb-form-group :is(input,textarea,select):focus{outline:2px solid var(--sb-color-accent,#111);outline-offset:1px}'
+            // Theme: Light and Dark give the panel and the button fixed colours whatever the site's theme (Auto follows
+            // it). The colours are custom properties (--sb-msg-bg, -fg, -muted, -line, -field, -btn-bg, -btn-fg) a site can tune.
+            . '.sb-msg--light{--sb-msg-bg:#fff;--sb-msg-fg:#16171c;--sb-msg-muted:#5c6070;--sb-msg-line:rgba(22,23,28,.14);--sb-msg-field:#f4f4f2;--sb-msg-btn-bg:#fff;--sb-msg-btn-fg:#16171c}'
+            . '.sb-msg--dark{--sb-msg-bg:#151518;--sb-msg-fg:#f2f0eb;--sb-msg-muted:#a8a49c;--sb-msg-line:rgba(242,240,235,.14);--sb-msg-field:rgba(242,240,235,.06);--sb-msg-btn-bg:#151518;--sb-msg-btn-fg:#f2f0eb}'
+            . ':is(.sb-msg--light,.sb-msg--dark) .sb-msg__panel{background:var(--sb-msg-bg);color:var(--sb-msg-fg);--sb-text-body:var(--sb-msg-fg);--sb-text-heading:var(--sb-msg-fg);--sb-text-primary:var(--sb-msg-fg);--sb-text-muted:var(--sb-msg-muted);--sb-border-default:var(--sb-msg-line)}'
+            . '.sb-body :is(.sb-msg--light,.sb-msg--dark) .sb-msg__launcher[data-sb-msg-open]{background:var(--sb-msg-btn-bg);color:var(--sb-msg-btn-fg);box-shadow:0 10px 30px rgba(0,0,0,.18),0 0 0 1px var(--sb-msg-line)}'
+            . ':is(.sb-msg--light,.sb-msg--dark) .sb-msg__dot{box-shadow:0 0 0 2px var(--sb-msg-btn-bg)}'
+            // On a phone, while the panel is open, the button keeps only its photo or icon.
+            . '@media (max-width:600px){.sb-msg.is-open .sb-msg__launcher-text{max-width:0;opacity:0}.sb-msg.is-open .sb-msg__launcher{gap:0}.sb-msg.is-open .sb-msg__launcher--photo{padding:.35rem}}'
+            // On the editor canvas the widget sits in the flow with its panel open, so it can be selected and read.
+            . '.sb-msg--editor{position:static;max-width:none;align-items:flex-start}'
+            // Wave text: letters the runtime makes, each set to a weight by the pointer; a touch screen rolls the weight.
+            . '[data-sb-wave-on] .sb-wave__w{white-space:nowrap}'
+            . '[data-sb-wave-on] .sb-wave__l{font-weight:var(--sb-wave-low,300);transition:font-weight .3s ease}'
+            . 'html[data-sb-wave-auto] [data-sb-wave-on] .sb-wave__l{animation:sb-wave 2.8s ease-in-out infinite;animation-delay:calc(var(--i,0) * 70ms)}'
+            . '@keyframes sb-wave{50%{font-weight:var(--sb-wave-high,800)}}'
+            // Query Loop: filter chips, the gap in a numbered pager, and the dialog an item opens in.
+            . '.sb-filter{margin-bottom:1.5rem}'
+            . '.sb-filter__list{display:flex;flex-wrap:wrap;gap:.5rem;list-style:none;margin:0;padding:0}'
+            . '.sb-filter__chip{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .9rem;border-radius:999px;border:1px solid var(--sb-border-default,#e2e8f0);text-decoration:none;color:inherit;font-size:.875rem;transition:background-color .2s ease,color .2s ease,border-color .2s ease}'
+            . '.sb-body .sb-filter a.sb-filter__chip{color:inherit}'
+            . '.sb-filter__chip:hover{border-color:currentColor}'
+            . '.sb-body .sb-filter a.sb-filter__chip[aria-current]{background:var(--sb-color-accent,#111);border-color:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff)}'
+            . '.sb-filter__count{font-size:.75em;opacity:.65;font-variant-numeric:tabular-nums}'
+            . '.sb-query-loop [data-sb-terms][hidden]{display:none!important}'
+            . '.sb-pagination__gap{padding:0 .25rem;opacity:.6}'
+            . '.sb-loop-dialog{width:min(960px,calc(100vw - 2rem));max-height:calc(100vh - 2rem);padding:0;border:0;border-radius:1rem;background:var(--sb-surface-page,#fff);color:var(--sb-text-body,#111);box-shadow:0 30px 80px rgba(0,0,0,.35)}'
+            . '.sb-loop-dialog::backdrop{background:rgba(0,0,0,.55)}'
+            . '.sb-loop-dialog__bar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:.5rem;padding:.75rem 1rem;background:inherit;border-bottom:1px solid var(--sb-border-default,#e5e7eb)}'
+            . '.sb-loop-dialog__bar button{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .8rem;border-radius:999px;border:1px solid var(--sb-border-default,#e5e7eb);background:none;color:inherit;font:inherit;font-size:.875rem;cursor:pointer}'
+            . '.sb-loop-dialog__bar button:disabled{opacity:.4;cursor:default}'
+            . '.sb-loop-dialog__close{margin-left:auto}'
+            . '.sb-loop-dialog__body{min-height:12rem}'
+            . '.sb-loop-dialog__body[aria-busy="true"]{opacity:.5}'
+            . '.sb-local-time{margin:0;font-variant-numeric:tabular-nums}'
+            // A field shown as chips, or as a ticker the marquee runtime scrolls.
+            . '.sb-field-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}'
+            . '.sb-field-chips>li{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;border:1px solid color-mix(in srgb,currentColor 18%,transparent)}'
+            . '.sb-field-chips--ticker{flex-wrap:nowrap;overflow:hidden}.sb-field-chips--ticker>li{flex:none;white-space:nowrap}'
+            // Testimonial grid: every card is in the page; the runtime shows a page at a time and draws the pager.
+            . '.sb-tgrid{--sb-tg-line:color-mix(in srgb,currentColor 10%,transparent)}'
+            . '.sb-tgrid__bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}'
+            . '.sb-tgrid__count{margin:0;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--sb-text-muted,currentColor);font-variant-numeric:tabular-nums}'
+            . '.sb-tgrid__nav{display:flex;align-items:center;gap:8px}.sb-tgrid__nav[hidden]{display:none}'
+            . '.sb-tgrid__arrow{display:inline-grid;place-items:center;width:44px;height:44px;padding:0;border-radius:50%;border:1px solid color-mix(in srgb,currentColor 18%,transparent);background:transparent;color:inherit;cursor:pointer;transition:background-color .3s,color .3s,border-color .3s,opacity .3s}'
+            . '.sb-tgrid__arrow:disabled{opacity:.3;cursor:default}'
+            . '@media (hover:hover){.sb-tgrid__arrow:hover:not(:disabled){background:currentColor}.sb-tgrid__arrow:hover:not(:disabled) svg{color:var(--sb-surface-page,#fff)}}'
+            . '.sb-tgrid__pages{display:flex;align-items:center;gap:4px}'
+            . '.sb-tgrid__page{min-width:34px;height:34px;padding:0 8px;border-radius:999px;border:0;background:transparent;color:var(--sb-text-muted,currentColor);font:inherit;font-size:.75rem;font-variant-numeric:tabular-nums;cursor:pointer;transition:background-color .3s,color .3s}'
+            . '.sb-tgrid__page:hover{color:inherit}.sb-tgrid__page[aria-current="true"]{background:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff)}'
+            . '.sb-tgrid__gap{padding:0 2px;color:var(--sb-text-muted,currentColor)}'
+            . '.sb-tgrid__grid{display:grid;grid-template-columns:repeat(var(--sb-tg-cols,3),minmax(0,1fr));grid-auto-rows:1fr;gap:16px}'
+            . '@keyframes sb-tg-in{from{opacity:0;translate:0 16px}}'
+            . '.sb-tgrid__card{position:relative;display:flex;flex-direction:column;gap:16px;min-width:0;margin:0;padding:26px 26px 22px;border-radius:24px;border:1px solid var(--sb-tg-line);background:color-mix(in srgb,#fff 45%,transparent);box-shadow:0 24px 40px -32px rgba(40,30,20,.45);transition:translate .5s cubic-bezier(.2,.8,.2,1),box-shadow .5s,border-color .4s}'
+            . '.sb-tgrid__card[hidden]{display:none}.sb-tgrid__card.is-in{animation:sb-tg-in .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*60ms)}'
+            . '@media (hover:hover){.sb-tgrid__card:hover{translate:0 -4px;border-color:color-mix(in srgb,var(--sb-color-accent,currentColor) 45%,transparent);box-shadow:0 30px 50px -30px color-mix(in srgb,var(--sb-color-accent,#000) 45%,transparent)}}'
+            . '.sb-tgrid__card.is-first{background:var(--sb-surface-inverse,#111);color:var(--sb-text-inverse,#fff);border-color:var(--sb-surface-inverse,#111)}'
+            . '.sb-tgrid__top{display:flex;justify-content:space-between;align-items:flex-start}'
+            . '.sb-tgrid__quote{height:30px;font-size:64px;line-height:.7;font-weight:200;color:var(--sb-color-accent,currentColor)}'
+            . '.sb-tgrid__stars{font-size:.75rem;letter-spacing:2px;color:var(--sb-color-accent,currentColor)}.sb-tgrid__star-off{opacity:.25}'
+            . '.sb-tgrid__text{margin:0;font-size:1.03rem;line-height:1.6;font-weight:300;white-space:pre-line}'
+            . 'html[data-sb-ready] .sb-tgrid--clamp .sb-tgrid__text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--sb-tg-clamp,6);line-clamp:var(--sb-tg-clamp,6);overflow:hidden}'
+            . '.sb-tgrid__more{align-self:flex-start;margin-top:-6px;padding:0;border:0;background:none;color:var(--sb-color-accent,currentColor);font:inherit;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}.sb-tgrid__more[hidden]{display:none}'
+            . '.sb-tgrid__by{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"av who" "av when";column-gap:12px;align-items:center;margin-top:auto;padding-top:16px;border-top:1px solid var(--sb-tg-line)}'
+            . '.sb-tgrid__avatar{grid-area:av;display:grid;place-items:center;width:42px;height:42px;overflow:hidden;border-radius:50%;background:var(--sb-text-body,#111);color:var(--sb-color-accent,#fff);font-size:.8rem;font-weight:500}'
+            . '.sb-tgrid__card.is-first .sb-tgrid__avatar{background:var(--sb-color-accent,#fff);color:var(--sb-text-body,#111)}'
+            . '.sb-tgrid__avatar img{display:block;width:100%;height:100%;object-fit:cover}'
+            . '.sb-tgrid__who{grid-area:who;display:flex;flex-direction:column;min-width:0}'
+            . '.sb-tgrid__name{font-weight:500;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+            . '.sb-tgrid__meta,.sb-tgrid__date{display:block;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+            . '.sb-tgrid__date{grid-area:when;margin-top:2px}'
+            . '.sb-tgrid__by--plain{grid-template-columns:minmax(0,1fr);grid-template-areas:"who" "when"}'
+            // Ticker: rows of chips the marquee runtime scrolls; still, they clip at the edge.
+            . '.sb-tgrid--ticker{display:flex;flex-direction:column;gap:12px}'
+            . '.sb-tgrid__row{display:flex;gap:12px;margin:0;padding:0;list-style:none;overflow:hidden}'
+            . '.sb-tgrid__chip{display:inline-flex;flex:none;align-items:center;gap:10px;padding:12px 20px;border-radius:999px;border:1px solid var(--sb-tg-line);background:color-mix(in srgb,#fff 35%,transparent);white-space:nowrap}'
+            . '.sb-tgrid__chip-star{color:var(--sb-color-accent,currentColor)}.sb-tgrid__chip-name{opacity:.6;font-size:.85em}'
+            . '.sb-tgrid__progress{height:2px;margin-top:22px;border-radius:2px;background:var(--sb-tg-line);overflow:hidden}.sb-tgrid__progress[hidden]{display:none}'
+            . '.sb-tgrid__progress>i{display:block;height:100%;width:var(--p,10%);background:var(--sb-color-accent,currentColor);transition:width .6s cubic-bezier(.2,.8,.2,1)}'
+            . '.sb-tgrid__dialog{width:min(620px,calc(100vw - 2rem));max-height:85vh;padding:34px;border:0;border-radius:24px;background:var(--sb-surface-page,#fff);color:var(--sb-text-body,#111);box-shadow:0 40px 80px -30px rgba(0,0,0,.6)}'
+            . '.sb-tgrid__dialog::backdrop{background:rgba(11,11,12,.55);backdrop-filter:blur(6px)}'
+            . '.sb-tgrid__dialog[open]{animation:sb-tg-in .4s cubic-bezier(.2,.8,.2,1)}'
+            . '.sb-tgrid__close{position:absolute;right:14px;top:14px;display:grid;place-items:center;width:38px;height:38px;padding:0;border-radius:50%;border:1px solid color-mix(in srgb,currentColor 14%,transparent);background:transparent;color:inherit;cursor:pointer}'
+            . '.sb-tgrid__full{margin:16px 0 18px;font-size:clamp(18px,1.8vw,22px);line-height:1.5;font-weight:300;white-space:pre-line}'
+            . '.sb-tgrid__dialog-who{margin:0;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;opacity:.65}'
+            . '.sb-tgrid--empty{padding:1.5rem;border:1px dashed var(--sb-border-default,#ccc);border-radius:12px}'
+            . '@media (max-width:1023.98px){.sb-tgrid__grid{grid-template-columns:repeat(var(--sb-tg-cols-md,2),minmax(0,1fr))}}'
+            . '@media (max-width:767.98px){.sb-tgrid__grid{grid-template-columns:repeat(var(--sb-tg-cols-sm,1),minmax(0,1fr));grid-auto-rows:auto}.sb-tgrid__card{padding:22px 20px 18px}.sb-tgrid__bar{flex-direction:column;align-items:flex-start}.sb-tgrid__page{min-width:30px;height:30px}}'
+            . '@media (prefers-reduced-motion:reduce){.sb-tgrid__card,.sb-tgrid__card.is-in,.sb-tgrid__dialog[open]{animation:none;transition:none}}'
+            . '.sb-local-time__zone{opacity:.6;font-size:.85em}'
+            . '@media (prefers-reduced-motion:reduce){.sb-msg__panel:not([hidden]){animation:none}.sb-msg__launcher,.sb-msg__launcher-text,.sb-msg__launcher-sub{transition:none}[data-sb-wave-on] .sb-wave__l{animation:none!important}}';
+    }
+
+    /**
      * The page-level motion of ScrollEffects; studio-runtime.js does the work and these rules only paint its results.
      *
      *  - Page colours: the runtime sets `--sb-paged-bg` / `--sb-paged-fg` (and the matching attribute) on <html> from the
-     *    section in the middle of the screen; the page blends to them. Text set in its own colour keeps it.
+     *    section in the middle of the screen; the page blends to them, and the theme's text, muted, border and accent
+     *    colours follow (pageTokens), so blocks left on theme colours stay readable. Text set in its own colour keeps it.
      *  - Adapt: a node (a header) takes the colours of the section beneath it, set inline by the runtime.
      *  - Progress bar: a span the runtime adds along the node's edge, scaled by `--sb-page-progress` (0 to 1).
      *  - Text: `data-sb-text="lines:…"` holds its text out of sight for at most 1.2s while the runtime splits it into
@@ -1008,11 +1212,38 @@ final class StudioStylesheet
      *  - Glow: a span the runtime adds behind the node's content, lit at the pointer.
      * Reduced motion: no blends, no held text, nothing waits; the runtime starts none of these.
      */
+    /**
+     * The theme colours a page colour stands in for, so a block left on theme colours follows the page:
+     * text sets the heading and body colours, muted the muted text, line the borders, accent the accent.
+     * `$from` is `page` (the section's own, before the runtime runs) or `paged` (the page's, set by the runtime).
+     */
+    private static function pageTokens(string $colour, string $from): string
+    {
+        $tokens = [
+            'fg'     => ['text-heading', 'text-body', 'text-primary'],
+            'muted'  => ['text-muted'],
+            'line'   => ['border-default'],
+            'accent' => ['color-accent', 'text-accent'],
+        ][$colour];
+        return implode(';', array_map(static fn(string $t): string => '--sb-' . $t . ':var(--sb-' . $from . '-' . $colour . ')', $tokens));
+    }
+
     public static function pageMotionCss(): string
     {
         return 'html[data-sb-page-colors] body.sb-body{transition:background-color .6s ease,color .6s ease}'
+            // A themed section paints its own colours unless the runtime marks it near the screen (data-sb-page-on): before
+            // the runtime runs, without it, and off screen, so its text always reads against its own background (and a
+            // checker reading the page at load sees each section's real colours). Near the screen it lets the page's show.
+            . '[data-sb-page-colors~="bg"]:not([data-sb-page-on]){background:var(--sb-page-bg)}'
+            . '[data-sb-page-colors~="fg"]:not([data-sb-page-on]){color:var(--sb-page-fg);' . self::pageTokens('fg', 'page') . '}'
+            . '[data-sb-page-colors~="muted"]:not([data-sb-page-on]){' . self::pageTokens('muted', 'page') . '}'
+            . '[data-sb-page-colors~="line"]:not([data-sb-page-on]){' . self::pageTokens('line', 'page') . '}'
+            . '[data-sb-page-colors~="accent"]:not([data-sb-page-on]){' . self::pageTokens('accent', 'page') . '}'
             . 'html[data-sb-paged-bg] body.sb-body{background:var(--sb-paged-bg)}'
-            . 'html[data-sb-paged-fg] body.sb-body{color:var(--sb-paged-fg);--sb-text-heading:var(--sb-paged-fg);--sb-text-body:var(--sb-paged-fg)}'
+            . 'html[data-sb-paged-fg] body.sb-body{color:var(--sb-paged-fg);' . self::pageTokens('fg', 'paged') . '}'
+            . 'html[data-sb-paged-muted] body.sb-body{' . self::pageTokens('muted', 'paged') . '}'
+            . 'html[data-sb-paged-line] body.sb-body{' . self::pageTokens('line', 'paged') . '}'
+            . 'html[data-sb-paged-accent] body.sb-body{' . self::pageTokens('accent', 'paged') . '}'
             . ':where(.sb-adapt){transition:background-color .4s ease,color .4s ease}'
             . '.sb-progress-bar{position:absolute;left:0;right:0;height:var(--sb-progress-h,3px);background:var(--sb-progress-color,var(--sb-color-accent,currentColor));transform-origin:0 50%;transform:scaleX(var(--sb-page-progress,0));pointer-events:none;z-index:2}'
             . '[data-sb-progress="top"]>.sb-progress-bar{top:0}[data-sb-progress="bottom"]>.sb-progress-bar{bottom:0}'

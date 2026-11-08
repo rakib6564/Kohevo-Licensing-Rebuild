@@ -237,7 +237,9 @@ export function normalizeParallax(raw) {
 
 // ── Page-level motion (ScrollEffects.php holds the same ranges) ──
 
-export const TEXT_EFFECTS = Object.freeze(['light_words', 'lines']);
+export const TEXT_EFFECTS = Object.freeze(['light_words', 'lines', 'wave']);
+export const WAVE_WEIGHT = Object.freeze({ min: 100, max: 900, low: 300, high: 800 });
+export const WAVE_RADIUS = Object.freeze({ min: 40, max: 600, default: 160 });
 export const TEXT_DIM = Object.freeze({ min: 5, max: 60, default: 18 });
 export const TEXT_STEP = Object.freeze({ min: 0, max: 400, default: 100 });
 export const STAGGER_STEP = Object.freeze({ min: 20, max: 600, default: 80 });
@@ -254,13 +256,16 @@ function whole(raw, range) {
   return Number.isFinite(n) ? Math.max(range.min, Math.min(range.max, n)) : undefined;
 }
 
-/** `interactions.page_colors`, or null when neither colour is set. */
+/** The colours a section can give the page: background and text, and the muted text, lines and accent that follow them. */
+export const PAGE_COLOUR_KEYS = ['background', 'text', 'muted', 'line', 'accent'];
+
+/** `interactions.page_colors`, or null when no colour is set. */
 export function normalizePageColors(raw) {
   if (!plainObject(raw)) return null;
   const out = {};
-  if (colour(raw.background)) out.background = colour(raw.background);
-  if (colour(raw.text)) out.text = colour(raw.text);
-  return Object.keys(out).length ? out : null;
+  for (const key of PAGE_COLOUR_KEYS) if (colour(raw[key])) out[key] = colour(raw[key]);
+  // The server wants a background or a text colour: muted, lines and accent only follow them.
+  return out.background || out.text ? out : null;
 }
 
 /** `interactions.progress`, or null when it is off (no edge). */
@@ -280,6 +285,13 @@ export function normalizeTextEffect(raw) {
   if (raw.effect === 'light_words') {
     const dim = whole(raw.dim, TEXT_DIM);
     if (dim !== undefined) out.dim = dim;
+  } else if (raw.effect === 'wave') {
+    const low = whole(raw.low, WAVE_WEIGHT);
+    const high = whole(raw.high, WAVE_WEIGHT);
+    const radius = whole(raw.radius, WAVE_RADIUS);
+    if (low !== undefined) out.low = low;
+    if (high !== undefined) out.high = high;
+    if (radius !== undefined) out.radius = radius;
   } else {
     const step = whole(raw.step_ms, TEXT_STEP);
     if (step !== undefined) out.step_ms = step;

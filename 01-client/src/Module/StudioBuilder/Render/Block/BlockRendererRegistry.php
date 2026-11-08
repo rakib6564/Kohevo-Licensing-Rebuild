@@ -96,6 +96,9 @@ final class BlockRendererRegistry
         $registry->register(new CoreRenderers\TimelineRenderer());
         $registry->register(new CoreRenderers\ProgressRenderer());
         $registry->register(new CoreRenderers\CircleTextRenderer());
+        $registry->register(new CoreRenderers\MessageWidgetRenderer());
+        $registry->register(new CoreRenderers\LocalTimeRenderer());
+        $registry->register(new CoreRenderers\TestimonialGridRenderer());
         // Phase 6 — interactive blocks. Each one emits markup the Phase 2
         // runtime already knows how to drive; none of them require a new
         // runtime feature to be useful with JavaScript switched off.
