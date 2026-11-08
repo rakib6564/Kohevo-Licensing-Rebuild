@@ -17,7 +17,7 @@ function TC(string $theme): array
 {
     return match ($theme) {
         'bone' => ['fg' => INK, 'muted' => MUTED_BONE, 'line' => LINE_BONE, 'accent' => RUST, 'card' => 'rgba(11,11,12,0.04)'],
-        'navy' => ['fg' => '#E9ECF5', 'muted' => '#9AA6C4', 'line' => '#24335A', 'accent' => PERI, 'card' => 'rgba(233,236,245,0.05)'],
+        'navy' => ['fg' => BONE, 'muted' => MUTED, 'line' => LINE, 'accent' => PERI, 'card' => 'rgba(237,232,223,0.04)'],
         'orange' => ['fg' => INK, 'muted' => '#4A1806', 'line' => '#E04A12', 'accent' => INK, 'card' => 'rgba(11,11,12,0.06)'],
         default => ['fg' => BONE, 'muted' => MUTED, 'line' => LINE, 'accent' => ORANGE, 'card' => 'rgba(237,232,223,0.04)'],
     };

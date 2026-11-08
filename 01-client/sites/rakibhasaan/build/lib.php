@@ -25,7 +25,7 @@ const MEDIA_DIR = '/uploads/media/rakib/';
 // The site's palette and type (the original's four themes: ink, bone, navy, orange).
 const INK = '#0B0B0C';
 const BONE = '#EDE8DF';
-const NAVY = '#0D1A3A';
+const NAVY = INK; // was navy #0D1A3A; the user asked for black instead (2026-11-08). The 'navy' theme now matches 'ink'.
 const ORANGE = '#FF5A1F';
 const RUST = '#AE3A0B'; // the original #D9480F darkened to 4.6:1 on the light cards (5:1 on BONE), so small accent text reads
 const PERI = ORANGE; // was periwinkle #8EA2FF; the user asked for no blue on the site (2026-11-08)
@@ -293,7 +293,7 @@ function SEC(string $label, array $kids, string $top, string $bottom, array $mor
 const PALETTE = [
     'ink'    => ['bg' => INK, 'fg' => BONE, 'muted' => MUTED, 'line' => LINE, 'accent' => ORANGE],
     'bone'   => ['bg' => BONE, 'fg' => INK, 'muted' => MUTED_BONE, 'line' => LINE_BONE, 'accent' => RUST],
-    'navy'   => ['bg' => NAVY, 'fg' => '#E9ECF5', 'muted' => '#9AA6C4', 'line' => '#24335A', 'accent' => PERI],
+    'navy'   => ['bg' => NAVY, 'fg' => BONE, 'muted' => MUTED, 'line' => LINE, 'accent' => PERI],
     'orange' => ['bg' => ORANGE, 'fg' => INK, 'muted' => '#4A1806', 'line' => '#E04A12', 'accent' => INK],
 ];
 /** The colours a section gives the whole page while it is on screen: all five, so the theme's text, muted, line and accent colours follow. */

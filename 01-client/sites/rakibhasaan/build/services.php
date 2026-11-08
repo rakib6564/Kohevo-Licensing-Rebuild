@@ -120,8 +120,8 @@ $statement = SEC('Statement', [
 
 $checklist = SEC('Checklist', [
     $twoCol($sHead('04', 'checklist', $cN, 'What you can expect'), VBOX([
-        FV('checklist', '#E9ECF5', '17px', 'div', [], [], ['classNames' => ['rk-checks']]),
-        FV('checklist_note', '#9AA6C4', '16px', 'div', ['margin' => ['top' => '20px']]),
+        FV('checklist', BONE, '17px', 'div', [], [], ['classNames' => ['rk-checks']]),
+        FV('checklist_note', MUTED, '16px', 'div', ['margin' => ['top' => '20px']]),
     ], '0px')),
 ], '120px', '120px', [], ['interactions' => THEME('navy'), 'when_field' => 'checklist']);
 

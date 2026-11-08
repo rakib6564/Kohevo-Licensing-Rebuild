@@ -34,7 +34,7 @@
 .rk-top a { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid #2A2926; text-decoration: none; }
 
 /* Worldwide: the country list as chips. */
-.rk-country p { display: inline-block; padding: 6px 10px; border: 1px solid #24335A; border-radius: 999px; }
+.rk-country p { display: inline-block; padding: 6px 10px; border: 1px solid #2A2926; border-radius: 999px; }
 
 /* Free audit: "Start here" sits in the middle of the turning words. */
 .rk-start-wrap { position: relative; display: grid; place-items: center; width: 190px; height: 190px; }

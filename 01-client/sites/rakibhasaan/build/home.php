@@ -94,15 +94,15 @@ $homeCard = CTOP('Card', [
         FV('industry', INK, '11px', 'span', ['typography' => ['size' => '11px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.1px', 'line_height' => '1.3'], 'position' => ['mode' => 'absolute', 'top' => '14px', 'left' => '14px']],
             ['bg_field' => 'color'], ['classNames' => ['rk-tag']]),
     ], ['position' => ['mode' => 'relative']]),
-    B('theme.post_title', ['level' => 'h3', 'link_to_post' => true], [], ['color' => '#E9ECF5', 'margin' => ['top' => '18px'], 'typography' => ['size' => '36px', 'font_family' => SANS, 'weight' => '300', 'line_height' => '1.05', 'letter_spacing' => '-1.6px']], ['responsive' => ['mobile' => ['style' => ['typography' => ['size' => '28px']]]]]),
-    FV('tagline', '#9AA6C4', '15px', 'p', [], [], ['when_field' => 'tagline']),
+    B('theme.post_title', ['level' => 'h3', 'link_to_post' => true], [], ['color' => BONE, 'margin' => ['top' => '18px'], 'typography' => ['size' => '36px', 'font_family' => SANS, 'weight' => '300', 'line_height' => '1.05', 'letter_spacing' => '-1.6px']], ['responsive' => ['mobile' => ['style' => ['typography' => ['size' => '28px']]]]]),
+    FV('tagline', MUTED, '15px', 'p', [], [], ['when_field' => 'tagline']),
 ], ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '6px', 'content_width' => 'full', 'padding_y' => 'none']], ['classNames' => ['rk-card']]);
 build_page('template-loop-project-home', 'Loop Item: Project (home)', 'system', 'standalone', [$homeCard], ['settings' => ['template_type' => 'loop']]);
 $homeCardUuid = (string) \Slate\Data\Database::value("SELECT uuid FROM studiobuilder_pages WHERE tenant_id = ? AND slug = 'template-loop-project-home' AND status <> 'archived'", [$tid]);
 $featuredLoop = B('core.query_loop', ['source' => 'posts', 'content_type' => 'project', 'featured_only' => true, 'loop_template' => $homeCardUuid, 'per_page' => 6, 'columns' => 3, 'gap' => 'lg',
     'order_by' => 'published_at', 'order' => 'desc', 'show_featured_image' => true, 'show_date' => false, 'show_author' => false, 'show_category' => false, 'show_excerpt' => false, 'enable_pagination' => false, 'empty_message' => ''], [], [], ['classNames' => ['rk-loop', 'rk-home-loop']]);
 $workSec = SEC('Selected work', [
-    ROW([EYE('03 — Selected work', '#9AA6C4'), B('core.dual_heading', ['before' => 'One from every', 'colored' => 'world', 'after' => '', 'level' => 'h2'], [], ['typography' => ['size' => '72px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.95', 'letter_spacing' => '-3.6px']], ['style_parts' => ['highlight' => ['color' => PERI]], 'responsive' => ['mobile' => ['style' => ['typography' => ['size' => '44px']]]]])],
+    ROW([EYE('03 — Selected work', MUTED), B('core.dual_heading', ['before' => 'One from every', 'colored' => 'world', 'after' => '', 'level' => 'h2'], [], ['typography' => ['size' => '72px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.95', 'letter_spacing' => '-3.6px']], ['style_parts' => ['highlight' => ['color' => PERI]], 'responsive' => ['mobile' => ['style' => ['typography' => ['size' => '44px']]]]])],
         '16px', ['margin' => ['bottom' => '40px']], ['justify' => 'between', 'align' => 'end'], ['layout' => ['direction' => 'column', 'gap' => '10px']]),
     B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap', 'align' => 'stretch'], [$featuredLoop], ['layout' => ['display' => 'flex', 'direction' => 'row', 'wrap' => 'wrap', 'gap' => '28px']],
         ['interactions' => ['horizontal' => ['offset' => 90, 'width' => 520]], 'classNames' => ['rk-work'], 'responsive' => ['mobile' => ['style' => ['layout' => ['direction' => 'column']]]]]),
@@ -160,18 +160,18 @@ $reviews = SEC('Reviews', [
 ], '160px', '140px', ['layout' => ['gap' => '28px', 'content_max' => '1180px']], ['interactions' => THEME('orange')]);
 
 // ── 9. Worldwide (the client map is not rebuilt: the countries are listed instead) ──
-$wstat = static fn(string $n, string $l): array => VBOX([H($n, 'div', '48px', '36px', '#E9ECF5'), EYE($l, '#9AA6C4')], '6px', ['dimensions' => ['width' => 'auto']]);
+$wstat = static fn(string $n, string $l): array => VBOX([H($n, 'div', '48px', '36px', BONE), EYE($l, MUTED)], '6px', ['dimensions' => ['width' => 'auto']]);
 $countries = [['United States', 72], ['Belgium', 10], ['United Kingdom', 4], ['Azerbaijan', 3], ['Germany', 2], ['Nigeria', 2], ['New Zealand', 2], ['Canada', 1], ['Hungary', 1], ['Slovakia', 1], ['Denmark', 1], ['Latvia', 1], ['Vietnam', 1], ['Uganda', 'Direct']];
 $world = SEC('Worldwide', [
-    EYE('06 — Worldwide', '#9AA6C4'),
+    EYE('06 — Worldwide', MUTED),
     B('core.dual_heading', ['before' => '250+ websites, shipped from', 'colored' => 'one desk in Dhaka.', 'after' => '', 'level' => 'h2'], [], ['typography' => ['size' => '72px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '1', 'letter_spacing' => '-3.6px'], 'dimensions' => ['max_width' => '980px'], 'margin' => ['top' => '24px']],
         ['style_parts' => ['highlight' => ['color' => PERI]], 'responsive' => ['mobile' => ['style' => ['typography' => ['size' => '42px']]]]]),
     ROW([$wstat('250+', 'Websites shipped'), $wstat('14', 'Countries'), $wstat('5', 'Continents'), $wstat('101', 'Fiverr reviews')], '44px', ['margin' => ['top' => '36px', 'bottom' => '48px']], ['wrap' => 'wrap'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap', 'gap' => '28px']]),
     VBOX([
-        ROW([EYE('● Client map', '#22C55E'), B('core.local_time', ['label' => 'Dhaka', 'city' => '', 'timezone' => 'Asia/Dhaka', 'format' => '24h', 'seconds' => false, 'show_offset' => false], [], ['color' => '#9AA6C4', 'typography' => ['size' => '12px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.4px']])], '12px', [], ['justify' => 'between'], []),
-        B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap'], array_map(static fn(array $c): array => P($c[0] . '  ' . $c[1], '#E9ECF5', '13px', ['font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1px'], ['classNames' => ['rk-country']]), $countries), ['layout' => ['display' => 'flex', 'direction' => 'row', 'wrap' => 'wrap', 'gap' => '10px']], ['interactions' => ['stagger' => ['step_ms' => 60]]]),
-        ROW([EYE('14 countries · 5 continents', '#9AA6C4'), B('core.link', ['link' => L('Your country next? →', '/free-audit/'), 'style' => 'plain'], [], ['color' => ORANGE, 'typography' => ['size' => '12px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.4px']])], '12px', ['padding' => ['top' => '18px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => '#24335A']], ['justify' => 'between'], []),
-    ], '28px', ['background' => ['color' => '#08080A'], 'border' => ['width' => '1px', 'style' => 'solid', 'color' => '#24335A', 'radius' => '20px'], 'padding' => ['top' => '24px', 'right' => '22px', 'bottom' => '22px', 'left' => '22px']]),
+        ROW([EYE('● Client map', '#22C55E'), B('core.local_time', ['label' => 'Dhaka', 'city' => '', 'timezone' => 'Asia/Dhaka', 'format' => '24h', 'seconds' => false, 'show_offset' => false], [], ['color' => MUTED, 'typography' => ['size' => '12px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.4px']])], '12px', [], ['justify' => 'between'], []),
+        B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap'], array_map(static fn(array $c): array => P($c[0] . '  ' . $c[1], BONE, '13px', ['font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1px'], ['classNames' => ['rk-country']]), $countries), ['layout' => ['display' => 'flex', 'direction' => 'row', 'wrap' => 'wrap', 'gap' => '10px']], ['interactions' => ['stagger' => ['step_ms' => 60]]]),
+        ROW([EYE('14 countries · 5 continents', MUTED), B('core.link', ['link' => L('Your country next? →', '/free-audit/'), 'style' => 'plain'], [], ['color' => ORANGE, 'typography' => ['size' => '12px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.4px']])], '12px', ['padding' => ['top' => '18px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => LINE]], ['justify' => 'between'], []),
+    ], '28px', ['background' => ['color' => '#08080A'], 'border' => ['width' => '1px', 'style' => 'solid', 'color' => LINE, 'radius' => '20px'], 'padding' => ['top' => '24px', 'right' => '22px', 'bottom' => '22px', 'left' => '22px']]),
 ], '120px', '120px', [], ['interactions' => THEME('navy')]);
 
 // ── 10. Free audit ─────────────────────────────────────────────────────────────
