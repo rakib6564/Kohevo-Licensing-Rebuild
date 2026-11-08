@@ -99,7 +99,8 @@ unit('page motion: the theme colours follow the page colours, and each section k
     assert_true(str_contains($css, 'html[data-sb-paged-line] body.sb-body{--sb-border-default:var(--sb-paged-line)}'), 'lines');
     assert_true(str_contains($css, 'html[data-sb-paged-accent] body.sb-body{--sb-color-accent:var(--sb-paged-accent);--sb-text-accent:var(--sb-paged-accent)}'), 'accent');
     // Only a colour the section sets is pointed at: an unset custom property would blank the theme colour.
-    assert_true(str_contains($css, 'html:not([data-sb-ready]) [data-sb-page-colors~="muted"]{--sb-text-muted:var(--sb-page-muted)}'), 'own muted before the runtime');
+    // A section paints its own colours unless the runtime marks it as following the page (before the runtime, off screen).
+    assert_true(str_contains($css, '[data-sb-page-colors~="muted"]:not([data-sb-page-on]){--sb-text-muted:var(--sb-page-muted)}'), 'own muted unless following the page');
     assert_true(!str_contains($css, '[data-sb-page-colors]{'), 'no rule for a section whatever it sets');
 });
 

@@ -104,6 +104,11 @@ unit('field value: chips and a ticker for lists, text around the value, a domain
     assert_true(str_contains($dom, 'href="https://www.rtjrentals.com/" rel="noopener">rtjrentals.com ↗</a>'), $dom);
     assert_true(str_contains(sbfv_render(['field' => 'live', 'url_label' => 'text', 'link_text' => 'Visit <site>'], $fields, $values), '>Visit &lt;site&gt;</a>'), 'fixed text, escaped');
     assert_true(str_contains(sbfv_render(['field' => 'shot', 'alt_field' => 'alt'], $fields, $values), 'alt="RTJ &quot;home&quot;"'), 'alt from a field');
+    // An image not in the library (no width or sizes to give): lazy and decoded off the main thread, unless it loads first.
+    $lazy = sbfv_render(['field' => 'shot'], $fields, $values);
+    assert_true(str_contains($lazy, '<img src="/uploads/a.jpg" alt="" loading="lazy" decoding="async">'), $lazy);
+    $first = sbfv_render(['field' => 'shot', 'priority' => true], $fields, $values);
+    assert_true(str_contains($first, 'fetchpriority="high"') && !str_contains($first, 'loading="lazy"'), $first);
     assert_true(str_contains(sbfv_render(['field' => 'speed', 'bg_field' => 'color'], $fields, $values), 'style="background-color:#FF5A1F"'), 'background from a colour field');
     assert_true(!str_contains(sbfv_render(['field' => 'speed', 'bg_field' => 'bad'], $fields, $values), 'style='), 'only a hex colour');
     assert_true(str_contains(sbfv_render(['field' => 'speed', 'list_style' => 'chips'], $fields, $values), '>97</div>'), 'chips only for lists');

@@ -45,6 +45,9 @@ test('a widget\'s own list scrolls: its items move into the track and come back 
   await page.addScriptTag({ url: 'http://localhost/runtime.js' });
   const track = page.locator('[data-sb-ticker] > .sb-ticker-track');
   await expect(track.locator('li:not([data-sb-copy])')).toHaveCount(4);
+  // The items sit in the track, so the track is the list and the <ul> only its frame: no <li> outside a list.
+  await expect(track).toHaveAttribute('role', 'list');
+  await expect(page.locator('ul[data-sb-ticker]')).toHaveAttribute('role', 'presentation');
   const x0 = await track.evaluate((t) => t.getBoundingClientRect().x);
   await page.waitForTimeout(700);
   const x1 = await track.evaluate((t) => t.getBoundingClientRect().x);
@@ -52,4 +55,5 @@ test('a widget\'s own list scrolls: its items move into the track and come back 
   await page.evaluate(() => window.StudioRuntime.disable());
   await expect(page.locator('[data-sb-ticker] > li')).toHaveCount(4);
   await expect(page.locator('.sb-ticker-track')).toHaveCount(0);
+  await expect(page.locator('ul[data-sb-ticker]')).not.toHaveAttribute('role', /./);
 });

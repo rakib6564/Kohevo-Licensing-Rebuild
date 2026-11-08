@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '77';
+    public const VERSION = '78';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -1050,7 +1050,7 @@ final class StudioStylesheet
             . '.sb-msg__launcher:hover{transform:translateY(-2px)}'
             // The button's text column: the label, and the lines that take turns under it (fading between them).
             . '.sb-msg__launcher-text{display:flex;flex-direction:column;min-width:0;max-width:18rem;line-height:1.2;white-space:nowrap;overflow:hidden;transition:max-width .35s ease,opacity .25s ease}'
-            . '.sb-msg__launcher-sub{font-size:.72rem;font-weight:400;opacity:.65;transition:opacity .3s ease}.sb-msg__launcher-sub[data-fade]{opacity:0}'
+            . '.sb-msg__launcher-sub{font-size:.72rem;font-weight:400;opacity:.72;transition:filter .3s ease}.sb-msg__launcher-sub[data-fade]{filter:opacity(0)}'
             . '.sb-msg__launcher--photo{padding:.35rem 1.1rem .35rem .35rem;gap:.7rem}'
             . '.sb-msg__launcher-photo{position:relative;flex:none;display:block;width:44px;height:44px}'
             . '.sb-msg__launcher-photo img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}'
@@ -1204,12 +1204,14 @@ final class StudioStylesheet
     public static function pageMotionCss(): string
     {
         return 'html[data-sb-page-colors] body.sb-body{transition:background-color .6s ease,color .6s ease}'
-            // Until the runtime runs (or without it), each themed section paints its own colours, so its text stays readable.
-            . 'html:not([data-sb-ready]) [data-sb-page-colors~="bg"]{background:var(--sb-page-bg)}'
-            . 'html:not([data-sb-ready]) [data-sb-page-colors~="fg"]{color:var(--sb-page-fg);' . self::pageTokens('fg', 'page') . '}'
-            . 'html:not([data-sb-ready]) [data-sb-page-colors~="muted"]{' . self::pageTokens('muted', 'page') . '}'
-            . 'html:not([data-sb-ready]) [data-sb-page-colors~="line"]{' . self::pageTokens('line', 'page') . '}'
-            . 'html:not([data-sb-ready]) [data-sb-page-colors~="accent"]{' . self::pageTokens('accent', 'page') . '}'
+            // A themed section paints its own colours unless the runtime marks it near the screen (data-sb-page-on): before
+            // the runtime runs, without it, and off screen, so its text always reads against its own background (and a
+            // checker reading the page at load sees each section's real colours). Near the screen it lets the page's show.
+            . '[data-sb-page-colors~="bg"]:not([data-sb-page-on]){background:var(--sb-page-bg)}'
+            . '[data-sb-page-colors~="fg"]:not([data-sb-page-on]){color:var(--sb-page-fg);' . self::pageTokens('fg', 'page') . '}'
+            . '[data-sb-page-colors~="muted"]:not([data-sb-page-on]){' . self::pageTokens('muted', 'page') . '}'
+            . '[data-sb-page-colors~="line"]:not([data-sb-page-on]){' . self::pageTokens('line', 'page') . '}'
+            . '[data-sb-page-colors~="accent"]:not([data-sb-page-on]){' . self::pageTokens('accent', 'page') . '}'
             . 'html[data-sb-paged-bg] body.sb-body{background:var(--sb-paged-bg)}'
             . 'html[data-sb-paged-fg] body.sb-body{color:var(--sb-paged-fg);' . self::pageTokens('fg', 'paged') . '}'
             . 'html[data-sb-paged-muted] body.sb-body{' . self::pageTokens('muted', 'paged') . '}'

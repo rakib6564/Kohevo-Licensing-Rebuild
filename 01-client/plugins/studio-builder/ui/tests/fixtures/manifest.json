@@ -10795,6 +10795,7 @@
                 "link_text": "",
                 "link_to_post": false,
                 "list_style": "list",
+                "priority": false,
                 "show_label": false,
                 "tag": "div",
                 "ticker_speed": 3,
@@ -10933,6 +10934,13 @@
                     "default": "",
                     "max_length": 64,
                     "format": "meta_field"
+                },
+                {
+                    "key": "priority",
+                    "type": "boolean",
+                    "label": "Load First (main picture)",
+                    "required": false,
+                    "default": false
                 },
                 {
                     "key": "bg_field",

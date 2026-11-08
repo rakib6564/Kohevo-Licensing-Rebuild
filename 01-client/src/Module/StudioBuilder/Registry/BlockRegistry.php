@@ -556,6 +556,7 @@ final class BlockRegistry
                 ['key' => 'link_text', 'type' => 'string', 'label' => 'Link text', 'required' => false, 'default' => '', 'max_length' => 80],
                 ['key' => 'link_arrow', 'type' => 'boolean', 'label' => 'Arrow after the link', 'required' => false, 'default' => false],
                 ['key' => 'alt_field', 'type' => 'string', 'label' => 'Image description from field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
+                ['key' => 'priority', 'type' => 'boolean', 'label' => 'Load First (main picture)', 'required' => false, 'default' => false],
                 ['key' => 'bg_field', 'type' => 'string', 'label' => 'Background colour from field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
             ]),
             allowsChildren: false,

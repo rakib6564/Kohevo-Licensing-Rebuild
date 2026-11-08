@@ -157,6 +157,8 @@ final class MessageWidgetRenderer implements BlockRendererInterface
         // The button may show the photo instead of the icon, and lines under its text that take turns (the runtime
         // turns them; the first is the server's). `{status}` is the online or away text, `{time}` the owner's time.
         $photo = $scope->bool('launcher_photo', false) && $avatar !== null;
+        // The photo shows at 40-44px: the library's smallest WebP copy, not the whole file.
+        $small = $avatar !== null && $avatar->srcset !== [] ? $avatar->srcset[min(array_keys($avatar->srcset))] : ($avatar !== null ? $avatar->url : '');
         $lines = self::lines($scope->string('launcher_lines', ''), $online ? $onlineText : $awayText, $zone);
         $sub = $lines !== []
             ? '<span class="sb-msg__launcher-sub" data-sb-msg-lines="' . Html::e((string) json_encode(array_column($lines, 'raw'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '"'
@@ -166,7 +168,7 @@ final class MessageWidgetRenderer implements BlockRendererInterface
         $launcher = '<a href="#' . Html::e($id) . '"' . Html::classAttr($launcherClasses) . ' data-sb-msg-open aria-controls="' . Html::e($id) . '" aria-expanded="false"'
             . ($label === '' ? ' aria-label="' . Html::e(Html::t('studio_msg_open', 'Send a message')) . '"' : '') . '>'
             . ($photo
-                ? '<span class="sb-msg__launcher-photo"><img src="' . Html::e($avatar->url) . '" alt="" width="44" height="44" loading="lazy"><span class="sb-msg__dot" data-sb-msg-dot aria-hidden="true"></span></span>'
+                ? '<span class="sb-msg__launcher-photo"><img src="' . Html::e($small) . '" alt="" width="44" height="44" loading="lazy"><span class="sb-msg__dot" data-sb-msg-dot aria-hidden="true"></span></span>'
                 : $iconSvg($icon, 22))
             . ($label !== '' || $sub !== ''
                 ? '<span class="sb-msg__launcher-text">' . ($label !== '' ? '<span class="sb-msg__launcher-label">' . Html::e($label) . '</span>' : '') . $sub . '</span>'
@@ -176,7 +178,7 @@ final class MessageWidgetRenderer implements BlockRendererInterface
         $title = $scope->string('title', 'Let’s talk');
         $intro = $scope->string('intro', '');
         $head = '<header class="sb-msg__head">'
-            . ($avatar !== null ? '<img class="sb-msg__avatar" src="' . Html::e($avatar->url) . '" alt="" width="40" height="40" loading="lazy">' : '')
+            . ($avatar !== null ? '<img class="sb-msg__avatar" src="' . Html::e($small) . '" alt="" width="40" height="40" loading="lazy">' : '')
             . '<div class="sb-msg__who">'
             . '<h2 class="sb-msg__title" id="' . Html::e($id) . '-title">' . Html::e($title) . '</h2>'
             . '<p class="sb-msg__status" data-sb-msg-status data-sb-online="' . Html::e($onlineText) . '" data-sb-away="' . Html::e($awayText) . '">'

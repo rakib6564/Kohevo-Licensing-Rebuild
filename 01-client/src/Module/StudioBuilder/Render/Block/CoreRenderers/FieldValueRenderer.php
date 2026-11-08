@@ -8,6 +8,9 @@
  * read as `chips` or as a `ticker` the marquee runtime scrolls (data-sb-ticker); an address can show its domain
  * (rtjrentals.com ↗) or a fixed text instead of the whole address; an image takes its alt text from another field,
  * and the value can sit on a background taken from a colour field of the same item (`bg_field`).
+ *
+ * An image from the media library is drawn like the Image block's: its width and height (no layout shift when it
+ * loads), its WebP sizes as a srcset, lazy unless `priority` asks for it first (the page's main picture).
  */
 
 declare(strict_types=1);
@@ -18,6 +21,7 @@ use Slate\Module\StudioBuilder\Meta\MetaFieldTypes;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
 use Slate\Module\StudioBuilder\Render\Html;
+use Slate\Module\StudioBuilder\Render\Media\ResolvedMedia;
 
 final class FieldValueRenderer implements BlockRendererInterface
 {
@@ -111,14 +115,40 @@ final class FieldValueRenderer implements BlockRendererInterface
                 return (string) preg_replace('#>[^<]*</a>$#', '>' . Html::e($text) . ($scope->bool('link_arrow') ? ' ↗' : '') . '</a>', $body);
             }
         }
-        if (in_array($type, ['image', 'gallery'], true)) {
+        if (in_array($type, ['image', 'gallery'], true) && $body !== '') {
             $altKey = $scope->string('alt_field');
             $alt = $altKey !== '' && is_scalar($values[$altKey] ?? null) ? trim((string) $values[$altKey]) : '';
-            if ($alt !== '') {
-                return str_replace(' alt=""', ' alt="' . Html::e($alt) . '"', $body);
+            $priority = $scope->bool('priority', false);
+            $out = '';
+            foreach ($type === 'image' ? [$value] : (is_array($value) ? array_values($value) : []) as $url) {
+                if (!is_string($url) || preg_match('~^(https?://[^\s"\'<>]+|/[^/\s"\'<>][^\s"\'<>]*)$~i', $url) !== 1) {
+                    continue;
+                }
+                $first = $priority && $out === '';
+                $image = self::libraryImage($scope, $url);
+                $out .= $image !== null
+                    ? ImageRenderer::img($image->url, $alt !== '' ? $alt : $image->alt, $image->width, $image->height, null, !$first, $image->srcset, $first)
+                    : '<img src="' . Html::e($url) . '" alt="' . Html::e($alt) . '"' . ($first ? ' fetchpriority="high"' : ' loading="lazy"') . ' decoding="async">';
             }
+            return $out !== '' ? $out : $body;
         }
         return $body;
+    }
+
+    /** The library's record of an image field's file (by its path under /uploads/), resolved as the Image block resolves one, or null. */
+    private static function libraryImage(BlockRenderScope $scope, string $url): ?ResolvedMedia
+    {
+        $path = (string) parse_url($url, PHP_URL_PATH);
+        $at = strpos($path, '/uploads/');
+        if ($at === false || !function_exists('current_tenant_id') || !class_exists('Database')) {
+            return null;
+        }
+        try {
+            $id = \Database::value('SELECT id FROM media_files WHERE tenant_id = ? AND path = ? LIMIT 1', [current_tenant_id(), substr($path, $at)]);
+        } catch (\Throwable $ignored) {
+            return null;
+        }
+        return is_numeric($id) && (int) $id > 0 ? $scope->image(['media_id' => (int) $id]) : null;
     }
 
     /** @param array<string, mixed> $field */

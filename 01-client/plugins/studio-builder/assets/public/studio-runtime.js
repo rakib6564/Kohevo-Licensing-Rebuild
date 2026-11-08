@@ -481,6 +481,24 @@
       return c;
     }
     var list = sections.map(function (el) { return { el: el, c: colours(el) }; });
+    // A section scrolled near the screen (15% of it either side) lets the page's colours show; elsewhere it paints its
+    // own, so it reads right wherever it is and whenever it is read (the stylesheet's :not([data-sb-page-on]) rules).
+    // One already in view when the page opens keeps its own until it gives the page its colours (and the page has
+    // blended to them): it is never shown in another section's colours it was not scrolled into.
+    var io = null;
+    if ('IntersectionObserver' in global) {
+      io = new global.IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          var first = !en.target.__sbPageSeen;
+          en.target.__sbPageSeen = true;
+          if (en.isIntersecting) { if (!first) en.target.setAttribute('data-sb-page-on', ''); }
+          else en.target.removeAttribute('data-sb-page-on');
+        });
+      }, { rootMargin: '15% 0px 15% 0px' });
+      sections.forEach(function (el) { io.observe(el); });
+    } else {
+      sections.forEach(function (el) { el.setAttribute('data-sb-page-on', ''); });
+    }
     var adapters = qsa(root, '[data-sb-adapt]').map(function (el) { return { el: el, hit: null }; });
     // The innermost themed section spanning the line y, leaving out any that holds `skip`.
     function at(y, skip) {
@@ -497,6 +515,7 @@
       else { html.style.removeProperty(name); html.removeAttribute(attr); }
     }
     var current = null;
+    var onTimer = 0;
     var ticking = false;
     function update() {
       ticking = false;
@@ -510,6 +529,13 @@
       if (hit !== current) {
         current = hit;
         NAMES.forEach(function (n) { setVar('--sb-paged-' + n, 'data-sb-paged-' + n, hit && hit.c[n]); });
+        // The section giving the colours (and the themed sections around it) follows the page once it has blended.
+        global.clearTimeout(onTimer);
+        if (hit) {
+          onTimer = global.setTimeout(function () {
+            list.forEach(function (s) { if (s.el === hit.el || s.el.contains(hit.el)) s.el.setAttribute('data-sb-page-on', ''); });
+          }, reducedMotion() ? 0 : 650);
+        }
       }
       adapters.forEach(function (a) {
         var r = a.el.getBoundingClientRect();
@@ -530,6 +556,9 @@
     update();
     mount(function () {
       offs.forEach(function (off) { off(); });
+      if (io) io.disconnect();
+      global.clearTimeout(onTimer);
+      sections.forEach(function (el) { el.removeAttribute('data-sb-page-on'); delete el.__sbPageSeen; });
       html.removeAttribute('data-sb-page-colors');
       NAMES.forEach(function (n) { setVar('--sb-paged-' + n, 'data-sb-paged-' + n, ''); });
       adapters.forEach(function (a) { a.el.style.removeProperty('background-color'); a.el.style.removeProperty('color'); });
@@ -669,7 +698,21 @@
       }, 1000 + Math.max(0, line) * step);
     }
 
-    els.forEach(function (el) {
+    // Split once the page's fonts are in (at most a second's wait): lines are measured in the font they end in, and
+    // the words never sit in their masks in a fallback font that wraps them differently (no jump when the font lands).
+    var started = false;
+    var fontWait = 0;
+    function start() {
+      if (started) return;
+      started = true;
+      global.clearTimeout(fontWait);
+      els.forEach(split);
+      if (lighters.length) {
+        offs.push(on(global, 'scroll', onScroll, { passive: true }), on(global, 'resize', onScroll, { passive: true }));
+        light();
+      }
+    }
+    function split(el) {
       var parts = (el.getAttribute('data-sb-text') || '').split(':');
       var units = splitWords(el);
       el.setAttribute('data-sb-split', '');
@@ -686,7 +729,7 @@
       } else {
         lighters.push({ el: el, units: units, dim: String(clamp(parseInt(parts[1], 10) || 18, 5, 60) / 100) });
       }
-    });
+    }
 
     var ticking = false;
     function light() {
@@ -704,11 +747,15 @@
       ticking = true;
       global.requestAnimationFrame(light);
     }
-    if (lighters.length) {
-      offs.push(on(global, 'scroll', onScroll, { passive: true }), on(global, 'resize', onScroll, { passive: true }));
-      light();
+    if (document.fonts && document.fonts.status !== 'loaded' && document.fonts.ready) {
+      fontWait = global.setTimeout(start, 1000);
+      document.fonts.ready.then(start);
+    } else {
+      start();
     }
     mount(function () {
+      started = true;
+      global.clearTimeout(fontWait);
       if (io) io.disconnect();
       offs.forEach(function (off) { off(); });
       els.forEach(function (el) {
@@ -865,6 +912,7 @@
     if (loopGrid) {
       kids = Array.prototype.slice.call(loopGrid.children);
       kids.forEach(function (k) { track.appendChild(k); });
+      if (/^(UL|OL)$/.test(loopGrid.tagName)) track.setAttribute('role', 'list');
       if (frame) frame.appendChild(track);
       // The row takes the loop's place; the emptied loop steps aside until the items go back.
       el.insertBefore(frame || track, loopBlock);
@@ -883,11 +931,15 @@
     kids.forEach(function (k) { track.appendChild(k); });
     (frame || el).appendChild(track);
     el.insertBefore(frame || track, anchor);
+    // A list's items now sit in the track: the track is the list, the <ul> only its frame (no <li> outside a list).
+    var listRole = /^(UL|OL)$/.test(el.tagName) ? el.getAttribute('role') : undefined;
+    if (listRole !== undefined) { el.setAttribute('role', 'presentation'); track.setAttribute('role', 'list'); }
     return {
       track: track,
       undo: function () {
         kids.forEach(function (k) { el.insertBefore(k, frame || track); });
         (frame || track).remove();
+        if (listRole !== undefined) { if (listRole === null) el.removeAttribute('role'); else el.setAttribute('role', listRole); }
       }
     };
   }
