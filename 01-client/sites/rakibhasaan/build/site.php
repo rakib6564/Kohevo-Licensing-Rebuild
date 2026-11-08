@@ -34,7 +34,8 @@ say('  + theme');
 // ── SEO ────────────────────────────────────────────────────────────────────────
 // Site & SEO: the description and share card any page without its own uses, the favicon, and the business behind the
 // site for search engines (schema.org). Share cards, the logo and the favicon come from build/og/make-og.cjs.
-// Search engines stay off this preview (studio_seo_robots noindex,nofollow, set at install) until it replaces the main site.
+// The site is live at rakibhasaan.com (since 2026-11-08), so search engines may index it. Set RK_NOINDEX=1 for a preview copy.
+Database::setSetting('studio_seo_robots', getenv('RK_NOINDEX') ? 'noindex,nofollow' : 'index,follow', $tid);
 Database::setSetting('studio_seo_description', 'Rakib Hasan, freelance WordPress designer and developer in Dhaka, Bangladesh. 250+ websites, custom plugins and SEO fixes for small businesses in 14 countries.', $tid);
 Database::setSetting('studio_seo_og_media_id', (string) MID('og-default.png'), $tid);
 Database::setSetting('brand_favicon_path', ltrim(MEDIA_DIR, '/') . 'rakib-favicon.png', $tid);
