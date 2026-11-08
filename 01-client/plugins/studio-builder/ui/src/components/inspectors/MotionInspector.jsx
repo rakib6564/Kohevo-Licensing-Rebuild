@@ -13,7 +13,7 @@
 
 import { asObject } from '../../core/doc.mjs';
 import {
-  ANIMATION_TYPES, DELAY_RANGE, DURATION_RANGE, EASINGS, GLOW_SIZE, INTERACTION_TRIGGERS,
+  ANIMATION_TYPES, DELAY_RANGE, DURATION_RANGE, EASINGS, GLOW_SIZE, HOVER_IMAGE_SIZE, INTERACTION_TRIGGERS, ITEM_WIDTH, MARQUEE_SPEED, PANEL_WIDTH,
   MOTION_PRESETS, MOUSE_LEVELS, PARALLAX_SPEED, PROGRESS_HEIGHT, SCROLL_LEVELS, SCROLL_DEVICES, STAGGER_STEP, STICKY_OFFSET,
   TEXT_DIM, TEXT_EFFECT_TYPES, TEXT_STEP, clampMs, motionLabel, normalizeAnimation, normalizeInteractions,
 } from '../../core/motion.mjs';
@@ -21,7 +21,7 @@ import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 import { useState } from 'react';
 import { Check, Field, Pills } from '../ui/index.js';
-import { SliderField, ThemeColor } from './SurfaceControls.jsx';
+import { IntField, SliderField, ThemeColor } from './SurfaceControls.jsx';
 
 /** `block` is the block whose motion is edited; `tokens` are the theme colours offered. */
 export function MotionInspector({ block, applyOp, label, tokens }) {
@@ -344,6 +344,9 @@ function PageEffectsGroup({ idPrefix, type, interactions, tokens, onChange }) {
   const progress = interactions.progress || null;
   const stagger = interactions.stagger || null;
   const glow = interactions.glow || null;
+  const marquee = interactions.marquee || null;
+  const horizontal = interactions.horizontal || null;
+  const hoverImage = interactions.hover_image || null;
 
   return (
     <section className="sbx-motion-section" data-page-effects>
@@ -403,6 +406,42 @@ function PageEffectsGroup({ idPrefix, type, interactions, tokens, onChange }) {
           <SwitchSection id={`${idPrefix}-stagger`} title={t('stagger')} value={stagger} onOn={() => set('stagger', { step_ms: STAGGER_STEP.default })} onOff={() => set('stagger', null)} testId="stagger">
             {stagger && <SliderField id={`${idPrefix}-stagger-step`} label={t('stagger_step')} value={stagger.step_ms} min={STAGGER_STEP.min} max={STAGGER_STEP.max} step={10} unit="ms" neutral={STAGGER_STEP.default} onChange={(v) => set('stagger', { step_ms: v ?? STAGGER_STEP.default })} />}
             <p className="sbx-hint">{t('stagger_hint')}</p>
+          </SwitchSection>
+
+          {/* Marquee and sideways scroll both rearrange the children: switching one on switches the other off. */}
+          <SwitchSection id={`${idPrefix}-marquee`} title={t('block_marquee')} value={marquee} onOn={() => onChange(normalizeInteractions({ ...interactions, horizontal: null, marquee: { speed: MARQUEE_SPEED.default } }))} onOff={() => set('marquee', null)} testId="block-marquee">
+            {marquee && (
+              <>
+                <SliderField id={`${idPrefix}-marquee-speed`} label={t('block_marquee_speed')} value={marquee.speed} min={MARQUEE_SPEED.min} max={MARQUEE_SPEED.max} neutral={MARQUEE_SPEED.default} onChange={(v) => set('marquee', { ...marquee, speed: v ?? MARQUEE_SPEED.default })} />
+                <Field label={t('parallax_direction')}>
+                  <Pills
+                    label={t('parallax_direction')}
+                    value={marquee.direction === 'right' ? 'right' : 'left'}
+                    options={[{ value: 'left', label: t('block_marquee_left') }, { value: 'right', label: t('block_marquee_right') }]}
+                    onChange={(v) => set('marquee', { ...marquee, direction: v })}
+                  />
+                </Field>
+                <Check label={t('block_marquee_scroll')} checked={marquee.scroll === true} onChange={(e) => set('marquee', { ...marquee, scroll: e.target.checked })} />
+                <Check label={t('block_marquee_pause')} checked={marquee.pause === true} onChange={(e) => set('marquee', { ...marquee, pause: e.target.checked })} />
+                <IntField id={`${idPrefix}-marquee-width`} label={t('item_width')} value={marquee.width} min={ITEM_WIDTH.min} max={ITEM_WIDTH.max} onChange={(v) => set('marquee', { ...marquee, width: v })} />
+              </>
+            )}
+            <p className="sbx-hint">{t('block_marquee_hint')}</p>
+          </SwitchSection>
+
+          <SwitchSection id={`${idPrefix}-horizontal`} title={t('horizontal_scroll')} value={horizontal} onOn={() => onChange(normalizeInteractions({ ...interactions, marquee: null, horizontal: { offset: 0 } }))} onOff={() => set('horizontal', null)} testId="horizontal-scroll">
+            {horizontal && (
+              <>
+                <SliderField id={`${idPrefix}-horizontal-offset`} label={t('sticky_offset')} value={horizontal.offset} min={STICKY_OFFSET.min} max={STICKY_OFFSET.max} unit="px" neutral={0} onChange={(v) => set('horizontal', { ...horizontal, offset: v ?? 0 })} />
+                <IntField id={`${idPrefix}-horizontal-width`} label={t('item_width')} value={horizontal.width} min={PANEL_WIDTH.min} max={PANEL_WIDTH.max} onChange={(v) => set('horizontal', { ...horizontal, width: v })} />
+              </>
+            )}
+            <p className="sbx-hint">{t('horizontal_scroll_hint')}</p>
+          </SwitchSection>
+
+          <SwitchSection id={`${idPrefix}-hover-image`} title={t('hover_image')} value={hoverImage} onOn={() => set('hover_image', { size: HOVER_IMAGE_SIZE.default })} onOff={() => set('hover_image', null)} testId="hover-image">
+            {hoverImage && <SliderField id={`${idPrefix}-hover-image-size`} label={t('hover_image_size')} value={hoverImage.size} min={HOVER_IMAGE_SIZE.min} max={HOVER_IMAGE_SIZE.max} step={10} unit="px" neutral={HOVER_IMAGE_SIZE.default} onChange={(v) => set('hover_image', { size: v ?? HOVER_IMAGE_SIZE.default })} />}
+            <p className="sbx-hint">{t('hover_image_hint')}</p>
           </SwitchSection>
         </>
       )}

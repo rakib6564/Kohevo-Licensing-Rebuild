@@ -623,12 +623,15 @@ Part rules are written with `!important`. Custom CSS can't override them, so an 
 | Split-text line reveal, words lighting up on scroll | `interactions.text` on a heading or text block |
 | Rotating word in a headline | `core.dual_heading` with `rotate_words` |
 | Magnetic button, cursor glow on cards | `interactions.mouse.magnet`, `interactions.glow` |
+| Logo or card marquee, scroll-reactive rows | `interactions.marquee` on a Container (its children loop) |
+| Pinned horizontal scroll section | `interactions.horizontal` on a Container |
+| List rows with an image that follows the cursor | `interactions.hover_image` on the list Container, an Image block in each row |
 | Lenis or similar smooth scrolling | The site's Smooth scrolling setting (Site & SEO; `studio_smooth_scroll` = `1`) |
 | Page transitions | None; drop and report |
 | Count-up | `core.stats` |
 | Countdown | `core.countdown` |
 | Filter, sort, search on a list | `shop.products` has a filter; `theme.search_box`; otherwise a gap |
-| Video on hover, pinned or horizontal scroll, GSAP timelines, canvas, 3D | Gap or widget; simplify with the owner's agreement |
+| Video on hover, GSAP timelines, canvas, 3D | Gap or widget; simplify with the owner's agreement |
 
 Entrance animation:
 
@@ -669,6 +672,9 @@ Page-level motion:
 - `adapt`: the node (a header) takes the page colours of the section beneath it.
 - `text.effect`: `lines` (each line rises from a mask, `step_ms` apart) or `light_words` (words light up as the page scrolls; the rest at `dim` %, 5-60).
 - `stagger`: the entrance animations inside play `step_ms` apart (20-600) once the node is in view.
+- `marquee` `{speed: 1-10, direction: left|right, scroll, pause, width}`: the Container's children run past in a loop. `scroll` speeds it up and turns it with the page's scroll; `width` sizes each child (px).
+- `horizontal` `{offset: 0-400, width}`: from 1024px wide, the Container pins `offset` below the top and the page's scroll moves its children sideways. Smaller screens keep the Container's own layout. A Container is a marquee or horizontal, not both.
+- `hover_image` `{size: 120-600}`: each child row's Image is hidden on large screens with a mouse and follows the pointer over its row.
 - A Dual Color Heading's `rotate_words` (comma separated) replace its coloured part in turn, every `rotate_ms` (1000-10000).
 
 Hover movement runs only on devices that can hover, and only when the visitor allows motion. Keep that behaviour.

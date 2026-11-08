@@ -204,3 +204,63 @@ unit('page motion: the markup and CSS match the browser fixture the runtime spec
     assert_true(($kf[0] ?? '') !== '' && ($rule[0] ?? '') !== '', 'the fade-up rules were found');
     assert_eq(trim((string) file_get_contents($fixture)), $css . $html, 'ui/tests/fixtures/page-motion.html is stale — regenerate with SBPM_WRITE_FIXTURE=1');
 });
+
+unit('scroll layout: marquee, sideways scroll and hover image validate with fixed shapes, and a node is not both a marquee and sideways', function (): void {
+    $registry = BlockRegistry::withAllCoreBlocks();
+    foreach ([
+        'marquee'    => ['marquee' => ['speed' => 6, 'direction' => 'right', 'scroll' => true, 'pause' => true, 'width' => 240]],
+        'sideways'   => ['horizontal' => ['offset' => 80, 'width' => 520], 'hover_image' => ['size' => 280]],
+        'offset 0'   => ['horizontal' => ['offset' => 0]],
+    ] as $why => $interactions) {
+        $ok = DocumentValidator::validate(sbsm_doc(sbsm_section(['interactions' => $interactions])), $registry);
+        assert_true($ok->isValid(), "valid: {$why} " . json_encode($ok->errors()));
+    }
+    foreach ([
+        'marquee no speed'      => ['marquee' => ['direction' => 'left']],
+        'marquee too fast'      => ['marquee' => ['speed' => 11]],
+        'marquee up'            => ['marquee' => ['speed' => 3, 'direction' => 'up']],
+        'scroll a string'       => ['marquee' => ['speed' => 3, 'scroll' => 'yes']],
+        'item too narrow'       => ['marquee' => ['speed' => 3, 'width' => 20]],
+        'sideways no offset'    => ['horizontal' => ['width' => 400]],
+        'sideways offset large' => ['horizontal' => ['offset' => 900]],
+        'both'                  => ['marquee' => ['speed' => 3], 'horizontal' => ['offset' => 0]],
+        'hover image no size'   => ['hover_image' => []],
+        'hover image too big'   => ['hover_image' => ['size' => 2000]],
+    ] as $why => $interactions) {
+        assert_true(!DocumentValidator::validate(sbsm_doc(sbsm_section(['interactions' => $interactions])), $registry)->isValid(), "refused: {$why}");
+    }
+});
+
+unit('scroll layout: each renders as a data-sb-* attribute and custom properties, and sideways wins over a stored marquee', function (): void {
+    $tag = sbpm_tag(['marquee' => ['speed' => 6, 'direction' => 'right', 'scroll' => true, 'pause' => true, 'width' => 240]]);
+    assert_true(str_contains($tag, 'data-sb-ticker="6 right scroll pause"') && str_contains($tag, '--sb-item-w:240px'), $tag);
+    assert_true(str_contains(sbpm_tag(['marquee' => ['speed' => 2]]), 'data-sb-ticker="2 left"'), 'defaults');
+    $side = sbpm_tag(['horizontal' => ['offset' => 80, 'width' => 520]]);
+    assert_true(str_contains($side, ' data-sb-horizontal') && str_contains($side, '--sb-hs-offset:80px') && str_contains($side, '--sb-item-w:520px'), $side);
+    $both = sbpm_tag(['horizontal' => ['offset' => 0], 'marquee' => ['speed' => 3]]);
+    assert_true(str_contains($both, 'data-sb-horizontal') && !str_contains($both, 'data-sb-ticker'), 'sideways wins: ' . $both);
+    $hover = sbpm_tag(['hover_image' => ['size' => 300]]);
+    assert_true(str_contains($hover, ' data-sb-hover-image') && str_contains($hover, '--sb-hover-size:300px'), $hover);
+    // The text marquee's runtime selects [data-sb-marquee] and carousels use data-sb-loop: these must never collide.
+    assert_true(!str_contains($tag, 'data-sb-marquee') && !str_contains($tag, 'data-sb-loop'), 'no attribute shared with the text marquee or carousel');
+});
+
+unit('scroll layout: the markup and CSS match the browser fixture the runtime spec scrolls through', function (): void {
+    $items = static fn(string $prefix, int $n): array => array_map(static fn(int $i): array => sbpm_block('core.heading', ['text' => "{$prefix} {$i}", 'level' => 'h3']), range(1, $n));
+    $row = static fn(string $name): array => sbpm_box([sbpm_block('core.heading', ['text' => $name, 'level' => 'h3'])]);
+    $sections = [
+        sbpm_box($items('Card', 3), ['interactions' => ['marquee' => ['speed' => 6, 'pause' => true, 'width' => 200]]]),
+        sbpm_box($items('Panel', 4), ['interactions' => ['horizontal' => ['offset' => 0, 'width' => 500]]]),
+        sbpm_box([$row('Construction'), $row('Logistics'), $row('Hospitality')], ['interactions' => ['hover_image' => ['size' => 200]]]),
+    ];
+    $html = implode('', array_map('sbsm_render', $sections));
+    $html = (string) preg_replace('/ data-sb-node="[^"]*" data-sb-type="[^"]*"/', '', $html);
+    $html = (string) preg_replace('/\bblk_[a-z0-9]+/', 'blk', $html);
+    $html = (string) preg_replace('/\bsb-x-[a-f0-9]+/', 'sb-x', $html);
+    $css = '<style>' . StudioStylesheet::scrollEffectsCss() . '</style>';
+    $fixture = __DIR__ . '/../../plugins/studio-builder/ui/tests/fixtures/scroll-layout.html';
+    if (getenv('SBPM_WRITE_FIXTURE') === '1') {
+        file_put_contents($fixture, $css . $html . "\n");
+    }
+    assert_eq(trim((string) file_get_contents($fixture)), $css . $html, 'ui/tests/fixtures/scroll-layout.html is stale — regenerate with SBPM_WRITE_FIXTURE=1');
+});

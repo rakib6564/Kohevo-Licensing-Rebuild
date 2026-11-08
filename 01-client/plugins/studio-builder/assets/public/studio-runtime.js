@@ -843,6 +843,253 @@
   }
 
 
+/** Move a node's children into a new flex track (inside `frame` when given), keeping the node's own gap. Returns the
+   *  track and the undo, which puts the children back where they were. */
+  function trackChildren(el, className, frame) {
+    var gap = global.getComputedStyle(el).columnGap;
+    var track = document.createElement('div');
+    track.className = className;
+    if (gap && gap !== 'normal') track.style.gap = gap;
+    // Blocks only: a Container's background video, slideshow and shape dividers (and layers this file added) stay put.
+    var kids = blockChildren(el);
+    var anchor = kids.length ? kids[kids.length - 1].nextSibling : null;
+    kids.forEach(function (k) { track.appendChild(k); });
+    (frame || el).appendChild(track);
+    el.insertBefore(frame || track, anchor);
+    return {
+      track: track,
+      undo: function () {
+        kids.forEach(function (k) { el.insertBefore(k, frame || track); });
+        (frame || track).remove();
+      }
+    };
+  }
+
+  /** A node's child blocks, in order. */
+  function blockChildren(el) {
+    return Array.prototype.filter.call(el.children, function (k) { return k.classList.contains('sb-block'); });
+  }
+
+  /** A copy of a node for a loop: hidden from assistive technology and the tab order, with no ids to repeat. */
+  function loopCopy(node) {
+    var copy = node.cloneNode(true);
+    copy.setAttribute('aria-hidden', 'true');
+    copy.setAttribute('data-sb-copy', '');
+    if (copy.removeAttribute) copy.removeAttribute('id');
+    qsa(copy, '[id]').forEach(function (n) { n.removeAttribute('id'); });
+    qsa(copy, CONFIG.FOCUSABLE).forEach(function (n) { n.setAttribute('tabindex', '-1'); });
+    return copy;
+  }
+
+  /* ── Feature: marquee of blocks ──────────────────────────────────────────
+   * [data-sb-ticker="<speed 1-10> <left|right> [scroll] [pause]"] (interactions.marquee): the node's children run past
+   * in an endless line. The runtime puts them in a track and repeats them (copies hidden from screen readers and the
+   * tab order, but still clickable) until the line is wider than the node plus one set. `scroll` speeds the line up
+   * with the page's scroll and turns it with the scroll's direction; `pause` slows it while the pointer is over it. It
+   * only runs while on screen. Reduced motion: nothing moves and the node keeps its author's layout.
+   */
+  function initTicker(root) {
+    var els = qsa(root, '[data-sb-ticker]').filter(function (el) { return !el.hasAttribute('data-sb-horizontal'); });
+    if (!els.length || reducedMotion()) return;
+    var undo = [];
+    var lines = els.map(function (el) {
+      var parts = (el.getAttribute('data-sb-ticker') || '').split(/\s+/);
+      var built = trackChildren(el, 'sb-ticker-track');
+      var originals = Array.prototype.slice.call(built.track.children);
+      el.classList.add('is-live');
+      undo.push(function () { qsa(built.track, '[data-sb-copy]').forEach(function (c) { c.remove(); }); built.undo(); el.classList.remove('is-live'); });
+      var line = {
+        el: el, track: built.track, originals: originals, set: 0, x: 0, slow: 1, hover: false, seen: true,
+        speed: clamp(parseInt(parts[0], 10) || 4, 1, 10), dir: parts[1] === 'right' ? -1 : 1,
+        scroll: parts.indexOf('scroll') !== -1, pause: parts.indexOf('pause') !== -1
+      };
+      if (line.pause) {
+        undo.push(on(el, 'pointerenter', function () { line.hover = true; }));
+        undo.push(on(el, 'pointerleave', function () { line.hover = false; }));
+      }
+      return line;
+    });
+    // One set's width is where the first copy starts; fill the track until a set can scroll away with no gap.
+    function measure(line) {
+      qsa(line.track, '[data-sb-copy]').forEach(function (c) { c.remove(); });
+      if (!line.originals.length) return;
+      var copies = 0;
+      do {
+        line.originals.forEach(function (n) { line.track.appendChild(loopCopy(n)); });
+        copies++;
+        var first = line.track.children[line.originals.length];
+        line.set = first.offsetLeft - line.originals[0].offsetLeft;
+      } while (line.set > 0 && line.track.scrollWidth < line.el.clientWidth + line.set * 2 && copies < 20);
+    }
+    lines.forEach(measure);
+    var io = 'IntersectionObserver' in global ? new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        lines.forEach(function (l) { if (l.el === entry.target) l.seen = entry.isIntersecting; });
+      });
+    }, { rootMargin: '200px 0px' }) : null;
+    if (io) lines.forEach(function (l) { io.observe(l.el); });
+
+    var lastY = global.pageYOffset || 0, velocity = 0, scrollDir = 1, prev = 0, raf = 0;
+    undo.push(on(global, 'scroll', function () {
+      var y = global.pageYOffset || 0, d = y - lastY;
+      lastY = y;
+      velocity += d;
+      if (Math.abs(d) > 1) scrollDir = d > 0 ? 1 : -1;
+    }, { passive: true }));
+    var resizeTimer = 0;
+    undo.push(on(global, 'resize', function () {
+      global.clearTimeout(resizeTimer);
+      resizeTimer = global.setTimeout(function () { lines.forEach(measure); }, 150);
+    }, { passive: true }));
+    lines.forEach(function (l) {
+      qsa(l.track, 'img').forEach(function (img) { if (!img.complete) undo.push(on(img, 'load', function () { measure(l); })); });
+    });
+
+    function frame(now) {
+      var dt = prev ? Math.min(50, now - prev) / 16.67 : 1;
+      prev = now;
+      var v = velocity;
+      velocity *= 0.86;
+      lines.forEach(function (l) {
+        if (!l.seen || l.set <= 0) return;
+        l.slow += ((l.hover ? 0.15 : 1) - l.slow) * 0.08;
+        var boost = l.scroll ? Math.min(18, Math.abs(v) * 0.25) : 0;
+        var turn = l.scroll ? scrollDir : 1;
+        l.x -= (l.speed * 0.25 + boost) * l.slow * dt * l.dir * turn;
+        if (l.x <= -l.set) l.x += l.set;
+        if (l.x > 0) l.x -= l.set;
+        l.track.style.transform = 'translate3d(' + l.x.toFixed(1) + 'px,0,0)';
+      });
+      raf = global.requestAnimationFrame(frame);
+    }
+    raf = global.requestAnimationFrame(frame);
+    mount(function () {
+      global.cancelAnimationFrame(raf);
+      global.clearTimeout(resizeTimer);
+      if (io) io.disconnect();
+      undo.forEach(function (fn) { fn(); });
+    });
+  }
+
+  /* ── Feature: sideways scroll ────────────────────────────────────────────
+   * [data-sb-horizontal] (interactions.horizontal): on screens at least 1024px wide and 560px tall, the node grows tall
+   * by the width its children overflow, a frame inside it pins (`--sb-hs-offset` below the top), and scrolling the page
+   * moves the children sideways through the frame. Smaller screens, and reduced motion, keep the author's layout.
+   */
+  function initHorizontal(root) {
+    var els = qsa(root, '[data-sb-horizontal]');
+    if (!els.length || reducedMotion() || !global.matchMedia) return;
+    var query = global.matchMedia('(min-width: 1024px) and (min-height: 560px)');
+    var live = [];
+    function build() {
+      els.forEach(function (el) {
+        var pin = document.createElement('div');
+        pin.className = 'sb-hs-pin';
+        var built = trackChildren(el, 'sb-hs-track', pin);
+        var item = { el: el, pin: pin, track: built.track, undo: built.undo, distance: 0, offset: 0 };
+        live.push(item);
+        qsa(built.track, 'img').forEach(function (img) { if (!img.complete) img.addEventListener('load', layout, { once: true }); });
+      });
+      layout();
+    }
+    function teardown() {
+      live.forEach(function (item) {
+        item.undo();
+        item.el.style.removeProperty('height');
+      });
+      live = [];
+    }
+    function layout() {
+      var vw = document.documentElement.clientWidth, vh = global.innerHeight || 1;
+      live.forEach(function (item) {
+        item.offset = parseFloat(global.getComputedStyle(item.el).getPropertyValue('--sb-hs-offset')) || 0;
+        var frameH = vh - item.offset;
+        item.pin.style.height = frameH + 'px';
+        item.distance = Math.max(0, item.track.scrollWidth - item.pin.clientWidth);
+        item.el.style.height = (frameH + item.distance) + 'px';
+      });
+      update();
+    }
+    function update() {
+      live.forEach(function (item) {
+        var r = item.el.getBoundingClientRect();
+        var travel = item.el.offsetHeight - item.pin.offsetHeight;
+        var p = travel > 0 ? clamp((item.offset - r.top) / travel, 0, 1) : 0;
+        item.track.style.transform = 'translate3d(' + (-p * item.distance).toFixed(1) + 'px,0,0)';
+      });
+    }
+    var ticking = false;
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      global.requestAnimationFrame(function () { ticking = false; update(); });
+    }
+    function onChange() {
+      if (query.matches && !live.length) build();
+      else if (!query.matches && live.length) teardown();
+      else layout();
+    }
+    if (query.matches) build();
+    var offs = [on(global, 'scroll', onScroll, { passive: true }), on(global, 'resize', onChange, { passive: true })];
+    mount(function () {
+      offs.forEach(function (off) { off(); });
+      teardown();
+    });
+  }
+
+  /* ── Feature: hover image ────────────────────────────────────────────────
+   * [data-sb-hover-image] (interactions.hover_image): on screens at least 900px wide with a mouse, each child row's
+   * first picture is hidden in the row (`is-live`), and while the pointer is over a row its picture follows the
+   * pointer, easing behind it and leaning with its speed. Touch screens and reduced motion keep the pictures in the rows.
+   */
+  function initHoverImage(root) {
+    var els = qsa(root, '[data-sb-hover-image]');
+    if (!els.length || reducedMotion() || !global.matchMedia || !global.matchMedia('(pointer: fine) and (min-width: 900px)').matches) return;
+    var float = document.createElement('div');
+    float.className = 'sb-hover-float';
+    float.setAttribute('aria-hidden', 'true');
+    var pic = document.createElement('img');
+    pic.alt = '';
+    float.appendChild(pic);
+    document.body.appendChild(float);
+    var offs = [];
+    var px = 0, py = 0, x = 0, y = 0, showing = false, raf = 0;
+    els.forEach(function (el) {
+      el.classList.add('is-live');
+      float.style.setProperty('--sb-hover-size', global.getComputedStyle(el).getPropertyValue('--sb-hover-size'));
+      blockChildren(el).forEach(function (row) {
+        var img = qs(row, '.sb-block--core-image img') || qs(row, 'img');
+        if (!img) return;
+        offs.push(on(row, 'pointerenter', function (e) {
+          float.style.setProperty('--sb-hover-size', global.getComputedStyle(el).getPropertyValue('--sb-hover-size'));
+          pic.src = img.currentSrc || img.src;
+          if (!showing) { x = px = e.clientX; y = py = e.clientY; }
+          showing = true;
+          float.classList.add('is-on');
+          if (!raf) raf = global.requestAnimationFrame(follow);
+        }));
+        offs.push(on(row, 'pointerleave', function () { showing = false; float.classList.remove('is-on'); }));
+      });
+    });
+    offs.push(on(global, 'pointermove', function (e) { px = e.clientX; py = e.clientY; }, { passive: true }));
+    function follow() {
+      raf = 0;
+      var dx = px - x;
+      x += dx * 0.14;
+      y += (py - y) * 0.14;
+      var lean = clamp(dx * 0.04, -7, 7);
+      float.style.transform = 'translate3d(' + (x - float.offsetWidth / 2).toFixed(1) + 'px,' + (y - float.offsetHeight / 2).toFixed(1) + 'px,0) rotate(' + lean.toFixed(2) + 'deg)';
+      if (showing || Math.abs(dx) > 0.5) raf = global.requestAnimationFrame(follow);
+    }
+    mount(function () {
+      offs.forEach(function (off) { off(); });
+      if (raf) global.cancelAnimationFrame(raf);
+      float.remove();
+      els.forEach(function (el) { el.classList.remove('is-live'); });
+    });
+  }
+
+
 /* ── Feature: click and scroll interaction triggers ──────────────────────
    * The renderer marks a block with `data-sb-interaction-trigger`.
    *   click:  each click (re)plays the block's chosen animation: data-sb-play is removed, a reflow restarts
@@ -2906,6 +3153,9 @@
     ['rotate', initRotate],
     ['glow', initGlow],
     ['smooth-scroll', initSmoothScroll],
+    ['ticker', initTicker],
+    ['horizontal', initHorizontal],
+    ['hover-image', initHoverImage],
     ['interactions', initInteractions],
     ['sticky', initSticky],
     ['overlays', initOverlays],

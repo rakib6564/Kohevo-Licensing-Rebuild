@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '68';
+    public const VERSION = '69';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -972,6 +972,16 @@ final class StudioStylesheet
             . '.sb-glow{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;opacity:0;transition:opacity .3s ease;'
             . 'background:radial-gradient(var(--sb-glow-size,320px) circle at var(--sb-mx,50%) var(--sb-my,50%),var(--sb-glow-color,rgba(255,255,255,.12)),transparent 70%)}'
             . '.sb-glow-on:hover>.sb-glow{opacity:1}'
+            // Marquee and sideways scroll: the runtime moves the children into a track (and a pinned frame for sideways
+            // scroll); without it, or with reduced motion, the node keeps the layout its author gave it.
+            . '[data-sb-ticker].is-live{overflow:hidden}'
+            . '.sb-ticker-track,.sb-hs-track{display:flex;flex-wrap:nowrap;width:max-content;will-change:transform}'
+            . '.sb-ticker-track>*,.sb-hs-track>*{flex:none;width:var(--sb-item-w,auto);max-width:none}'
+            . '.sb-hs-pin{position:sticky;top:var(--sb-hs-offset,0px);overflow:hidden;display:flex;align-items:center}'
+            // Hover image: the rows' own pictures give way to one that follows the pointer.
+            . '[data-sb-hover-image].is-live>* .sb-block--core-image{display:none}'
+            . '.sb-hover-float{position:fixed;left:0;top:0;z-index:60;width:var(--sb-hover-size,280px);pointer-events:none;opacity:0;transition:opacity .25s ease;border-radius:12px;overflow:hidden;box-shadow:0 24px 48px -16px rgba(0,0,0,.45)}'
+            . '.sb-hover-float.is-on{opacity:1}.sb-hover-float img{display:block;width:100%;height:auto}'
             . '@media (prefers-reduced-motion:reduce){html[data-sb-page-colors] body.sb-body,:where(.sb-adapt){transition:none}'
             . '[data-sb-text^="lines"]{animation:none}.sb-wm>.sb-w{transform:none;transition:none}}';
     }
