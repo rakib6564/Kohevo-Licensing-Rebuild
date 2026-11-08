@@ -133,7 +133,7 @@ $mServices = $megaItem('Services', '/services/', 3, [
 $mAbout = $megaItem('About', '/about/', 3, [
     $col([
         B('layout.flex', ['direction' => 'column', 'gap' => 'none'], [
-            PIC('rakib-menu-card.jpg', 'Rakib Hasan, freelance web designer and developer', '100%', '', '16px'),
+            PIC('rakib-menu-card-orange.jpg', 'Rakib Hasan, freelance web designer and developer', '100%', '', '16px'),
             VBOX([P('Rakib Hasan', BONE, '15px', ['weight' => '500']), EYE('Designer + developer · Dhaka', '#BDB7AD')], '2px', ['position' => ['mode' => 'absolute', 'left' => '16px', 'bottom' => '14px']]),
         ], ['dimensions' => ['height' => '250px', 'overflow' => 'hidden'], 'position' => ['mode' => 'relative'], 'border' => ['radius' => '16px']], ['classNames' => ['rk-mabout-pic']]),
     ]),

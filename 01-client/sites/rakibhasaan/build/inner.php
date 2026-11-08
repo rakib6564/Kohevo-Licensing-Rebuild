@@ -529,7 +529,7 @@ foreach ($DATA['pages'] as $slug => $p) {
     $below = false;
     if ($slug === 'free-audit') { $side = AUDITFORM('I reply within 12 hours. Your details are only used to send your audit.'); }
     // About and Contact open on a photo of Rakib behind the words.
-    $photo = ['about' => 'rakib-hero-teal.jpg', 'contact' => 'rakib-hero-grey.jpg'][$slug] ?? null;
+    $photo = ['about' => 'rakib-hero-teal-clean.jpg', 'contact' => 'rakib-hero-grey.jpg'][$slug] ?? null;
     // Under a photo hero the photo band becomes a note from Rakib (no second big portrait).
     if ($photo !== null) {
         foreach ($p['items'] as $k => $it) { if (($it['kind'] ?? '') === 'band') { $p['items'][$k]['kind'] = 'note'; } }
