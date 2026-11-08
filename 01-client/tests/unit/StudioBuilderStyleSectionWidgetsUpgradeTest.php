@@ -163,3 +163,56 @@ unit('offcanvas: the trigger text can give way to its icon on a phone, still rea
     assert_true(str_contains($html, 'sb-offcanvas-trigger--icon sb-offcanvas-trigger--icon-sm') && str_contains($html, '<span class="sb-offcanvas-trigger__label">Menu</span>'), $html);
     assert_true(str_contains(StudioStylesheet::css(), '.sb-offcanvas-trigger--icon-sm .sb-offcanvas-trigger__label{position:absolute;width:1px'), 'hidden visually only');
 });
+
+unit('testimonial grid: each part can be hidden, a maximum length, and a ticker of chips in rows', function (): void {
+    $items = [['name' => 'Ann Lee', 'text' => 'Great work, thanks!', 'rating' => 5, 'meta' => 'USA', 'date' => '1 year ago'], ['name' => 'Bob', 'text' => str_repeat('Long review. ', 10), 'rating' => 4, 'meta' => 'UK', 'date' => '2 years ago'], ['name' => 'Cy', 'text' => 'Fast!', 'rating' => 5, 'meta' => '', 'date' => '']];
+    $bare = sbsm_render(sbpm_box([sbpm_block('core.testimonial_grid', ['items' => $items, 'show_avatar' => false, 'show_meta' => false, 'show_date' => false, 'show_name' => false, 'show_quote' => false, 'show_stars' => false])]));
+    assert_true(!str_contains($bare, 'sb-tgrid__avatar') && !str_contains($bare, 'sb-tgrid__meta') && !str_contains($bare, 'sb-tgrid__date') && !str_contains($bare, 'sb-tgrid__name') && !str_contains($bare, 'sb-tgrid__top') && !str_contains($bare, 'sb-tgrid__by'), $bare);
+    assert_true(str_contains($bare, 'data-sb-tg-name="Ann Lee"'), 'the dialog still names the reviewer');
+    $noAvatar = sbsm_render(sbpm_box([sbpm_block('core.testimonial_grid', ['items' => $items, 'show_avatar' => false])]));
+    assert_true(str_contains($noAvatar, 'class="sb-tgrid__by sb-tgrid__by--plain"'), 'the row closes up without the avatar');
+    $max = sbsm_render(sbpm_box([sbpm_block('core.testimonial_grid', ['items' => $items, 'max_length' => 30])]));
+    assert_eq(2, substr_count($max, 'class="sb-tgrid__card'), 'the long one left out');
+    $ticker = sbsm_render(sbpm_box([sbpm_block('core.testimonial_grid', ['items' => $items, 'layout' => 'ticker', 'ticker_rows' => 2, 'ticker_speed' => 4])]));
+    assert_true(str_contains($ticker, '<div class="sb-tgrid sb-tgrid--ticker"><ul class="sb-tgrid__row" data-sb-ticker="4 left scroll pause">') && str_contains($ticker, '<ul class="sb-tgrid__row" data-sb-ticker="4 right scroll pause">'), $ticker);
+    assert_eq(3, substr_count($ticker, 'class="sb-tgrid__chip"'), 'a chip each');
+    assert_true(!str_contains($ticker, 'sb-tgrid__nav'), 'no pager');
+});
+
+unit('accordions: rows can read as lines and open with a plus, in every accordion widget', function (): void {
+    $set = sbsm_render(sbpm_box([sbpm_block('layout.accordion', ['look' => 'lines', 'icon' => 'plus'], ['children' => [sbpm_block('layout.accordion_item', ['title' => 'Q'])]])]));
+    assert_true(str_contains($set, 'class="sb-accordion-block sb-accordion-block--blocks sb-accordion-block--lines sb-accordion-block--plus"'), 'set: ' . $set);
+    $core = sbsm_render(sbpm_box([sbpm_block('core.accordion', ['items' => [['heading' => 'Q', 'body' => 'A']], 'look' => 'lines'])]));
+    assert_true(str_contains($core, 'class="sb-accordion-block sb-accordion-block--lines"'), 'core: ' . $core);
+    $plain = sbsm_render(sbpm_box([sbpm_block('core.accordion', ['items' => [['heading' => 'Q', 'body' => 'A']]])]));
+    assert_true(str_contains($plain, 'class="sb-accordion-block"'), 'boxed by default');
+    StudioStylesheet::resetCache();
+    $css = StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-accordion-block--plus .sb-accordion__button[aria-expanded="true"] .sb-accordion__icon{transform:rotate(45deg)}'), 'plus turns');
+});
+
+unit('style parts: a line height may be a plain number, as a block\'s own', function (): void {
+    assert_eq([], StyleSurface::partIssues(['paragraph' => ['typography' => ['line_height' => '1.45']]], 'theme.field_value', 'p'), 'accepted');
+    assert_true(StyleSurface::partIssues(['paragraph' => ['typography' => ['line_height' => '1;x:y']]], 'theme.field_value', 'p') !== [], 'checked');
+});
+
+unit('query loop: on a Single template the item\'s own category does not filter the loop; on an archive it does', function (): void {
+    $listing = new ReflectionMethod(\Slate\Module\StudioBuilder\Render\Block\CoreRenderers\QueryLoopRenderer::class, 'listing');
+    $scopeWith = static function (array $attrs): \Slate\Module\StudioBuilder\Render\Block\BlockRenderScope {
+        $block = ['id' => 'loop_l', 'type' => 'core.query_loop', 'props' => []];
+        return new \Slate\Module\StudioBuilder\Render\Block\BlockRenderScope($block,
+            \Slate\Module\StudioBuilder\Render\RenderContext::forPublic(1, new \Slate\Module\StudioBuilder\Render\SiteContext('https://example.test', 'Test', 'en'), null, $attrs),
+            new \Slate\Module\StudioBuilder\Render\Media\CoreMediaResolver(new \Slate\Tenancy\TenantContext()), new \Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme('default', []),
+            new \Slate\Module\StudioBuilder\Render\RenderCollector('nonce'), '', []);
+    };
+    assert_eq('', $listing->invoke(null, $scopeWith(['is_single' => true, 'category' => 'Core']))['category'], 'a single item');
+    assert_eq('Web', $listing->invoke(null, $scopeWith(['archive_type' => 'category', 'category' => 'Web']))['category'], 'a category archive');
+    $def = BlockRegistry::withAllCoreBlocks()->get('core.query_loop');
+    $schema = json_encode($def->toEditorManifest());
+    assert_true(str_contains($schema, '"featured_only"') && str_contains($schema, '"max":48'), 'featured only, and up to 48 a page');
+});
+
+unit('post titles: a linked item title keeps its colour over the site link colour', function (): void {
+    StudioStylesheet::resetCache();
+    assert_true(str_contains(StudioStylesheet::css(), '.sb-body .sb-post-title a:not(.sb-button):not(.sb-heading__link),.sb-body a.sb-post-link:not(.sb-button):not(.sb-heading__link){color:inherit}'));
+});

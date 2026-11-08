@@ -1,0 +1,33 @@
+// A Query Loop alone in a marquee Container lends the row its items, and gets them back on teardown.
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test, expect } from '@playwright/test';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const runtime = fs.readFileSync(path.join(here, '..', '..', 'assets', 'public', 'studio-runtime.js'), 'utf8');
+const items = Array.from({ length: 4 }, (_, i) => `<div class="sb-query-loop__item"><article style="width:200px;height:80px">Item ${i + 1}</article></div>`).join('');
+const html = `<!doctype html><html><head><meta charset="utf-8"></head><body class="sb-body">`
+  + `<div class="sb-block" data-sb-ticker="3 left" style="display:flex;gap:16px;width:600px">`
+  + `<div class="sb-block sb-block--core-query-loop"><div class="sb-query-loop"><div class="sb-query-loop__grid">${items}</div></div></div>`
+  + `</div></body></html>`;
+
+test.beforeEach(async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'one viewport is enough');
+  await page.route('http://localhost/loop', (route) => route.fulfill({ contentType: 'text/html', body: html }));
+  await page.route('http://localhost/runtime.js', (route) => route.fulfill({ contentType: 'text/javascript', body: runtime }));
+});
+
+test('the loop\'s items scroll in the row, and go back into the loop when the runtime stops', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('http://localhost/loop');
+  await page.addScriptTag({ url: 'http://localhost/runtime.js' });
+  const track = page.locator('[data-sb-ticker] > .sb-ticker-track');
+  await expect(track).toHaveCount(1);
+  await expect(track.locator('.sb-query-loop__item:not([data-sb-copy])')).toHaveCount(4);
+  await expect(page.locator('.sb-query-loop__grid > .sb-query-loop__item')).toHaveCount(0);
+  await page.evaluate(() => window.StudioRuntime.disable());
+  await expect(page.locator('.sb-query-loop__grid > .sb-query-loop__item')).toHaveCount(4);
+  await expect(page.locator('.sb-ticker-track')).toHaveCount(0);
+  await expect(page.locator('[data-sb-copy]')).toHaveCount(0);
+});

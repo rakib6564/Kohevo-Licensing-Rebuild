@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '75';
+    public const VERSION = '76';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -298,6 +298,8 @@ final class StudioStylesheet
             . '.sb-post-excerpt{margin:0}'
             . '.sb-post-title a,.sb-post-link{color:inherit;text-decoration:none}'
             . '.sb-post-title a:hover,.sb-post-link:hover{text-decoration:underline}'
+            // A linked item title keeps the title's colour: the generic link colour above outweighs `.sb-post-title a`.
+            . '.sb-body .sb-post-title a:not(.sb-button):not(.sb-heading__link),.sb-body a.sb-post-link:not(.sb-button):not(.sb-heading__link){color:inherit}'
             . '.sb-repeater__list{margin:0;padding:0;list-style:none}'
             . '.sb-unavailable{padding:.75rem 1rem;border:1px dashed #b45309;color:#92400e;background:#fffbeb;border-radius:6px;font-size:.875rem}'
             . '.sb-preview-banner{position:sticky;top:0;z-index:10;padding:.5rem 1rem;background:#1e293b;color:#fff;font:600 .8rem/1.4 system-ui,sans-serif;text-align:center}'
@@ -516,6 +518,12 @@ final class StudioStylesheet
             . '.sb-accordion__icon{flex:none;transition:transform .2s ease}'
             . '.sb-accordion__button[aria-expanded="true"] .sb-accordion__icon{transform:rotate(180deg)}'
             . '.sb-accordion__panel{padding:0 1.25rem 1.25rem;overflow:hidden}'
+            // Lines: no box, a line under each row, the text flush with the column. Plus: a + that turns to a cross.
+            . '.sb-accordion-block--lines .sb-accordion{border:0;border-radius:0;overflow:visible}'
+            . '.sb-accordion-block--lines .sb-accordion__item{border-bottom:1px solid var(--sb-border-default,#e2e8f0)}.sb-accordion-block--lines .sb-accordion__item+.sb-accordion__item{border-top:0}'
+            . '.sb-accordion-block--lines .sb-accordion__button{padding:1.1rem 0}.sb-accordion-block--lines .sb-accordion__panel{padding:0 0 1.25rem}'
+            . '.sb-accordion-block--plus .sb-accordion__icon{font-size:0;line-height:1}.sb-accordion-block--plus .sb-accordion__icon::before{content:"+";font-size:1.25rem;font-weight:300}'
+            . '.sb-accordion-block--plus .sb-accordion__button[aria-expanded="true"] .sb-accordion__icon{transform:rotate(45deg)}'
             // Without script, `[hidden]` keeps the browser's default `display:none`
             // — the closed rows really are gone for everyone, including screen
             // readers. Once the runtime boots it swaps in a height-0 state so it can
@@ -1097,6 +1105,10 @@ final class StudioStylesheet
             . '.sb-loop-dialog__body{min-height:12rem}'
             . '.sb-loop-dialog__body[aria-busy="true"]{opacity:.5}'
             . '.sb-local-time{margin:0;font-variant-numeric:tabular-nums}'
+            // A field shown as chips, or as a ticker the marquee runtime scrolls.
+            . '.sb-field-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}'
+            . '.sb-field-chips>li{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;border:1px solid color-mix(in srgb,currentColor 18%,transparent)}'
+            . '.sb-field-chips--ticker{flex-wrap:nowrap;overflow:hidden}.sb-field-chips--ticker>li{flex:none;white-space:nowrap}'
             // Testimonial grid: every card is in the page; the runtime shows a page at a time and draws the pager.
             . '.sb-tgrid{--sb-tg-line:color-mix(in srgb,currentColor 10%,transparent)}'
             . '.sb-tgrid__bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}'
@@ -1129,6 +1141,12 @@ final class StudioStylesheet
             . '.sb-tgrid__name{font-weight:500;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
             . '.sb-tgrid__meta,.sb-tgrid__date{display:block;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
             . '.sb-tgrid__date{grid-area:when;margin-top:2px}'
+            . '.sb-tgrid__by--plain{grid-template-columns:minmax(0,1fr);grid-template-areas:"who" "when"}'
+            // Ticker: rows of chips the marquee runtime scrolls; still, they clip at the edge.
+            . '.sb-tgrid--ticker{display:flex;flex-direction:column;gap:12px}'
+            . '.sb-tgrid__row{display:flex;gap:12px;margin:0;padding:0;list-style:none;overflow:hidden}'
+            . '.sb-tgrid__chip{display:inline-flex;flex:none;align-items:center;gap:10px;padding:12px 20px;border-radius:999px;border:1px solid var(--sb-tg-line);background:color-mix(in srgb,#fff 35%,transparent);white-space:nowrap}'
+            . '.sb-tgrid__chip-star{color:var(--sb-color-accent,currentColor)}.sb-tgrid__chip-name{opacity:.6;font-size:.85em}'
             . '.sb-tgrid__progress{height:2px;margin-top:22px;border-radius:2px;background:var(--sb-tg-line);overflow:hidden}.sb-tgrid__progress[hidden]{display:none}'
             . '.sb-tgrid__progress>i{display:block;height:100%;width:var(--p,10%);background:var(--sb-color-accent,currentColor);transition:width .6s cubic-bezier(.2,.8,.2,1)}'
             . '.sb-tgrid__dialog{width:min(620px,calc(100vw - 2rem));max-height:85vh;padding:34px;border:0;border-radius:24px;background:var(--sb-surface-page,#fff);color:var(--sb-text-body,#111);box-shadow:0 40px 80px -30px rgba(0,0,0,.6)}'

@@ -29,6 +29,8 @@ use Slate\Module\StudioBuilder\Render\RenderMode;
 final class TestimonialGridRenderer implements BlockRendererInterface
 {
     public const ORDERS = ['newest', 'oldest', 'title', 'longest'];
+    /** `grid` pages through cards; `ticker` scrolls the texts as chips in rows (short reviews, say). */
+    public const LAYOUTS = ['grid', 'ticker'];
     public const FIELD_PATTERN = '/^([a-z][a-z0-9_]{0,63})?$/';
     /** Testimonials one block shows, all pages together. */
     public const MAX_ITEMS = 200;
@@ -45,7 +47,16 @@ final class TestimonialGridRenderer implements BlockRendererInterface
 
     public function render(BlockRenderScope $scope): string
     {
+        $max = is_int($x = $scope->prop('max_length')) && $x > 0 ? $x : 0;
+        $limit = is_int($l = $scope->prop('limit')) && $l >= 1 && $l <= self::MAX_ITEMS ? $l : 60;
         $items = $this->items($scope);
+        if ($max > 0) {
+            $items = array_values(array_filter($items, static fn(array $t): bool => mb_strlen($t['text']) <= $max));
+        }
+        $items = array_slice($items, 0, $limit);
+        if ($scope->string('layout', 'grid') === 'ticker') {
+            return $this->ticker($scope, $items);
+        }
         $num = static fn(string $key, int $default, int $min, int $max): int => is_int($v = $scope->prop($key)) && $v >= $min && $v <= $max ? $v : $default;
         $per = [$num('per_page', 6, 1, 24), $num('per_page_tablet', 4, 1, 24), $num('per_page_mobile', 3, 1, 24)];
         $cols = [$num('columns', 3, 1, 4), $num('columns_tablet', 2, 1, 4), $num('columns_mobile', 1, 1, 2)];
@@ -65,13 +76,19 @@ final class TestimonialGridRenderer implements BlockRendererInterface
         $pad = static fn(int $n): string => sprintf('%02d', $n);
         $count = strtr($label, ['{from}' => $pad(1), '{to}' => $pad($total), '{total}' => (string) $total]);
         $first = $scope->bool('highlight_first', true);
-        $quote = $scope->bool('show_quote', true);
-        $stars = $scope->bool('show_stars', true);
+        $show = [
+            'quote'  => $scope->bool('show_quote', true),
+            'stars'  => $scope->bool('show_stars', true),
+            'avatar' => $scope->bool('show_avatar', true),
+            'name'   => $scope->bool('show_name', true),
+            'meta'   => $scope->bool('show_meta', true),
+            'date'   => $scope->bool('show_date', true),
+        ];
         $more = $scope->string('read_more_label', 'Read full review');
 
         $cards = '';
         foreach ($items as $i => $t) {
-            $cards .= $this->card($t, $i, $first && $i === 0, $quote, $stars, $more);
+            $cards .= $this->card($t, $i, $first && $i === 0, $show, $more);
         }
         $classes = ['sb-tgrid', $clamp > 0 ? 'sb-tgrid--clamp' : '', $first ? 'sb-tgrid--first' : ''];
         $style = '--sb-tg-cols:' . $cols[0] . ';--sb-tg-cols-md:' . $cols[1] . ';--sb-tg-cols-sm:' . $cols[2] . ($clamp > 0 ? ';--sb-tg-clamp:' . $clamp : '');
@@ -98,30 +115,68 @@ final class TestimonialGridRenderer implements BlockRendererInterface
             . '</div>';
     }
 
-    /** @param array{name: string, text: string, rating: ?float, meta: string, date: string, photo: string} $t */
-    private function card(array $t, int $i, bool $first, bool $quote, bool $stars, string $more): string
+    /**
+     * @param array{name: string, text: string, rating: ?float, meta: string, date: string, photo: string} $t
+     * @param array{quote: bool, stars: bool, avatar: bool, name: bool, meta: bool, date: bool} $show
+     */
+    private function card(array $t, int $i, bool $first, array $show, string $more): string
     {
         $top = '';
-        if ($quote || ($stars && $t['rating'] !== null)) {
+        if ($show['quote'] || ($show['stars'] && $t['rating'] !== null)) {
             $top = '<div class="sb-tgrid__top">'
-                . ($quote ? '<span class="sb-tgrid__quote" aria-hidden="true">“</span>' : '<span></span>')
-                . ($stars && $t['rating'] !== null ? self::stars($t['rating']) : '')
+                . ($show['quote'] ? '<span class="sb-tgrid__quote" aria-hidden="true">“</span>' : '<span></span>')
+                . ($show['stars'] && $t['rating'] !== null ? self::stars($t['rating']) : '')
                 . '</div>';
         }
-        $photo = $t['photo'] !== '' ? Html::safeUrl($t['photo']) : null;
-        $avatar = $photo !== null && preg_match('#^(mailto|tel):#i', $photo) !== 1
-            ? '<span class="sb-tgrid__avatar"><img src="' . Html::e($photo) . '" alt="" width="42" height="42" loading="lazy" decoding="async"></span>'
-            : '<span class="sb-tgrid__avatar" aria-hidden="true">' . Html::e(self::initials($t['name'])) . '</span>';
-        return '<figure' . Html::classAttr(['sb-tgrid__card', $first ? 'is-first' : '']) . ' data-sb-tg-i="' . $i . '">'
+        $avatar = '';
+        if ($show['avatar']) {
+            $photo = $t['photo'] !== '' ? Html::safeUrl($t['photo']) : null;
+            $avatar = $photo !== null && preg_match('#^(mailto|tel):#i', $photo) !== 1
+                ? '<span class="sb-tgrid__avatar"><img src="' . Html::e($photo) . '" alt="" width="42" height="42" loading="lazy" decoding="async"></span>'
+                : '<span class="sb-tgrid__avatar" aria-hidden="true">' . Html::e(self::initials($t['name'])) . '</span>';
+        }
+        $who = ($show['name'] ? '<span class="sb-tgrid__name">' . Html::e($t['name']) . '</span>' : '')
+            . ($show['meta'] && $t['meta'] !== '' ? '<span class="sb-tgrid__meta">' . Html::e($t['meta']) . '</span>' : '');
+        $date = $show['date'] && $t['date'] !== '' ? '<span class="sb-tgrid__date">' . Html::e($t['date']) . '</span>' : '';
+        // The reviewer row goes when nothing is left in it; without an avatar its text starts at the edge.
+        $by = $avatar . ($who !== '' ? '<span class="sb-tgrid__who">' . $who . '</span>' : '') . $date;
+        return '<figure' . Html::classAttr(['sb-tgrid__card', $first ? 'is-first' : '']) . ' data-sb-tg-i="' . $i . '"'
+            . ($show['name'] ? '' : ' data-sb-tg-name="' . Html::e($t['name']) . '"') . '>'
             . $top
             . '<blockquote class="sb-tgrid__text">' . Html::e($t['text']) . '</blockquote>'
             . ($more !== '' ? '<button type="button" class="sb-tgrid__more" data-sb-tg-more hidden>' . Html::e($more) . '</button>' : '')
-            . '<figcaption class="sb-tgrid__by">' . $avatar
-            . '<span class="sb-tgrid__who"><span class="sb-tgrid__name">' . Html::e($t['name']) . '</span>'
-            . ($t['meta'] !== '' ? '<span class="sb-tgrid__meta">' . Html::e($t['meta']) . '</span>' : '') . '</span>'
-            . ($t['date'] !== '' ? '<span class="sb-tgrid__date">' . Html::e($t['date']) . '</span>' : '')
-            . '</figcaption>'
+            . ($by !== '' ? '<figcaption' . Html::classAttr(['sb-tgrid__by', $avatar === '' ? 'sb-tgrid__by--plain' : '']) . '>' . $by . '</figcaption>' : '')
             . '</figure>';
+    }
+
+    /**
+     * The ticker: each testimonial's text as a chip (a star and the words), dealt into rows that scroll in turn
+     * directions with the marquee runtime (`data-sb-ticker`). Without it the rows sit still and clip.
+     *
+     * @param list<array{name: string, text: string, rating: ?float, meta: string, date: string, photo: string}> $items
+     */
+    private function ticker(BlockRenderScope $scope, array $items): string
+    {
+        if ($items === []) {
+            return '';
+        }
+        $rows = is_int($r = $scope->prop('ticker_rows')) && $r >= 1 && $r <= 4 ? $r : 2;
+        $speed = is_int($v = $scope->prop('ticker_speed')) && $v >= 1 && $v <= 10 ? $v : 3;
+        $stars = $scope->bool('show_stars', true);
+        $name = $scope->bool('show_name', false);
+        $lines = array_fill(0, min($rows, count($items)), '');
+        foreach ($items as $i => $t) {
+            $lines[$i % count($lines)] .= '<li class="sb-tgrid__chip">'
+                . ($stars ? '<span class="sb-tgrid__chip-star" aria-hidden="true">★</span>' : '')
+                . '<span class="sb-tgrid__chip-text">' . Html::e($t['text']) . '</span>'
+                . ($name ? '<span class="sb-tgrid__chip-name">' . Html::e($t['name']) . '</span>' : '')
+                . '</li>';
+        }
+        $html = '';
+        foreach ($lines as $n => $line) {
+            $html .= '<ul class="sb-tgrid__row" data-sb-ticker="' . $speed . ' ' . ($n % 2 === 0 ? 'left' : 'right') . ' scroll pause">' . $line . '</ul>';
+        }
+        return '<div class="sb-tgrid sb-tgrid--ticker">' . $html . '</div>';
     }
 
     /** Five stars, the rating's share of them lit; read out as "4.5 out of 5". */
@@ -154,7 +209,7 @@ final class TestimonialGridRenderer implements BlockRendererInterface
     {
         $order = in_array($scope->string('order', 'newest'), self::ORDERS, true) ? $scope->string('order', 'newest') : 'newest';
         $min = is_int($m = $scope->prop('min_length')) && $m >= 0 ? $m : 0;
-        $limit = is_int($l = $scope->prop('limit')) && $l >= 1 && $l <= self::MAX_ITEMS ? $l : 60;
+        $limit = self::MAX_ITEMS; // render() leaves out the too long and keeps `limit`
         $key = static fn(string $v): string => preg_match(self::FIELD_PATTERN, $v) === 1 ? $v : '';
 
         if ($scope->string('source', 'items') === 'content_type') {

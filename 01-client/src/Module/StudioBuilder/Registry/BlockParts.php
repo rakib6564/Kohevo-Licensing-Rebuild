@@ -248,6 +248,10 @@ final class BlockParts
             'label'     => ['label' => 'Label', 'selectors' => ['.sb-field-value__label']],
             'paragraph' => ['label' => 'Paragraphs', 'selectors' => ['.sb-field-value p']],
             'list'      => ['label' => 'Lists', 'selectors' => ['.sb-field-value ul', '.sb-field-value ol']],
+            'chip'      => ['label' => 'Chips', 'selectors' => ['.sb-field-chips>li']],
+            'link'      => ['label' => 'Link', 'selectors' => ['.sb-field-value a']],
+            'image'     => ['label' => 'Image', 'selectors' => ['.sb-field-value img']],
+            'affix'     => ['label' => 'Text before and after', 'selectors' => ['.sb-field-value__before', '.sb-field-value__after']],
         ],
         'core.map' => [
             'frame' => ['label' => 'Map frame', 'selectors' => ['.sb-map']],

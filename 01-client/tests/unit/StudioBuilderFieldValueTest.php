@@ -85,3 +85,26 @@ unit('field value: the block is in the registry, validates its props, and a fiel
     assert_eq(7, $ctx->withAttributes(['a' => 7])->attribute('a'), 'withAttributes adds');
     assert_eq(null, $ctx->attribute('a'), 'and leaves the original alone');
 });
+
+unit('field value: chips and a ticker for lists, text around the value, a domain or text for a link, alt text and a background from fields', function (): void {
+    $fields = [
+        ['key' => 'stack', 'label' => 'Stack', 'type' => 'list'],
+        ['key' => 'live', 'label' => 'Live', 'type' => 'url'],
+        ['key' => 'speed', 'label' => 'Speed', 'type' => 'number'],
+        ['key' => 'shot', 'label' => 'Shot', 'type' => 'image'],
+        ['key' => 'alt', 'label' => 'Alt', 'type' => 'text'],
+        ['key' => 'color', 'label' => 'Colour', 'type' => 'color'],
+        ['key' => 'bad', 'label' => 'Bad', 'type' => 'text'],
+    ];
+    $values = ['stack' => ['WordPress', 'Elementor <Pro>'], 'live' => 'https://www.rtjrentals.com/', 'speed' => '97', 'shot' => '/uploads/a.jpg', 'alt' => 'RTJ "home"', 'color' => '#FF5A1F', 'bad' => 'red;x:y'];
+    assert_true(str_contains(sbfv_render(['field' => 'stack', 'list_style' => 'chips'], $fields, $values), '<ul class="sb-field-chips"><li>WordPress</li><li>Elementor &lt;Pro&gt;</li></ul>'), 'chips');
+    assert_true(str_contains(sbfv_render(['field' => 'stack', 'list_style' => 'ticker', 'ticker_speed' => 5], $fields, $values), '<ul class="sb-field-chips sb-field-chips--ticker" data-sb-ticker="5 left"><li>WordPress</li>'), 'ticker');
+    assert_true(str_contains(sbfv_render(['field' => 'speed', 'before' => 'Speed ', 'after' => '/100'], $fields, $values), '<span class="sb-field-value__before">Speed </span>97<span class="sb-field-value__after">/100</span>'), 'affixes');
+    $dom = sbfv_render(['field' => 'live', 'url_label' => 'domain', 'link_arrow' => true], $fields, $values);
+    assert_true(str_contains($dom, 'href="https://www.rtjrentals.com/" rel="noopener">rtjrentals.com ↗</a>'), $dom);
+    assert_true(str_contains(sbfv_render(['field' => 'live', 'url_label' => 'text', 'link_text' => 'Visit <site>'], $fields, $values), '>Visit &lt;site&gt;</a>'), 'fixed text, escaped');
+    assert_true(str_contains(sbfv_render(['field' => 'shot', 'alt_field' => 'alt'], $fields, $values), 'alt="RTJ &quot;home&quot;"'), 'alt from a field');
+    assert_true(str_contains(sbfv_render(['field' => 'speed', 'bg_field' => 'color'], $fields, $values), 'style="background-color:#FF5A1F"'), 'background from a colour field');
+    assert_true(!str_contains(sbfv_render(['field' => 'speed', 'bg_field' => 'bad'], $fields, $values), 'style='), 'only a hex colour');
+    assert_true(str_contains(sbfv_render(['field' => 'speed', 'list_style' => 'chips'], $fields, $values), '>97</div>'), 'chips only for lists');
+});

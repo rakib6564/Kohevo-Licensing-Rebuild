@@ -1198,7 +1198,8 @@ final class StyleSurface
                 'family'         => ['map', 'font-family', ['heading' => 'var(--sb-font-heading)', 'body' => 'var(--sb-font-body)']],
                 'size'           => ['length', 'font-size'],
                 'weight'         => ['map', 'font-weight', ['normal' => '400', 'medium' => '500', 'semibold' => '600', 'bold' => '700', 'extrabold' => '800']],
-                'line_height'    => ['length', 'line-height'],
+                // A plain number (1.45) as the block's own line height takes, or a length.
+                'line_height'    => ['lineheight', 'line-height'],
                 'letter_spacing' => ['length', 'letter-spacing', true],
                 'transform'      => ['enum', 'text-transform', ['none', 'uppercase', 'lowercase', 'capitalize']],
                 'style'          => $more['typography']['style'],

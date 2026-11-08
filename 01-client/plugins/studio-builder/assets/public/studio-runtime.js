@@ -856,6 +856,22 @@
     if (gap && gap !== 'normal') track.style.gap = gap;
     // Blocks only: a Container's background video, slideshow and shape dividers (and layers this file added) stay put.
     var kids = blockChildren(el);
+    // A Query Loop alone in the node lends its items: the row scrolls the listed items, not the one list. The loop
+    // stays where it was (its chips and pager with it) and gets its items back on undo.
+    var loopGrid = kids.length === 1 && kids[0].classList.contains('sb-block--core-query-loop') ? kids[0].querySelector('.sb-query-loop__grid') : null;
+    if (loopGrid) {
+      kids = Array.prototype.slice.call(loopGrid.children);
+      (frame || el).appendChild(track);
+      kids.forEach(function (k) { track.appendChild(k); });
+      if (frame) el.appendChild(frame);
+      return {
+        track: track,
+        undo: function () {
+          kids.forEach(function (k) { loopGrid.appendChild(k); });
+          (frame || track).remove();
+        }
+      };
+    }
     var anchor = kids.length ? kids[kids.length - 1].nextSibling : null;
     kids.forEach(function (k) { track.appendChild(k); });
     (frame || el).appendChild(track);
@@ -1802,7 +1818,7 @@
           if (!more || !w.contains(more)) return;
           var card = more.closest('.sb-tgrid__card');
           full.textContent = (qs(card, '.sb-tgrid__text') || {}).textContent || '';
-          var name = (qs(card, '.sb-tgrid__name') || {}).textContent || '';
+          var name = card.getAttribute('data-sb-tg-name') || (qs(card, '.sb-tgrid__name') || {}).textContent || '';
           whoEl.textContent = '— ' + name + (note ? ' · ' + note : '');
           opener = more;
           dialog.showModal();

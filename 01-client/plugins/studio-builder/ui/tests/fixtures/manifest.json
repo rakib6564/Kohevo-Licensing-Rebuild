@@ -290,6 +290,7 @@
             "category": "content",
             "default_props": {
                 "allow_multiple": false,
+                "icon": "chevron",
                 "items": [
                     {
                         "body": "Pick a track, book a trial class, and we handle the rest.",
@@ -303,10 +304,33 @@
                         "body": "Comfortable clothes, water, and socks you can move in.",
                         "heading": "What should I bring?"
                     }
-                ]
+                ],
+                "look": "boxed"
             },
             "description": "Stacked rows that expand, ideal for FAQs",
             "field_schema": [
+                {
+                    "key": "look",
+                    "type": "enum",
+                    "label": "Rows look",
+                    "required": false,
+                    "default": "boxed",
+                    "allowed_values": [
+                        "boxed",
+                        "lines"
+                    ]
+                },
+                {
+                    "key": "icon",
+                    "type": "enum",
+                    "label": "Open icon",
+                    "required": false,
+                    "default": "chevron",
+                    "allowed_values": [
+                        "chevron",
+                        "plus"
+                    ]
+                },
                 {
                     "key": "items",
                     "type": "repeater",
@@ -5225,6 +5249,7 @@
                 "content_type": "",
                 "empty_message": "No posts found.",
                 "enable_pagination": true,
+                "featured_only": false,
                 "filter_all_label": "All",
                 "filter_counts": true,
                 "filter_field": "",
@@ -5322,8 +5347,15 @@
                     "required": false,
                     "default": 6,
                     "min": 1,
-                    "max": 24,
+                    "max": 48,
                     "integer_only": true
+                },
+                {
+                    "key": "featured_only",
+                    "type": "boolean",
+                    "label": "Featured items only",
+                    "required": false,
+                    "default": false
                 },
                 {
                     "key": "columns",
@@ -6323,7 +6355,9 @@
                         "text": "Great communication from start to finish. I would hire him again."
                     }
                 ],
+                "layout": "grid",
                 "limit": 60,
+                "max_length": 0,
                 "meta_fields": "country",
                 "min_length": 0,
                 "order": "newest",
@@ -6333,12 +6367,18 @@
                 "photo_field": "",
                 "rating_field": "rating",
                 "read_more_label": "Read full review",
+                "show_avatar": true,
+                "show_date": true,
+                "show_meta": true,
+                "show_name": true,
                 "show_progress": true,
                 "show_quote": true,
                 "show_stars": true,
                 "source": "items",
                 "source_note": "",
-                "text_field": "text"
+                "text_field": "text",
+                "ticker_rows": 2,
+                "ticker_speed": 3
             },
             "description": "Reviews in a grid that pages like a carousel, from a content type or typed in",
             "field_schema": [
@@ -6418,6 +6458,16 @@
                     "key": "min_length",
                     "type": "number",
                     "label": "Only reviews at least this long (characters)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2000,
+                    "integer_only": true
+                },
+                {
+                    "key": "max_length",
+                    "type": "number",
+                    "label": "Only reviews at most this long (characters, 0 = any)",
                     "required": false,
                     "default": 0,
                     "min": 0,
@@ -6513,6 +6563,37 @@
                             "default": null
                         }
                     ]
+                },
+                {
+                    "key": "layout",
+                    "type": "enum",
+                    "label": "Layout",
+                    "required": false,
+                    "default": "grid",
+                    "allowed_values": [
+                        "grid",
+                        "ticker"
+                    ]
+                },
+                {
+                    "key": "ticker_rows",
+                    "type": "number",
+                    "label": "Ticker rows",
+                    "required": false,
+                    "default": 2,
+                    "min": 1,
+                    "max": 4,
+                    "integer_only": true
+                },
+                {
+                    "key": "ticker_speed",
+                    "type": "number",
+                    "label": "Ticker speed",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 10,
+                    "integer_only": true
                 },
                 {
                     "key": "per_page",
@@ -6619,6 +6700,34 @@
                     "key": "show_stars",
                     "type": "boolean",
                     "label": "Stars",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_avatar",
+                    "type": "boolean",
+                    "label": "Avatar",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_name",
+                    "type": "boolean",
+                    "label": "Name",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_meta",
+                    "type": "boolean",
+                    "label": "Details under the name",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_date",
+                    "type": "boolean",
+                    "label": "Date",
                     "required": false,
                     "default": true
                 },
@@ -7297,7 +7406,9 @@
             "binding_slots": [],
             "category": "layout",
             "default_props": {
-                "allow_multiple": false
+                "allow_multiple": false,
+                "icon": "chevron",
+                "look": "boxed"
             },
             "description": "Rows that open and close, with any blocks inside",
             "field_schema": [
@@ -7307,6 +7418,28 @@
                     "label": "Allow several rows open at once",
                     "required": false,
                     "default": false
+                },
+                {
+                    "key": "look",
+                    "type": "enum",
+                    "label": "Rows look",
+                    "required": false,
+                    "default": "boxed",
+                    "allowed_values": [
+                        "boxed",
+                        "lines"
+                    ]
+                },
+                {
+                    "key": "icon",
+                    "type": "enum",
+                    "label": "Open icon",
+                    "required": false,
+                    "default": "chevron",
+                    "allowed_values": [
+                        "chevron",
+                        "plus"
+                    ]
                 }
             ],
             "icon": "list-check",
@@ -10631,12 +10764,21 @@
             "binding_slots": [],
             "category": "theme",
             "default_props": {
+                "after": "",
+                "alt_field": "",
+                "before": "",
+                "bg_field": "",
                 "fallback": "",
                 "field": "",
                 "fit": "auto",
+                "link_arrow": false,
+                "link_text": "",
                 "link_to_post": false,
+                "list_style": "list",
                 "show_label": false,
-                "tag": "div"
+                "tag": "div",
+                "ticker_speed": 3,
+                "url_label": "full"
             },
             "description": "A custom field of this page",
             "field_schema": [
@@ -10697,6 +10839,89 @@
                         "cover",
                         "contain"
                     ]
+                },
+                {
+                    "key": "before",
+                    "type": "string",
+                    "label": "Text before the value",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "after",
+                    "type": "string",
+                    "label": "Text after the value",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "list_style",
+                    "type": "enum",
+                    "label": "A list shows as",
+                    "required": false,
+                    "default": "list",
+                    "allowed_values": [
+                        "list",
+                        "chips",
+                        "ticker"
+                    ]
+                },
+                {
+                    "key": "ticker_speed",
+                    "type": "number",
+                    "label": "Ticker speed",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 10,
+                    "integer_only": true
+                },
+                {
+                    "key": "url_label",
+                    "type": "enum",
+                    "label": "A web address shows as",
+                    "required": false,
+                    "default": "full",
+                    "allowed_values": [
+                        "full",
+                        "domain",
+                        "text"
+                    ]
+                },
+                {
+                    "key": "link_text",
+                    "type": "string",
+                    "label": "Link text",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                },
+                {
+                    "key": "link_arrow",
+                    "type": "boolean",
+                    "label": "Arrow after the link",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "alt_field",
+                    "type": "string",
+                    "label": "Image description from field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
+                },
+                {
+                    "key": "bg_field",
+                    "type": "string",
+                    "label": "Background colour from field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
                 }
             ],
             "icon": "list-check",
@@ -10745,6 +10970,22 @@
                 {
                     "key": "list",
                     "label": "Lists"
+                },
+                {
+                    "key": "chip",
+                    "label": "Chips"
+                },
+                {
+                    "key": "link",
+                    "label": "Link"
+                },
+                {
+                    "key": "image",
+                    "label": "Image"
+                },
+                {
+                    "key": "affix",
+                    "label": "Text before and after"
                 }
             ],
             "title": "Field value",
@@ -11162,6 +11403,8 @@
                 "body_field": "",
                 "display": "list",
                 "field": "",
+                "icon": "chevron",
+                "look": "boxed",
                 "title_field": ""
             },
             "description": "The rows of a repeater field",
@@ -11210,6 +11453,28 @@
                     "label": "Allow several open",
                     "required": false,
                     "default": false
+                },
+                {
+                    "key": "look",
+                    "type": "enum",
+                    "label": "Rows look",
+                    "required": false,
+                    "default": "boxed",
+                    "allowed_values": [
+                        "boxed",
+                        "lines"
+                    ]
+                },
+                {
+                    "key": "icon",
+                    "type": "enum",
+                    "label": "Open icon",
+                    "required": false,
+                    "default": "chevron",
+                    "allowed_values": [
+                        "chevron",
+                        "plus"
+                    ]
                 }
             ],
             "icon": "list-check",
