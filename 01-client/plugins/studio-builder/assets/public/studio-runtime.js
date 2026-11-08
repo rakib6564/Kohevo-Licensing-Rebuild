@@ -460,9 +460,10 @@
   }
 
 /* ── Feature: page colours ───────────────────────────────────────────────
-   * [data-sb-page-colors] (interactions.page_colors) carries `--sb-page-bg` / `--sb-page-fg`. The section crossing the
-   * middle of the screen gives the page its colours: they are set on <html> as `--sb-paged-bg` / `--sb-paged-fg` and the
-   * stylesheet blends the body to them. Above the first such section the page keeps its own colours; past one, it keeps
+   * [data-sb-page-colors="bg fg muted line accent"] (interactions.page_colors) carries `--sb-page-<name>` for the colours
+   * it lists. The section crossing the middle of the screen gives the page its colours: they are set on <html> as
+   * `--sb-paged-<name>` and the stylesheet blends the body to them and points the theme's text, muted, border and accent
+   * colours at them. Above the first such section the page keeps its own colours; past one, it keeps
    * the last until another takes over.
    * [data-sb-adapt] (interactions.adapt, a header) takes the colours of the section beneath its bottom edge, inline.
    */
@@ -470,11 +471,34 @@
     var sections = qsa(root, '[data-sb-page-colors]');
     if (!sections.length) return;
     var html = document.documentElement;
+    var NAMES = ['bg', 'fg', 'muted', 'line', 'accent'];
+    // Only the colours the section lists in its attribute: a custom property is inherited, so reading one it does not set would pick up an outer section's.
     function colours(el) {
       var cs = global.getComputedStyle(el);
-      return { bg: cs.getPropertyValue('--sb-page-bg').trim(), fg: cs.getPropertyValue('--sb-page-fg').trim() };
+      var own = (el.getAttribute('data-sb-page-colors') || 'bg fg').split(/\s+/);
+      var c = {};
+      NAMES.forEach(function (n) { c[n] = own.indexOf(n) >= 0 ? cs.getPropertyValue('--sb-page-' + n).trim() : ''; });
+      return c;
     }
     var list = sections.map(function (el) { return { el: el, c: colours(el) }; });
+    // A section scrolled near the screen (15% of it either side) lets the page's colours show; elsewhere it paints its
+    // own, so it reads right wherever it is and whenever it is read (the stylesheet's :not([data-sb-page-on]) rules).
+    // One already in view when the page opens keeps its own until it gives the page its colours (and the page has
+    // blended to them): it is never shown in another section's colours it was not scrolled into.
+    var io = null;
+    if ('IntersectionObserver' in global) {
+      io = new global.IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          var first = !en.target.__sbPageSeen;
+          en.target.__sbPageSeen = true;
+          if (en.isIntersecting) { if (!first) en.target.setAttribute('data-sb-page-on', ''); }
+          else en.target.removeAttribute('data-sb-page-on');
+        });
+      }, { rootMargin: '15% 0px 15% 0px' });
+      sections.forEach(function (el) { io.observe(el); });
+    } else {
+      sections.forEach(function (el) { el.setAttribute('data-sb-page-on', ''); });
+    }
     var adapters = qsa(root, '[data-sb-adapt]').map(function (el) { return { el: el, hit: null }; });
     // The innermost themed section spanning the line y, leaving out any that holds `skip`.
     function at(y, skip) {
@@ -490,7 +514,15 @@
       if (value) { html.style.setProperty(name, value); html.setAttribute(attr, ''); }
       else { html.style.removeProperty(name); html.removeAttribute(attr); }
     }
+    // The theme colours each page colour stands in for (as the stylesheet points them for a section or the page).
+    var TOKENS = { fg: ['--sb-text-heading', '--sb-text-body', '--sb-text-primary'], muted: ['--sb-text-muted'], line: ['--sb-border-default'], accent: ['--sb-color-accent', '--sb-text-accent'] };
+    function tokenVars(el, c) {
+      Object.keys(TOKENS).forEach(function (n) {
+        TOKENS[n].forEach(function (v) { if (c && c[n]) el.style.setProperty(v, c[n]); else el.style.removeProperty(v); });
+      });
+    }
     var current = null;
+    var onTimer = 0;
     var ticking = false;
     function update() {
       ticking = false;
@@ -503,8 +535,14 @@
       }
       if (hit !== current) {
         current = hit;
-        setVar('--sb-paged-bg', 'data-sb-paged-bg', hit && hit.c.bg);
-        setVar('--sb-paged-fg', 'data-sb-paged-fg', hit && hit.c.fg);
+        NAMES.forEach(function (n) { setVar('--sb-paged-' + n, 'data-sb-paged-' + n, hit && hit.c[n]); });
+        // The section giving the colours (and the themed sections around it) follows the page once it has blended.
+        global.clearTimeout(onTimer);
+        if (hit) {
+          onTimer = global.setTimeout(function () {
+            list.forEach(function (s) { if (s.el === hit.el || s.el.contains(hit.el)) s.el.setAttribute('data-sb-page-on', ''); });
+          }, reducedMotion() ? 0 : 650);
+        }
       }
       adapters.forEach(function (a) {
         var r = a.el.getBoundingClientRect();
@@ -513,6 +551,8 @@
         a.hit = under;
         if (under && under.c.bg) a.el.style.setProperty('background-color', under.c.bg, 'important'); else a.el.style.removeProperty('background-color');
         if (under && under.c.fg) a.el.style.setProperty('color', under.c.fg, 'important'); else a.el.style.removeProperty('color');
+        // And the theme colours inside it (text, muted, border, accent), so a logo or link on theme colours follows too.
+        tokenVars(a.el, under && under.c);
       });
     }
     function onScroll() {
@@ -525,10 +565,12 @@
     update();
     mount(function () {
       offs.forEach(function (off) { off(); });
+      if (io) io.disconnect();
+      global.clearTimeout(onTimer);
+      sections.forEach(function (el) { el.removeAttribute('data-sb-page-on'); delete el.__sbPageSeen; });
       html.removeAttribute('data-sb-page-colors');
-      setVar('--sb-paged-bg', 'data-sb-paged-bg', '');
-      setVar('--sb-paged-fg', 'data-sb-paged-fg', '');
-      adapters.forEach(function (a) { a.el.style.removeProperty('background-color'); a.el.style.removeProperty('color'); });
+      NAMES.forEach(function (n) { setVar('--sb-paged-' + n, 'data-sb-paged-' + n, ''); });
+      adapters.forEach(function (a) { a.el.style.removeProperty('background-color'); a.el.style.removeProperty('color'); tokenVars(a.el, null); });
     });
   }
 
@@ -665,7 +707,21 @@
       }, 1000 + Math.max(0, line) * step);
     }
 
-    els.forEach(function (el) {
+    // Split once the page's fonts are in (at most a second's wait): lines are measured in the font they end in, and
+    // the words never sit in their masks in a fallback font that wraps them differently (no jump when the font lands).
+    var started = false;
+    var fontWait = 0;
+    function start() {
+      if (started) return;
+      started = true;
+      global.clearTimeout(fontWait);
+      els.forEach(split);
+      if (lighters.length) {
+        offs.push(on(global, 'scroll', onScroll, { passive: true }), on(global, 'resize', onScroll, { passive: true }));
+        light();
+      }
+    }
+    function split(el) {
       var parts = (el.getAttribute('data-sb-text') || '').split(':');
       var units = splitWords(el);
       el.setAttribute('data-sb-split', '');
@@ -682,7 +738,7 @@
       } else {
         lighters.push({ el: el, units: units, dim: String(clamp(parseInt(parts[1], 10) || 18, 5, 60) / 100) });
       }
-    });
+    }
 
     var ticking = false;
     function light() {
@@ -700,11 +756,15 @@
       ticking = true;
       global.requestAnimationFrame(light);
     }
-    if (lighters.length) {
-      offs.push(on(global, 'scroll', onScroll, { passive: true }), on(global, 'resize', onScroll, { passive: true }));
-      light();
+    if (document.fonts && document.fonts.status !== 'loaded' && document.fonts.ready) {
+      fontWait = global.setTimeout(start, 1000);
+      document.fonts.ready.then(start);
+    } else {
+      start();
     }
     mount(function () {
+      started = true;
+      global.clearTimeout(fontWait);
       if (io) io.disconnect();
       offs.forEach(function (off) { off(); });
       els.forEach(function (el) {
@@ -851,16 +911,44 @@
     track.className = className;
     if (gap && gap !== 'normal') track.style.gap = gap;
     // Blocks only: a Container's background video, slideshow and shape dividers (and layers this file added) stay put.
+    // A widget's own list that scrolls (a Field value's chips, a Testimonial ticker row) has no child blocks: its items move.
     var kids = blockChildren(el);
+    if (!kids.length && !el.classList.contains('sb-block')) kids = Array.prototype.slice.call(el.children);
+    // A Query Loop alone in the node lends its items: the row scrolls the listed items, not the one list. The loop
+    // stays where it was (its chips and pager with it) and gets its items back on undo.
+    var loopBlock = kids.length === 1 && kids[0].classList.contains('sb-block--core-query-loop') ? kids[0] : null;
+    var loopGrid = loopBlock ? loopBlock.querySelector('.sb-query-loop__grid') : null;
+    if (loopGrid) {
+      kids = Array.prototype.slice.call(loopGrid.children);
+      kids.forEach(function (k) { track.appendChild(k); });
+      if (/^(UL|OL)$/.test(loopGrid.tagName)) track.setAttribute('role', 'list');
+      if (frame) frame.appendChild(track);
+      // The row takes the loop's place; the emptied loop steps aside until the items go back.
+      el.insertBefore(frame || track, loopBlock);
+      var wasHidden = loopBlock.hidden;
+      loopBlock.hidden = true;
+      return {
+        track: track,
+        undo: function () {
+          kids.forEach(function (k) { loopGrid.appendChild(k); });
+          (frame || track).remove();
+          loopBlock.hidden = wasHidden;
+        }
+      };
+    }
     var anchor = kids.length ? kids[kids.length - 1].nextSibling : null;
     kids.forEach(function (k) { track.appendChild(k); });
     (frame || el).appendChild(track);
     el.insertBefore(frame || track, anchor);
+    // A list's items now sit in the track: the track is the list, the <ul> only its frame (no <li> outside a list).
+    var listRole = /^(UL|OL)$/.test(el.tagName) ? el.getAttribute('role') : undefined;
+    if (listRole !== undefined) { el.setAttribute('role', 'presentation'); track.setAttribute('role', 'list'); }
     return {
       track: track,
       undo: function () {
         kids.forEach(function (k) { el.insertBefore(k, frame || track); });
         (frame || track).remove();
+        if (listRole !== undefined) { if (listRole === null) el.removeAttribute('role'); else el.setAttribute('role', listRole); }
       }
     };
   }
@@ -1618,6 +1706,46 @@
       };
       tick();
       timers.push(global.setInterval(tick, 60000));
+
+      // The button's lines take turns every few seconds; {status} follows the hours, {time} is the owner's clock.
+      var sub = qs(launcher, '[data-sb-msg-lines]');
+      var lines = [];
+      try { lines = sub ? JSON.parse(sub.getAttribute('data-sb-msg-lines') || '[]') : []; } catch (e) { lines = []; }
+      if (sub && lines.length) {
+        var first = sub.textContent;
+        var clock = null;
+        try { clock = new Intl.DateTimeFormat('en-US', { timeZone: zone || undefined, hour: 'numeric', minute: '2-digit', hour12: true }); } catch (e) { clock = null; }
+        var fill = function (line) {
+          var online = w.classList.contains('is-online');
+          return line.replace('{status}', sub.getAttribute(online ? 'data-sb-online' : 'data-sb-away') || '')
+            .replace('{time}', clock ? clock.format(new Date()) : '');
+        };
+        var at = 0;
+        sub.textContent = fill(lines[0]);
+        if (lines.length > 1 && !reducedMotion()) {
+          timers.push(global.setInterval(function () {
+            sub.setAttribute('data-fade', '');
+            timers.push(global.setTimeout(function () {
+              at = (at + 1) % lines.length;
+              sub.textContent = fill(lines[at]);
+              sub.removeAttribute('data-fade');
+            }, 300));
+          }, 4000));
+        }
+        offs.push(function () { sub.textContent = first; sub.removeAttribute('data-fade'); });
+      }
+
+      // Shrunk to the photo or icon while scrolling down; back on the way up and near the top.
+      if (w.hasAttribute('data-sb-msg-compact')) {
+        var lastY = global.scrollY;
+        offs.push(on(global, 'scroll', function () {
+          var y = global.scrollY;
+          if (y < 200 || y < lastY - 4) w.classList.remove('is-compact');
+          else if (y > lastY + 4) w.classList.add('is-compact');
+          lastY = y;
+        }, { passive: true }));
+        offs.push(function () { w.classList.remove('is-compact'); });
+      }
     });
     mount(function () {
       offs.forEach(function (off) { off(); });
@@ -1647,6 +1775,171 @@
     mount(function () { timers.forEach(function (t) { global.clearInterval(t); }); });
   }
 
+
+  /* ── Feature: testimonial grid ───────────────────────────────────────────
+   * `[data-sb-tgrid]` holds every testimonial; this shows one page at a time: `data-sb-tg-per` gives the number for a
+   * desktop, a tablet (under 1024px) and a phone (under 768px). It draws the numbered pages (first, last and the ones
+   * around the current, with gaps), the arrows, the count and the progress line, swipes on touch, keeps the first
+   * card of each page marked (`is-first`) and lets a card whose text is clamped open it whole in the <dialog>.
+   * A change of screen size keeps the first card shown on screen. Teardown shows every card again, as the server did.
+   */
+
+  function initTestimonialGrids(root) {
+    var grids = qsa(root, '[data-sb-tgrid]');
+    if (!grids.length) return;
+    var offs = [];
+    grids.forEach(function (w) {
+      var cards = qsa(w, '.sb-tgrid__card');
+      var nav = qs(w, '.sb-tgrid__nav'), pagesEl = qs(w, '[data-sb-tg-pages]');
+      var prev = qs(w, '[data-sb-tg-prev]'), next = qs(w, '[data-sb-tg-next]');
+      var countEl = qs(w, '[data-sb-tg-count]'), prog = qs(w, '.sb-tgrid__progress');
+      var dialog = qs(w, '.sb-tgrid__dialog');
+      if (!cards.length || !nav || !pagesEl || !prev || !next) return;
+      var serverCount = countEl ? countEl.textContent : '';
+      var label = countEl ? countEl.getAttribute('data-sb-tg-label') || '' : '';
+      var per3 = (w.getAttribute('data-sb-tg-per') || '6,4,3').split(',').map(function (n) { return Math.max(1, parseInt(n, 10) || 6); });
+      var marksFirst = w.classList.contains('sb-tgrid--first');
+      var total = cards.length, page = 0;
+      function per() { var x = global.innerWidth; return x < 768 ? per3[2] : x < 1024 ? per3[1] : per3[0]; }
+      function pad(n) { return (n < 10 ? '0' : '') + n; }
+      function pageCount() { return Math.ceil(total / per()); }
+      function render(scroll) {
+        var p = per(), n = pageCount();
+        page = Math.max(0, Math.min(page, n - 1));
+        cards.forEach(function (c, i) {
+          var show = i >= page * p && i < (page + 1) * p;
+          c.hidden = !show;
+          c.classList.remove('is-in');
+          if (marksFirst) c.classList.toggle('is-first', i === page * p);
+          if (show) {
+            c.style.setProperty('--i', String(i - page * p));
+            if (!reducedMotion()) { void c.offsetWidth; c.classList.add('is-in'); }
+          }
+        });
+        measure();
+        global.requestAnimationFrame(measure);
+        if (countEl) countEl.textContent = label.replace('{from}', pad(page * p + 1)).replace('{to}', pad(Math.min(total, (page + 1) * p))).replace('{total}', String(total));
+        prev.disabled = page === 0;
+        next.disabled = page >= n - 1;
+        var nums = [];
+        for (var k = 0; k < n; k++) {
+          if (k === 0 || k === n - 1 || Math.abs(k - page) <= 1) nums.push(k);
+          else if (nums[nums.length - 1] !== -1) nums.push(-1);
+        }
+        pagesEl.innerHTML = nums.map(function (x) {
+          return x < 0 ? '<span class="sb-tgrid__gap" aria-hidden="true">…</span>'
+            : '<button type="button" class="sb-tgrid__page" data-sb-tg-page="' + x + '" aria-current="' + (x === page) + '">' + pad(x + 1) + '</button>';
+        }).join('');
+        nav.hidden = n < 2;
+        if (prog) { prog.hidden = n < 2; prog.style.setProperty('--p', ((page + 1) / n * 100).toFixed(1) + '%'); }
+        if (scroll) {
+          var r = w.getBoundingClientRect();
+          if (r.top < 60) global.scrollBy({ top: r.top - 110, behavior: reducedMotion() ? 'auto' : 'smooth' });
+        }
+      }
+      // A clamped text can be told from a short one only once the page's cards are laid out (and the clamp,
+      // which waits for the runtime, applies): measured now, on the next frame and when the fonts arrive.
+      function measure() {
+        cards.forEach(function (c) {
+          var t = qs(c, '.sb-tgrid__text'), more = qs(c, '[data-sb-tg-more]');
+          if (t && more) more.hidden = c.hidden || t.scrollHeight <= t.clientHeight + 2;
+        });
+      }
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (w.isConnected) measure(); });
+      function go(to) { page = to; render(true); }
+      offs.push(on(prev, 'click', function () { go(page - 1); }));
+      offs.push(on(next, 'click', function () { go(page + 1); }));
+      offs.push(on(pagesEl, 'click', function (e) {
+        var b = e.target.closest ? e.target.closest('[data-sb-tg-page]') : null;
+        if (b) go(parseInt(b.getAttribute('data-sb-tg-page'), 10) || 0);
+      }));
+      // A sideways swipe on the cards turns the page.
+      var grid = qs(w, '.sb-tgrid__grid'), sx = null, sy = 0;
+      if (grid) {
+        offs.push(on(grid, 'touchstart', function (e) { var t = e.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true }));
+        offs.push(on(grid, 'touchend', function (e) {
+          if (sx === null) return;
+          var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+          sx = null;
+          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            if (dx < 0 && !next.disabled) go(page + 1);
+            else if (dx > 0 && !prev.disabled) go(page - 1);
+          }
+        }, { passive: true }));
+      }
+      var lastPer = per();
+      offs.push(on(global, 'resize', function () {
+        var p = per();
+        // A phone's address bar resizes the window as the page scrolls: same page size, so only measure again.
+        if (p === lastPer) { measure(); return; }
+        page = Math.floor(page * lastPer / p);
+        lastPer = p;
+        render(false);
+      }, { passive: true }));
+
+      // The whole review in the dialog: its text, and who wrote it with the block's note ("on Fiverr").
+      if (dialog && typeof dialog.showModal === 'function') {
+        var full = qs(dialog, '[data-sb-tg-full]'), whoEl = qs(dialog, '[data-sb-tg-who]'), note = dialog.getAttribute('data-sb-tg-note') || '';
+        var opener = null;
+        offs.push(on(w, 'click', function (e) {
+          var more = e.target.closest ? e.target.closest('[data-sb-tg-more]') : null;
+          if (!more || !w.contains(more)) return;
+          var card = more.closest('.sb-tgrid__card');
+          full.textContent = (qs(card, '.sb-tgrid__text') || {}).textContent || '';
+          var name = card.getAttribute('data-sb-tg-name') || (qs(card, '.sb-tgrid__name') || {}).textContent || '';
+          whoEl.textContent = '— ' + name + (note ? ' · ' + note : '');
+          opener = more;
+          dialog.showModal();
+        }));
+        offs.push(on(dialog, 'click', function (e) {
+          if (e.target === dialog || (e.target.closest && e.target.closest('[data-sb-tg-close]'))) dialog.close();
+        }));
+        offs.push(on(dialog, 'close', function () { if (opener) opener.focus(); }));
+      }
+      render(false);
+      offs.push(function () {
+        if (dialog && dialog.open) dialog.close();
+        cards.forEach(function (c, i) { c.hidden = false; c.classList.remove('is-in'); c.style.removeProperty('--i'); if (marksFirst) c.classList.toggle('is-first', i === 0); });
+        qsa(w, '[data-sb-tg-more]').forEach(function (m) { m.hidden = true; });
+        pagesEl.innerHTML = '';
+        nav.hidden = true;
+        if (prog) prog.hidden = true;
+        if (countEl) countEl.textContent = serverCount;
+      });
+    });
+    mount(function () { offs.forEach(function (off) { off(); }); });
+  }
+
+  /* ── Feature: nav menu preview ───────────────────────────────────────────
+   * A Nav menu with `preview` has a panel of pictures (`.sb-nav__shot[data-sb-preview=i]`) and its links carry the
+   * same index on their <li>. Hovering or focusing a link shows its picture; the last one shown stays until another
+   * link takes over. The server marks the first (`data-on`), so the panel is never empty without the runtime.
+   */
+
+  function initNavPreviews(root) {
+    var navs = qsa(root, '[data-sb-nav-preview]');
+    if (!navs.length) return;
+    var offs = [];
+    navs.forEach(function (nav) {
+      var shots = qsa(nav, '.sb-nav__shot[data-sb-preview]');
+      function show(e) {
+        var li = e.target && e.target.closest ? e.target.closest('li[data-sb-preview]') : null;
+        if (!li || !nav.contains(li)) return;
+        var i = li.getAttribute('data-sb-preview');
+        shots.forEach(function (f) { if (f.getAttribute('data-sb-preview') === i) f.setAttribute('data-on', ''); else f.removeAttribute('data-on'); });
+      }
+      offs.push(on(nav, 'pointerover', show), on(nav, 'focusin', show));
+      // The current page's picture first, once the current link is marked (currentLinks runs after this feature).
+      var t = global.setTimeout(function () {
+        var cur = nav.querySelector('li[data-sb-preview] > [aria-current]');
+        if (cur) show({ target: cur });
+      }, 0);
+      offs.push(function () { global.clearTimeout(t); });
+      // Back to the server's state: the first picture shown.
+      offs.push(function () { shots.forEach(function (f, n) { if (n === 0) f.setAttribute('data-on', ''); else f.removeAttribute('data-on'); }); });
+    });
+    mount(function () { offs.forEach(function (off) { off(); }); });
+  }
 
 /* ── Feature: click and scroll interaction triggers ──────────────────────
    * The renderer marks a block with `data-sb-interaction-trigger`.
@@ -2531,6 +2824,8 @@
         if (panel) {
           panel.hidden = !open;
           panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+          // A closed answer stays laid out for the height animation: inert keeps its links out of the tab order too.
+          panel.inert = !open;
           // Height animation needs a real pixel value; fall back to instant.
           if (!reducedMotion() && panel.scrollHeight) {
             panel.style.height = open ? panel.scrollHeight + 'px' : panel.style.height || '0px';
@@ -2570,7 +2865,10 @@
         }));
       });
 
-      teardowns.push(function () { off.forEach(function (un) { un(); }); });
+      teardowns.push(function () {
+        off.forEach(function (un) { un(); });
+        items.forEach(function (item) { var p = panelOf(item); if (p) p.inert = false; });
+      });
     });
 
     if (teardowns.length) mount(function () { teardowns.forEach(function (fn) { fn(); }); });
@@ -3644,6 +3942,7 @@
 
   /* ── Feature: mega menu panels ───────────────────────────────────────────
    * A panel starts at the header's bottom edge and spans the window. Without this file it keeps the menu's own width.
+   * `--sb-mega-bridge` is the gap between the menu's row and the panel: the panel's hover bridge fills just that gap.
    */
   function initMegaMenus(root) {
     var off = [];
@@ -3653,7 +3952,12 @@
         var rect = nav.getBoundingClientRect();
         var header = nav.closest('.sb-site-header');
         var section = header && (nav.closest('.sb-top') || header);
-        if (section) nav.style.setProperty('--sb-mega-top', (section.getBoundingClientRect().bottom - rect.top) + 'px');
+        if (section) {
+          var bottom = section.getBoundingClientRect().bottom;
+          nav.style.setProperty('--sb-mega-top', (bottom - rect.top) + 'px');
+          // The hover bridge spans only the gap under the menu's row, so it never covers the other links.
+          nav.style.setProperty('--sb-mega-bridge', Math.max(0, bottom - rect.bottom) + 'px');
+        }
         nav.style.setProperty('--sb-mega-left', (-rect.left) + 'px');
         nav.style.setProperty('--sb-mega-vw', document.documentElement.clientWidth + 'px');
       }
@@ -3665,7 +3969,7 @@
     if (navs.length) {
       mount(function () {
         off.forEach(function (un) { un(); });
-        navs.forEach(function (nav) { ['--sb-mega-top', '--sb-mega-left', '--sb-mega-vw'].forEach(function (name) { nav.style.removeProperty(name); }); });
+        navs.forEach(function (nav) { ['--sb-mega-top', '--sb-mega-bridge', '--sb-mega-left', '--sb-mega-vw'].forEach(function (name) { nav.style.removeProperty(name); }); });
       });
     }
   }
@@ -3785,6 +4089,8 @@
     ['loopDialogs', initLoopDialogs],
     ['messageWidgets', initMessageWidgets],
     ['clocks', initClocks],
+    ['navPreviews', initNavPreviews],
+    ['testimonialGrids', initTestimonialGrids],
     ['fragments', initFragments],
     ['variants', initVariants],
     ['shopGrid', initShopGrid],

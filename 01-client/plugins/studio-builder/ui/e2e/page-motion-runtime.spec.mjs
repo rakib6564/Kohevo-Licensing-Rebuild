@@ -50,6 +50,8 @@ test('page colours follow the section in the middle of the screen, and a header 
   expect(await htmlVar(page, '--sb-paged-fg')).toBe('#ede8df');
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(11, 11, 12)', { timeout: 2000 });
   await expect(header).toHaveCSS('background-color', 'rgb(11, 11, 12)', { timeout: 2000 });
+  // The header carries the theme colours of what is beneath it too, so a logo or link on theme colours follows.
+  expect(await header.evaluate((el) => el.style.getPropertyValue('--sb-text-body'))).toBe('#ede8df');
 
   await scrollTo(page, await sectionTop(page, 2));
   expect(await htmlVar(page, '--sb-paged-bg')).toBe('#ede8df');
@@ -59,6 +61,39 @@ test('page colours follow the section in the middle of the screen, and a header 
   expect(await htmlVar(page, '--sb-paged-bg')).toBe('#ede8df');
   await scrollTo(page, 0);
   expect(await htmlVar(page, '--sb-paged-bg')).toBe('#0b0b0c');
+});
+
+test('a coloured section off the screen paints its own colours, and follows the page once scrolled near it', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await load(page);
+  const light = page.locator('section').nth(2);
+  // Far below the screen: its own background and text, so it reads right whenever it is read.
+  await expect(light).not.toHaveAttribute('data-sb-page-on', '');
+  await expect(light).toHaveCSS('background-color', 'rgb(237, 232, 223)');
+  // Scrolled until it shows at the bottom (the dark section still gives the colours): it lets the page's show.
+  await scrollTo(page, (await sectionTop(page, 2)) - 600);
+  await expect(light).toHaveAttribute('data-sb-page-on', '', { timeout: 2000 });
+  await expect(light).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  // Back far above it: its own colours again.
+  await scrollTo(page, 0);
+  await expect(light).not.toHaveAttribute('data-sb-page-on', '', { timeout: 2000 });
+});
+
+test('a section already in view when the page opens keeps its own colours until it gives the page its colours', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.setContent(html(false));
+  // Open the page scrolled so the light section shows at the bottom while the dark one gives the colours.
+  await page.evaluate((y) => window.scrollTo(0, y), (await sectionTop(page, 2)) - 600);
+  await page.addScriptTag({ path: runtimePath });
+  await page.waitForTimeout(300);
+  const light = page.locator('section').nth(2);
+  expect(await htmlVar(page, '--sb-paged-bg')).toBe('#0b0b0c');
+  await expect(light).not.toHaveAttribute('data-sb-page-on', '');
+  await expect(light).toHaveCSS('background-color', 'rgb(237, 232, 223)');
+  // Once it crosses the middle and the page has blended to its colours, it follows the page.
+  await scrollTo(page, await sectionTop(page, 2));
+  await expect(light).toHaveAttribute('data-sb-page-on', '', { timeout: 2000 });
 });
 
 test('the progress bar fills with the scroll', async ({ page }) => {

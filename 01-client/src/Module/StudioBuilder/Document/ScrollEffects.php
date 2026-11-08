@@ -15,7 +15,7 @@ namespace Slate\Module\StudioBuilder\Document;
  *                            devices: [desktop, tablet, mobile]}  each follows the node's way through the viewport
  *   interactions.mouse    = {track: -10 to 10, tilt: 0 to 10, magnet: 0 to 10}  the node follows the pointer, tilts
  *                            towards it, or is pulled towards it while it is near; desktop only
- *   interactions.page_colors = {background, text: colour}  the page takes these colours while the node is in the middle
+ *   interactions.page_colors = {background, text, muted, line, accent: colour}  the page takes these colours while the node is in the middle
  *                            of the screen, with a short blend
  *   interactions.adapt    = true  the node takes the page colours of the section beneath its bottom edge (a header)
  *   interactions.spy      = true  of the node's links to sections of this page, the one whose section is on screen is
@@ -56,6 +56,9 @@ final class ScrollEffects
     public const SCROLL_FIELDS = ['vertical' => ['y', -10], 'horizontal' => ['x', -10], 'rotate' => ['r', -10], 'scale' => ['s', -10], 'transparency' => ['o', 0], 'blur' => ['b', 0]];
     public const MOUSE_FIELDS  = ['track' => ['t', -10], 'tilt' => ['i', 0], 'magnet' => ['m', 0]];
     public const TEXT_EFFECTS  = ['light_words', 'lines', 'wave'];
+
+    /** interactions.page_colors keys and the custom property suffix each travels as (`--sb-page-<suffix>`). */
+    public const PAGE_COLOURS = ['background' => 'bg', 'text' => 'fg', 'muted' => 'muted', 'line' => 'line', 'accent' => 'accent'];
     public const WAVE_WEIGHT   = [100, 900];
     public const WAVE_RADIUS   = [40, 600];
     public const DIM_RANGE     = [5, 60];
@@ -94,7 +97,7 @@ final class ScrollEffects
             }
         }
         $shapes = [
-            'page_colors' => ['background' => 'colour', 'text' => 'colour'],
+            'page_colors' => ['background' => 'colour', 'text' => 'colour', 'muted' => 'colour', 'line' => 'colour', 'accent' => 'colour'],
             'progress'    => ['edge' => self::EDGES, 'color' => 'colour', 'height' => self::PROGRESS_HEIGHT],
             'text'        => ['effect' => self::TEXT_EFFECTS, 'dim' => self::DIM_RANGE, 'step_ms' => self::TEXT_STEP, 'low' => self::WAVE_WEIGHT, 'high' => self::WAVE_WEIGHT, 'radius' => self::WAVE_RADIUS],
             'stagger'     => ['step_ms' => self::STAGGER_STEP],
@@ -346,17 +349,18 @@ final class ScrollEffects
         }
 
         // Colours travel as custom properties on the node, in its one style attribute; the runtime reads them back.
+        // The attribute lists the colours the node sets, so the stylesheet only points theme colours at ones that exist.
         $page = $interactions['page_colors'] ?? null;
-        $bg = self::field($page, 'background', 'colour');
-        $fg = self::field($page, 'text', 'colour');
-        if ($bg !== null || $fg !== null) {
-            $attrs .= ' data-sb-page-colors';
-            if ($bg !== null) {
-                $vars[] = '--sb-page-bg:' . StyleSurface::colourCss((string) $bg);
+        $set = [];
+        foreach (self::PAGE_COLOURS as $key => $name) {
+            $value = self::field($page, $key, 'colour');
+            if ($value !== null) {
+                $set[] = $name;
+                $vars[] = '--sb-page-' . $name . ':' . StyleSurface::colourCss((string) $value);
             }
-            if ($fg !== null) {
-                $vars[] = '--sb-page-fg:' . StyleSurface::colourCss((string) $fg);
-            }
+        }
+        if ($set !== []) {
+            $attrs .= ' data-sb-page-colors="' . implode(' ', $set) . '"';
         }
         if (($interactions['adapt'] ?? false) === true) {
             $classes[] = 'sb-adapt';

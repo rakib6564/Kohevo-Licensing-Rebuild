@@ -49,7 +49,7 @@ export const tokenNameKey = (ref) => `ss_tk_${String(ref).replace(/[^a-z0-9]+/gi
  * Tokens nothing on a page uses unless a block picks them. Site settings say so beside them, so editing
  * one and seeing no change is not a surprise.
  */
-export const BLOCK_ONLY_TOKENS = Object.freeze(['surface.muted', 'surface.inverse', 'text.accent']);
+export const BLOCK_ONLY_TOKENS = Object.freeze(['surface.muted', 'text.accent']);
 
 export function tokenUsedOnlyByBlocks(ref) {
   return BLOCK_ONLY_TOKENS.includes(ref);

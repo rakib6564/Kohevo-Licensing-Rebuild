@@ -179,7 +179,13 @@ unit('widgets: the markup and CSS match the browser fixture the runtime spec dri
         ['id' => 2, 'title' => 'Two', 'url' => '/work/two', 'category' => 'Brand'],
         ['id' => 3, 'title' => 'Three', 'url' => '/work/three', 'category' => 'Web'],
     ];
+    // Last, so it moves nothing the other specs point at.
+    $grid = sbsm_render(sbpm_box([sbpm_block('core.testimonial_grid', ['per_page' => 2, 'per_page_tablet' => 2, 'per_page_mobile' => 1, 'clamp_lines' => 2, 'source_note' => 'on Fiverr', 'items' => array_map(
+        static fn(int $i): array => ['name' => 'Client ' . $i, 'text' => $i === 1 ? str_repeat('A long review that runs on and on. ', 12) : 'Review ' . $i, 'rating' => 5, 'meta' => 'Belgium', 'date' => $i . ' years ago'],
+        range(1, 7),
+    )])]));
     $html .= '<section>' . (new \Slate\Module\StudioBuilder\Render\Block\CoreRenderers\QueryLoopRenderer())->render(sbw_loop_scope(['filter_field' => 'category', 'open_in' => 'dialog', 'show_featured_image' => false, 'per_page' => 6], $rows)) . '</section>';
+    $html .= $grid;
     $html = (string) preg_replace('/ data-sb-node="[^"]*" data-sb-type="[^"]*"/', '', $html);
     $html = (string) preg_replace('/\bsb-x-[a-f0-9]+/', 'sb-x', $html);
     // The time and the online state depend on the clock: the runtime redraws both, so the fixture holds fixed ones.
@@ -221,5 +227,6 @@ unit('stylesheet: numeric font weights work, links never colour the message laun
     }
     assert_true(str_contains($css, '.sb-body .sb-msg .sb-msg__launcher[data-sb-msg-open]{color:var(--sb-text-inverse,#fff)}'), 'the launcher keeps its own colour');
     assert_true(str_contains($css, '.sb-body .sb-filter a.sb-filter__chip{color:inherit}'), 'chips are not link-coloured');
-    assert_true(str_contains($css, 'html:not([data-sb-ready]) [data-sb-page-colors]{background:var(--sb-page-bg);color:var(--sb-page-fg)}'), 'page colours without the runtime');
+    assert_true(str_contains($css, '[data-sb-page-colors~="bg"]:not([data-sb-page-on]){background:var(--sb-page-bg)}')
+        && str_contains($css, '[data-sb-page-colors~="fg"]:not([data-sb-page-on]){color:var(--sb-page-fg);'), 'page colours without the runtime, and off screen');
 });

@@ -1,0 +1,218 @@
+/* rakibhasaan.com: the little the block styles cannot say. Classes come from the build (rk-*). */
+
+/* The brand dot is a filled circle. */
+.rk-dot svg { fill: currentColor; }
+
+/* Manifesto: the industry words in the accent colour, upright. */
+.rk-manifesto em { font-style: normal; color: var(--sb-color-accent); font-weight: 400; }
+
+/* Mono labels never wrap ("8 sites"). */
+.rk-ind-row .sb-block--core-text { white-space: nowrap; }
+.rk-ind-row .sb-block--core-image { flex: 0 0 200px; }
+.rk-ind-row .sb-block--core-image img { height: 120px; }
+.rk-arrow a { display: inline-grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; border: 1px solid #2A2926; text-decoration: none; }
+
+/* Selected work: the industry tag sits on the picture. */
+.rk-card-media { position: relative; }
+.rk-tag { position: absolute; top: 14px; left: 14px; z-index: 1; }
+
+/* Three rules: big thin titles, the "when" as a small mono label. */
+.rk-rules .sb-tabset__title { font-size: clamp(28px, 2.4vw + 14px, 48px); font-weight: 200; letter-spacing: -.04em; line-height: 1.05; }
+.rk-rules .sb-tabset__tab[aria-selected="false"] .sb-tabset__title { opacity: .55; }
+.rk-rules .sb-tabset__sub { font: 500 12px/1.4 "Geist Mono", GeistMonoFallback, ui-monospace, monospace; text-transform: uppercase; letter-spacing: 1.4px; opacity: .7; }
+.rk-rules .sb-tabset__tab::before { font: 500 12px "Geist Mono", GeistMonoFallback, ui-monospace, monospace; }
+.rk-ok p, .rk-fix p { display: inline-block; padding: 3px 8px; border-radius: 999px; }
+.rk-ok p { background: rgba(34, 197, 94, .14); }
+.rk-fix p { background: rgba(255, 90, 31, .16); }
+
+/* About: the badge overlaps the portrait's corner. */
+.rk-badge { position: absolute; right: -34px; bottom: -34px; z-index: 1; }
+
+/* Footer chips. */
+.rk-chip p { display: inline-block; padding: 7px 11px; border: 1px solid #2A2926; border-radius: 999px; }
+.rk-online p::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 10px; border-radius: 50%; background: #22C55E; vertical-align: 1px; }
+.rk-top a { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid #2A2926; text-decoration: none; }
+
+/* Worldwide: the country list as chips. */
+.rk-country p { display: inline-block; padding: 6px 10px; border: 1px solid #24335A; border-radius: 999px; }
+
+/* Free audit: "Start here" sits in the middle of the turning words. */
+.rk-start-wrap { position: relative; display: grid; place-items: center; width: 190px; height: 190px; }
+.rk-start-wrap > .sb-block { grid-area: 1 / 1; }
+.rk-start a { width: 118px; height: 118px; border-radius: 50%; display: grid; place-items: center; padding: 0; }
+
+/* Message widget: a light pill with the photo, like the original. */
+/* Chat widget: Studio's Light theme in the site's warm paper colours. */
+.rk-chat { --sb-msg-bg: #FBF9F5; --sb-msg-btn-bg: #FBF9F5; --sb-msg-fg: #0B0B0C; --sb-msg-btn-fg: #0B0B0C; --sb-msg-muted: #625D55; --sb-msg-field: #F1EDE5; --sb-msg-line: rgba(11, 11, 12, .12); }
+
+@media (max-width: 767.98px) {
+  .rk-ind-row .sb-block--core-image { display: none; }
+  .rk-badge { right: 10px; bottom: 10px; }
+}
+
+/* Case studies: a term list reads as plain text; short labels stay on one line. */
+.rk-case-hero ul, .rk-case-ind ul, .rk-pcard ul, .rk-card ul { list-style: none; margin: 0; padding: 0; display: inline; }
+.rk-case-hero li, .rk-case-ind li, .rk-pcard li, .rk-card li { display: inline; }
+.rk-label-row > .sb-block--core-text { flex: none; white-space: nowrap; }
+.rk-case-hero .sb-block--theme-field-value img, .rk-case-gal .sb-block--theme-field-value img { width: 100%; height: auto; border-radius: 18px; display: block; }
+
+/* Project cards: the title is a link, but reads as a title. */
+.rk-pcard .sb-block--theme-post-title a { color: inherit; text-decoration: none; }
+.rk-pcard .sb-block--theme-post-title a:hover { color: var(--sb-color-accent); }
+
+/* Recent work marquee: cards of one size. */
+.rk-iq-card { width: 320px; flex: none; }
+.rk-iq-card img { width: 100%; height: 240px; object-fit: cover; }
+
+/* Full-screen menu: the numbers and descriptions in the mono face, as every small label on the site. */
+.rk-fs .sb-nav__num, .rk-fs .sb-nav__desc, .rk-fs .sb-nav__preview-caption { font-family: "Geist Mono", GeistMonoFallback, ui-monospace, monospace; }
+
+/* Reviews grid: the small labels in the mono face. */
+.rk-tgrid :is(.sb-tgrid__count, .sb-tgrid__meta, .sb-tgrid__date, .sb-tgrid__more, .sb-tgrid__page, .sb-tgrid__dialog-who) { font-family: "Geist Mono", GeistMonoFallback, ui-monospace, monospace; }
+
+/* Industry rows: the name gives way (and wraps) before the arrow leaves the screen on a phone. */
+.rk-ind-row > .rk-ind-name { min-width: 0; overflow-wrap: break-word; hyphens: none; }
+@media (max-width: 1023.98px) { .rk-ind-row .sb-block--core-image { display: none; } }
+
+/* Short reviews ticker: the rows fade out at both edges. */
+.rk-ticker .sb-tgrid__row { -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+
+/* Project single: the browser frame, its badges, the stack band, the facts, the story and the screens. */
+.rk-dots p, .rk-dots { margin: 0; display: flex; gap: 6px; }
+.rk-dots span { width: 10px; height: 10px; border-radius: 50%; background: #3A3A40; display: inline-block; }
+.rk-dots span:nth-child(1) { background: #FF5F57; } .rk-dots span:nth-child(2) { background: #FEBC2E; } .rk-dots span:nth-child(3) { background: #28C840; }
+.rk-bar .sb-field-value--url { flex: 1; margin: 0 auto; padding: 6px 14px; border-radius: 999px; background: #0E0E10; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rk-bar .sb-field-value a { color: inherit; text-decoration: none; }
+.rk-shot img, .rk-show-a img, .rk-show-b img, .rk-thumb img { display: block; width: 100%; height: auto; }
+.rk-show-a img, .rk-show-b img, .rk-thumb img { border-radius: 18px; }
+.rk-stage { position: relative; }
+.rk-stage > [class*="rk-badge-"] { position: absolute; z-index: 3; }
+.rk-badge-l { left: -18px; bottom: 30px; } .rk-badge-r { right: -18px; top: 30%; }
+.rk-stack .sb-field-chips > li { border: 0; padding: 0 28px 0 0; }
+.rk-stack .sb-field-chips > li::after { content: "✦"; margin-left: 28px; font-size: .6em; vertical-align: middle; }
+.rk-inline-list ul { list-style: none; margin: 0; padding: 0; }
+.rk-inline-list li { display: inline; } .rk-inline-list li + li::before { content: ", "; }
+.rk-fact-live a { text-decoration: none; }
+.rk-qmark p { margin: 0 0 -30px; }
+@media (max-width: 767.98px) { .rk-stage > [class*="rk-badge-"] { display: none; } }
+.rk-frame { overflow: hidden; }
+
+/* Service single: the checklist as ticked rows, the steps numbered, the middle price stands out. */
+.rk-checks ul { list-style: none; margin: 0; padding: 0; counter-reset: rk-check; }
+.rk-checks li { display: flex; gap: 14px; align-items: baseline; padding: 14px 0; border-bottom: 1px solid var(--sb-border-default); }
+.rk-checks li::before { content: "✓"; color: var(--sb-color-accent); font-weight: 600; }
+.rk-rep-steps { counter-reset: rk-step; }
+.rk-step { counter-increment: rk-step; }
+.rk-step::before { content: counter(rk-step, decimal-leading-zero); font: 500 12px "Geist Mono", GeistMonoFallback, ui-monospace, monospace; letter-spacing: 1.2px; color: var(--sb-color-accent); }
+.rk-rep-pricing > .sb-repeater > .rk-price:nth-child(2):not(:last-child) { background: #EDE8DF !important; border-color: #EDE8DF !important; }
+.rk-rep-pricing > .sb-repeater > .rk-price:nth-child(2):not(:last-child) :is(h3, p, div, a) { color: #0B0B0C !important; }
+.rk-rep-features > .sb-repeater > .rk-step:last-child { border-right: 0 !important; }
+.rk-step-row::before { margin-right: 22px; }
+.rk-faq .sb-accordion__item, .rk-faq details { border-bottom: 1px solid var(--sb-border-default); }
+
+/* Service cards: the title is a link that reads as a title. Home cards: the industry tag is a pill in its colour. */
+.rk-scard .sb-block--theme-post-title a, .rk-card .sb-block--theme-post-title a { color: inherit; text-decoration: none; }
+.rk-scard .sb-block--theme-post-title a:hover, .rk-card .sb-block--theme-post-title a:hover { color: var(--sb-color-accent); }
+.rk-tag .sb-field-value { display: inline-block; padding: 7px 12px; border-radius: 999px; }
+
+/* Hero proof row: mono labels between thin dividers, as the original. */
+.rk-proofs .rk-proof { font-family: "Geist Mono", GeistMonoFallback, ui-monospace, monospace; text-transform: uppercase; letter-spacing: 1.2px; padding: 0 20px; border-left: 1px solid var(--sb-border-default); }
+.rk-proofs .rk-proof:first-child { padding-left: 0; border-left: 0; }
+.rk-proofs .rk-proof p { margin: 0; }
+.rk-proofs .rk-proof strong { color: var(--sb-text-body); font-weight: 500; }
+@media (max-width: 767.98px) { .rk-proofs .rk-proof { padding: 0 14px 0 0; border-left: 0; } }
+/* Reviews bento: one column on a tablet, the score card no longer spans two rows. */
+@media (max-width: 1023.98px) { .rk-bento > * { grid-row: auto !important; grid-column: auto !important; } }
+
+/* Card grids: a card never pushes its words past its edge. */
+.rk-grid > * { min-width: 0; overflow-wrap: break-word; }
+
+/* Chapter list numbers: full strength, so the accent passes contrast on the light page. */
+.rk-chapters .sb-nav__num { opacity: 1; }
+
+/* Fallback faces sized to Geist's metrics (width per weight band, and line box), so the swap to the web font barely moves the text. */
+@font-face { font-family: GeistFallback; src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Helvetica"); font-weight: 100 250; size-adjust: 102.6%; ascent-override: 98.0%; descent-override: 28.8%; line-gap-override: 0%; }
+@font-face { font-family: GeistFallback; src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Helvetica"); font-weight: 251 350; size-adjust: 104.3%; ascent-override: 96.4%; descent-override: 28.3%; line-gap-override: 0%; }
+@font-face { font-family: GeistFallback; src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Helvetica"); font-weight: 351 450; size-adjust: 105.9%; ascent-override: 94.9%; descent-override: 27.9%; line-gap-override: 0%; }
+@font-face { font-family: GeistFallback; src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Helvetica"); font-weight: 451 1000; size-adjust: 108.3%; ascent-override: 92.8%; descent-override: 27.2%; line-gap-override: 0%; }
+@font-face { font-family: GeistMonoFallback; src: local("Courier New"), local("CourierNewPSMT"), local("Liberation Mono"); size-adjust: 100%; ascent-override: 100.5%; descent-override: 29.5%; line-gap-override: 0%; }
+
+/* Review grid on the light page: the current page reads light on rust, "Read more" on the dark standout card in orange. */
+.rk-tgrid .sb-tgrid__page[aria-current="true"] { color: #EDE8DF; }
+.rk-tgrid .sb-tgrid__card.is-first .sb-tgrid__more { color: #FF5A1F; }
+/* Filter counts: dimmed less, so they read on the orange current chip too. */
+.sb-filter__count { opacity: .85; }
+
+/* Service cards: a little lighter than the colours they sit on, light or dark (the section's own, or the page's while
+   the section follows the page). */
+.sb-body .rk-scard { background-color: color-mix(in srgb, var(--sb-page-bg, #EDE8DF) 93%, #fff); }
+.sb-body [data-sb-page-on] .rk-scard { background-color: color-mix(in srgb, var(--sb-paged-bg, var(--sb-page-bg, #EDE8DF)) 93%, #fff); }
+/* Filter chips: light text on the rust of the current one. */
+.sb-body .sb-filter a.sb-filter__chip[aria-current] { color: #EDE8DF; }
+.sb-body .sb-filter a.sb-filter__chip[aria-current] .sb-filter__count { opacity: 1; }
+/* The browser frame's bar and screenshot span the frame before the picture arrives, so its space is held (no layout shift). */
+.rk-frame, .rk-frame > * { align-self: stretch; }
+/* Header links and the Menu button follow the header's colours (it adapts to the section beneath): links a little dimmer
+   than the name, the button on a faint wash of the same colour. */
+[data-sb-adapt] .rk-nav .sb-nav__link:not([aria-current]) { opacity: .78; }
+[data-sb-adapt] .sb-offcanvas-trigger { background-color: color-mix(in srgb, currentColor 9%, transparent); }
+/* Read by screen readers, not shown. */
+.rk-sr { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* Case-study numbers keep their width ("6 weeks" never breaks); the label beside them takes what is left. */
+.rk-metric-v { flex: none; white-space: nowrap; }
+/* About photo caption: a frosted card over the photo's lower-left corner, never wider than the photo. */
+.rk-band { position: relative; }
+.rk-band .rk-band-cap { position: absolute; left: 20px; bottom: 20px; max-width: calc(100% - 40px); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.rk-band .rk-band-face { flex: none; }
+.rk-band .rk-band-face img { border-radius: 12px; }
+@media (max-width: 767px) {
+  .rk-band .rk-band-cap { left: 12px; bottom: 12px; max-width: calc(100% - 24px); padding: 8px 14px 8px 8px; }
+  .rk-band .rk-band-face { width: 36px !important; }
+  .rk-band .rk-band-cap .sb-block--core-text, .rk-band .rk-band-cap .sb-text { font-size: 10px !important; letter-spacing: 1px !important; }
+}
+
+/* ── Mega menu: frosted-glass panels under the header ───────────────────────────────── */
+.rk-mega { --sb-mega-glass: rgba(16, 16, 18, .8); }
+.rk-mega .rk-tag ul, .rk-mega .rk-tag li { list-style: none; margin: 0; padding: 0; }
+.rk-mega .rk-tag .sb-field-value { padding: 5px 9px; }
+.rk-mega .rk-mega-loop:has(.rk-mrow) { margin: 0 -16px; }
+.rk-mega .sb-nav__mega { color: #EDE8DF; border-radius: 0 0 22px 22px !important; }
+.rk-mega .sb-mega__grid { gap: 28px 36px; }
+.rk-mega .rk-mega-span3 { grid-column: span 3; }
+.rk-mega .rk-mega-span2 { grid-column: span 2; }
+.rk-mega .rk-mega-loop .sb-loop__grid, .rk-mega .rk-mega-loop .sb-query-loop__grid { gap: 18px; }
+/* Each card and row is one big link: its title's link covers it. */
+.rk-mega .rk-stretch a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.rk-mega .rk-mlink, .rk-mega .rk-mrow { transition: background-color .2s ease; }
+.rk-mega .rk-mlink:hover, .rk-mega .rk-mrow:hover, .rk-mega .rk-mlink:focus-within, .rk-mega .rk-mrow:focus-within { background-color: rgba(237, 232, 223, .07); }
+.rk-mega .rk-mcard .rk-pcard-img img { transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
+.rk-mega .rk-mcard:hover .rk-pcard-img img { transform: scale(1.04); }
+.rk-mega .rk-mcard:hover h3 a { color: #FF5A1F; }
+.rk-mega .rk-clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rk-mega .rk-clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.rk-mega .rk-mreview { background: rgba(237, 232, 223, .035); }
+.rk-mega .rk-mpromo-pic img, .rk-mega .rk-mabout-pic img { height: 100% !important; }
+.rk-mega .rk-mpromo-pic img { object-position: 78% 30%; }
+.rk-mega .rk-mabout-pic img { object-position: 70% 30%; }
+.rk-mega .rk-mabout-pic::after { content: ""; position: absolute; inset: 40% 0 0; background: linear-gradient(transparent, rgba(8, 8, 9, .85)); pointer-events: none; }
+.rk-mega .rk-mabout-pic > :last-child { z-index: 1; }
+.rk-mega .rk-mega-more a { white-space: nowrap; }
+/* The panel's links keep their own colours whatever section the header is over. */
+.rk-mega .sb-nav__mega a.sb-nav__link, .rk-mega .sb-nav__mega a { opacity: 1 !important; }
+
+/* ── Photo heroes: a full-bleed photo behind the hero's words ───────────────────────── */
+.rk-photo-hero { position: relative; overflow: hidden; isolation: isolate; }
+.rk-photo-hero > .rk-bgpic { position: absolute !important; inset: 0; z-index: -1; margin: 0 !important; width: auto !important; max-width: none !important; }
+.rk-photo-hero > .rk-bgpic img { width: 100% !important; height: 100% !important; object-fit: cover; }
+.rk-photo-hero::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(90deg, rgba(11, 11, 12, .82) 0%, rgba(11, 11, 12, .45) 42%, rgba(11, 11, 12, 0) 68%), linear-gradient(0deg, rgba(11, 11, 12, .9) 0%, rgba(11, 11, 12, 0) 38%); }
+.rk-bgpic--right img { object-position: 78% 35% !important; }
+.rk-bgpic--top img { object-position: 50% 0% !important; }
+@media (max-width: 767px) {
+  .rk-photo-hero::after { background: linear-gradient(0deg, rgba(11, 11, 12, .96) 0%, rgba(11, 11, 12, .7) 45%, rgba(11, 11, 12, .1) 75%); }
+  /* The tall portrait has a dark band along its top edge: it sits above the hero, out of sight. */
+  /* On a phone the portrait fills the top of the hero and fades out under the words. */
+  .rk-photo-hero > .rk-bgpic--top { bottom: auto !important; height: 500px !important; -webkit-mask-image: linear-gradient(#000 62%, transparent); mask-image: linear-gradient(#000 62%, transparent); }
+  .rk-photo-hero > .rk-bgpic--top img { object-position: 50% 12% !important; }
+  .rk-photo-hero > .rk-bgpic--top:has(img[src*="portrait-tall"]) { top: -56px !important; height: 556px !important; }
+  .rk-photo-hero > .rk-bgpic--top:has(img[src*="portrait-tall"]) img { object-position: 50% 0% !important; }
+}

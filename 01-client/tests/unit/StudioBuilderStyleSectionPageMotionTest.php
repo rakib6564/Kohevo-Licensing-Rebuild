@@ -51,7 +51,8 @@ unit('page motion: each effect validates with a fixed shape and refuses anything
         'page colours empty'     => ['page_colors' => []],
         'page colour injection'  => ['page_colors' => ['background' => 'red;position:fixed']],
         'page colours a list'    => ['page_colors' => ['#000']],
-        'unknown page key'       => ['page_colors' => ['background' => '#000', 'accent' => '#fff']],
+        'unknown page key'       => ['page_colors' => ['background' => '#000', 'border' => '#fff']],
+        'muted alone'            => ['page_colors' => ['muted' => '#777']],
         'adapt a string'         => ['adapt' => 'yes'],
         'progress no edge'       => ['progress' => ['color' => '#000']],
         'progress left'          => ['progress' => ['edge' => 'left']],
@@ -75,16 +76,32 @@ unit('page motion: each effect validates with a fixed shape and refuses anything
 
 unit('page motion: page colours and adapt reach the tag as an attribute and custom properties only', function (): void {
     $tag = sbpm_tag(['page_colors' => ['background' => '#0b0b0c', 'text' => 'text.primary'], 'adapt' => true]);
-    assert_true(str_contains($tag, ' data-sb-page-colors'), 'marked for the runtime: ' . $tag);
+    assert_true(str_contains($tag, ' data-sb-page-colors="bg fg"'), 'marked for the runtime with the colours it sets: ' . $tag);
     assert_true(str_contains($tag, '--sb-page-bg:#0b0b0c'), 'background colour');
     assert_true(str_contains($tag, '--sb-page-fg:var(--sb-text-primary)'), 'a theme colour becomes its variable');
     assert_true(str_contains($tag, ' data-sb-adapt') && (bool) preg_match('/class="[^"]*\bsb-adapt\b/', $tag), 'adapt');
+
+    $all = sbpm_tag(['page_colors' => ['background' => '#ede8df', 'text' => '#0b0b0c', 'muted' => '#6b665e', 'line' => '#d2cbbe', 'accent' => 'color.accent']]);
+    assert_true(str_contains($all, 'data-sb-page-colors="bg fg muted line accent"'), 'every colour listed: ' . $all);
+    assert_true(str_contains($all, '--sb-page-muted:#6b665e') && str_contains($all, '--sb-page-line:#d2cbbe') && str_contains($all, '--sb-page-accent:var(--sb-color-accent)'), 'muted, line and accent travel too');
 
     $one = sbpm_tag(['page_colors' => ['text' => '#ffffff']]);
     assert_true(str_contains($one, '--sb-page-fg:#ffffff') && !str_contains($one, '--sb-page-bg'), 'a text colour alone');
     // A stored document is never trusted: junk renders nothing rather than reaching the style attribute.
     $junk = sbpm_tag(['page_colors' => ['background' => 'red;x:y'], 'adapt' => 'yes']);
     assert_true(!str_contains($junk, 'data-sb-page-colors') && !str_contains($junk, 'red;') && !str_contains($junk, 'data-sb-adapt'), 'junk is dropped: ' . $junk);
+});
+
+unit('page motion: the theme colours follow the page colours, and each section keeps its own until the runtime runs', function (): void {
+    $css = StudioStylesheet::pageMotionCss();
+    assert_true(str_contains($css, 'html[data-sb-paged-fg] body.sb-body{color:var(--sb-paged-fg);--sb-text-heading:var(--sb-paged-fg);--sb-text-body:var(--sb-paged-fg);--sb-text-primary:var(--sb-paged-fg)}'), 'text');
+    assert_true(str_contains($css, 'html[data-sb-paged-muted] body.sb-body{--sb-text-muted:var(--sb-paged-muted)}'), 'muted');
+    assert_true(str_contains($css, 'html[data-sb-paged-line] body.sb-body{--sb-border-default:var(--sb-paged-line)}'), 'lines');
+    assert_true(str_contains($css, 'html[data-sb-paged-accent] body.sb-body{--sb-color-accent:var(--sb-paged-accent);--sb-text-accent:var(--sb-paged-accent)}'), 'accent');
+    // Only a colour the section sets is pointed at: an unset custom property would blank the theme colour.
+    // A section paints its own colours unless the runtime marks it as following the page (before the runtime, off screen).
+    assert_true(str_contains($css, '[data-sb-page-colors~="muted"]:not([data-sb-page-on]){--sb-text-muted:var(--sb-page-muted)}'), 'own muted unless following the page');
+    assert_true(!str_contains($css, '[data-sb-page-colors]{'), 'no rule for a section whatever it sets');
 });
 
 unit('page motion: the progress bar, text effects, stagger, glow and magnet render as data-sb-* attributes', function (): void {

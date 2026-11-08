@@ -139,3 +139,54 @@ test('the dialog walks only the items a chip left showing, and closing it return
   await expect.poll(() => page.evaluate(() => location.pathname + location.search)).toBe('/widgets?filter=Web');
   await expect(page.locator('.sb-post-card__title a', { hasText: 'One' })).toBeFocused();
 });
+
+test('the testimonial grid shows a page at a time, pages by number and arrow, and opens a clamped review in a dialog', async ({ page }) => {
+  await load(page);
+  const grid = page.locator('[data-sb-tgrid]');
+  const shown = grid.locator('.sb-tgrid__card:not([hidden])');
+  await expect(shown).toHaveCount(2);
+  await expect(grid.locator('.sb-tgrid__count')).toHaveText('01–02 of 7 reviews');
+  await expect(grid.locator('.sb-tgrid__nav')).toBeVisible();
+  await expect(grid.locator('[data-sb-tg-page]')).toHaveText(['01', '02', '04']);
+  await expect(grid.locator('.sb-tgrid__gap')).toHaveCount(1);
+  await expect(grid.locator('[data-sb-tg-prev]')).toBeDisabled();
+  await expect(shown.first()).toHaveClass(/is-first/);
+
+  await grid.locator('[data-sb-tg-next]').click();
+  await expect(grid.locator('.sb-tgrid__count')).toHaveText('03–04 of 7 reviews');
+  await expect(shown.first()).toContainText('Client 3');
+  await expect(shown.first()).toHaveClass(/is-first/);
+  await grid.locator('[data-sb-tg-page="3"]').click();
+  await expect(grid.locator('.sb-tgrid__count')).toHaveText('07–07 of 7 reviews');
+  await expect(shown).toHaveCount(1);
+  await expect(grid.locator('[data-sb-tg-next]')).toBeDisabled();
+  await grid.locator('[data-sb-tg-page="0"]').click();
+
+  // Only the clamped review offers its full text.
+  const more = grid.locator('[data-sb-tg-more]:not([hidden])');
+  await expect(more).toHaveCount(1);
+  await more.click();
+  const dialog = grid.locator('.sb-tgrid__dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('[data-sb-tg-full]')).toContainText('runs on and on');
+  await expect(dialog.locator('[data-sb-tg-who]')).toHaveText('— Client 1 · on Fiverr');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(more).toBeFocused();
+
+  // Teardown leaves every review showing, as without the runtime.
+  await page.evaluate(() => window.StudioRuntime.disable());
+  await expect(grid.locator('.sb-tgrid__card:not([hidden])')).toHaveCount(7);
+  await expect(grid.locator('.sb-tgrid__nav')).toBeHidden();
+  await expect(grid.locator('.sb-tgrid__count')).toHaveText('01–07 of 7 reviews');
+});
+
+test('the testimonial grid shows its page size for a phone, and every review reads in full without the runtime', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto('http://localhost/widgets');
+  const grid = page.locator('[data-sb-tgrid]');
+  await expect(grid.locator('.sb-tgrid__card:not([hidden])')).toHaveCount(7);
+  await page.addScriptTag({ url: 'http://localhost/runtime.js' });
+  await expect(grid.locator('.sb-tgrid__card:not([hidden])')).toHaveCount(1);
+  await expect(grid.locator('.sb-tgrid__count')).toHaveText('01–01 of 7 reviews');
+});

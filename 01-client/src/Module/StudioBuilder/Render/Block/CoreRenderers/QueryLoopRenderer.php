@@ -77,6 +77,7 @@ final class QueryLoopRenderer implements BlockRendererInterface
                     'content_type' => $contentType,
                     'order_by'  => $scope->string('order_by', 'published_at'),
                     'order'     => $scope->string('order', 'desc'),
+                    'featured_only' => $scope->bool('featured_only', false),
                     'limit'     => $perPage,
                     'page'      => $currentPage,
                 ];
@@ -379,6 +380,11 @@ final class QueryLoopRenderer implements BlockRendererInterface
     private static function listing(BlockRenderScope $scope): array
     {
         $context = $scope->context();
+        // A single item's own category (on its Single template) names the item, not a listing: a loop there lists
+        // what it was set to list, not the items that share that category.
+        if ($context->attribute('is_single') === true) {
+            return ['category' => '', 'tag' => '', 'author_id' => 0, 'search' => '', 'content_type' => ''];
+        }
         $str = static fn(string $key): string => is_string($context->attribute($key)) ? mb_substr(trim((string) $context->attribute($key)), 0, 120) : '';
         $type = $str('archive_type');
         return [

@@ -26,6 +26,8 @@ use Slate\Module\StudioBuilder\Service\StudioFormSync;
 final class MessageWidgetRenderer implements BlockRendererInterface
 {
     public const POSITIONS = ['right', 'left'];
+    /** Auto follows the site's theme colours; Light and Dark fix the panel's and the button's (StudioStylesheet). */
+    public const THEMES = ['auto', 'light', 'dark'];
     /** Which days the hours apply to. */
     public const DAYS = ['weekdays', 'mon_sat', 'everyday'];
     public const MAX_TOPICS = 8;
@@ -149,21 +151,36 @@ final class MessageWidgetRenderer implements BlockRendererInterface
         $icon = $scope->string('launcher_icon', 'message-circle');
         $icon = IconLibrary::has($icon) ? $icon : 'message-circle';
         $iconSvg = static fn(string $name, int $size): string => '<svg viewBox="0 0 24 24" width="' . $size . '" height="' . $size . '" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' . IconLibrary::markup($name) . '</svg>';
-        $launcher = '<a href="#' . Html::e($id) . '" class="sb-msg__launcher" data-sb-msg-open aria-controls="' . Html::e($id) . '" aria-expanded="false"'
-            . ($label === '' ? ' aria-label="' . Html::e(Html::t('studio_msg_open', 'Send a message')) . '"' : '') . '>'
-            . $iconSvg($icon, 22)
-            . ($label !== '' ? '<span class="sb-msg__launcher-label">' . Html::e($label) . '</span>' : '')
-            . '<span class="sb-msg__dot" data-sb-msg-dot aria-hidden="true"></span>'
-            . '</a>';
-
         // Who answers.
         $who = $scope->string('name', '');
         $avatarRef = $scope->prop('avatar');
         $avatar = $scope->image($avatarRef);
+
+        // The button may show the photo instead of the icon, and lines under its text that take turns (the runtime
+        // turns them; the first is the server's). `{status}` is the online or away text, `{time}` the owner's time.
+        $photo = $scope->bool('launcher_photo', false) && $avatar !== null;
+        // The photo shows at 40-44px: the library's smallest WebP copy, not the whole file.
+        $small = $avatar !== null && $avatar->srcset !== [] ? $avatar->srcset[min(array_keys($avatar->srcset))] : ($avatar !== null ? $avatar->url : '');
+        $lines = self::lines($scope->string('launcher_lines', ''), $online ? $onlineText : $awayText, $zone);
+        $sub = $lines !== []
+            ? '<span class="sb-msg__launcher-sub" data-sb-msg-lines="' . Html::e((string) json_encode(array_column($lines, 'raw'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '"'
+                . ' data-sb-online="' . Html::e($onlineText) . '" data-sb-away="' . Html::e($awayText) . '">' . Html::e($lines[0]['text']) . '</span>'
+            : '';
+        $launcherClasses = ['sb-msg__launcher', $photo ? 'sb-msg__launcher--photo' : '', $sub !== '' ? 'sb-msg__launcher--lines' : ''];
+        $launcher = '<a href="#' . Html::e($id) . '"' . Html::classAttr($launcherClasses) . ' data-sb-msg-open aria-controls="' . Html::e($id) . '" aria-expanded="false"'
+            . ($label === '' ? ' aria-label="' . Html::e(Html::t('studio_msg_open', 'Send a message')) . '"' : '') . '>'
+            . ($photo
+                ? '<span class="sb-msg__launcher-photo"><img src="' . Html::e($small) . '" alt="" width="44" height="44" loading="lazy"><span class="sb-msg__dot" data-sb-msg-dot aria-hidden="true"></span></span>'
+                : $iconSvg($icon, 22))
+            . ($label !== '' || $sub !== ''
+                ? '<span class="sb-msg__launcher-text">' . ($label !== '' ? '<span class="sb-msg__launcher-label">' . Html::e($label) . '</span>' : '') . $sub . '</span>'
+                : '')
+            . ($photo ? '' : '<span class="sb-msg__dot" data-sb-msg-dot aria-hidden="true"></span>')
+            . '</a>';
         $title = $scope->string('title', 'Let’s talk');
         $intro = $scope->string('intro', '');
         $head = '<header class="sb-msg__head">'
-            . ($avatar !== null ? '<img class="sb-msg__avatar" src="' . Html::e($avatar->url) . '" alt="" width="40" height="40" loading="lazy">' : '')
+            . ($avatar !== null ? '<img class="sb-msg__avatar" src="' . Html::e($small) . '" alt="" width="40" height="40" loading="lazy">' : '')
             . '<div class="sb-msg__who">'
             . '<h2 class="sb-msg__title" id="' . Html::e($id) . '-title">' . Html::e($title) . '</h2>'
             . '<p class="sb-msg__status" data-sb-msg-status data-sb-online="' . Html::e($onlineText) . '" data-sb-away="' . Html::e($awayText) . '">'
@@ -187,9 +204,41 @@ final class MessageWidgetRenderer implements BlockRendererInterface
             . ' data-sb-who="' . Html::e($who) . '"'
             . ($delay > 0 ? ' data-sb-open-after="' . $delay . '"' : '')
             . ($scroll > 0 ? ' data-sb-open-scroll="' . $scroll . '"' : '')
-            . ($scope->bool('remember_closed', true) ? ' data-sb-msg-remember' : '');
-        $classes = ['sb-msg', 'sb-msg--' . $position, $online ? 'is-online' : 'is-away', $editor ? 'sb-msg--editor' : ''];
+            . ($scope->bool('remember_closed', true) ? ' data-sb-msg-remember' : '')
+            . ($scope->bool('compact_on_scroll', false) ? ' data-sb-msg-compact' : '');
+        $theme = in_array($t = $scope->string('theme', 'auto'), self::THEMES, true) ? $t : 'auto';
+        $classes = ['sb-msg', 'sb-msg--' . $position, $theme !== 'auto' ? 'sb-msg--' . $theme : '', $online ? 'is-online' : 'is-away', $editor ? 'sb-msg--editor' : ''];
         return '<div' . Html::classAttr($classes) . $attrs . '>' . $html . $launcher . '</div>';
+    }
+
+    /**
+     * The button's lines, each with `{status}` and `{time}` filled in for the server's render. Up to four lines of up to
+     * 80 characters; blank lines are dropped.
+     *
+     * @return list<array{raw: string, text: string}>
+     */
+    public static function lines(string $raw, string $status, string $zone): array
+    {
+        $out = [];
+        foreach (preg_split('/\R/u', $raw) ?: [] as $line) {
+            $line = trim($line);
+            if ($line === '' || mb_strlen($line) > 80) {
+                continue;
+            }
+            $time = '';
+            if (str_contains($line, '{time}')) {
+                try {
+                    $time = (new \DateTimeImmutable('now', new \DateTimeZone($zone !== '' ? $zone : 'UTC')))->format('g:i A');
+                } catch (\Throwable) {
+                    $time = '';
+                }
+            }
+            $out[] = ['raw' => $line, 'text' => strtr($line, ['{status}' => $status, '{time}' => $time])];
+            if (count($out) === 4) {
+                break;
+            }
+        }
+        return $out;
     }
 
     /** The form: the same Forms form markup as `core.form`, from this block's settings. */
