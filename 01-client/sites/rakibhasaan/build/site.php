@@ -41,29 +41,58 @@ $menu('header', 'Header', [
     ['label' => 'Work', 'url' => '/work/'], ['label' => 'Services', 'url' => '/services/', 'children' => $sub($SERVICES)],
     ['label' => 'Process', 'url' => '/process/'], ['label' => 'About', 'url' => '/about/'], ['label' => 'Reviews', 'url' => '/reviews/'],
 ]);
-$menu('full', 'Full menu', [
-    ['label' => 'Home', 'url' => '/'], ['label' => 'Work', 'url' => '/work/'], ['label' => 'Services', 'url' => '/services/'], ['label' => 'Process', 'url' => '/process/'],
-    ['label' => 'About', 'url' => '/about/'], ['label' => 'Reviews', 'url' => '/reviews/'], ['label' => 'FAQ', 'url' => '/faq/'], ['label' => 'Contact', 'url' => '/contact/'], ['label' => 'Free audit', 'url' => '/free-audit/'],
-]);
+$menu('full', 'Full menu', array_map(static fn(array $r): array => ['label' => $r[0], 'url' => $r[1], 'description' => $r[2], 'image' => MEDIA_DIR . $r[3]], [
+    ['Home', '/', 'Websites built for your industry', 'e37702657907eb0bc2e36a82f2212ce8.jpg'],
+    ['Work', '/work/', '250+ sites · 14 countries', '3e90a1e3057c56feda9aa00c4dbcdd5f.webp'],
+    ['Services', '/services/', 'WordPress, custom code, SEO', 'b131e2de14c018247fe2c08587aa79d2.webp'],
+    ['Process', '/process/', 'Audit, staging, verified live', '3694c109ea579750e33aef9a769d2f94.webp'],
+    ['About', '/about/', 'Rakib Hasan · designer + developer', 'fbba8323ce2532684276bba580d15600.jpg'],
+    ['Reviews', '/reviews/', '5.0 from 101 Fiverr reviews', 'b5ab7d08d5870755f32a3d0a43e7f82a.jpg'],
+    ['FAQ', '/faq/', 'Cost, timelines, ownership', '286bece3cd0f08b4ad4ec3f69420675b.png'],
+    ['Contact', '/contact/', 'Replies within about an hour', '611fb132b1dbd5cec1b65c55e0a4ff7d.jpg'],
+    ['Free audit', '/free-audit/', 'Top five fixes, free', '8bad9500d3d698ebbeff8b1348d8df76.webp'],
+]));
 say('  + menus');
 
 // ── Header ─────────────────────────────────────────────────────────────────────
-$brand = ROW([
+$brandRow = static fn(): array => ROW([
     B('core.icon', ['name' => 'circle', 'size' => 'sm'], [], ['color' => ORANGE, 'dimensions' => ['width' => '12px']], ['classNames' => ['rk-dot']]),
-    B('core.link', ['link' => L('Rakib Hasan', '/'), 'style' => 'plain'], [], ['typography' => ['size' => '16px', 'font_family' => SANS, 'weight' => '500', 'letter_spacing' => '-0.3px']]),
+    B('core.link', ['link' => L('Rakib Hasan', '/'), 'style' => 'plain'], [], ['color' => BONE, 'typography' => ['size' => '16px', 'font_family' => SANS, 'weight' => '500', 'letter_spacing' => '-0.3px']]),
 ], '8px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], []);
+$brand = $brandRow();
 $nav = B('core.nav_menu', ['menu' => 'header', 'items' => [], 'layout' => 'horizontal', 'align' => 'center', 'aria_label' => 'Main', 'toggle_breakpoint' => 'none'], [], ['typography' => ['size' => '14px', 'font_family' => SANS, 'weight' => '400']], ['classNames' => ['rk-nav'], 'style_parts' => [
     'link' => ['color' => 'rgba(237,232,223,.72)'], 'current' => ['color' => BONE],
     'submenu' => ['background' => ['color' => '#141416'], 'border' => ['radius' => '14px']], 'sublink' => ['color' => BONE],
 ], 'devices' => ['lg']]);
-$fullMenu = B('layout.offcanvas', ['drawer_id' => 'rk-menu', 'title' => '', 'position' => 'right', 'trigger_text' => 'Menu', 'trigger_variant' => 'plain', 'trigger_icon' => 'menu', 'trigger_icon_size' => 18, 'trigger_show_text' => true], [
-    B('core.nav_menu', ['menu' => 'full', 'items' => [], 'layout' => 'vertical', 'align' => 'left', 'aria_label' => 'Full menu', 'toggle_breakpoint' => 'none'], [], ['typography' => ['size' => '44px', 'font_family' => SANS, 'weight' => '200', 'letter_spacing' => '-2px', 'line_height' => '1.1']], ['style_parts' => ['link' => ['color' => BONE], 'current' => ['color' => ORANGE]]]),
-    EYE('Available from December 2026 · Based in Bangladesh, working worldwide', MUTED),
-    B('core.link', ['link' => L('Support@rakibhasaan.com', 'mailto:Support@rakibhasaan.com'), 'style' => 'plain'], [], ['color' => BONE, 'typography' => ['size' => '18px']]),
+// The full-screen menu: the brand where the header's is, two columns of numbered links with a line under each,
+// the hovered link's picture on the right, and a row of contact links along the bottom.
+$fsLinks = static fn(array $links): array => array_map(static fn(array $l): array => B('core.link', ['link' => L($l[0], $l[1]), 'style' => 'plain'], [], ['color' => BONE, 'typography' => ['size' => '14px']]), $links);
+$fullMenu = B('layout.offcanvas', ['drawer_id' => 'rk-menu', 'title' => '', 'position' => 'fullscreen', 'close_text' => 'Close', 'trigger_text' => 'Menu', 'trigger_variant' => 'plain', 'trigger_icon' => 'menu', 'trigger_icon_size' => 18, 'trigger_show_text' => true], [
+    ROW([$brandRow()], '0px', ['padding' => ['top' => '20px', 'right' => '28px', 'bottom' => '20px', 'left' => '28px']], ['align' => 'center'], []),
+    B('core.nav_menu', ['menu' => 'full', 'items' => [], 'layout' => 'vertical', 'align' => 'left', 'aria_label' => 'Full menu', 'toggle_breakpoint' => 'none',
+        'numbered' => true, 'descriptions' => true, 'arrow' => true, 'columns' => 2, 'preview' => true, 'reveal' => true], [],
+        ['typography' => ['size' => '40px', 'font_family' => SANS, 'weight' => '300', 'letter_spacing' => '-1.6px', 'line_height' => '1.05'],
+         'padding' => ['top' => '40px', 'right' => '28px', 'bottom' => '40px', 'left' => '28px'], 'dimensions' => ['max_width' => '1440px'], 'margin' => ['top' => 'auto', 'bottom' => '0px']],
+        ['classNames' => ['rk-fs'], 'style_parts' => [
+            'item' => ['border' => ['width' => '1px', 'style' => 'solid', 'color' => '#22211F', 'sides' => 'bottom']],
+            'link' => ['color' => BONE, 'padding' => ['top' => '14px', 'right' => '0px', 'bottom' => '14px', 'left' => '0px']],
+            'current' => ['color' => ORANGE],
+            'number' => ['color' => MUTED],
+            'description' => ['color' => MUTED],
+            'arrow' => ['color' => ORANGE],
+            'preview' => ['border' => ['radius' => '20px']],
+            'caption' => ['color' => MUTED],
+        ], 'responsive' => ['mobile' => ['style' => ['typography' => ['size' => '30px'], 'padding' => ['top' => '24px', 'right' => '16px', 'bottom' => '24px', 'left' => '16px']]]]]),
+    ROW([
+        P('Available from December 2026 · Based in Bangladesh, working worldwide', '#BDB7AD', '14px'),
+        ROW($fsLinks([['Support@rakibhasaan.com', 'mailto:Support@rakibhasaan.com'], ['Fiverr', 'https://fiverr.com/rakib_64/'], ['GitHub', 'https://github.com/rakib6564/']]), '22px', ['dimensions' => ['width' => 'auto']], ['wrap' => 'wrap'], []),
+    ], '20px', ['padding' => ['top' => '22px', 'right' => '28px', 'bottom' => '22px', 'left' => '28px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => '#22211F'], 'margin' => ['top' => 'auto']], ['justify' => 'between', 'align' => 'center', 'wrap' => 'wrap'], ['layout' => ['direction' => 'column', 'align' => 'start']]),
 ], [], ['style_parts' => [
     'trigger' => ['background' => ['color' => 'rgba(237,232,223,.08)'], 'color' => BONE, 'border' => ['radius' => '999px'], 'padding' => ['top' => '11px', 'right' => '18px', 'bottom' => '11px', 'left' => '18px'], 'typography' => ['size' => '14px', 'weight' => 'medium', 'family' => 'body']],
     'panel' => ['background' => ['color' => INK], 'color' => BONE],
-    'close' => ['color' => BONE],
+    'header' => ['padding' => ['top' => '16px', 'right' => '28px', 'bottom' => '16px', 'left' => '28px']],
+    'close' => ['color' => BONE, 'background' => ['color' => '#1C1B19']],
+    'body' => ['padding' => ['top' => '0px', 'right' => '0px', 'bottom' => '0px', 'left' => '0px']],
 ]]);
 $hdr = CTOP('Header', [
     $brand,
@@ -110,6 +139,7 @@ $ft = CTOP('Footer', [
     ], '22px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], [])], '16px', ['padding' => ['top' => '22px']], ['justify' => 'between', 'align' => 'center'], []),
     B('core.message_widget', [
         'launcher_label' => 'Message Rakib H.', 'launcher_icon' => 'message-circle', 'position' => 'left',
+        'launcher_photo' => true, 'launcher_lines' => "{status}\nIt's {time} in Dhaka\nAsk me about your website", 'compact_on_scroll' => true,
         'title' => 'Message Rakib H.', 'name' => 'Rakib', 'avatar' => IMGREF('dc5af924d95ea0c65e0bccbd61ccba59.jpg', 'Rakib Hasan'),
         'intro' => 'Tell me about your site. I usually reply within the hour.',
         'timezone' => 'Asia/Dhaka', 'hours_start' => '10:00', 'hours_end' => '23:00', 'days' => 'everyday',

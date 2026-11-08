@@ -63,3 +63,6 @@
 /* Recent work marquee: cards of one size. */
 .rk-iq-card { width: 320px; flex: none; }
 .rk-iq-card img { width: 100%; height: 240px; object-fit: cover; }
+
+/* Full-screen menu: the numbers and descriptions in the mono face, as every small label on the site. */
+.rk-fs .sb-nav__num, .rk-fs .sb-nav__desc, .rk-fs .sb-nav__preview-caption { font-family: "Geist Mono", ui-monospace, monospace; }

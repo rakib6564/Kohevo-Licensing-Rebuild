@@ -66,6 +66,12 @@ function CTOP(string $label, array $children, array $style, array $extra = []): 
         'children' => array_values(array_filter($children)),
     ]);
     foreach (['responsive', 'interactions', 'classNames', 'animation'] as $k) { if (!empty($extra[$k])) { $c[$k] = $extra[$k]; } }
+    $pc = $extra['interactions']['page_colors'] ?? null;
+    if (is_array($pc) && isset($pc['text'], $pc['muted'], $pc['line'], $pc['accent'])) {
+        $map = [strtolower($pc['text']) => 'text.body', strtolower($pc['muted']) => 'text.muted', strtolower($pc['line']) => 'border.default'];
+        $map += [strtolower($pc['accent']) => 'color.accent'];
+        foreach ($c['children'] as $i => $child) { $c['children'][$i] = follow_page($child, $map); }
+    }
     return $c;
 }
 
@@ -184,13 +190,36 @@ function SEC(string $label, array $kids, string $top, string $bottom, array $mor
     $extra['responsive']['mobile']['style']['padding'] = ['top' => $mtop, 'right' => '20px', 'bottom' => $mbottom, 'left' => '20px'];
     return CTOP($label, $kids, $style, $extra);
 }
-/** The colours a section gives the whole page while it is on screen. */
+/** Each section theme's colours: text, muted text, lines and accent, as the original's four themes. */
+const PALETTE = [
+    'ink'    => ['bg' => INK, 'fg' => BONE, 'muted' => MUTED, 'line' => LINE, 'accent' => ORANGE],
+    'bone'   => ['bg' => BONE, 'fg' => INK, 'muted' => MUTED_BONE, 'line' => LINE_BONE, 'accent' => RUST],
+    'navy'   => ['bg' => NAVY, 'fg' => '#E9ECF5', 'muted' => '#9AA6C4', 'line' => '#24335A', 'accent' => PERI],
+    'orange' => ['bg' => ORANGE, 'fg' => INK, 'muted' => '#5A1F08', 'line' => '#E04A12', 'accent' => INK],
+];
+/** The colours a section gives the whole page while it is on screen: all five, so the theme's text, muted, line and accent colours follow. */
 function THEME(string $name): array
 {
-    return ['page_colors' => match ($name) {
-        'bone' => ['background' => BONE, 'text' => INK],
-        'navy' => ['background' => NAVY, 'text' => '#E9ECF5'],
-        'orange' => ['background' => ORANGE, 'text' => INK],
-        default => ['background' => INK, 'text' => BONE],
-    }];
+    $p = PALETTE[$name] ?? PALETTE['ink'];
+    return ['page_colors' => ['background' => $p['bg'], 'text' => $p['fg'], 'muted' => $p['muted'], 'line' => $p['line'], 'accent' => $p['accent']]];
+}
+/**
+ * Inside a themed section, a text, muted, line or accent colour written as the theme's own becomes the matching theme
+ * colour (text.body, text.muted, border.default, color.accent), so it changes with the page as the original's do and a
+ * light section never shows dark text on the dark page. Backgrounds and buttons keep their colours.
+ */
+function follow_page(array $node, array $map): array
+{
+    if (($node['type'] ?? '') === 'core.button') { return $node; }
+    $swap = static function (mixed $v) use ($map): mixed { return is_string($v) && isset($map[strtolower($v)]) ? $map[strtolower($v)] : $v; };
+    $style = static function (array $st) use ($swap): array {
+        if (isset($st['color'])) { $st['color'] = $swap($st['color']); }
+        if (isset($st['border']['color'])) { $st['border']['color'] = $swap($st['border']['color']); }
+        return $st;
+    };
+    if (isset($node['style']) && is_array($node['style'])) { $node['style'] = $style($node['style']); }
+    foreach (($node['style_parts'] ?? []) as $k => $part) { if (is_array($part)) { $node['style_parts'][$k] = $style($part); } }
+    foreach (($node['responsive'] ?? []) as $d => $r) { if (is_array($r['style'] ?? null)) { $node['responsive'][$d]['style'] = $style($r['style']); } }
+    foreach (($node['children'] ?? []) as $i => $child) { if (is_array($child)) { $node['children'][$i] = follow_page($child, $map); } }
+    return $node;
 }
