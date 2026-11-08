@@ -71,7 +71,8 @@
 .rk-tgrid :is(.sb-tgrid__count, .sb-tgrid__meta, .sb-tgrid__date, .sb-tgrid__more, .sb-tgrid__page, .sb-tgrid__dialog-who) { font-family: "Geist Mono", ui-monospace, monospace; }
 
 /* Industry rows: the name gives way (and wraps) before the arrow leaves the screen on a phone. */
-.rk-ind-row > .rk-ind-name { min-width: 0; overflow-wrap: anywhere; }
+.rk-ind-row > .rk-ind-name { min-width: 0; overflow-wrap: break-word; hyphens: none; }
+@media (max-width: 1023.98px) { .rk-ind-row .sb-block--core-image { display: none; } }
 
 /* Short reviews ticker: the rows fade out at both edges. */
 .rk-ticker .sb-tgrid__row { -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
@@ -113,3 +114,12 @@
 .rk-scard .sb-block--theme-post-title a, .rk-card .sb-block--theme-post-title a { color: inherit; text-decoration: none; }
 .rk-scard .sb-block--theme-post-title a:hover, .rk-card .sb-block--theme-post-title a:hover { color: var(--sb-color-accent); }
 .rk-tag .sb-field-value { display: inline-block; padding: 7px 12px; border-radius: 999px; }
+
+/* Hero proof row: mono labels between thin dividers, as the original. */
+.rk-proofs .rk-proof { font-family: "Geist Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: 1.2px; padding: 0 20px; border-left: 1px solid var(--sb-border-default); }
+.rk-proofs .rk-proof:first-child { padding-left: 0; border-left: 0; }
+.rk-proofs .rk-proof p { margin: 0; }
+.rk-proofs .rk-proof strong { color: var(--sb-text-body); font-weight: 500; }
+@media (max-width: 767.98px) { .rk-proofs .rk-proof { padding: 0 14px 0 0; border-left: 0; } }
+/* Reviews bento: one column on a tablet, the score card no longer spans two rows. */
+@media (max-width: 1023.98px) { .rk-bento > * { grid-row: auto !important; grid-column: auto !important; } }

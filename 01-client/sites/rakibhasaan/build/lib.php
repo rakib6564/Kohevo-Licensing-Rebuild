@@ -58,6 +58,15 @@ function B(string $type, array $props = [], array $children = [], array $style =
     return scale_tracking($b);
 }
 
+/** A background colour that hides what is behind it: a hex colour, or rgba() at half opacity or more. */
+function solid_background(mixed $bg): bool
+{
+    $c = is_array($bg) ? trim((string) ($bg['color'] ?? '')) : '';
+    if ($c === '' || $c === 'transparent') { return false; }
+    if (preg_match('/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/i', $c, $m)) { return (float) $m[1] >= 0.5; }
+    return str_starts_with($c, '#') || str_starts_with(strtolower($c), 'rgb(');
+}
+
 /**
  * Tight tracking written in px suits the desktop size only: a device that sets its own font size gets the same
  * tracking in proportion (-5px at 96px is -2.7px at 52px), unless it sets one itself.
@@ -91,7 +100,7 @@ function CTOP(string $label, array $children, array $style, array $extra = []): 
     $pc = $extra['interactions']['page_colors'] ?? null;
     if (is_array($pc) && isset($pc['text'], $pc['muted'], $pc['line'], $pc['accent'])) {
         $map = [strtolower($pc['text']) => 'text.body', strtolower($pc['muted']) => 'text.muted', strtolower($pc['line']) => 'border.default'];
-        $map += [strtolower($pc['accent']) => 'color.accent'];
+        $map += [strtolower($pc['accent']) => 'text.accent'];
         foreach ($c['children'] as $i => $child) { $c['children'][$i] = follow_page($child, $map); }
     }
     return $c;
@@ -244,21 +253,38 @@ function THEME(string $name): array
 }
 /**
  * Inside a themed section, a text, muted, line or accent colour written as the theme's own becomes the matching theme
- * colour (text.body, text.muted, border.default, color.accent), so it changes with the page as the original's do and a
+ * colour (text.body, text.muted, border.default, text.accent), so it changes with the page as the original's do and a
  * light section never shows dark text on the dark page. Backgrounds and buttons keep their colours.
  */
 function follow_page(array $node, array $map): array
 {
     if (($node['type'] ?? '') === 'core.button') { return $node; }
+    // Text on a background of its own (a dark caption pill on a photo) keeps its colours: the page's would not show on it.
+    if (solid_background($node['style']['background'] ?? null)) { return $node; }
     $swap = static function (mixed $v) use ($map): mixed { return is_string($v) && isset($map[strtolower($v)]) ? $map[strtolower($v)] : $v; };
-    $style = static function (array $st) use ($swap): array {
+    // A part's colour takes a theme colour as written. A block's own takes it as its text or border colour token
+    // (`text_token`, `border_token`): its plain `color` and `border.color` take literal colours only.
+    $part = static function (array $st) use ($swap): array {
         if (isset($st['color'])) { $st['color'] = $swap($st['color']); }
         if (isset($st['border']['color'])) { $st['border']['color'] = $swap($st['border']['color']); }
         return $st;
     };
-    if (isset($node['style']) && is_array($node['style'])) { $node['style'] = $style($node['style']); }
-    foreach (($node['style_parts'] ?? []) as $k => $part) { if (is_array($part)) { $node['style_parts'][$k] = $style($part); } }
-    foreach (($node['responsive'] ?? []) as $d => $r) { if (is_array($r['style'] ?? null)) { $node['responsive'][$d]['style'] = $style($r['style']); } }
+    $own = static function (array $st) use ($swap): array {
+        foreach ([['color'], ['typography', 'color']] as $path) {
+            $v = $path === ['color'] ? ($st['color'] ?? null) : ($st['typography']['color'] ?? null);
+            $t = $swap($v);
+            if (is_string($t) && $t !== $v) {
+                if ($path === ['color']) { unset($st['color']); } else { unset($st['typography']['color']); }
+                $st['text_token'] = $t;
+            }
+        }
+        $b = $st['border']['color'] ?? null;
+        $t = $swap($b);
+        if (is_string($t) && $t !== $b && $t === 'border.default') { unset($st['border']['color']); $st['border_token'] = $t; }
+        return $st;
+    };
+    if (isset($node['style']) && is_array($node['style'])) { $node['style'] = $own($node['style']); }
+    foreach (($node['style_parts'] ?? []) as $k => $p) { if (is_array($p)) { $node['style_parts'][$k] = $part($p); } }
     foreach (($node['children'] ?? []) as $i => $child) { if (is_array($child)) { $node['children'][$i] = follow_page($child, $map); } }
     return $node;
 }

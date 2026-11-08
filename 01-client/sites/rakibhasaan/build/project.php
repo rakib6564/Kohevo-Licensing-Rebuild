@@ -131,10 +131,13 @@ $screens = SEC('On every screen', [
 ], '110px', '110px', [], ['interactions' => THEME('navy'), 'when_field' => 'screen']);
 
 // 6. The result, and the numbers it came with.
-$metric = static fn(string $key, string $unit, string $label): array => VBOX([
-    FV($key, BONE, '64px', 'div', ['typography' => ['weight' => '200', 'line_height' => '1', 'letter_spacing' => '-3px']], ['after' => $unit], ['style_parts' => ['affix' => ['typography' => ['size' => '18px'], 'color' => MUTED]]]),
-    EYE($label, MUTED),
-], '10px', ['padding' => ['top' => '18px', 'bottom' => '18px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => LINE]], ['when_field' => $key]);
+// A number in a small card: the figure with its unit, and what it counts.
+$metric = static fn(string $key, string $unit, string $label): array => ROW([
+    FV($key, BONE, '40px', 'div', ['typography' => ['weight' => '200', 'line_height' => '1', 'letter_spacing' => '-1.6px']], ['after' => $unit],
+        ['style_parts' => ['affix' => ['typography' => ['size' => '15px', 'letter_spacing' => '0px'], 'color' => MUTED]]]),
+    P($label, MUTED, '12px', ['line_height' => '1.35']),
+], '14px', ['padding' => ['top' => '16px', 'right' => '18px', 'bottom' => '16px', 'left' => '18px'], 'border' => ['width' => '1px', 'style' => 'solid', 'color' => LINE, 'radius' => '14px'], 'margin' => ['bottom' => '10px']],
+    ['align' => 'end'], ['layout' => ['direction' => 'row', 'align' => 'end']], ['when_field' => $key]);
 $result = SEC('The result', [
     $headRow('05', 'The result', 'ink'),
     ROW([

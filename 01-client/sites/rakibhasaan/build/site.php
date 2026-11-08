@@ -111,7 +111,7 @@ $ft = CTOP('Footer', [
         EYE('in Dhaka'),
     ], '6px', [], ['align' => 'center'], []),
     ROW([
-        B('core.heading', ['text' => 'Have a project in mind?', 'level' => 'h2'], [], ['color' => BONE, 'typography' => ['size' => '96px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.95', 'letter_spacing' => '-5.2px'], 'dimensions' => ['max_width' => '620px']], ['responsive' => ['mobile' => ['style' => ['typography' => ['size' => '52px']]]]]),
+        B('core.heading', ['text' => 'Have a project in mind?', 'level' => 'h2'], [], ['color' => BONE, 'typography' => ['size' => '96px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.95', 'letter_spacing' => '-5.2px'], 'dimensions' => ['max_width' => '620px']], ['responsive' => ['tablet' => ['style' => ['typography' => ['size' => '72px']]], 'mobile' => ['style' => ['typography' => ['size' => '52px']]]]]),
         VBOX([
             PILL('Start with a free audit  ↗', '/free-audit/', ORANGE, INK),
             EYE('Copy email'),

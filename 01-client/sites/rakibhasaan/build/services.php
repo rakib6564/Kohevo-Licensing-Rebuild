@@ -64,7 +64,15 @@ $rep = static fn(string $field, array $row, int $cols, string $gap = '16px', arr
 
 $cB = TC('bone'); $cI = TC('ink'); $cN = TC('navy'); $cO = TC('orange');
 /** The original's section layout: the head on the left, the content on the right; stacked on a phone. */
-$twoCol = static fn(array $head, array $content): array => ROW([W($head, '34%'), W($content, '60%')], '48px', [], ['justify' => 'between', 'align' => 'start']);
+$twoCol = static function (array $head, array $content): array {
+    // Side by side on a desktop; stacked on a tablet and a phone, where a third of the width is too narrow for the head.
+    $head = W($head, '34%'); $content = W($content, '60%');
+    $head['responsive']['tablet']['style']['dimensions']['width'] = '100%';
+    $content['responsive']['tablet']['style']['dimensions']['width'] = '100%';
+    $row = ROW([$head, $content], '48px', [], ['justify' => 'between', 'align' => 'start']);
+    $row['responsive']['tablet']['style']['layout'] = ['direction' => 'column', 'gap' => '32px'];
+    return $row;
+};
 
 $hero = CTOP('Hero', [
     ROW([

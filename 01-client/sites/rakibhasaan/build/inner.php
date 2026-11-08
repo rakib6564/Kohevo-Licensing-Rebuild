@@ -37,7 +37,8 @@ function RICH(string $html, string $color, string $size = '18px', array $opt = [
     if (str_ends_with($size, 'px') && $px >= 20 && !isset($opt['responsive']['mobile']['style']['typography']['size'])) {
         $opt['responsive']['mobile']['style']['typography']['size'] = max(16, (int) round($px * 0.78)) . 'px';
     }
-    return B('core.rich_text', ['content' => $html], [], ['color' => $color, 'typography' => ['size' => $size, 'font_family' => SANS, 'weight' => $weight, 'line_height' => '1.6']], ['classNames' => ['rk-rich']] + $opt);
+    $opt['classNames'] = array_values(array_unique(array_merge(['rk-rich'], $opt['classNames'] ?? [])));
+    return B('core.rich_text', ['content' => $html], [], ['color' => $color, 'typography' => ['size' => $size, 'font_family' => SANS, 'weight' => $weight, 'line_height' => '1.6']], $opt);
 }
 function CARD(array $kids, array $c, string $gap = '14px', array $more = []): array
 {
@@ -197,7 +198,7 @@ function S_BAND(array $s): array
         B('layout.flex', ['direction' => 'column', 'gap' => 'none'], [
             PIC(MFILE($s['img']), $s['alt'], '620px', '360px', '24px'),
             ROW([EYE($s['cap'], BONE), ROW([B('core.image', ['media' => IMGREF(MFILE('dc5af924d95ea0c65e0bccbd61ccba59'), ''), 'aspect_ratio' => '1:1', 'rounded' => true], [], ['dimensions' => ['width' => '28px']]), P('Rakib Hasan', BONE, '14px')], '8px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], [])],
-                '12px', ['background' => ['color' => 'rgba(11,11,12,0.7)'], 'border' => ['radius' => '999px'], 'padding' => ['top' => '10px', 'right' => '16px', 'bottom' => '10px', 'left' => '16px']], ['justify' => 'between', 'align' => 'center'], ['layout' => ['direction' => 'column', 'gap' => '6px']], ['classNames' => ['rk-band-cap']]),
+                '12px', ['background' => ['color' => 'rgba(11,11,12,0.7)'], 'border' => ['radius' => '999px'], 'padding' => ['top' => '10px', 'right' => '16px', 'bottom' => '10px', 'left' => '16px'], 'dimensions' => ['width' => '100%']], ['justify' => 'between', 'align' => 'center'], ['layout' => ['direction' => 'column', 'gap' => '6px']], ['classNames' => ['rk-band-cap']]),
         ], ['position' => ['mode' => 'relative']], ['classNames' => ['rk-band'], 'interactions' => ['scroll' => ['scale' => 2, 'devices' => ['desktop']]]]),
     ], ['padding' => ['top' => '20px', 'right' => '28px', 'bottom' => '40px', 'left' => '28px'], 'layout' => ['display' => 'flex', 'direction' => 'column', 'content_width' => 'boxed', 'content_max' => '1440px']],
         ['interactions' => THEME('ink'), 'responsive' => ['mobile' => ['style' => ['padding' => ['top' => '10px', 'right' => '16px', 'bottom' => '24px', 'left' => '16px']]]]]);
@@ -298,17 +299,19 @@ function S_PRODUCTS(int $n): array
 }
 function S_REVIEWS(array $reviews, array $featured): array
 {
-    $bars = static fn(array $rows): array => B('core.progress', ['items' => array_map(static fn(array $x): array => ['label' => $x[0], 'value' => (int) round($x[1] * 100 / 101)], $rows), 'show_value' => false, 'bar_color' => ORANGE, 'track_color' => '#232120', 'height' => 4], [], ['color' => BONE, 'typography' => ['size' => '14px']], ['classNames' => ['rk-bars']]);
+    // Label, bar and count on one line, as the original's charts.
+    $bars = static fn(array $rows): array => B('core.progress', ['items' => array_map(static fn(array $x): array => ['label' => preg_replace('/ · \d+$/', '', $x[0]), 'value' => (int) round($x[1] * 100 / 101), 'note' => (string) $x[1]], $rows),
+        'show_value' => true, 'layout' => 'inline', 'bar_color' => ORANGE, 'track_color' => '#232120', 'height' => 4], [], ['color' => BONE, 'typography' => ['size' => '14px']], ['classNames' => ['rk-bars']]);
     $box = static fn(string $h, array $kids, array $item = []): array => CARD([EYE($h, MUTED), ...$kids], TC('ink'), '14px', ['layout' => $item]);
     $num = static fn(string $n, string $l): array => VBOX([P($n, BONE, '26px', ['weight' => '300']), EYE($l, MUTED)], '4px', ['dimensions' => ['width' => 'auto']]);
     $chip = static fn(string $t): array => P($t, BONE, '14px', [], ['classNames' => ['rk-chip']]);
     // The original's bento: the score card down the left, two charts, and the clients who came back across the bottom.
     $score = CARD([
-        EYE('Fiverr · rakib_64 · Level 2', MUTED), H('4.99', 'div', '150px', '104px', BONE), P('★★★★★', ORANGE, '22px'),
+        EYE('Fiverr · rakib_64 · Level 2', MUTED), H('4.99', 'div', '150px', '96px', BONE, ['responsive' => ['tablet' => ['style' => ['typography' => ['size' => '120px']]], 'mobile' => ['style' => ['typography' => ['size' => '96px']]]]]), P('★★★★★', ORANGE, '22px'),
         RICH('<p>Average of all <strong>101 reviews</strong>. 98 are five stars. Every category on the profile is rated 5: communication, quality and value.</p>', 'rgba(237,232,223,.75)', '16px'),
         ROW([$num('101', 'Reviews'), $num('13', 'Countries'), $num('1 hr', 'Avg. response'), $num('89', 'Replied to')], '28px',
             ['margin' => ['top' => 'auto'], 'padding' => ['top' => '22px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => LINE]], ['wrap' => 'wrap', 'justify' => 'between'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']]),
-    ], TC('ink'), '14px', ['layout' => ['row_span' => 2], 'background' => ['gradient' => 'radial-gradient(120% 90% at 100% 0%, rgba(255,90,31,0.28) 0%, rgba(255,90,31,0.06) 45%, rgba(11,11,12,0) 70%)']]);
+    ], TC('ink'), '14px', ['layout' => ['row_span' => 2, 'justify' => 'between'], 'background' => ['gradient' => 'radial-gradient(120% 90% at 100% 0%, rgba(255,90,31,0.28) 0%, rgba(255,90,31,0.06) 45%, rgba(11,11,12,0) 70%)']]);
     $stats = SEC('Review stats', [B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap', 'align' => 'stretch'], [
         $score,
         $box('Where clients are', [$bars([['United States · 72', 72], ['Belgium · 10', 10], ['United Kingdom · 4', 4], ['Azerbaijan · 3', 3], ['Germany · 2', 2], ['Nigeria · 2', 2], ['New Zealand · 2', 2], ['8 more countries · 6', 6]])]),
@@ -318,9 +321,9 @@ function S_REVIEWS(array $reviews, array $featured): array
             P('evburgessjr_01 has hired me 20 times.', MUTED, '14px'),
         ], ['column_span' => 2]),
     ], ['layout' => ['display' => 'grid', 'columns' => 3, 'gap' => '16px']], ['responsive' => [
-        'tablet' => ['style' => ['layout' => ['columns' => 2]]],
+        'tablet' => ['style' => ['layout' => ['columns' => 1]]],
         'mobile' => ['style' => ['layout' => ['columns' => 1]]],
-    ]])], '120px', '100px', [], ['interactions' => THEME('ink')]);
+    ], 'classNames' => ['rk-bento']])], '120px', '100px', [], ['interactions' => THEME('ink')]);
 
     // The short reviews scroll past in two rows: the same Review items, the ones under 48 characters.
     $marquee = CTOP('Short reviews', [B('core.testimonial_grid', [
@@ -357,11 +360,12 @@ function HERO(array $p, array $crumbs, ?array $side = null, bool $sideBelow = fa
         $crumb[] = EYE('/', LINE);
     }
     array_pop($crumb);
-    $proof = ROW(array_map(static fn(array $x): array => RICH('<p><strong>' . $x[0] . '</strong> ' . $x[1] . '</p>', MUTED, '12px', ['classNames' => ['rk-rich', 'rk-proof']]), [['5.0', 'from 101 reviews'], ['250+', 'sites shipped'], ['~1 hr', 'average reply'], ['14', 'countries']]), '28px',
-        ['padding' => ['top' => '20px'], 'margin' => ['top' => '48px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => LINE]], ['wrap' => 'wrap'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap', 'gap' => '14px']]);
+    $proof = ROW(array_map(static fn(array $x): array => RICH('<p><strong>' . $x[0] . '</strong> ' . $x[1] . '</p>', MUTED, '12px', ['classNames' => ['rk-rich', 'rk-proof']]), [['5.0', 'from 101 reviews'], ['250+', 'sites shipped'], ['~1 hr', 'average reply'], ['14', 'countries']]), '0px',
+        ['padding' => ['top' => '20px'], 'margin' => ['top' => '48px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => LINE]], ['wrap' => 'wrap', 'align' => 'center'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap', 'gap' => '10px']], ['classNames' => ['rk-proofs']]);
     $title = B('core.heading', ['text' => $p['h1'], 'level' => 'h1'], [], ['color' => BONE, 'typography' => ['size' => '104px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.96', 'letter_spacing' => '-5.6px'], 'dimensions' => ['max_width' => '1180px']],
         ['responsive' => ['tablet' => ['style' => ['typography' => ['size' => '72px']]], 'mobile' => ['style' => ['typography' => ['size' => '46px']]]], 'interactions' => ['text' => ['effect' => 'lines', 'step_ms' => 90]]]);
-    $intro = VBOX(BLKS($p['intro'], $c, true), '16px');
+    // The intro reads at body size, as the original's (16-17px, not a lead).
+    $intro = VBOX(BLKS($p['intro'], ['muted' => 'rgba(237,232,223,.82)'] + $c, false), '14px');
     $body = $side !== null && !$sideBelow
         ? ROW([W(VBOX([$title, $intro], '32px'), '58%'), W($side, '36%')], '48px', ['margin' => ['top' => '40px']], ['justify' => 'between', 'align' => 'end'])
         : VBOX(array_values(array_filter([$title, $side !== null ? ROW([W($intro, '56%'), W($side, '38%')], '40px', [], ['justify' => 'between', 'align' => 'end']) : W($intro, '62%')])), '32px', ['margin' => ['top' => '40px']]);
