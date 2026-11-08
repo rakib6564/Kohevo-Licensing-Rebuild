@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '72';
+    public const VERSION = '73';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -366,6 +366,8 @@ final class StudioStylesheet
             . '.sb-button--md{padding:.7rem 1.3rem;font-size:1rem}'
             . '.sb-button--lg{padding:.9rem 1.8rem;font-size:1.125rem}'
             . '.sb-font-normal{font-weight:400}.sb-font-medium{font-weight:500}.sb-font-semibold{font-weight:600}.sb-font-bold{font-weight:700}.sb-font-extrabold{font-weight:800}'
+            // The numeric weights the schema also accepts (a variable font's thin 200, a heavy 900).
+            . implode('', array_map(static fn(int $w): string => '.sb-font-' . $w . '{font-weight:' . $w . '}', range(100, 900, 100)))
             . self::typographyInheritCss()
             . '.sb-uppercase{text-transform:uppercase}.sb-lowercase{text-transform:lowercase}.sb-capitalize{text-transform:capitalize}.sb-normal-case{text-transform:none}'
             . '.sb-leading-tight{line-height:1.25}.sb-leading-snug{line-height:1.375}.sb-leading-normal{line-height:1.5}.sb-leading-relaxed{line-height:1.625}.sb-leading-loose{line-height:2}'
@@ -1002,6 +1004,8 @@ final class StudioStylesheet
             . '.sb-msg--right{right:1.25rem}.sb-msg--left{left:1.25rem;align-items:flex-start}'
             . '.sb-msg__launcher{display:inline-flex;align-items:center;gap:.5rem;position:relative;padding:.75rem 1.1rem;border-radius:999px;background:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff);text-decoration:none;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.18);transition:transform .2s ease}'
             . '.sb-msg__launcher:hover{transform:translateY(-2px)}'
+            // The launcher and the close button are links: the site's link colour must not reach them.
+            . '.sb-body .sb-msg .sb-msg__launcher[data-sb-msg-open]{color:var(--sb-text-inverse,#fff)}.sb-body .sb-msg .sb-msg__close[data-sb-msg-close]{color:inherit}'
             . '.sb-msg__dot,.sb-msg__status-dot{width:.55rem;height:.55rem;border-radius:50%;background:#9ca3af;flex:none}'
             . '.sb-msg__dot{position:absolute;top:.2rem;right:.2rem;box-shadow:0 0 0 2px var(--sb-color-accent,#111)}'
             . '.sb-msg.is-online .sb-msg__dot,.sb-msg.is-online .sb-msg__status-dot{background:#22c55e}'
@@ -1035,8 +1039,9 @@ final class StudioStylesheet
             . '.sb-filter{margin-bottom:1.5rem}'
             . '.sb-filter__list{display:flex;flex-wrap:wrap;gap:.5rem;list-style:none;margin:0;padding:0}'
             . '.sb-filter__chip{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .9rem;border-radius:999px;border:1px solid var(--sb-border-default,#e2e8f0);text-decoration:none;color:inherit;font-size:.875rem;transition:background-color .2s ease,color .2s ease,border-color .2s ease}'
+            . '.sb-body .sb-filter a.sb-filter__chip{color:inherit}'
             . '.sb-filter__chip:hover{border-color:currentColor}'
-            . '.sb-filter__chip[aria-current]{background:var(--sb-color-accent,#111);border-color:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff)}'
+            . '.sb-body .sb-filter a.sb-filter__chip[aria-current]{background:var(--sb-color-accent,#111);border-color:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff)}'
             . '.sb-filter__count{font-size:.75em;opacity:.65;font-variant-numeric:tabular-nums}'
             . '.sb-query-loop [data-sb-terms][hidden]{display:none!important}'
             . '.sb-pagination__gap{padding:0 .25rem;opacity:.6}'
@@ -1073,6 +1078,8 @@ final class StudioStylesheet
     public static function pageMotionCss(): string
     {
         return 'html[data-sb-page-colors] body.sb-body{transition:background-color .6s ease,color .6s ease}'
+            // Until the runtime runs (or without it), each themed section paints its own colours, so its text stays readable.
+            . 'html:not([data-sb-ready]) [data-sb-page-colors]{background:var(--sb-page-bg);color:var(--sb-page-fg)}'
             . 'html[data-sb-paged-bg] body.sb-body{background:var(--sb-paged-bg)}'
             . 'html[data-sb-paged-fg] body.sb-body{color:var(--sb-paged-fg);--sb-text-heading:var(--sb-paged-fg);--sb-text-body:var(--sb-paged-fg)}'
             . ':where(.sb-adapt){transition:background-color .4s ease,color .4s ease}'

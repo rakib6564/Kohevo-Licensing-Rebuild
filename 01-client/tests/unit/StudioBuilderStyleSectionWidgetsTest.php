@@ -212,3 +212,14 @@ unit('query loop: a visitor\'s ?filter= marks its chip current and hides the oth
     assert_true(str_contains($html, 'data-sb-item-url="/w/1" data-sb-terms="[&quot;Web&quot;]" hidden>'), 'the Web item is hidden');
     assert_true(str_contains($html, 'data-sb-item-url="/w/2" data-sb-terms="[&quot;Brand&quot;]">'), 'the Brand item shows');
 });
+
+unit('stylesheet: numeric font weights work, links never colour the message launcher or the chips, and themed sections read without the runtime', function (): void {
+    StudioStylesheet::resetCache();
+    $css = StudioStylesheet::css();
+    foreach (range(100, 900, 100) as $w) {
+        assert_true(str_contains($css, ".sb-font-{$w}{font-weight:{$w}}"), "weight {$w}");
+    }
+    assert_true(str_contains($css, '.sb-body .sb-msg .sb-msg__launcher[data-sb-msg-open]{color:var(--sb-text-inverse,#fff)}'), 'the launcher keeps its own colour');
+    assert_true(str_contains($css, '.sb-body .sb-filter a.sb-filter__chip{color:inherit}'), 'chips are not link-coloured');
+    assert_true(str_contains($css, 'html:not([data-sb-ready]) [data-sb-page-colors]{background:var(--sb-page-bg);color:var(--sb-page-fg)}'), 'page colours without the runtime');
+});
