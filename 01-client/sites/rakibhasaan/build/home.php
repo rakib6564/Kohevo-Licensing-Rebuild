@@ -19,8 +19,8 @@ $stat = static fn(string $n, string $label): array => VBOX([
 ], '6px', ['dimensions' => ['width' => 'auto']]);
 $hero = CTOP('Hero', [
     // The studio portrait: its wide framing on desktop and tablet, the tall one on a phone (the face above the words).
-    BGPIC('rakib-portrait-studio.jpg', 'right', true, ['md', 'lg']),
-    BGPIC('rakib-portrait-tall.jpg', 'top', false, ['base', 'sm']),
+    BGPIC('rakib-hero-golden.jpg', 'right', true, ['md', 'lg']),
+    BGPIC('rakib-hero-golden-m.jpg', 'top', false, ['base', 'sm']),
     ROW([EYE('Freelance designer + developer', BONE), EYE('Available from December 2026', BONE, 'right')], '16px', [], ['justify' => 'between'], ['layout' => ['direction' => 'column', 'gap' => '6px']]),
     B('core.dual_heading', ['before' => 'Websites built for', 'colored' => 'contractors', 'rotate_words' => 'truckers, cleaners, villas, lawyers, artists', 'rotate_ms' => 2200, 'after' => '', 'level' => 'h1'], [],
         ['typography' => ['size' => '138px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.95', 'letter_spacing' => '-7.6px'], 'dimensions' => ['max_width' => '900px'], 'margin' => ['top' => '24px']],

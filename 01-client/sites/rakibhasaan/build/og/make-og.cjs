@@ -15,10 +15,10 @@ const img = (f) => 'data:' + (f.endsWith('.png') ? 'image/png' : f.endsWith('.we
 
 // slug, the small label, the line, the picture on the right (and where its subject sits).
 const CARDS = [
-  ['default', 'Freelance designer + developer', 'Websites built for your industry', 'rakib-portrait-studio.jpg', '72% 30%'],
-  ['home', 'Freelance designer + developer', 'Websites built for your industry', 'rakib-portrait-studio.jpg', '72% 30%'],
-  ['about', 'About', 'One person plans, designs and builds your site', 'rakib-portrait-studio.jpg', '72% 30%'],
-  ['contact', 'Contact', 'Let’s talk about your website', 'rakib-portrait-blue.jpg', '80% 30%'],
+  ['default', 'Freelance designer + developer', 'Websites built for your industry', 'rakib-hero-golden.jpg', '70% 35%'],
+  ['home', 'Freelance designer + developer', 'Websites built for your industry', 'rakib-hero-golden.jpg', '70% 35%'],
+  ['about', 'About', 'One person plans, designs and builds your site', 'rakib-hero-teal.jpg', '78% 30%'],
+  ['contact', 'Contact', 'Let’s talk about your website', 'rakib-headshot.jpg', '50% 28%'],
   ['work', 'Work', 'A web design portfolio, one site from every world', '3e90a1e3057c56feda9aa00c4dbcdd5f.webp', '50% 50%'],
   ['services', 'Services', 'Web design, development and SEO services', 'b131e2de14c018247fe2c08587aa79d2.webp', '50% 50%'],
   ['wordpress-websites', 'WordPress & Elementor websites', 'WordPress websites built for your business', 'e37702657907eb0bc2e36a82f2212ce8.jpg', '50% 50%'],
