@@ -200,8 +200,11 @@ function S_BAND(array $s): array
     return CTOP('Photo', [
         B('layout.flex', ['direction' => 'column', 'gap' => 'none'], [
             PIC(MFILE($s['img']), $s['alt'], '620px', '360px', '24px'),
-            ROW([EYE($s['cap'], BONE), ROW([B('core.image', ['media' => IMGREF(MFILE('dc5af924d95ea0c65e0bccbd61ccba59'), ''), 'aspect_ratio' => '1:1', 'rounded' => true], [], ['dimensions' => ['width' => '28px']]), P('Rakib Hasan', BONE, '14px')], '8px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], [])],
-                '12px', ['background' => ['color' => 'rgba(11,11,12,0.7)'], 'border' => ['radius' => '999px'], 'padding' => ['top' => '10px', 'right' => '16px', 'bottom' => '10px', 'left' => '16px'], 'dimensions' => ['width' => '100%']], ['justify' => 'between', 'align' => 'center'], ['layout' => ['direction' => 'column', 'gap' => '6px']], ['classNames' => ['rk-band-cap']]),
+            // The caption: a small frosted card on the photo's lower-left corner — the face, the name, the line under it.
+            ROW([
+                B('core.image', ['media' => IMGREF(MFILE('dc5af924d95ea0c65e0bccbd61ccba59'), 'Rakib Hasan'), 'aspect_ratio' => '1:1', 'rounded' => false], [], ['dimensions' => ['width' => '44px'], 'border' => ['radius' => '12px']], ['classNames' => ['rk-band-face']]),
+                VBOX([P('Rakib Hasan', BONE, '15px', ['weight' => '500', 'line_height' => '1.2']), EYE($s['cap'], '#BDB7AD')], '4px', ['dimensions' => ['width' => 'auto']]),
+            ], '12px', ['background' => ['color' => 'rgba(11,11,12,0.62)'], 'border' => ['width' => '1px', 'style' => 'solid', 'color' => 'rgba(237,232,223,0.14)', 'radius' => '16px'], 'padding' => ['top' => '10px', 'right' => '18px', 'bottom' => '10px', 'left' => '10px'], 'dimensions' => ['width' => 'auto']], ['align' => 'center'], ['layout' => ['direction' => 'row', 'align' => 'center']], ['classNames' => ['rk-band-cap']]),
         ], ['position' => ['mode' => 'relative']], ['classNames' => ['rk-band'], 'interactions' => ['scroll' => ['scale' => 2, 'devices' => ['desktop']]]]),
     ], ['padding' => ['top' => '20px', 'right' => '28px', 'bottom' => '40px', 'left' => '28px'], 'layout' => ['display' => 'flex', 'direction' => 'column', 'content_width' => 'boxed', 'content_max' => '1440px']],
         ['interactions' => THEME('ink'), 'responsive' => ['mobile' => ['style' => ['padding' => ['top' => '10px', 'right' => '16px', 'bottom' => '24px', 'left' => '16px']]]]]);

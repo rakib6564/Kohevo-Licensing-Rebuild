@@ -86,6 +86,41 @@ function scale_tracking(array $b): array
     return $b;
 }
 
+/**
+ * Tablet and phone sizes for display text. Above 24px (tablet) or 20px (phone) a size steps down on a curve, capped at
+ * 64px on a tablet and 38px on a phone, and never above a size the block already sets for that screen or the tablet's.
+ * Letter spacing scales with it. Body sizes are left alone.
+ */
+function fit_size(float $px, string $device): float
+{
+    return $device === 'mobile'
+        ? ($px <= 20 ? $px : min($px, 38.0, 18 + ($px - 18) * 0.36))
+        : ($px <= 24 ? $px : min($px, 64.0, 22 + ($px - 22) * 0.58));
+}
+function fit_type(array $node): array
+{
+    $sz = $node['style']['typography']['size'] ?? null;
+    if (is_string($sz) && preg_match('/^([\d.]+)px$/', $sz, $m) && (float) $m[1] > 20) {
+        $base = (float) $m[1];
+        $ls = $node['style']['typography']['letter_spacing'] ?? null;
+        $lsv = is_string($ls) && preg_match('/^(-?[\d.]+)px$/', $ls, $l) ? (float) $l[1] : null;
+        $ceiling = $base;
+        foreach (['tablet', 'mobile'] as $d) {
+            $cur = $node['responsive'][$d]['style']['typography']['size'] ?? null;
+            $curv = is_string($cur) && preg_match('/^([\d.]+)px$/', $cur, $c) ? (float) $c[1] : null;
+            $want = round(min(fit_size($base, $d), $ceiling, $curv ?? INF));
+            if ($curv === null || $want < $curv) {
+                $node['responsive'][$d]['style']['typography']['size'] = $want . 'px';
+                if ($lsv !== null) { $node['responsive'][$d]['style']['typography']['letter_spacing'] = round($lsv * $want / $base, 2) . 'px'; }
+                $curv = $want;
+            }
+            $ceiling = $curv;
+        }
+    }
+    foreach (($node['children'] ?? []) as $i => $child) { if (is_array($child)) { $node['children'][$i] = fit_type($child); } }
+    return $node;
+}
+
 /** A top-level section. `$extra` may carry responsive, interactions, classNames. */
 function CTOP(string $label, array $children, array $style, array $extra = []): array
 {
@@ -155,7 +190,7 @@ function build_page(string $slug, string $title, string $pageType, string $route
 {
     global $runtime, $actor, $tid;
     $doc = CanonicalDocumentSchema::emptyDocument($pageType, 'default', ($opt['seo_title'] ?? '') ?: $title);
-    $doc['containers'] = array_values(array_filter($containers));
+    $doc['containers'] = array_map('fit_type', array_values(array_filter($containers)));
     $doc['settings'] = array_replace($doc['settings'], $opt['settings'] ?? []);
     if (!empty($opt['seo_desc'])) { $doc['seo']['description'] = mb_substr((string) $opt['seo_desc'], 0, 300); }
     if (!empty($opt['image']) && ($id = MID($opt['image'])) > 0) { $doc['seo']['og_image_media_id'] = $id; }

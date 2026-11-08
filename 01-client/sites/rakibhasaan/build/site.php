@@ -139,7 +139,7 @@ $ft = CTOP('Footer', [
         B('core.link', ['link' => L('↑', '#top'), 'style' => 'plain'], [], ['color' => BONE], ['classNames' => ['rk-top']]),
     ], '22px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], [])], '16px', ['padding' => ['top' => '22px']], ['justify' => 'between', 'align' => 'center'], []),
     B('core.message_widget', [
-        'launcher_label' => 'Message Rakib H.', 'launcher_icon' => 'message-circle', 'position' => 'left',
+        'launcher_label' => 'Message Rakib H.', 'launcher_icon' => 'message-circle', 'position' => 'left', 'theme' => 'light',
         'launcher_photo' => true, 'launcher_lines' => "{status}\nIt's {time} in Dhaka\nAsk me about your website", 'compact_on_scroll' => true,
         'title' => 'Message Rakib H.', 'name' => 'Rakib', 'avatar' => IMGREF('dc5af924d95ea0c65e0bccbd61ccba59.jpg', 'Rakib Hasan'),
         'intro' => 'Tell me about your site. I usually reply within the hour.',

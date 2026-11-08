@@ -17,7 +17,7 @@
 .rk-tag { position: absolute; top: 14px; left: 14px; z-index: 1; }
 
 /* Three rules: big thin titles, the "when" as a small mono label. */
-.rk-rules .sb-tabset__title { font-size: 48px; font-weight: 200; letter-spacing: -2px; line-height: 1.05; }
+.rk-rules .sb-tabset__title { font-size: clamp(28px, 2.4vw + 14px, 48px); font-weight: 200; letter-spacing: -.04em; line-height: 1.05; }
 .rk-rules .sb-tabset__tab[aria-selected="false"] .sb-tabset__title { opacity: .55; }
 .rk-rules .sb-tabset__sub { font: 500 12px/1.4 "Geist Mono", GeistMonoFallback, ui-monospace, monospace; text-transform: uppercase; letter-spacing: 1.4px; opacity: .7; }
 .rk-rules .sb-tabset__tab::before { font: 500 12px "Geist Mono", GeistMonoFallback, ui-monospace, monospace; }
@@ -42,8 +42,8 @@
 .rk-start a { width: 118px; height: 118px; border-radius: 50%; display: grid; place-items: center; padding: 0; }
 
 /* Message widget: a light pill with the photo, like the original. */
-.rk-chat .sb-msg__launcher[data-sb-msg-open] { background: #FBF9F5; color: #0B0B0C; box-shadow: 0 10px 30px rgba(0, 0, 0, .25); }
-.rk-chat .sb-msg__dot { box-shadow: 0 0 0 2px #FBF9F5; }
+/* Chat widget: Studio's Light theme in the site's warm paper colours. */
+.rk-chat { --sb-msg-bg: #FBF9F5; --sb-msg-btn-bg: #FBF9F5; --sb-msg-fg: #0B0B0C; --sb-msg-btn-fg: #0B0B0C; --sb-msg-muted: #625D55; --sb-msg-field: #F1EDE5; --sb-msg-line: rgba(11, 11, 12, .12); }
 
 @media (max-width: 767.98px) {
   .rk-ind-row .sb-block--core-image { display: none; }
@@ -158,3 +158,15 @@
 [data-sb-adapt] .sb-offcanvas-trigger { background-color: color-mix(in srgb, currentColor 9%, transparent); }
 /* Read by screen readers, not shown. */
 .rk-sr { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* Case-study numbers keep their width ("6 weeks" never breaks); the label beside them takes what is left. */
+.rk-metric-v { flex: none; white-space: nowrap; }
+/* About photo caption: a frosted card over the photo's lower-left corner, never wider than the photo. */
+.rk-band { position: relative; }
+.rk-band .rk-band-cap { position: absolute; left: 20px; bottom: 20px; max-width: calc(100% - 40px); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.rk-band .rk-band-face { flex: none; }
+.rk-band .rk-band-face img { border-radius: 12px; }
+@media (max-width: 767px) {
+  .rk-band .rk-band-cap { left: 12px; bottom: 12px; max-width: calc(100% - 24px); padding: 8px 14px 8px 8px; }
+  .rk-band .rk-band-face { width: 36px !important; }
+  .rk-band .rk-band-cap .sb-block--core-text, .rk-band .rk-band-cap .sb-text { font-size: 10px !important; letter-spacing: 1px !important; }
+}

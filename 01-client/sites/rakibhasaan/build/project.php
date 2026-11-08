@@ -134,7 +134,7 @@ $screens = SEC('On every screen', [
 // A number in a small card: the figure with its unit, and what it counts.
 $metric = static fn(string $key, string $unit, string $label): array => ROW([
     FV($key, BONE, '40px', 'div', ['typography' => ['weight' => '200', 'line_height' => '1', 'letter_spacing' => '-1.6px']], ['after' => $unit],
-        ['style_parts' => ['affix' => ['typography' => ['size' => '15px', 'letter_spacing' => '0px'], 'color' => MUTED]]]),
+        ['style_parts' => ['affix' => ['typography' => ['size' => '15px', 'letter_spacing' => '0px'], 'color' => MUTED]], 'classNames' => ['rk-metric-v']]),
     P($label, MUTED, '12px', ['line_height' => '1.35']),
 ], '14px', ['padding' => ['top' => '16px', 'right' => '18px', 'bottom' => '16px', 'left' => '18px'], 'border' => ['width' => '1px', 'style' => 'solid', 'color' => LINE, 'radius' => '14px'], 'margin' => ['bottom' => '10px']],
     ['align' => 'end'], ['layout' => ['direction' => 'row', 'align' => 'end']], ['when_field' => $key]);
