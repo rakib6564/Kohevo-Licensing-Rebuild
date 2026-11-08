@@ -305,6 +305,8 @@ foreach ($DATA['pages']['services']['items'] as $it) {
             'best_for' => (string) preg_replace('/^Best for:\s*/', '', $plain($paras[1]['html'] ?? '')), 'card_label' => (string) ($s['link']['label'] ?? $s['title']), 'title' => $s['title']];
     }
 }
+// The cards' copy, edited to even lengths (data/card-copy.php), laid over what the original pages give, group by group.
+$CARD_COPY = require __DIR__ . '/../data/card-copy.php';
 $onlyPages = array_filter(explode(',', (string) getenv('RK_PAGES')));
 foreach (array_reverse(SERVICE_SLUGS) as $i => $slug) {
     if ($onlyPages !== [] && !in_array($slug, $onlyPages, true) && !in_array('services', $onlyPages, true)) { continue; }
@@ -315,6 +317,7 @@ foreach (array_reverse(SERVICE_SLUGS) as $i => $slug) {
     $fields = ['group' => $card['group'], 'h1' => $p['h1'], 'intro' => sv_html(array_filter($p['intro'], static fn(array $b): bool => $b['k'] === 'p')),
         'summary' => $card['summary'], 'best_for' => $card['best_for'], 'card_label' => $card['card_label'],
         'primary_label' => $btns[0]['label'] ?? '', 'primary_url' => $btns[0]['href'] ?? '', 'secondary_label' => $btns[1]['label'] ?? '', 'secondary_url' => $btns[1]['href'] ?? ''] + sv_fields($p, $plain);
+    $fields = array_replace($fields, $CARD_COPY[$slug] ?? []);
     build_page($slug, $card['title'], 'page', 'standalone', [CTOP('Body', [P($card['summary'], BONE, '18px')], ['layout' => ['display' => 'flex', 'direction' => 'column']])], [
         'seo_title' => $p['seo_title'], 'seo_desc' => $p['meta'], 'settings' => ['category' => $card['group'], 'excerpt' => $card['summary']],
         'date' => date('Y-m-d H:i:s', strtotime('2025-06-01') + $i * 3600), 'type' => 'service', 'fields' => $fields,
