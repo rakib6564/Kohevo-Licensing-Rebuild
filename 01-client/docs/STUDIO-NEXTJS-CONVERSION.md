@@ -617,11 +617,18 @@ Part rules are written with `!important`. Custom CSS can't override them, so an 
 | Parallax | `interactions.parallax` |
 | Hover effects | `style_states`, part `:hover` |
 | Fade-in on scroll (Framer `whileInView`) | `animation`, on a block or section |
+| Children appearing in turn (`staggerChildren`) | `interactions.stagger` on the parent |
+| Page or header colour changing per section | `interactions.page_colors` on each section, `interactions.adapt` on the header |
+| Reading progress bar | `interactions.progress` on the header |
+| Split-text line reveal, words lighting up on scroll | `interactions.text` on a heading or text block |
+| Rotating word in a headline | `core.dual_heading` with `rotate_words` |
+| Magnetic button, cursor glow on cards | `interactions.mouse.magnet`, `interactions.glow` |
+| Lenis or similar smooth scrolling | The site's Smooth scrolling setting (Site & SEO; `studio_smooth_scroll` = `1`) |
 | Page transitions | None; drop and report |
 | Count-up | `core.stats` |
 | Countdown | `core.countdown` |
 | Filter, sort, search on a list | `shop.products` has a filter; `theme.search_box`; otherwise a gap |
-| Video on hover, scroll-driven timelines, GSAP, canvas, 3D | Gap or widget; simplify with the owner's agreement |
+| Video on hover, pinned or horizontal scroll, GSAP timelines, canvas, 3D | Gap or widget; simplify with the owner's agreement |
 
 Entrance animation:
 
@@ -641,6 +648,28 @@ Sticky and parallax:
   }
 }
 ```
+
+Page-level motion:
+
+```json
+{
+  "interactions": {
+    "page_colors": {"background": "#0b0b0c", "text": "#ede8df"},
+    "adapt": true,
+    "progress": {"edge": "bottom", "color": "#ff5a1f", "height": 3},
+    "text": {"effect": "lines", "step_ms": 100},
+    "stagger": {"step_ms": 80},
+    "glow": {"color": "rgba(255,90,31,.2)", "size": 320},
+    "mouse": {"magnet": 6}
+  }
+}
+```
+
+- `page_colors`: while the section crosses the middle of the screen the page blends to these colours. Leave the section's own background empty.
+- `adapt`: the node (a header) takes the page colours of the section beneath it.
+- `text.effect`: `lines` (each line rises from a mask, `step_ms` apart) or `light_words` (words light up as the page scrolls; the rest at `dim` %, 5-60).
+- `stagger`: the entrance animations inside play `step_ms` apart (20-600) once the node is in view.
+- A Dual Color Heading's `rotate_words` (comma separated) replace its coloured part in turn, every `rotate_ms` (1000-10000).
 
 Hover movement runs only on devices that can hover, and only when the visitor allows motion. Keep that behaviour.
 

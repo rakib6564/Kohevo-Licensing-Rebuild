@@ -13,7 +13,19 @@ namespace Slate\Module\StudioBuilder\Document;
  *                            devices: [desktop, tablet, mobile]}
  *   interactions.scroll   = {vertical, horizontal, rotate, scale: -10 to 10; transparency, blur: 0 to 10;
  *                            devices: [desktop, tablet, mobile]}  each follows the node's way through the viewport
- *   interactions.mouse    = {track: -10 to 10, tilt: 0 to 10}  the node follows the pointer; desktop only
+ *   interactions.mouse    = {track: -10 to 10, tilt: 0 to 10, magnet: 0 to 10}  the node follows the pointer, tilts
+ *                            towards it, or is pulled towards it while it is near; desktop only
+ *   interactions.page_colors = {background, text: colour}  the page takes these colours while the node is in the middle
+ *                            of the screen, with a short blend
+ *   interactions.adapt    = true  the node takes the page colours of the section beneath its bottom edge (a header)
+ *   interactions.progress = {edge: top|bottom, color: colour, height: 1-12 (px)}  a bar along that edge that fills as
+ *                            the page scrolls
+ *   interactions.text     = {effect: light_words|lines, dim: 5-60 (%), step_ms: 0-400}  light_words lights the words up
+ *                            one by one as the node crosses the screen (the rest at `dim` opacity); lines raises each
+ *                            line from a mask as the node comes into view, `step_ms` apart
+ *   interactions.stagger  = {step_ms: 20-600}  the entrance animations inside the node play in turn, `step_ms` apart,
+ *                            once the node comes into view
+ *   interactions.glow     = {color: colour, size: 80-800 (px)}  a soft light follows the pointer over the node
  *
  * The renderer turns them into classes, `data-sb-*` attributes and custom properties only; the stylesheet holds the CSS and
  * studio-runtime.js the scroll work (the stuck state, hiding on scroll, the parallax offset). Without JavaScript a sticky
@@ -30,7 +42,13 @@ final class ScrollEffects
     public const MAX_SPEED  = 80;
     /** Scrolling and mouse effects: the attribute letter of each, and the lowest level it takes (the highest is 10). */
     public const SCROLL_FIELDS = ['vertical' => ['y', -10], 'horizontal' => ['x', -10], 'rotate' => ['r', -10], 'scale' => ['s', -10], 'transparency' => ['o', 0], 'blur' => ['b', 0]];
-    public const MOUSE_FIELDS  = ['track' => ['t', -10], 'tilt' => ['i', 0]];
+    public const MOUSE_FIELDS  = ['track' => ['t', -10], 'tilt' => ['i', 0], 'magnet' => ['m', 0]];
+    public const TEXT_EFFECTS  = ['light_words', 'lines'];
+    public const DIM_RANGE     = [5, 60];
+    public const TEXT_STEP     = [0, 400];
+    public const STAGGER_STEP  = [20, 600];
+    public const PROGRESS_HEIGHT = [1, 12];
+    public const GLOW_SIZE     = [80, 800];
 
     /**
      * @param array<string, mixed> $interactions
@@ -50,6 +68,26 @@ final class ScrollEffects
         }
         if (array_key_exists('mouse', $interactions)) {
             self::levelIssues($interactions['mouse'], self::MOUSE_FIELDS, "{$path}.mouse", $errors);
+        }
+        if (array_key_exists('adapt', $interactions) && !is_bool($interactions['adapt'])) {
+            $errors[] = self::issue("{$path}.adapt", 'adapt must be true or false.');
+        }
+        $shapes = [
+            'page_colors' => ['background' => 'colour', 'text' => 'colour'],
+            'progress'    => ['edge' => self::EDGES, 'color' => 'colour', 'height' => self::PROGRESS_HEIGHT],
+            'text'        => ['effect' => self::TEXT_EFFECTS, 'dim' => self::DIM_RANGE, 'step_ms' => self::TEXT_STEP],
+            'stagger'     => ['step_ms' => self::STAGGER_STEP],
+            'glow'        => ['color' => 'colour', 'size' => self::GLOW_SIZE],
+        ];
+        $needs = ['progress' => 'edge', 'text' => 'effect', 'stagger' => 'step_ms', 'glow' => 'color'];
+        foreach ($shapes as $key => $fields) {
+            if (array_key_exists($key, $interactions)) {
+                self::shapeIssues($interactions[$key], $fields, $needs[$key] ?? null, "{$path}.{$key}", $errors);
+            }
+        }
+        if (array_key_exists('page_colors', $interactions) && is_array($interactions['page_colors'])
+            && !isset($interactions['page_colors']['background']) && !isset($interactions['page_colors']['text'])) {
+            $errors[] = self::issue("{$path}.page_colors", 'Page colours need a background or a text colour.');
         }
         return $errors;
     }
@@ -77,6 +115,51 @@ final class ScrollEffects
                 $errors[] = self::issue("{$path}.{$key}", "Invalid {$key}.");
             }
         }
+    }
+
+    /**
+     * An effect made of fixed fields: a colour ('colour'), a choice (a list) or a whole number in a range ([min, max]).
+     *
+     * @param array<string, string|list<string>|array{0: int, 1: int}> $fields
+     * @param list<array{path: string, code: string, message: string}> $errors
+     */
+    private static function shapeIssues(mixed $effect, array $fields, ?string $required, string $path, array &$errors): void
+    {
+        if (!self::isObject($effect)) {
+            $errors[] = self::issue($path, 'This effect must be an object.');
+            return;
+        }
+        foreach ($effect as $key => $value) {
+            if (!isset($fields[$key])) {
+                $errors[] = self::issue("{$path}.{$key}", "Unknown setting '{$key}'.");
+            } elseif (!self::fieldValid($fields[$key], $value)) {
+                $errors[] = self::issue("{$path}.{$key}", "Invalid {$key}.");
+            }
+        }
+        if ($required !== null && !isset($effect[$required])) {
+            $errors[] = self::issue("{$path}.{$required}", "This effect needs a {$required}.");
+        }
+    }
+
+    /** @param string|list<string>|array{0: int, 1: int} $field */
+    private static function fieldValid(string|array $field, mixed $value): bool
+    {
+        if ($field === 'colour') {
+            return StyleValueGuard::isColor($value);
+        }
+        if (is_array($field) && count($field) === 2 && is_int($field[0] ?? null) && is_int($field[1] ?? null)) {
+            return is_int($value) && $value >= $field[0] && $value <= $field[1];
+        }
+        return in_array($value, $field, true);
+    }
+
+    /** The checked field of an effect, or null when it is missing or invalid (a stored document is never trusted). */
+    private static function field(mixed $effect, string $key, string|array $field): mixed
+    {
+        if (!self::isObject($effect) || !array_key_exists($key, $effect)) {
+            return null;
+        }
+        return self::fieldValid($field, $effect[$key]) ? $effect[$key] : null;
     }
 
     /**
@@ -230,6 +313,64 @@ final class ScrollEffects
         $levels = self::levels($interactions['mouse'] ?? null, self::MOUSE_FIELDS);
         if ($levels !== '') {
             $attrs .= ' data-sb-mouse="' . $levels . '"';
+        }
+
+        // Colours travel as custom properties on the node, in its one style attribute; the runtime reads them back.
+        $page = $interactions['page_colors'] ?? null;
+        $bg = self::field($page, 'background', 'colour');
+        $fg = self::field($page, 'text', 'colour');
+        if ($bg !== null || $fg !== null) {
+            $attrs .= ' data-sb-page-colors';
+            if ($bg !== null) {
+                $vars[] = '--sb-page-bg:' . StyleSurface::colourCss((string) $bg);
+            }
+            if ($fg !== null) {
+                $vars[] = '--sb-page-fg:' . StyleSurface::colourCss((string) $fg);
+            }
+        }
+        if (($interactions['adapt'] ?? false) === true) {
+            $classes[] = 'sb-adapt';
+            $attrs .= ' data-sb-adapt';
+        }
+
+        $progress = $interactions['progress'] ?? null;
+        $edge = self::field($progress, 'edge', self::EDGES);
+        if ($edge !== null) {
+            $attrs .= ' data-sb-progress="' . $edge . '"';
+            $color = self::field($progress, 'color', 'colour');
+            if ($color !== null) {
+                $vars[] = '--sb-progress-color:' . StyleSurface::colourCss((string) $color);
+            }
+            $height = self::field($progress, 'height', self::PROGRESS_HEIGHT);
+            if ($height !== null) {
+                $vars[] = '--sb-progress-h:' . $height . 'px';
+            }
+        }
+
+        $text = $interactions['text'] ?? null;
+        $effect = self::field($text, 'effect', self::TEXT_EFFECTS);
+        if ($effect === 'light_words') {
+            $attrs .= ' data-sb-text="words:' . (self::field($text, 'dim', self::DIM_RANGE) ?? 18) . '"';
+        } elseif ($effect === 'lines') {
+            $attrs .= ' data-sb-text="lines:' . (self::field($text, 'step_ms', self::TEXT_STEP) ?? 100) . '"';
+        }
+
+        $step = self::field($interactions['stagger'] ?? null, 'step_ms', self::STAGGER_STEP);
+        if ($step !== null) {
+            $attrs .= ' data-sb-stagger="' . $step . '"';
+            $vars[] = '--sb-stagger-step:' . $step . 'ms';
+        }
+
+        $glow = $interactions['glow'] ?? null;
+        $glowColor = self::field($glow, 'color', 'colour');
+        if ($glowColor !== null) {
+            $classes[] = 'sb-glow-on';
+            $attrs .= ' data-sb-glow';
+            $vars[] = '--sb-glow-color:' . StyleSurface::colourCss((string) $glowColor);
+            $size = self::field($glow, 'size', self::GLOW_SIZE);
+            if ($size !== null) {
+                $vars[] = '--sb-glow-size:' . $size . 'px';
+            }
         }
 
         return ['classes' => $classes, 'attrs' => $attrs, 'vars' => $vars];

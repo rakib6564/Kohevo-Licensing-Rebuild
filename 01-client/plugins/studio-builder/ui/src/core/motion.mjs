@@ -145,12 +145,23 @@ export function normalizeInteractions(raw) {
   if (scroll) out.scroll = scroll;
   const mouse = normalizeLevels(i.mouse, MOUSE_LEVELS);
   if (mouse) out.mouse = mouse;
+  const pageColors = normalizePageColors(i.page_colors);
+  if (pageColors) out.page_colors = pageColors;
+  if (i.adapt === true) out.adapt = true;
+  const progress = normalizeProgress(i.progress);
+  if (progress) out.progress = progress;
+  const text = normalizeTextEffect(i.text);
+  if (text) out.text = text;
+  const stagger = normalizeStagger(i.stagger);
+  if (stagger) out.stagger = stagger;
+  const glow = normalizeGlow(i.glow);
+  if (glow) out.glow = glow;
   return out;
 }
 
 /** Scrolling and mouse effects: each field's lowest level; the highest is 10 (ScrollEffects::SCROLL_FIELDS, MOUSE_FIELDS). */
 export const SCROLL_LEVELS = Object.freeze({ vertical: -10, horizontal: -10, transparency: 0, blur: 0, rotate: -10, scale: -10 });
-export const MOUSE_LEVELS = Object.freeze({ track: -10, tilt: 0 });
+export const MOUSE_LEVELS = Object.freeze({ track: -10, tilt: 0, magnet: 0 });
 
 /** Whole levels in range, without the zeros; null when nothing is left, which turns the effect off. */
 function normalizeLevels(raw, fields) {
@@ -216,12 +227,81 @@ export function normalizeParallax(raw) {
   return out;
 }
 
+// ── Page-level motion (ScrollEffects.php holds the same ranges) ──
+
+export const TEXT_EFFECTS = Object.freeze(['light_words', 'lines']);
+export const TEXT_DIM = Object.freeze({ min: 5, max: 60, default: 18 });
+export const TEXT_STEP = Object.freeze({ min: 0, max: 400, default: 100 });
+export const STAGGER_STEP = Object.freeze({ min: 20, max: 600, default: 80 });
+export const PROGRESS_HEIGHT = Object.freeze({ min: 1, max: 12, default: 3 });
+export const GLOW_SIZE = Object.freeze({ min: 80, max: 800, default: 320 });
+/** Blocks whose words the text effects can move. */
+export const TEXT_EFFECT_TYPES = Object.freeze(['core.heading', 'core.dual_heading', 'core.text', 'core.rich_text', 'core.quote', 'theme.post_title', 'theme.post_excerpt']);
+
+const colour = (v) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : undefined);
+/** A whole number in a range, or undefined (the default) when it is not one. */
+function whole(raw, range) {
+  if (raw === undefined || raw === null || raw === '') return undefined;
+  const n = Math.round(Number(raw));
+  return Number.isFinite(n) ? Math.max(range.min, Math.min(range.max, n)) : undefined;
+}
+
+/** `interactions.page_colors`, or null when neither colour is set. */
+export function normalizePageColors(raw) {
+  if (!plainObject(raw)) return null;
+  const out = {};
+  if (colour(raw.background)) out.background = colour(raw.background);
+  if (colour(raw.text)) out.text = colour(raw.text);
+  return Object.keys(out).length ? out : null;
+}
+
+/** `interactions.progress`, or null when it is off (no edge). */
+export function normalizeProgress(raw) {
+  if (!plainObject(raw) || !STICKY_EDGES.includes(raw.edge)) return null;
+  const out = { edge: raw.edge };
+  if (colour(raw.color)) out.color = colour(raw.color);
+  const height = whole(raw.height, PROGRESS_HEIGHT);
+  if (height !== undefined) out.height = height;
+  return out;
+}
+
+/** `interactions.text`, or null when it is off. Each effect keeps only its own setting. */
+export function normalizeTextEffect(raw) {
+  if (!plainObject(raw) || !TEXT_EFFECTS.includes(raw.effect)) return null;
+  const out = { effect: raw.effect };
+  if (raw.effect === 'light_words') {
+    const dim = whole(raw.dim, TEXT_DIM);
+    if (dim !== undefined) out.dim = dim;
+  } else {
+    const step = whole(raw.step_ms, TEXT_STEP);
+    if (step !== undefined) out.step_ms = step;
+  }
+  return out;
+}
+
+/** `interactions.stagger`, or null when it is off. */
+export function normalizeStagger(raw) {
+  if (!plainObject(raw)) return null;
+  const step = whole(raw.step_ms, STAGGER_STEP);
+  return step === undefined ? null : { step_ms: step };
+}
+
+/** `interactions.glow`, or null when it has no colour. */
+export function normalizeGlow(raw) {
+  if (!plainObject(raw) || !colour(raw.color)) return null;
+  const out = { color: colour(raw.color) };
+  const size = whole(raw.size, GLOW_SIZE);
+  if (size !== undefined) out.size = size;
+  return out;
+}
+
 /** True when the block carries any motion at all (drives the panel's summary). */
 export function hasMotion(block) {
   const anim = block && block.animation;
   const inter = block && block.interactions;
   return Boolean(
     (anim && anim.type && anim.type !== 'none')
-    || (inter && (inter.trigger || inter.sticky || inter.parallax))
+    || (inter && (inter.trigger || inter.sticky || inter.parallax || inter.scroll || inter.mouse || inter.page_colors
+      || inter.adapt || inter.progress || inter.text || inter.stagger || inter.glow))
   );
 }

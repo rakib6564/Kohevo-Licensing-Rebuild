@@ -13,8 +13,9 @@
 
 import { asObject } from '../../core/doc.mjs';
 import {
-  ANIMATION_TYPES, DELAY_RANGE, DURATION_RANGE, EASINGS, INTERACTION_TRIGGERS,
-  MOTION_PRESETS, MOUSE_LEVELS, PARALLAX_SPEED, SCROLL_LEVELS, SCROLL_DEVICES, STICKY_OFFSET, clampMs, motionLabel, normalizeAnimation, normalizeInteractions,
+  ANIMATION_TYPES, DELAY_RANGE, DURATION_RANGE, EASINGS, GLOW_SIZE, INTERACTION_TRIGGERS,
+  MOTION_PRESETS, MOUSE_LEVELS, PARALLAX_SPEED, PROGRESS_HEIGHT, SCROLL_LEVELS, SCROLL_DEVICES, STAGGER_STEP, STICKY_OFFSET,
+  TEXT_DIM, TEXT_EFFECT_TYPES, TEXT_STEP, clampMs, motionLabel, normalizeAnimation, normalizeInteractions,
 } from '../../core/motion.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
@@ -53,6 +54,13 @@ export function MotionInspector({ block, applyOp, label, tokens }) {
         idPrefix={idPrefix}
         interactions={interactions}
         hasBackground={block.type === 'core.container'}
+        tokens={tokens}
+        onChange={commitInteractions}
+      />
+      <PageEffectsGroup
+        idPrefix={idPrefix}
+        type={block.type}
+        interactions={interactions}
         tokens={tokens}
         onChange={commitInteractions}
       />
@@ -317,6 +325,121 @@ function ScrollEffectsGroup({ idPrefix, interactions, hasBackground, tokens, onC
       )}
 
     </section>
+  );
+}
+
+/** Blocks that hold others: they can colour the page, carry a progress bar, take the colours beneath, and stagger. */
+const BOX_TYPES = ['core.container', 'layout.container', 'layout.flex', 'layout.grid', 'core.card'];
+
+/**
+ * The page-level effects (interactions.page_colors, adapt, progress, text, stagger, glow). Each writes the whole
+ * `interactions` back through the normaliser, so the settings above are kept; an effect that is switched on but has
+ * nothing chosen yet is not stored.
+ */
+function PageEffectsGroup({ idPrefix, type, interactions, tokens, onChange }) {
+  const set = (key, value) => onChange(normalizeInteractions({ ...interactions, [key]: value }));
+  const isBox = BOX_TYPES.includes(type);
+  const text = interactions.text || null;
+  const pageColors = interactions.page_colors || null;
+  const progress = interactions.progress || null;
+  const stagger = interactions.stagger || null;
+  const glow = interactions.glow || null;
+
+  return (
+    <section className="sbx-motion-section" data-page-effects>
+      {TEXT_EFFECT_TYPES.includes(type) && (
+        <>
+          <Field label={t('text_effect')}>
+            <Pills
+              label={t('text_effect')}
+              value={text ? text.effect : ''}
+              options={[
+                { value: '', label: t('sticky_off') },
+                { value: 'light_words', label: t('text_effect_light_words') },
+                { value: 'lines', label: t('text_effect_lines') },
+              ]}
+              onChange={(v) => set('text', v ? { effect: v } : null)}
+            />
+          </Field>
+          {text && text.effect === 'light_words' && (
+            <SliderField id={`${idPrefix}-text-dim`} label={t('text_dim')} value={text.dim} min={TEXT_DIM.min} max={TEXT_DIM.max} unit="%" neutral={TEXT_DIM.default} onChange={(v) => set('text', { ...text, dim: v })} />
+          )}
+          {text && text.effect === 'lines' && (
+            <SliderField id={`${idPrefix}-text-step`} label={t('text_step')} value={text.step_ms} min={TEXT_STEP.min} max={TEXT_STEP.max} step={10} unit="ms" neutral={TEXT_STEP.default} onChange={(v) => set('text', { ...text, step_ms: v })} />
+          )}
+          {text && <p className="sbx-hint">{t(text.effect === 'lines' ? 'text_effect_lines_hint' : 'text_effect_light_words_hint')}</p>}
+        </>
+      )}
+
+      {isBox && (
+        <>
+          <SwitchSection id={`${idPrefix}-page-colors`} title={t('page_colors')} value={pageColors} onOff={() => set('page_colors', null)} testId="page-colors">
+            <ThemeColor id={`${idPrefix}-page-bg`} label={t('page_colors_background')} value={pageColors && pageColors.background} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), background: v })} />
+            <ThemeColor id={`${idPrefix}-page-fg`} label={t('page_colors_text')} value={pageColors && pageColors.text} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), text: v })} />
+            <p className="sbx-hint">{t('page_colors_hint')}</p>
+          </SwitchSection>
+          <Check label={t('adapt_colors')} checked={interactions.adapt === true} onChange={(e) => set('adapt', e.target.checked ? true : undefined)} />
+          <p className="sbx-hint">{t('adapt_colors_hint')}</p>
+
+          <Field label={t('progress_bar')}>
+            <Pills
+              label={t('progress_bar')}
+              value={progress ? progress.edge : ''}
+              options={[
+                { value: '', label: t('sticky_off') },
+                { value: 'top', label: t('sticky_top') },
+                { value: 'bottom', label: t('sticky_bottom') },
+              ]}
+              onChange={(edge) => set('progress', edge ? { ...(progress || {}), edge } : null)}
+            />
+          </Field>
+          {progress && (
+            <>
+              <ThemeColor id={`${idPrefix}-progress-color`} label={t('progress_color')} value={progress.color} tokens={tokens} onChange={(v) => set('progress', { ...progress, color: v })} />
+              <SliderField id={`${idPrefix}-progress-height`} label={t('progress_height')} value={progress.height} min={PROGRESS_HEIGHT.min} max={PROGRESS_HEIGHT.max} unit="px" neutral={PROGRESS_HEIGHT.default} onChange={(v) => set('progress', { ...progress, height: v })} />
+            </>
+          )}
+
+          <SwitchSection id={`${idPrefix}-stagger`} title={t('stagger')} value={stagger} onOn={() => set('stagger', { step_ms: STAGGER_STEP.default })} onOff={() => set('stagger', null)} testId="stagger">
+            {stagger && <SliderField id={`${idPrefix}-stagger-step`} label={t('stagger_step')} value={stagger.step_ms} min={STAGGER_STEP.min} max={STAGGER_STEP.max} step={10} unit="ms" neutral={STAGGER_STEP.default} onChange={(v) => set('stagger', { step_ms: v ?? STAGGER_STEP.default })} />}
+            <p className="sbx-hint">{t('stagger_hint')}</p>
+          </SwitchSection>
+        </>
+      )}
+
+      <SwitchSection id={`${idPrefix}-glow`} title={t('glow')} value={glow} onOff={() => set('glow', null)} testId="glow">
+        <ThemeColor id={`${idPrefix}-glow-color`} label={t('glow_color')} value={glow && glow.color} tokens={tokens} onChange={(v) => set('glow', { ...(glow || {}), color: v })} />
+        {glow && <SliderField id={`${idPrefix}-glow-size`} label={t('glow_size')} value={glow.size} min={GLOW_SIZE.min} max={GLOW_SIZE.max} step={10} unit="px" neutral={GLOW_SIZE.default} onChange={(v) => set('glow', { ...glow, size: v })} />}
+        <p className="sbx-hint">{t('glow_hint')}</p>
+      </SwitchSection>
+    </section>
+  );
+}
+
+/**
+ * A switch that opens its settings. On is "has a value" or "switched on here and still being filled in"; `onOn` stores
+ * a default straight away (for effects that need nothing chosen), `onOff` removes the effect.
+ */
+function SwitchSection({ id, title, value, onOn, onOff, testId, children }) {
+  const [open, setOpen] = useState(!!value);
+  const on = open || !!value;
+  return (
+    <div className="sbx-leveleffects" data-testid={testId}>
+      <div className="sbx-switchrow">
+        <span id={`${id}-switch`}>{title}</span>
+        <button
+          type="button"
+          role="switch"
+          className="sbx-switch"
+          aria-checked={on}
+          aria-labelledby={`${id}-switch`}
+          onClick={() => { setOpen(!on); if (on) onOff(); else if (onOn) onOn(); }}
+        >
+          <span className="sbx-switch__knob" />
+        </button>
+      </div>
+      {on && children}
+    </div>
   );
 }
 

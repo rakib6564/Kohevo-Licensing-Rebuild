@@ -65,7 +65,7 @@ final class PageDocumentAssembler
             : '';
 
         return '<!DOCTYPE html>'
-            . '<html lang="' . Html::e($context->site->locale) . '">'
+            . '<html lang="' . Html::e($context->site->locale) . '"' . self::smoothScrollAttr($tenantId, $context) . '>'
             . '<head><meta charset="utf-8">'
             . '<meta name="viewport" content="width=device-width, initial-scale=1">'
             . $seo->tags()
@@ -85,6 +85,22 @@ final class PageDocumentAssembler
             . ($signature !== '' ? '<div class="sb-platform-signature">' . $signature . '</div>' : '')
             . $analyticsBody
             . '</body></html>';
+    }
+
+    /** The setting that turns on smooth (eased) wheel scrolling for every public page, read by studio-runtime.js. */
+    public const SMOOTH_SCROLL_SETTING = 'studio_smooth_scroll';
+
+    /** ` data-sb-smooth` on <html> when the site has smooth scrolling on; never on the canvas, which runs no script. */
+    private static function smoothScrollAttr(int $tenantId, RenderContext $context): string
+    {
+        if ($context->mode === RenderMode::Editor) {
+            return '';
+        }
+        try {
+            return (string) \Database::setting(self::SMOOTH_SCROLL_SETTING, $tenantId) === '1' ? ' data-sb-smooth' : '';
+        } catch (\Throwable $ignored) {
+            return '';
+        }
     }
 
     /**

@@ -141,46 +141,64 @@
   }
 
   /* ── Feature: stagger ────────────────────────────────────────────────────
-   * A container marked `data-sb-stagger` has its direct children offset by an
-   * increasing `--i`, so a group of headings/buttons arrives in sequence
-   * instead of all at once.
-   *
-   * The index is written here only when the author has not already set it.
-   * In a real Studio page `--i` is persisted as block data by the Phase 4
-   * motion inspector, which is why this is an "if not already set" default
-   * rather than an unconditional write.
+   * A node marked `data-sb-stagger` (interactions.stagger) plays the entrance animations inside it in turn: each
+   * animated block gets its place (`--i`, the stylesheet multiplies it by `--sb-stagger-step`), and all of them wait,
+   * paused, until the node comes into view (`is-in`). A block inside a nested group belongs to that group.
+   * Without this file the animations play on load, as before; with reduced motion the stylesheet stops them anyway.
    */
   function initStagger(root) {
     var groups = qsa(root, '[data-sb-stagger]');
     if (!groups.length) return;
-
-    groups.forEach(function (group) {
-      Array.prototype.forEach.call(group.children, function (child, i) {
-        if (child.style.getPropertyValue('--i')) return;
-        child.style.setProperty('--i', String(i));
-      });
-
-      // Fire the group as soon as it first reaches the viewport; groups that
-      // are already on screen at load fire on the next frame so the entrance
-      // animation is actually observed rather than being pre-applied.
-      if (reducedMotion() || !('IntersectionObserver' in global)) {
-        group.classList.add('is-in');
-        return;
-      }
-
-      var io = new IntersectionObserver(function (entries) {
+    var io = ('IntersectionObserver' in global) && !reducedMotion()
+      ? new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
           if (!entry.isIntersecting) return;
-          group.classList.add('is-in');
-          io.disconnect(); // one-way, same contract as scroll reveal
+          entry.target.classList.add('is-in');
+          io.unobserve(entry.target); // one-way, same contract as scroll reveal
         });
-      }, { threshold: 0.05 });
-      io.observe(group);
-
-      mount(function () {
-        io.disconnect();
-        group.classList.remove('is-in');
+      }, { rootMargin: CONFIG.revealMargin, threshold: 0.05 })
+      : null;
+    var marked = [];
+    groups.forEach(function (group) {
+      qsa(group, '[class*="sb-animate-"]').filter(function (el) {
+        return el.parentElement && el.parentElement.closest('[data-sb-stagger]') === group;
+      }).forEach(function (el, i) {
+        if (el.style.getPropertyValue('--i')) return;
+        el.style.setProperty('--i', String(i));
+        marked.push(el);
       });
+      if (io) io.observe(group); else group.classList.add('is-in');
+    });
+    mount(function () {
+      if (io) io.disconnect();
+      groups.forEach(function (group) { group.classList.remove('is-in'); });
+      marked.forEach(function (el) { el.style.removeProperty('--i'); });
+    });
+  }
+
+  /* ── Feature: "scroll into view" without scroll timelines ────────────────
+   * Where the browser has `animation-timeline: view()` the stylesheet ties the animation to the scroll. Elsewhere
+   * (Firefox, older Safari) the animation would run on load, out of sight; here it waits (`data-sb-wait`, paused in
+   * the stylesheet) until the block comes into view, then plays once.
+   */
+  function initViewportFallback(root) {
+    var timelines = global.CSS && global.CSS.supports && global.CSS.supports('animation-timeline: view()');
+    if (timelines || reducedMotion() || !('IntersectionObserver' in global)) return;
+    var els = qsa(root, '.sb-interaction-viewport-enter[class*="sb-animate-"]').filter(function (el) {
+      return !el.closest('[data-sb-stagger]');
+    });
+    if (!els.length) return;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.removeAttribute('data-sb-wait');
+        io.unobserve(entry.target);
+      });
+    }, { rootMargin: CONFIG.revealMargin, threshold: 0.01 });
+    els.forEach(function (el) { el.setAttribute('data-sb-wait', ''); io.observe(el); });
+    mount(function () {
+      io.disconnect();
+      els.forEach(function (el) { el.removeAttribute('data-sb-wait'); });
     });
   }
 
@@ -388,12 +406,39 @@
   function initMouseEffects(root) {
     var els = qsa(root, '[data-sb-mouse]');
     if (!els.length || reducedMotion() || !global.matchMedia || !global.matchMedia('(hover: hover)').matches) return;
+    // Magnet (m): near the node the pointer pulls it towards itself, eased each frame; it settles back when the pointer
+    // leaves. The node is measured where it would be without the pull, so it never runs away from the pointer.
+    var magnets = els.filter(function (el) { return effectLevels(el, 'data-sb-mouse').m; }).map(function (el) {
+      return { el: el, level: effectLevels(el, 'data-sb-mouse').m, x: 0, y: 0, tx: 0, ty: 0 };
+    });
+    var raf = 0;
+    function settle() {
+      raf = 0;
+      var moving = false;
+      magnets.forEach(function (g) {
+        g.x += (g.tx - g.x) * 0.18;
+        g.y += (g.ty - g.y) * 0.18;
+        if (Math.abs(g.tx - g.x) < 0.1 && Math.abs(g.ty - g.y) < 0.1) { g.x = g.tx; g.y = g.ty; } else moving = true;
+        if (g.x === 0 && g.y === 0) g.el.style.removeProperty('translate');
+        else g.el.style.translate = g.x.toFixed(2) + 'px ' + g.y.toFixed(2) + 'px';
+      });
+      if (moving) raf = global.requestAnimationFrame(settle);
+    }
     function onMove(e) {
       var w = global.innerWidth || 1;
       var h = global.innerHeight || 1;
+      magnets.forEach(function (g) {
+        var r = g.el.getBoundingClientRect();
+        var left = r.left - g.x, top = r.top - g.y, reach = 24 + g.level * 3;
+        var near = e.clientX >= left - reach && e.clientX <= left + r.width + reach && e.clientY >= top - reach && e.clientY <= top + r.height + reach;
+        var max = g.level * 3;
+        g.tx = near ? clamp((e.clientX - left - r.width / 2) * g.level * 0.04, -max, max) : 0;
+        g.ty = near ? clamp((e.clientY - top - r.height / 2) * g.level * 0.04, -max, max) : 0;
+      });
+      if (magnets.length && !raf) raf = global.requestAnimationFrame(settle);
       els.forEach(function (el) {
         var l = effectLevels(el, 'data-sb-mouse');
-        if (l.t) el.style.translate = ((e.clientX / w - 0.5) * l.t * 8).toFixed(1) + 'px ' + ((e.clientY / h - 0.5) * l.t * 8).toFixed(1) + 'px';
+        if (l.t && !l.m) el.style.translate = ((e.clientX / w - 0.5) * l.t * 8).toFixed(1) + 'px ' + ((e.clientY / h - 0.5) * l.t * 8).toFixed(1) + 'px';
         if (l.i) {
           var r = el.getBoundingClientRect();
           var over = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
@@ -403,12 +448,400 @@
         }
       });
     }
+    function onLeave() { magnets.forEach(function (g) { g.tx = 0; g.ty = 0; }); if (magnets.length && !raf) raf = global.requestAnimationFrame(settle); }
     global.addEventListener('mousemove', onMove, { passive: true });
+    document.addEventListener('mouseleave', onLeave);
     mount(function () {
       global.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseleave', onLeave);
+      if (raf) global.cancelAnimationFrame(raf);
       els.forEach(function (el) { el.style.removeProperty('translate'); el.style.removeProperty('transform'); });
     });
   }
+
+/* ── Feature: page colours ───────────────────────────────────────────────
+   * [data-sb-page-colors] (interactions.page_colors) carries `--sb-page-bg` / `--sb-page-fg`. The section crossing the
+   * middle of the screen gives the page its colours: they are set on <html> as `--sb-paged-bg` / `--sb-paged-fg` and the
+   * stylesheet blends the body to them. Above the first such section the page keeps its own colours; past one, it keeps
+   * the last until another takes over.
+   * [data-sb-adapt] (interactions.adapt, a header) takes the colours of the section beneath its bottom edge, inline.
+   */
+  function initPageColors(root) {
+    var sections = qsa(root, '[data-sb-page-colors]');
+    if (!sections.length) return;
+    var html = document.documentElement;
+    function colours(el) {
+      var cs = global.getComputedStyle(el);
+      return { bg: cs.getPropertyValue('--sb-page-bg').trim(), fg: cs.getPropertyValue('--sb-page-fg').trim() };
+    }
+    var list = sections.map(function (el) { return { el: el, c: colours(el) }; });
+    var adapters = qsa(root, '[data-sb-adapt]').map(function (el) { return { el: el, hit: null }; });
+    // The innermost themed section spanning the line y, leaving out any that holds `skip`.
+    function at(y, skip) {
+      var hit = null;
+      list.forEach(function (s) {
+        if (skip && s.el.contains(skip)) return;
+        var r = s.el.getBoundingClientRect();
+        if (r.height > 0 && r.top <= y && r.bottom > y && (!hit || hit.el.contains(s.el))) hit = s;
+      });
+      return hit;
+    }
+    function setVar(name, attr, value) {
+      if (value) { html.style.setProperty(name, value); html.setAttribute(attr, ''); }
+      else { html.style.removeProperty(name); html.removeAttribute(attr); }
+    }
+    var current = null;
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var mid = (global.innerHeight || 1) / 2;
+      var hit = at(mid, null);
+      if (!hit) {
+        var first = Infinity;
+        list.forEach(function (s) { first = Math.min(first, s.el.getBoundingClientRect().top); });
+        hit = first > mid ? null : current;
+      }
+      if (hit !== current) {
+        current = hit;
+        setVar('--sb-paged-bg', 'data-sb-paged-bg', hit && hit.c.bg);
+        setVar('--sb-paged-fg', 'data-sb-paged-fg', hit && hit.c.fg);
+      }
+      adapters.forEach(function (a) {
+        var r = a.el.getBoundingClientRect();
+        var under = at(Math.max(0, r.bottom + 1), a.el);
+        if (under === a.hit) return;
+        a.hit = under;
+        if (under && under.c.bg) a.el.style.setProperty('background-color', under.c.bg, 'important'); else a.el.style.removeProperty('background-color');
+        if (under && under.c.fg) a.el.style.setProperty('color', under.c.fg, 'important'); else a.el.style.removeProperty('color');
+      });
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      global.requestAnimationFrame(update);
+    }
+    html.setAttribute('data-sb-page-colors', '');
+    var offs = [on(global, 'scroll', onScroll, { passive: true }), on(global, 'resize', onScroll, { passive: true })];
+    update();
+    mount(function () {
+      offs.forEach(function (off) { off(); });
+      html.removeAttribute('data-sb-page-colors');
+      setVar('--sb-paged-bg', 'data-sb-paged-bg', '');
+      setVar('--sb-paged-fg', 'data-sb-paged-fg', '');
+      adapters.forEach(function (a) { a.el.style.removeProperty('background-color'); a.el.style.removeProperty('color'); });
+    });
+  }
+
+  /** Make a node a containing block for something this file adds inside it; returns the undo. */
+  function positioned(el) {
+    if (global.getComputedStyle(el).position !== 'static') return function () {};
+    el.style.position = 'relative';
+    return function () { el.style.removeProperty('position'); };
+  }
+
+  /* ── Feature: scroll progress bar ────────────────────────────────────────
+   * [data-sb-progress="top|bottom"] (interactions.progress) gets a bar along that edge; `--sb-page-progress` on <html>
+   * runs from 0 at the top of the page to 1 at the bottom, and the stylesheet scales the bar by it. It reports where
+   * the reader is, so it stays on with reduced motion.
+   */
+  function initProgress(root) {
+    var els = qsa(root, '[data-sb-progress]');
+    if (!els.length) return;
+    var html = document.documentElement;
+    var undo = els.map(function (el) {
+      var bar = document.createElement('span');
+      bar.className = 'sb-progress-bar';
+      bar.setAttribute('aria-hidden', 'true');
+      el.appendChild(bar);
+      var unposition = positioned(el);
+      return function () { bar.remove(); unposition(); };
+    });
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var max = html.scrollHeight - (global.innerHeight || 0);
+      html.style.setProperty('--sb-page-progress', (max > 0 ? clamp((global.pageYOffset || 0) / max, 0, 1) : 0).toFixed(4));
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      global.requestAnimationFrame(update);
+    }
+    var offs = [on(global, 'scroll', onScroll, { passive: true }), on(global, 'resize', onScroll, { passive: true })];
+    update();
+    mount(function () {
+      offs.forEach(function (off) { off(); });
+      undo.forEach(function (fn) { fn(); });
+      html.style.removeProperty('--sb-page-progress');
+    });
+  }
+
+  /**
+   * Wrap each word of `el` in `span.sb-w`, inside its own elements (links, highlights) too, and return them in order. A
+   * rotating word ([data-sb-rotate]) is one unit: it is wrapped whole, so it can keep changing its own text.
+   */
+  function splitWords(el) {
+    var units = [];
+    function wrap(node) {
+      var w = document.createElement('span');
+      w.className = 'sb-w';
+      node.parentNode.insertBefore(w, node);
+      w.appendChild(node);
+      units.push(w);
+    }
+    function splitText(text) {
+      var parts = text.nodeValue.split(/(\s+)/);
+      var frag = document.createDocumentFragment();
+      parts.forEach(function (part) {
+        if (!part) return;
+        if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+        var w = document.createElement('span');
+        w.className = 'sb-w';
+        w.textContent = part;
+        frag.appendChild(w);
+        units.push(w);
+      });
+      text.parentNode.replaceChild(frag, text);
+    }
+    (function walk(node) {
+      var child = node.firstChild;
+      while (child) {
+        var next = child.nextSibling;
+        if (child.nodeType === 3) {
+          if (child.nodeValue.trim()) splitText(child);
+        } else if (child.nodeType === 1) {
+          if (child.hasAttribute('data-sb-rotate')) wrap(child);
+          else if (!/^(script|style|svg|br|img|video|iframe|input|textarea|select|button)$/i.test(child.nodeName)) walk(child);
+        }
+        child = next;
+      }
+    })(el);
+    return units;
+  }
+
+  /** Undo splitWords (and the masks around the words): the text is back as it was. */
+  function unsplitWords(el) {
+    qsa(el, '.sb-wm, span.sb-w').forEach(function (w) {
+      while (w.firstChild) w.parentNode.insertBefore(w.firstChild, w);
+      w.remove();
+    });
+    el.normalize();
+  }
+
+  /* ── Feature: text effects ───────────────────────────────────────────────
+   * [data-sb-text] (interactions.text):
+   *   words:<dim>  every word starts at <dim>% opacity and lights up, in reading order, as the node crosses the screen.
+   *   lines:<ms>   every word rises from its own mask as the node comes into view, a line (<ms> apart) at a time; once
+   *                it has risen the text is put back as it was, so a later resize cannot leave words mid-line.
+   * Reduced motion: neither runs, and the stylesheet never holds the text back.
+   */
+  function initTextEffects(root) {
+    var els = qsa(root, '[data-sb-text]');
+    if (!els.length || reducedMotion()) return;
+    var offs = [];
+    var lighters = [];
+    var io = 'IntersectionObserver' in global ? new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        io.unobserve(entry.target);
+        rise(entry.target);
+      });
+    }, { threshold: 0.2 }) : null;
+
+    function rise(el) {
+      var units = el.__sbUnits || [];
+      var line = -1, lastTop = -Infinity;
+      units.forEach(function (u) {
+        var top = u.getBoundingClientRect().top;
+        if (top > lastTop + 2) { line++; lastTop = top; }
+        u.style.setProperty('--sb-line', String(line));
+      });
+      void el.offsetWidth;
+      el.setAttribute('data-sb-lines-in', '');
+      var step = parseInt((el.getAttribute('data-sb-text') || '').split(':')[1], 10) || 0;
+      el.__sbDone = global.setTimeout(function () {
+        unsplitWords(el);
+        el.removeAttribute('data-sb-lines-in');
+      }, 1000 + Math.max(0, line) * step);
+    }
+
+    els.forEach(function (el) {
+      var parts = (el.getAttribute('data-sb-text') || '').split(':');
+      var units = splitWords(el);
+      el.setAttribute('data-sb-split', '');
+      if (parts[0] === 'lines') {
+        el.style.setProperty('--sb-line-step', (parseInt(parts[1], 10) || 0) + 'ms');
+        units.forEach(function (u) {
+          var mask = document.createElement('span');
+          mask.className = 'sb-wm';
+          u.parentNode.insertBefore(mask, u);
+          mask.appendChild(u);
+        });
+        el.__sbUnits = units;
+        if (io) io.observe(el); else unsplitWords(el);
+      } else {
+        lighters.push({ el: el, units: units, dim: String(clamp(parseInt(parts[1], 10) || 18, 5, 60) / 100) });
+      }
+    });
+
+    var ticking = false;
+    function light() {
+      ticking = false;
+      var vh = global.innerHeight || 1;
+      lighters.forEach(function (l) {
+        var r = l.el.getBoundingClientRect();
+        var p = clamp((vh * 0.85 - r.top) / (vh * 0.5 + r.height * 0.5), 0, 1);
+        var lit = Math.round(p * l.units.length);
+        l.units.forEach(function (u, i) { u.style.opacity = i < lit ? '' : l.dim; });
+      });
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      global.requestAnimationFrame(light);
+    }
+    if (lighters.length) {
+      offs.push(on(global, 'scroll', onScroll, { passive: true }), on(global, 'resize', onScroll, { passive: true }));
+      light();
+    }
+    mount(function () {
+      if (io) io.disconnect();
+      offs.forEach(function (off) { off(); });
+      els.forEach(function (el) {
+        global.clearTimeout(el.__sbDone);
+        unsplitWords(el);
+        el.removeAttribute('data-sb-split');
+        el.removeAttribute('data-sb-lines-in');
+        el.style.removeProperty('--sb-line-step');
+        delete el.__sbUnits;
+      });
+    });
+  }
+
+  /* ── Feature: rotating words ─────────────────────────────────────────────
+   * [data-sb-rotate] (a Dual Color Heading's coloured part) changes to each of its other words in turn, every
+   * `data-sb-rotate-ms`: the word slides up and out, the next slides in. It waits while the tab is hidden. Reduced
+   * motion: the part keeps its own word, as it does without this file.
+   */
+  function initRotate(root) {
+    var els = qsa(root, '[data-sb-rotate]');
+    if (!els.length || reducedMotion()) return;
+    var timers = [];
+    var undo = [];
+    els.forEach(function (el) {
+      var original = el.textContent;
+      var words = [original].concat((el.getAttribute('data-sb-rotate') || '').split('|')).filter(function (w) { return w.trim() !== ''; });
+      if (words.length < 2) return;
+      var ms = clamp(parseInt(el.getAttribute('data-sb-rotate-ms'), 10) || 2800, 1000, 10000);
+      var i = 0;
+      el.style.display = 'inline-block';
+      function swap(word) {
+        if (!el.animate) { el.textContent = word; return; }
+        var out = el.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(-0.45em)', opacity: 0 }], { duration: 340, easing: 'cubic-bezier(.6,0,.8,.2)', fill: 'forwards' });
+        out.onfinish = function () {
+          el.textContent = word;
+          var next = el.animate([{ transform: 'translateY(0.45em)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }], { duration: 560, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both' });
+          out.cancel();
+          next.onfinish = function () { next.cancel(); };
+        };
+      }
+      timers.push(global.setInterval(function () {
+        if (document.hidden) return;
+        i = (i + 1) % words.length;
+        swap(words[i]);
+      }, ms));
+      undo.push(function () {
+        if (el.getAnimations) el.getAnimations().forEach(function (a) { a.cancel(); });
+        el.textContent = original;
+        el.style.removeProperty('display');
+      });
+    });
+    mount(function () {
+      timers.forEach(function (t) { global.clearInterval(t); });
+      undo.forEach(function (fn) { fn(); });
+    });
+  }
+
+  /* ── Feature: pointer glow ───────────────────────────────────────────────
+   * [data-sb-glow] (interactions.glow) gets a layer behind its content, lit around the pointer (`--sb-mx`, `--sb-my`)
+   * while the pointer is over it. Pointers that can hover only; nothing with reduced motion.
+   */
+  function initGlow(root) {
+    var els = qsa(root, '[data-sb-glow]');
+    if (!els.length || reducedMotion() || !prefersHover()) return;
+    var undo = els.map(function (el) {
+      var layer = document.createElement('span');
+      layer.className = 'sb-glow';
+      layer.setAttribute('aria-hidden', 'true');
+      el.appendChild(layer);
+      var unposition = positioned(el);
+      var off = on(el, 'pointermove', function (e) {
+        var r = el.getBoundingClientRect();
+        el.style.setProperty('--sb-mx', (e.clientX - r.left).toFixed(0) + 'px');
+        el.style.setProperty('--sb-my', (e.clientY - r.top).toFixed(0) + 'px');
+      }, { passive: true });
+      return function () {
+        off();
+        layer.remove();
+        unposition();
+        el.style.removeProperty('--sb-mx');
+        el.style.removeProperty('--sb-my');
+      };
+    });
+    mount(function () { undo.forEach(function (fn) { fn(); }); });
+  }
+
+  /* ── Feature: smooth scrolling ───────────────────────────────────────────
+   * `data-sb-smooth` on <html> (the site's Smooth scrolling setting): a mouse wheel moves the page towards where it
+   * would have jumped, easing a little each frame. Everything else keeps the browser's own scrolling: touch, the
+   * keyboard, the scroll bar, a box that scrolls by itself, an open dialog, a zoom gesture. Fine pointers only, and
+   * never with reduced motion.
+   */
+  function initSmoothScroll() {
+    var html = document.documentElement;
+    if (!html.hasAttribute('data-sb-smooth') || reducedMotion() || !global.matchMedia || !global.matchMedia('(pointer: fine)').matches) return;
+    var target = global.pageYOffset || 0, current = target, set = target, raf = 0;
+    var behavior = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto'; // a smooth scroll-behavior would animate every step again
+    function maxScroll() { return Math.max(0, html.scrollHeight - (global.innerHeight || 0)); }
+    function scrollsItself(node, dy) {
+      for (; node && node.nodeType === 1 && node !== document.body && node !== html; node = node.parentElement) {
+        var oy = global.getComputedStyle(node).overflowY;
+        if (/(auto|scroll|overlay)/.test(oy) && node.scrollHeight > node.clientHeight + 1
+          && (dy < 0 ? node.scrollTop > 0 : node.scrollTop + node.clientHeight < node.scrollHeight - 1)) return true;
+      }
+      return false;
+    }
+    function frame() {
+      raf = 0;
+      // Something else moved the page (the scroll bar, a key, a link): it wins, and the easing stops.
+      if (Math.abs((global.pageYOffset || 0) - set) > 2) { target = current = global.pageYOffset || 0; return; }
+      current += (target - current) * 0.12;
+      if (Math.abs(target - current) < 0.5) current = target;
+      set = Math.round(current);
+      global.scrollTo(0, current);
+      if (current !== target) raf = global.requestAnimationFrame(frame);
+    }
+    function onWheel(e) {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey) return;
+      var dy = e.deltaY;
+      if (!dy || Math.abs(e.deltaX) > Math.abs(dy) || openOverlays.length) return;
+      if (global.getComputedStyle(html).overflowY === 'hidden' || global.getComputedStyle(document.body).overflowY === 'hidden') return;
+      if (scrollsItself(e.target, dy)) return;
+      if (e.deltaMode === 1) dy *= 16; else if (e.deltaMode === 2) dy *= global.innerHeight || 1;
+      if (!raf) { target = current = set = global.pageYOffset || 0; }
+      target = clamp(target + dy, 0, maxScroll());
+      e.preventDefault();
+      if (!raf) raf = global.requestAnimationFrame(frame);
+    }
+    var off = on(global, 'wheel', onWheel, { passive: false });
+    mount(function () {
+      off();
+      if (raf) global.cancelAnimationFrame(raf);
+      html.style.scrollBehavior = behavior;
+    });
+  }
+
 
 /* ── Feature: click and scroll interaction triggers ──────────────────────
    * The renderer marks a block with `data-sb-interaction-trigger`.
@@ -2462,10 +2895,17 @@
   var FEATURES = [
     ['reveal', initReveal],
     ['stagger', initStagger],
+    ['viewport-fallback', initViewportFallback],
     ['counters', initCounters],
     ['parallax', initParallax],
     ['scroll-effects', initScrollEffects],
     ['mouse-effects', initMouseEffects],
+    ['page-colors', initPageColors],
+    ['progress', initProgress],
+    ['text-effects', initTextEffects],
+    ['rotate', initRotate],
+    ['glow', initGlow],
+    ['smooth-scroll', initSmoothScroll],
     ['interactions', initInteractions],
     ['sticky', initSticky],
     ['overlays', initOverlays],
