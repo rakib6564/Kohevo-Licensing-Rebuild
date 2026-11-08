@@ -50,6 +50,8 @@ test('page colours follow the section in the middle of the screen, and a header 
   expect(await htmlVar(page, '--sb-paged-fg')).toBe('#ede8df');
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(11, 11, 12)', { timeout: 2000 });
   await expect(header).toHaveCSS('background-color', 'rgb(11, 11, 12)', { timeout: 2000 });
+  // The header carries the theme colours of what is beneath it too, so a logo or link on theme colours follows.
+  expect(await header.evaluate((el) => el.style.getPropertyValue('--sb-text-body'))).toBe('#ede8df');
 
   await scrollTo(page, await sectionTop(page, 2));
   expect(await htmlVar(page, '--sb-paged-bg')).toBe('#ede8df');

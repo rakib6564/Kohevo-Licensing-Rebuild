@@ -514,6 +514,13 @@
       if (value) { html.style.setProperty(name, value); html.setAttribute(attr, ''); }
       else { html.style.removeProperty(name); html.removeAttribute(attr); }
     }
+    // The theme colours each page colour stands in for (as the stylesheet points them for a section or the page).
+    var TOKENS = { fg: ['--sb-text-heading', '--sb-text-body', '--sb-text-primary'], muted: ['--sb-text-muted'], line: ['--sb-border-default'], accent: ['--sb-color-accent', '--sb-text-accent'] };
+    function tokenVars(el, c) {
+      Object.keys(TOKENS).forEach(function (n) {
+        TOKENS[n].forEach(function (v) { if (c && c[n]) el.style.setProperty(v, c[n]); else el.style.removeProperty(v); });
+      });
+    }
     var current = null;
     var onTimer = 0;
     var ticking = false;
@@ -544,6 +551,8 @@
         a.hit = under;
         if (under && under.c.bg) a.el.style.setProperty('background-color', under.c.bg, 'important'); else a.el.style.removeProperty('background-color');
         if (under && under.c.fg) a.el.style.setProperty('color', under.c.fg, 'important'); else a.el.style.removeProperty('color');
+        // And the theme colours inside it (text, muted, border, accent), so a logo or link on theme colours follows too.
+        tokenVars(a.el, under && under.c);
       });
     }
     function onScroll() {
@@ -561,7 +570,7 @@
       sections.forEach(function (el) { el.removeAttribute('data-sb-page-on'); delete el.__sbPageSeen; });
       html.removeAttribute('data-sb-page-colors');
       NAMES.forEach(function (n) { setVar('--sb-paged-' + n, 'data-sb-paged-' + n, ''); });
-      adapters.forEach(function (a) { a.el.style.removeProperty('background-color'); a.el.style.removeProperty('color'); });
+      adapters.forEach(function (a) { a.el.style.removeProperty('background-color'); a.el.style.removeProperty('color'); tokenVars(a.el, null); });
     });
   }
 
@@ -2815,6 +2824,8 @@
         if (panel) {
           panel.hidden = !open;
           panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+          // A closed answer stays laid out for the height animation: inert keeps its links out of the tab order too.
+          panel.inert = !open;
           // Height animation needs a real pixel value; fall back to instant.
           if (!reducedMotion() && panel.scrollHeight) {
             panel.style.height = open ? panel.scrollHeight + 'px' : panel.style.height || '0px';
@@ -2854,7 +2865,10 @@
         }));
       });
 
-      teardowns.push(function () { off.forEach(function (un) { un(); }); });
+      teardowns.push(function () {
+        off.forEach(function (un) { un(); });
+        items.forEach(function (item) { var p = panelOf(item); if (p) p.inert = false; });
+      });
     });
 
     if (teardowns.length) mount(function () { teardowns.forEach(function (fn) { fn(); }); });
