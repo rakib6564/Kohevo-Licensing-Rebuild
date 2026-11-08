@@ -262,3 +262,16 @@ unit('grid tracks: as many columns as fit, each at least a size, and nothing loo
         assert_true(!StyleSurface::isTracks($bad), $bad);
     }
 });
+
+unit('widgets: the review and loop dialogs take their background from the section they open in, like their text', function (): void {
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    // A themed section sets --sb-text-* from --sb-page-fg but leaves --sb-surface-page alone: a dialog that paired the page
+    // surface with the section's text showed dark text on a dark page (light section on a dark site).
+    foreach (['.sb-tgrid__dialog{', '.sb-loop-dialog{'] as $sel) {
+        $at = strpos($css, $sel);
+        assert_true($at !== false, $sel . ' is styled');
+        $rule = substr($css, $at, strpos($css, '}', $at) - $at);
+        assert_true(str_contains($rule, 'background:var(--sb-page-bg,var(--sb-surface-page,#fff))'), $sel . ' background follows the section');
+        assert_true(str_contains($rule, 'color:var(--sb-text-body,#111)'), $sel . ' text follows the section');
+    }
+});
