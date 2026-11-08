@@ -155,7 +155,7 @@ $nav = B('layout.mega_menu', ['aria_label' => 'Main', 'align' => 'center', 'pane
 // The full-screen menu: the brand where the header's is, two columns of numbered links with a line under each,
 // the hovered link's picture on the right, and a row of contact links along the bottom.
 $fsLinks = static fn(array $links): array => array_map(static fn(array $l): array => B('core.link', ['link' => L($l[0], $l[1]), 'style' => 'plain'], [], ['color' => BONE, 'typography' => ['size' => '14px']]), $links);
-$fullMenu = B('layout.offcanvas', ['drawer_id' => 'rk-menu', 'title' => '', 'position' => 'fullscreen', 'close_text' => 'Close', 'trigger_text' => 'Menu', 'trigger_variant' => 'plain', 'trigger_icon' => 'menu', 'trigger_icon_size' => 18, 'trigger_show_text' => true, 'trigger_text_mobile' => false], [
+$fullMenu = B('layout.offcanvas', ['drawer_id' => 'rk-menu', 'title' => '', 'position' => 'fullscreen', 'close_text' => 'Close', 'trigger_text' => 'Menu', 'trigger_variant' => 'plain', 'trigger_icon' => 'menu', 'trigger_icon_size' => 18, 'trigger_show_text' => true, 'trigger_text_mobile' => true], [
     ROW([$brandRow()], '0px', ['padding' => ['top' => '20px', 'right' => '28px', 'bottom' => '20px', 'left' => '28px']], ['align' => 'center'], []),
     B('core.nav_menu', ['menu' => 'full', 'items' => [], 'layout' => 'vertical', 'align' => 'left', 'aria_label' => 'Full menu', 'toggle_breakpoint' => 'none',
         'numbered' => true, 'descriptions' => true, 'arrow' => true, 'columns' => 2, 'preview' => true, 'reveal' => true], [],
