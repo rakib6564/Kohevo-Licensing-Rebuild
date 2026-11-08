@@ -55,3 +55,10 @@ production-artifacts/*.zip
 
 # Sheets EmbedStyle writes while a render runs (tests, local preview).
 01-client/uploads/studio-embed/
+
+# Studio's scheduled-publish sweep stamp (written on page requests).
+01-client/storage/.studio-schedule-sweep
+
+# Site bundles keep their photos out of git (each bundle refetches or copies them).
+# No trailing slash, so a worktree's symlink to the folder is ignored too.
+01-client/sites/*/media
