@@ -330,6 +330,8 @@ function ScrollEffectsGroup({ idPrefix, interactions, hasBackground, tokens, onC
 
 /** Blocks that hold others: they can colour the page, carry a progress bar, take the colours beneath, and stagger. */
 const BOX_TYPES = ['core.container', 'layout.container', 'layout.flex', 'layout.grid', 'core.card'];
+/** Blocks made of links: a chapter nav can be one of these, or a box holding links. */
+const LINK_LIST_TYPES = ['core.nav_menu', 'core.icon_list', 'core.list'];
 
 /**
  * The page-level effects (interactions.page_colors, adapt, progress, text, stagger, glow). Each writes the whole
@@ -339,6 +341,7 @@ const BOX_TYPES = ['core.container', 'layout.container', 'layout.flex', 'layout.
 function PageEffectsGroup({ idPrefix, type, interactions, tokens, onChange }) {
   const set = (key, value) => onChange(normalizeInteractions({ ...interactions, [key]: value }));
   const isBox = BOX_TYPES.includes(type);
+  const holdsLinks = isBox || LINK_LIST_TYPES.includes(type);
   const text = interactions.text || null;
   const pageColors = interactions.page_colors || null;
   const progress = interactions.progress || null;
@@ -443,6 +446,13 @@ function PageEffectsGroup({ idPrefix, type, interactions, tokens, onChange }) {
             {hoverImage && <SliderField id={`${idPrefix}-hover-image-size`} label={t('hover_image_size')} value={hoverImage.size} min={HOVER_IMAGE_SIZE.min} max={HOVER_IMAGE_SIZE.max} step={10} unit="px" neutral={HOVER_IMAGE_SIZE.default} onChange={(v) => set('hover_image', { size: v ?? HOVER_IMAGE_SIZE.default })} />}
             <p className="sbx-hint">{t('hover_image_hint')}</p>
           </SwitchSection>
+        </>
+      )}
+
+      {holdsLinks && (
+        <>
+          <Check label={t('spy_links')} checked={interactions.spy === true} onChange={(e) => set('spy', e.target.checked ? true : undefined)} />
+          <p className="sbx-hint">{t('spy_links_hint')}</p>
         </>
       )}
 

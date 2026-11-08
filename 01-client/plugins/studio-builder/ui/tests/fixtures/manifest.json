@@ -536,6 +536,8 @@
             "binding_slots": [],
             "category": "content",
             "default_props": {
+                "copied_label": "Copied",
+                "copy_text": "",
                 "full_width": false,
                 "icon": "none",
                 "icon_position": "before",
@@ -614,6 +616,22 @@
                     "min": 0,
                     "max": 50,
                     "integer_only": true
+                },
+                {
+                    "key": "copy_text",
+                    "type": "string",
+                    "label": "Copy this text when clicked",
+                    "required": false,
+                    "default": "",
+                    "max_length": 300
+                },
+                {
+                    "key": "copied_label",
+                    "type": "string",
+                    "label": "Label once copied",
+                    "required": false,
+                    "default": "Copied",
+                    "max_length": 60
                 }
             ],
             "icon": "arrow-up-right",
@@ -942,6 +960,116 @@
             ],
             "title": "Carousel",
             "type": "core.carousel",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "direction": "clockwise",
+                "font_size": 11,
+                "icon": "none",
+                "size": 120,
+                "spin_seconds": 14,
+                "text": "Free website audit • Free website audit • "
+            },
+            "description": "Words round a turning circle, a badge",
+            "field_schema": [
+                {
+                    "key": "text",
+                    "type": "string",
+                    "label": "Text round the circle",
+                    "required": true,
+                    "default": "Free website audit • Free website audit • ",
+                    "max_length": 120
+                },
+                {
+                    "key": "icon",
+                    "type": "string",
+                    "label": "Icon in the middle",
+                    "required": false,
+                    "default": "none",
+                    "max_length": 40,
+                    "format": "icon"
+                },
+                {
+                    "key": "size",
+                    "type": "number",
+                    "label": "Size (px)",
+                    "required": false,
+                    "default": 120,
+                    "min": 60,
+                    "max": 400,
+                    "integer_only": true
+                },
+                {
+                    "key": "font_size",
+                    "type": "number",
+                    "label": "Letter size",
+                    "required": false,
+                    "default": 11,
+                    "min": 6,
+                    "max": 24,
+                    "integer_only": true
+                },
+                {
+                    "key": "spin_seconds",
+                    "type": "number",
+                    "label": "Seconds per turn (0 = still)",
+                    "required": false,
+                    "default": 14,
+                    "min": 0,
+                    "max": 120,
+                    "integer_only": true
+                },
+                {
+                    "key": "direction",
+                    "type": "enum",
+                    "label": "Turns",
+                    "required": false,
+                    "default": "clockwise",
+                    "allowed_values": [
+                        "clockwise",
+                        "anticlockwise"
+                    ]
+                }
+            ],
+            "icon": "star",
+            "inline_text": [],
+            "label": "Circular text",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Circular text",
+            "type": "core.circle_text",
             "version": 1
         },
         {
@@ -7138,6 +7266,7 @@
             "default_props": {
                 "aria_label": "",
                 "autoplay_ms": 0,
+                "look": "tabs",
                 "pause_on_hover": true,
                 "position": "top"
             },
@@ -7152,6 +7281,17 @@
                     "allowed_values": [
                         "top",
                         "left"
+                    ]
+                },
+                {
+                    "key": "look",
+                    "type": "enum",
+                    "label": "Tabs look",
+                    "required": false,
+                    "default": "tabs",
+                    "allowed_values": [
+                        "tabs",
+                        "list"
                     ]
                 },
                 {

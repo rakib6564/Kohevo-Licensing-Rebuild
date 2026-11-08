@@ -1155,6 +1155,100 @@
   }
 
 
+/* ── Feature: chapter nav (scrollspy) ───────────────────────────────────
+   * [data-sb-spy] (interactions.spy): of the node's links to sections of this page, the one whose section was the last to
+   * reach a line 35% down the screen is marked current (`aria-current="location"`, `is-current`), so a menu's "current
+   * link" style follows the reader. Before the first section, none is.
+   */
+  function initSpy(root) {
+    var els = qsa(root, '[data-sb-spy]');
+    if (!els.length) return;
+    var here = location.pathname.replace(/\/+$/, '') || '/';
+    var groups = els.map(function (el) {
+      var links = [];
+      qsa(el, 'a[href*="#"]').forEach(function (a) {
+        var url;
+        try { url = new URL(a.getAttribute('href'), location.href); } catch (err) { return; }
+        if (url.origin !== location.origin || (url.pathname.replace(/\/+$/, '') || '/') !== here || url.hash.length < 2) return;
+        var target;
+        try { target = document.getElementById(decodeURIComponent(url.hash.slice(1))); } catch (err) { return; }
+        if (!target) return;
+        // A link to this page is marked "page" by the menu's own feature; here it means a place on the page instead.
+        a.removeAttribute('aria-current');
+        a.classList.remove('is-current');
+        links.push({ a: a, target: target });
+      });
+      return links;
+    });
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var line = (global.innerHeight || 1) * 0.35;
+      groups.forEach(function (links) {
+        var current = null;
+        links.forEach(function (l) { if (l.target.getBoundingClientRect().top <= line) current = l.a; });
+        links.forEach(function (l) {
+          if (l.a === current) { l.a.setAttribute('aria-current', 'location'); l.a.classList.add('is-current'); }
+          else { l.a.removeAttribute('aria-current'); l.a.classList.remove('is-current'); }
+        });
+      });
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      global.requestAnimationFrame(update);
+    }
+    var offs = [on(global, 'scroll', onScroll, { passive: true }), on(global, 'resize', onScroll, { passive: true })];
+    update();
+    mount(function () {
+      offs.forEach(function (off) { off(); });
+      groups.forEach(function (links) { links.forEach(function (l) { l.a.removeAttribute('aria-current'); l.a.classList.remove('is-current'); }); });
+    });
+  }
+
+  /* ── Feature: copy to clipboard ──────────────────────────────────────────
+   * [data-sb-copy] (a Button's "Copy this text when clicked"): a click copies the text and, for two seconds, the label
+   * reads `data-sb-copied` (announced to screen readers). Where the browser refuses to copy, the link is followed as
+   * usual, which is also what happens without this file.
+   */
+  function initCopy(root) {
+    var els = qsa(root, '[data-sb-copy]');
+    if (!els.length || !global.navigator || !navigator.clipboard || !navigator.clipboard.writeText) return;
+    var status = document.createElement('span');
+    status.className = 'sb-sr-status';
+    status.setAttribute('role', 'status');
+    status.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap';
+    document.body.appendChild(status);
+    var offs = [];
+    var timers = [];
+    els.forEach(function (el) {
+      var label = qs(el, '.sb-button__label') || el;
+      var original = label.textContent;
+      offs.push(function () { label.textContent = original; el.classList.remove('is-copied'); });
+      offs.push(on(el, 'click', function (e) {
+        e.preventDefault();
+        var href = el.tagName === 'A' ? el.href : '';
+        navigator.clipboard.writeText(el.getAttribute('data-sb-copy') || '').then(function () {
+          var done = el.getAttribute('data-sb-copied') || 'Copied';
+          label.textContent = done;
+          status.textContent = done;
+          el.classList.add('is-copied');
+          global.clearTimeout(el.__sbCopied);
+          el.__sbCopied = global.setTimeout(function () { label.textContent = original; el.classList.remove('is-copied'); status.textContent = ''; }, 2000);
+          timers.push(el.__sbCopied);
+        }, function () {
+          if (href) global.location.href = href;
+        });
+      }));
+    });
+    mount(function () {
+      offs.forEach(function (off) { off(); });
+      timers.forEach(function (t) { global.clearTimeout(t); });
+      status.remove();
+    });
+  }
+
+
 /* ── Feature: click and scroll interaction triggers ──────────────────────
    * The renderer marks a block with `data-sb-interaction-trigger`.
    *   click:  each click (re)plays the block's chosen animation: data-sb-play is removed, a reflow restarts
@@ -3291,6 +3385,8 @@
     ['variants', initVariants],
     ['shopGrid', initShopGrid],
     ['currentLinks', initCurrentLinks],
+    ['spy', initSpy],
+    ['copy', initCopy],
     ['navToggles', initNavToggles],
     ['megaMenus', initMegaMenus],
     ['submenus', initSubmenus],

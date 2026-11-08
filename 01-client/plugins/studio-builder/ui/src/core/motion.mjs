@@ -148,6 +148,7 @@ export function normalizeInteractions(raw) {
   const pageColors = normalizePageColors(i.page_colors);
   if (pageColors) out.page_colors = pageColors;
   if (i.adapt === true) out.adapt = true;
+  if (i.spy === true) out.spy = true;
   const progress = normalizeProgress(i.progress);
   if (progress) out.progress = progress;
   const text = normalizeTextEffect(i.text);
@@ -346,7 +347,7 @@ export function hasMotion(block) {
   return Boolean(
     (anim && anim.type && anim.type !== 'none')
     || (inter && (inter.trigger || inter.sticky || inter.parallax || inter.scroll || inter.mouse || inter.page_colors
-      || inter.adapt || inter.progress || inter.text || inter.stagger || inter.glow || inter.marquee || inter.horizontal
+      || inter.adapt || inter.spy || inter.progress || inter.text || inter.stagger || inter.glow || inter.marquee || inter.horizontal
       || inter.hover_image))
   );
 }

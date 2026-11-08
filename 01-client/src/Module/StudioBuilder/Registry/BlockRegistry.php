@@ -229,6 +229,10 @@ final class BlockRegistry
                 ['key' => 'icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Icon', 'required' => false, 'default' => 'none'],
                 ['key' => 'icon_position', 'type' => 'enum', 'label' => 'Icon Position', 'required' => false, 'allowed_values' => ['before', 'after'], 'default' => 'before'],
                 ['key' => 'icon_spacing', 'type' => 'number', 'label' => 'Icon Spacing', 'required' => false, 'default' => 8, 'min' => 0, 'max' => 50, 'integer_only' => true],
+                // Copy to clipboard: a click copies this text (an email address, a code) and the label says so for a moment;
+                // without script, or where copying is refused, the button's own link still works.
+                ['key' => 'copy_text', 'type' => 'string', 'label' => 'Copy this text when clicked', 'required' => false, 'default' => '', 'max_length' => 300],
+                ['key' => 'copied_label', 'type' => 'string', 'label' => 'Label once copied', 'required' => false, 'default' => 'Copied', 'max_length' => 60],
             ]),
             allowsChildren: false,
             allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
@@ -1372,6 +1376,7 @@ final class BlockRegistry
             icon: 'grid-panes',
             schema: FieldSchema::define([
                 ['key' => 'position', 'type' => 'enum', 'label' => 'Tabs position', 'required' => false, 'allowed_values' => TabSetRenderer::POSITIONS, 'default' => 'top'],
+                ['key' => 'look', 'type' => 'enum', 'label' => 'Tabs look', 'required' => false, 'allowed_values' => TabSetRenderer::LOOKS, 'default' => 'tabs'],
                 ['key' => 'autoplay_ms', 'type' => 'number', 'label' => 'Turn by themselves every (ms, 0 = never)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => TabSetRenderer::MAX_AUTOPLAY, 'integer_only' => true],
                 ['key' => 'pause_on_hover', 'type' => 'boolean', 'label' => 'Pause while the pointer is over them', 'required' => false, 'default' => true],
                 ['key' => 'aria_label', 'type' => 'string', 'label' => 'Tabs name (for screen readers)', 'required' => false, 'default' => '', 'max_length' => 80],
@@ -1475,6 +1480,26 @@ final class BlockRegistry
                 ['key' => 'bar_color', 'type' => 'string', 'label' => 'Bar colour', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
                 ['key' => 'track_color', 'type' => 'string', 'label' => 'Track colour', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
                 ['key' => 'height', 'type' => 'number', 'label' => 'Bar height (px)', 'required' => false, 'default' => 8, 'min' => 2, 'max' => 40, 'integer_only' => true],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 38j. core.circle_text — words set round a circle that turns slowly, with an optional icon in the middle.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.circle_text',
+            version: 1,
+            label: 'Circular text',
+            title: 'Circular text',
+            description: 'Words round a turning circle, a badge',
+            category: 'content',
+            icon: 'star',
+            schema: FieldSchema::define([
+                ['key' => 'text', 'type' => 'string', 'label' => 'Text round the circle', 'required' => true, 'default' => 'Free website audit • Free website audit • ', 'max_length' => 120],
+                ['key' => 'icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Icon in the middle', 'required' => false, 'default' => 'none'],
+                ['key' => 'size', 'type' => 'number', 'label' => 'Size (px)', 'required' => false, 'default' => 120, 'min' => 60, 'max' => 400, 'integer_only' => true],
+                ['key' => 'font_size', 'type' => 'number', 'label' => 'Letter size', 'required' => false, 'default' => 11, 'min' => 6, 'max' => 24, 'integer_only' => true],
+                ['key' => 'spin_seconds', 'type' => 'number', 'label' => 'Seconds per turn (0 = still)', 'required' => false, 'default' => 14, 'min' => 0, 'max' => 120, 'integer_only' => true],
+                ['key' => 'direction', 'type' => 'enum', 'label' => 'Turns', 'required' => false, 'allowed_values' => ['clockwise', 'anticlockwise'], 'default' => 'clockwise'],
             ]),
             allowsChildren: false,
         ));

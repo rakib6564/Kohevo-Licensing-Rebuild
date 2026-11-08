@@ -146,3 +146,58 @@ unit('block sets: the editor canvas shows every tab titled and every row open; P
     assert_true(!str_contains($preview, 'sb-tabset__label'), 'no titles in Preview');
     assert_true(str_contains($preview, 'aria-expanded="false">Closed row') && str_contains($preview, ' hidden>'), 'Preview keeps the row closed, as the page does');
 });
+
+unit('extras: a chapter nav, a copy button, a picker look and circular text render what the runtime needs', function (): void {
+    $registry = BlockRegistry::withAllCoreBlocks();
+    assert_true(DocumentValidator::validate(sbsm_doc(sbsm_section(['interactions' => ['spy' => true]])), $registry)->isValid(), 'spy');
+    assert_true(!DocumentValidator::validate(sbsm_doc(sbsm_section(['interactions' => ['spy' => 'yes']])), $registry)->isValid(), 'spy is true or false');
+    assert_true(str_contains(sbpm_tag(['spy' => true]), ' data-sb-spy'), 'spy marks the node');
+    $parts = \Slate\Module\StudioBuilder\Registry\BlockParts::for('core.nav_menu');
+    assert_true(in_array('.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current]', $parts['current']['selectors'], true), 'the current-link part covers a chapter link');
+
+    $copy = sbsm_render(sbpm_box([sbpm_block('core.button', ['link' => ['label' => 'Copy email', 'href' => 'mailto:a@b.test'], 'copy_text' => 'a@b.test', 'copied_label' => 'Copied!'])]));
+    assert_true((bool) preg_match('/<a data-sb-copy="a@b\.test" data-sb-copied="Copied!" [^>]*href="mailto:a@b\.test"/', $copy), 'the link keeps its address: ' . $copy);
+    $bare = sbsm_render(sbpm_box([sbpm_block('core.button', ['link' => ['label' => 'Copy code', 'href' => ''], 'copy_text' => 'SAVE10"><x'])]));
+    assert_true(str_contains($bare, '<button type="button" class="sb-button sb-button--primary" data-sb-copy="SAVE10&quot;&gt;&lt;x" data-sb-copied="Copied">Copy code</button>'), 'no address: a button, escaped: ' . $bare);
+    $plain = sbsm_render(sbpm_box([sbpm_block('core.button', ['link' => ['label' => 'Go', 'href' => '/go']])]));
+    assert_true(!str_contains($plain, 'data-sb-copy'), 'an ordinary button is unchanged');
+
+    assert_true(str_contains(sbsm_render(sbpm_box([sbbs_tabs(['A', 'B'], ['look' => 'list', 'position' => 'left'])])), 'class="sb-tabset sb-tabset--left sb-tabset--list"'), 'picker look');
+
+    $ring = sbsm_render(sbpm_box([sbpm_block('core.circle_text', ['text' => 'Free <audit> • ', 'icon' => 'star', 'size' => 9999, 'spin_seconds' => 10, 'direction' => 'anticlockwise'])]));
+    assert_true(str_contains($ring, 'class="sb-circle-text sb-circle-text--spin sb-circle-text--reverse" role="img" aria-label="Free &lt;audit&gt; •" style="--sb-ct-size:400px;--sb-ct-spin:10s"'), $ring);
+    assert_true((bool) preg_match('/<textPath href="#([^"]+)" textLength="289\.0" lengthAdjust="spacing">Free &lt;audit&gt; •<\/textPath>/', $ring, $m) && str_contains($ring, '<path id="' . $m[1] . '"'), 'the text follows its own circle');
+    assert_true(str_contains($ring, 'class="sb-circle-text__icon" aria-hidden="true"'), 'icon in the middle');
+    $still = sbsm_render(sbpm_box([sbpm_block('core.circle_text', ['text' => 'x', 'spin_seconds' => 0])]));
+    assert_true(str_contains($still, 'class="sb-circle-text" ') && !str_contains($still, '--sb-ct-spin'), 'still');
+});
+
+unit('extras: the markup and CSS match the browser fixture the runtime spec drives', function (): void {
+    $chapter = static fn(string $id, string $title): array => sbpm_box([sbpm_block('core.heading', ['text' => $title, 'level' => 'h2'])], ['attributes' => ['id' => $id]]);
+    $sections = [
+        sbpm_box([
+            sbpm_block('core.button', ['link' => ['label' => 'Story', 'href' => '#story']]),
+            sbpm_block('core.button', ['link' => ['label' => 'Result', 'href' => '#result']]),
+        ], ['interactions' => ['spy' => true]]),
+        sbpm_box([
+            sbpm_block('core.button', ['link' => ['label' => 'Copy email', 'href' => '#mail'], 'copy_text' => 'hello@example.test', 'copied_label' => 'Copied!']),
+            sbpm_block('core.circle_text', ['text' => 'Free website audit • ', 'icon' => 'star', 'spin_seconds' => 4]),
+        ]),
+        $chapter('story', 'The story'),
+        $chapter('result', 'The result'),
+    ];
+    $html = implode('', array_map('sbsm_render', $sections));
+    $html = (string) preg_replace('/ data-sb-node="[^"]*" data-sb-type="[^"]*"/', '', $html);
+    $html = (string) preg_replace('/\bsb-x-[a-f0-9]+/', 'sb-x', $html);
+    $n = 0;
+    $map = [];
+    $html = (string) preg_replace_callback('/blk_[a-z0-9]+/', static function (array $m) use (&$n, &$map): string {
+        return $map[$m[0]] ??= 'blk_' . str_pad((string) ++$n, 3, '0', STR_PAD_LEFT);
+    }, $html);
+    $css = '<style>' . StudioStylesheet::blockSetsCss() . '</style>';
+    $fixture = __DIR__ . '/../../plugins/studio-builder/ui/tests/fixtures/extras.html';
+    if (getenv('SBPM_WRITE_FIXTURE') === '1') {
+        file_put_contents($fixture, $css . $html . "\n");
+    }
+    assert_eq(trim((string) file_get_contents($fixture)), $css . $html, 'ui/tests/fixtures/extras.html is stale — regenerate with SBPM_WRITE_FIXTURE=1');
+});

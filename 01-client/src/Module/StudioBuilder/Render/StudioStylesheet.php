@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '70';
+    public const VERSION = '71';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -808,7 +808,7 @@ final class StudioStylesheet
 
         // Pointers
         $link = '.sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)';
-        $lit = ':is(:focus-visible,[aria-current="page"])';
+        $lit = ':is(:focus-visible,[aria-current])';
         $css .= ':is(.sb-nav--pointer-underline,.sb-nav--pointer-overline,.sb-nav--pointer-double_line,.sb-nav--pointer-framed,.sb-nav--pointer-background) ' . $link . '{position:relative}'
             . ':is(.sb-nav--pointer-framed,.sb-nav--pointer-background) ' . $link . '{padding-left:.75rem;padding-right:.75rem}';
         $shape = [
@@ -837,7 +837,7 @@ final class StudioStylesheet
             // A Nav menu in a panel takes no pointer from the Mega menu around it.
             . '.sb-nav__mega .sb-nav:not([class*="sb-nav--pointer-"]) .sb-nav__link::before,.sb-nav__mega .sb-nav:not([class*="sb-nav--pointer-"]) .sb-nav__link::after{display:none}'
             . '@media (hover:hover){' . $marks(':hover') . '{opacity:1;transform:none}.sb-body .sb-nav--pointer-text a.sb-nav__link:hover{color:var(--sb-nav-pointer)}}'
-            . '.sb-body .sb-nav--pointer-text a.sb-nav__link:is(:focus-visible,[aria-current="page"]),.sb-nav--pointer-text .sb-nav__parent:focus-visible{color:var(--sb-nav-pointer)}'
+            . '.sb-body .sb-nav--pointer-text a.sb-nav__link:is(:focus-visible,[aria-current]),.sb-nav--pointer-text .sb-nav__parent:focus-visible{color:var(--sb-nav-pointer)}'
             . '@media (prefers-reduced-motion:reduce){[class*="sb-nav--anim-"] ' . $link . '::before,[class*="sb-nav--anim-"] ' . $link . '::after{transition:none;transform:none}.sb-nav__icon,.sb-nav__icon::before,.sb-nav__icon::after{transition:none}}';
 
         // Mega menu: a panel opens from the menu's row, and the runtime stretches it to the window under the header.
@@ -971,7 +971,24 @@ final class StudioStylesheet
             . '.sb-progress__track{height:var(--sb-pg-h,8px);border-radius:999px;background:var(--sb-pg-track,var(--sb-border-default,#e2e8f0));overflow:hidden}'
             . '.sb-progress__bar{display:block;height:100%;border-radius:inherit;background:var(--sb-pg-bar,var(--sb-color-accent,currentColor));transform-origin:0 50%;transform:scaleX(var(--sb-pg-v,0));transition:transform 1.2s cubic-bezier(.2,.8,.2,1)}'
             . 'html[data-sb-ready] [data-sb-progress-bars]:not(.is-in) .sb-progress__bar{transform:scaleX(0);transition:none}'
-            . '@media (prefers-reduced-motion:reduce){.sb-progress__bar,.sb-timeline__steps>.sb-block::before{transition:none}}';
+            // The list look (a picker): numbered rows with an arrow that turns towards the chosen answer.
+            . '.sb-tabset--list>.sb-tabset__list{gap:0;counter-reset:sb-pick}'
+            . '.sb-tabset--list .sb-tabset__tab{display:grid;grid-template-columns:auto 1fr auto;column-gap:1rem;align-items:center;padding:1rem .25rem;border:0;border-bottom:1px solid var(--sb-border-default,#e2e8f0);border-radius:0;counter-increment:sb-pick}'
+            . '.sb-tabset--list .sb-tabset__tab::before{content:counter(sb-pick,decimal-leading-zero);grid-row:1/span 2;font-size:.8em;opacity:.6;font-variant-numeric:tabular-nums}'
+            . '.sb-tabset--list .sb-tabset__tab::after{content:"→";grid-column:3;grid-row:1/span 2;transition:transform .3s ease}'
+            . '.sb-tabset--list .sb-tabset__tab[aria-selected="true"]::after{transform:rotate(-45deg);color:var(--sb-color-accent,currentColor)}'
+            . '.sb-tabset--list .sb-tabset__title,.sb-tabset--list .sb-tabset__sub{grid-column:2}'
+            . '.sb-tabset--list .sb-tabset__tab[aria-selected="true"]{border-color:var(--sb-color-accent,currentColor)}'
+            // Circular text: the drawing turns; the icon in the middle stays upright.
+            . '.sb-circle-text{position:relative;display:inline-grid;place-items:center;width:var(--sb-ct-size,120px);height:var(--sb-ct-size,120px)}'
+            . '.sb-circle-text__ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible;text-transform:uppercase;letter-spacing:.08em}'
+            . '.sb-circle-text--spin .sb-circle-text__ring{animation:sb-ct-spin var(--sb-ct-spin,14s) linear infinite}'
+            . '.sb-circle-text--reverse .sb-circle-text__ring{animation-direction:reverse}'
+            . '.sb-circle-text__icon{width:32%;height:32%;display:block}.sb-circle-text__icon svg{width:100%;height:100%}'
+            . '@keyframes sb-ct-spin{to{rotate:360deg}}'
+            // Copy to clipboard: the label says so for a moment.
+            . '.sb-button.is-copied{opacity:.85}'
+            . '@media (prefers-reduced-motion:reduce){.sb-progress__bar,.sb-timeline__steps>.sb-block::before{transition:none}.sb-circle-text__ring{animation:none!important}}';
     }
 
     /**

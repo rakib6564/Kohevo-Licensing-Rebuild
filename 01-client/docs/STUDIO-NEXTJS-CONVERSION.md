@@ -612,6 +612,10 @@ Part rules are written with `!important`. Custom CSS can't override them, so an 
 | Tabs | `core.tabs` (plain-text panels); `layout.tabs` with `layout.tab` children for panels of any blocks, vertical tabs (`position: left`) or tabs that turn by themselves (`autoplay_ms`, with a time bar) |
 | Process timeline with a line that fills on scroll | `layout.timeline`: each child block is a step (numbered unless `numbered: false`) |
 | Skill or progress bars | `core.progress` |
+| "Which one fits you" picker | `layout.tabs` with `look: list` (numbered answers with an arrow), usually `position: left` |
+| Chapter or section nav that highlights as you read | `interactions.spy` on the menu or the box holding the `#section` links |
+| Copy email or code button | `core.button` with `copy_text` (the link still works without script) |
+| Rotating circular text badge | `core.circle_text` |
 | Modal | `core.modal` |
 | Carousel, Swiper | `core.carousel`; check it can show the original's content, as slides have a fixed shape |
 | Lightbox | `core.gallery`; `core.video` with `lightbox` |

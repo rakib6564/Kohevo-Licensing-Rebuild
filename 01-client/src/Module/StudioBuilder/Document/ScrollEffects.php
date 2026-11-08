@@ -18,6 +18,8 @@ namespace Slate\Module\StudioBuilder\Document;
  *   interactions.page_colors = {background, text: colour}  the page takes these colours while the node is in the middle
  *                            of the screen, with a short blend
  *   interactions.adapt    = true  the node takes the page colours of the section beneath its bottom edge (a header)
+ *   interactions.spy      = true  of the node's links to sections of this page, the one whose section is on screen is
+ *                            marked current (a chapter nav)
  *   interactions.progress = {edge: top|bottom, color: colour, height: 1-12 (px)}  a bar along that edge that fills as
  *                            the page scrolls
  *   interactions.text     = {effect: light_words|lines, dim: 5-60 (%), step_ms: 0-400}  light_words lights the words up
@@ -81,8 +83,10 @@ final class ScrollEffects
         if (array_key_exists('mouse', $interactions)) {
             self::levelIssues($interactions['mouse'], self::MOUSE_FIELDS, "{$path}.mouse", $errors);
         }
-        if (array_key_exists('adapt', $interactions) && !is_bool($interactions['adapt'])) {
-            $errors[] = self::issue("{$path}.adapt", 'adapt must be true or false.');
+        foreach (['adapt', 'spy'] as $flag) {
+            if (array_key_exists($flag, $interactions) && !is_bool($interactions[$flag])) {
+                $errors[] = self::issue("{$path}.{$flag}", "{$flag} must be true or false.");
+            }
         }
         $shapes = [
             'page_colors' => ['background' => 'colour', 'text' => 'colour'],
@@ -352,6 +356,9 @@ final class ScrollEffects
         if (($interactions['adapt'] ?? false) === true) {
             $classes[] = 'sb-adapt';
             $attrs .= ' data-sb-adapt';
+        }
+        if (($interactions['spy'] ?? false) === true) {
+            $attrs .= ' data-sb-spy';
         }
 
         $progress = $interactions['progress'] ?? null;

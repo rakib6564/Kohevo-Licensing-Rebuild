@@ -830,7 +830,7 @@ unit('text colours: post excerpt and content use variables the theme defines', f
     // The page-level motion sets the rest: --sb-paged-* and --sb-page-progress on <html>, --sb-progress-*, --sb-stagger-*,
     // --sb-glow-*, --sb-mx/--sb-my, --sb-line*, --sb-item-*, --sb-hs-* and --sb-hover-* on the node or word (ScrollEffects,
     // studio-runtime.js).
-    $perElement = ['--sb-slide', '--sb-gal-', '--sb-il-', '--sb-anim-', '--sb-nav-', '--sb-mega-', '--sb-ov-', '--sb-shape-', '--sb-pbg-', '--sb-parallax-', '--sb-sticky-', '--sb-stuck-', '--sb-dc-', '--sb-tc-', '--sb-pv', '--sb-fw-', '--sb-cw', '--sb-shop-', '--sb-paged-', '--sb-page-progress', '--sb-progress-', '--sb-stagger-', '--sb-glow-', '--sb-mx', '--sb-my', '--sb-line', '--sb-item-', '--sb-hs-', '--sb-hover-', '--sb-tl-', '--sb-pg-'];
+    $perElement = ['--sb-slide', '--sb-gal-', '--sb-il-', '--sb-anim-', '--sb-nav-', '--sb-mega-', '--sb-ov-', '--sb-shape-', '--sb-pbg-', '--sb-parallax-', '--sb-sticky-', '--sb-stuck-', '--sb-dc-', '--sb-tc-', '--sb-pv', '--sb-fw-', '--sb-cw', '--sb-shop-', '--sb-paged-', '--sb-page-progress', '--sb-progress-', '--sb-stagger-', '--sb-glow-', '--sb-mx', '--sb-my', '--sb-line', '--sb-item-', '--sb-hs-', '--sb-hover-', '--sb-tl-', '--sb-pg-', '--sb-ct-'];
     $missing = array_values(array_filter(array_diff(array_unique($m[1]), $defined), static function (string $v) use ($perElement): bool {
         foreach ($perElement as $prefix) {
             if (str_starts_with($v, $prefix)) {

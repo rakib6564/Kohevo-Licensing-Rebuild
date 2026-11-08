@@ -100,7 +100,7 @@ final class BlockParts
             'link'    => ['label' => 'Links', 'selectors' => ['.sb-nav__list>.sb-nav__item>.sb-nav__link']],
             // studio-runtime.js marks the link of the page being viewed (a header is rendered once for every page).
             // As specific as `link` and `sublink` and more, or their colour would win over this one.
-            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current="page"]', '.sb-nav__sub .sb-nav__item>.sb-nav__link[aria-current="page"]', '.sb-nav__list .sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
+            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current]', '.sb-nav__sub .sb-nav__item>.sb-nav__link[aria-current]', '.sb-nav__list .sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
             'submenu' => ['label' => 'Submenu', 'selectors' => ['.sb-nav__sub']],
             'sublink' => ['label' => 'Submenu links', 'selectors' => ['.sb-nav__sub .sb-nav__link']],
             'toggle'  => ['label' => 'Submenu arrow', 'selectors' => ['.sb-nav__caret', '.sb-nav__toggle']],
@@ -113,7 +113,7 @@ final class BlockParts
         'layout.mega_menu' => [
             'list'    => ['label' => 'Menu list', 'selectors' => ['.sb-nav--mega>.sb-nav__list']],
             'link'    => ['label' => 'Links', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)']],
-            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current="page"]', '.sb-nav--mega>.sb-nav__list>.sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
+            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current]', '.sb-nav--mega>.sb-nav__list>.sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
             'open'    => ['label' => 'Link of the open panel', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item:is(:hover,:focus-within,[data-open])>:is(.sb-nav__link,.sb-nav__parent)'], 'states' => false],
             'submenu' => ['label' => 'Panels', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__mega']],
             'grid'    => ['label' => 'Panel columns', 'selectors' => ['.sb-mega__grid']],

@@ -433,6 +433,8 @@ const EN = {
   glow_size: 'Glow size',
   glow_hint: 'A soft light follows the pointer over this block. Pick a see-through colour for a subtle glow.',
   level_magnet: 'Magnetic pull',
+  spy_links: 'Highlight the link of the section on screen',
+  spy_links_hint: 'For a chapter menu: of the links to sections of this page, the one for the section being read is styled as the current link.',
   block_marquee: 'Run as a marquee',
   block_marquee_speed: 'Speed',
   block_marquee_left: 'To the left',

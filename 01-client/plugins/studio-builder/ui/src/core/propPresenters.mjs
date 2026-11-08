@@ -44,7 +44,9 @@ export const PROP_PRESENTERS = Object.freeze({
   // The menu button's options mean nothing without a button, and the dropdown's width only applies to a dropdown.
   'core.nav_menu': navPresenter,
   'layout.mega_menu': { ...navPresenter, panel_width: { pills: true } },
+  'core.circle_text': { direction: { pills: true } },
   'core.button': {
+    copied_label: { showIf: (p) => typeof p.copy_text === 'string' && p.copy_text.trim() !== '' },
     icon_position: { pills: true, showIf: (p) => !!p.icon && p.icon !== 'none' },
     icon_spacing: { showIf: (p) => !!p.icon && p.icon !== 'none' },
   },
@@ -73,6 +75,7 @@ export const PROP_PRESENTERS = Object.freeze({
   // Tabs with blocks: pausing means nothing until the tabs turn by themselves.
   'layout.tabs': {
     position: { pills: true },
+    look: { pills: true },
     pause_on_hover: { showIf: (p) => typeof p.autoplay_ms === 'number' && p.autoplay_ms > 0 },
   },
   'core.dual_heading': {
