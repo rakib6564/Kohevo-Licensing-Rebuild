@@ -1556,6 +1556,7 @@ final class BlockRegistry
                 ['key' => 'launcher_label', 'type' => 'string', 'label' => 'Button text', 'required' => false, 'default' => 'Message me', 'max_length' => 40],
                 ['key' => 'launcher_icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Button icon', 'required' => false, 'default' => 'message-circle'],
                 ['key' => 'position', 'type' => 'enum', 'label' => 'Corner', 'required' => false, 'allowed_values' => MessageWidgetRenderer::POSITIONS, 'default' => 'right'],
+                ['key' => 'theme', 'type' => 'enum', 'label' => 'Theme', 'required' => false, 'allowed_values' => MessageWidgetRenderer::THEMES, 'default' => 'auto'],
                 ['key' => 'launcher_photo', 'type' => 'boolean', 'label' => 'Photo on the button', 'required' => false, 'default' => false],
                 ['key' => 'launcher_lines', 'type' => 'text', 'label' => 'Lines under the button text (one per line; {status} and {time} fill in)', 'required' => false, 'default' => '', 'max_length' => 400],
                 ['key' => 'compact_on_scroll', 'type' => 'boolean', 'label' => 'Shrink to the photo or icon while scrolling down', 'required' => false, 'default' => false],

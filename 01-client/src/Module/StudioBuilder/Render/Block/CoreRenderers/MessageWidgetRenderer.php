@@ -26,6 +26,8 @@ use Slate\Module\StudioBuilder\Service\StudioFormSync;
 final class MessageWidgetRenderer implements BlockRendererInterface
 {
     public const POSITIONS = ['right', 'left'];
+    /** Auto follows the site's theme colours; Light and Dark fix the panel's and the button's (StudioStylesheet). */
+    public const THEMES = ['auto', 'light', 'dark'];
     /** Which days the hours apply to. */
     public const DAYS = ['weekdays', 'mon_sat', 'everyday'];
     public const MAX_TOPICS = 8;
@@ -204,7 +206,8 @@ final class MessageWidgetRenderer implements BlockRendererInterface
             . ($scroll > 0 ? ' data-sb-open-scroll="' . $scroll . '"' : '')
             . ($scope->bool('remember_closed', true) ? ' data-sb-msg-remember' : '')
             . ($scope->bool('compact_on_scroll', false) ? ' data-sb-msg-compact' : '');
-        $classes = ['sb-msg', 'sb-msg--' . $position, $online ? 'is-online' : 'is-away', $editor ? 'sb-msg--editor' : ''];
+        $theme = in_array($t = $scope->string('theme', 'auto'), self::THEMES, true) ? $t : 'auto';
+        $classes = ['sb-msg', 'sb-msg--' . $position, $theme !== 'auto' ? 'sb-msg--' . $theme : '', $online ? 'is-online' : 'is-away', $editor ? 'sb-msg--editor' : ''];
         return '<div' . Html::classAttr($classes) . $attrs . '>' . $html . $launcher . '</div>';
     }
 

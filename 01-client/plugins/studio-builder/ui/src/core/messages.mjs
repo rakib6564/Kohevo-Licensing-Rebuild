@@ -1034,6 +1034,8 @@ const EN = {
   opt_visible: 'Visible',
   opt_hidden: 'Hidden',
   opt_auto: 'Auto',
+  opt_light: 'Light',
+  opt_dark: 'Dark',
   opt_scroll: 'Scroll',
   opt_cover: 'Cover',
   opt_contain: 'Contain',

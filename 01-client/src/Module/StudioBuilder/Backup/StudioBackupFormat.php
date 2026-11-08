@@ -75,6 +75,9 @@ final class StudioBackupFormat
         'studio_code_site_verification',
         'studio_web_fonts',
         'studio_smooth_scroll',
+        'studio_scrollbar',
+        'studio_scrollbar_thumb',
+        'studio_scrollbar_track',
         'studio_seo_business',
     ];
 

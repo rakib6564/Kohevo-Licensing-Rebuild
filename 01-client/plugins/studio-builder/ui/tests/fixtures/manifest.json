@@ -4241,6 +4241,7 @@
                 "remember_closed": true,
                 "submit_text": "Send",
                 "success_message": "Thanks! I’ll get back to you soon.",
+                "theme": "auto",
                 "timezone": "",
                 "title": "Let’s talk",
                 "topics": "New website\nRedesign\nSEO\nSomething else",
@@ -4274,6 +4275,18 @@
                     "allowed_values": [
                         "right",
                         "left"
+                    ]
+                },
+                {
+                    "key": "theme",
+                    "type": "enum",
+                    "label": "Theme",
+                    "required": false,
+                    "default": "auto",
+                    "allowed_values": [
+                        "auto",
+                        "light",
+                        "dark"
                     ]
                 },
                 {

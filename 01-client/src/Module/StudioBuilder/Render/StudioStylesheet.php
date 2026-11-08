@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '78';
+    public const VERSION = '79';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -1073,7 +1073,7 @@ final class StudioStylesheet
             . '.sb-msg__who{flex:1;min-width:0}.sb-msg__title{font-size:1rem;margin:0;line-height:1.3}'
             . '.sb-msg__status{display:flex;align-items:center;gap:.4rem;margin:.15rem 0 0;font-size:.8rem;opacity:.75}'
             . '.sb-msg__close{display:inline-grid;place-items:center;width:2rem;height:2rem;border-radius:50%;color:inherit}'
-            . '.sb-msg__close:hover{background:rgba(0,0,0,.06)}'
+            . '.sb-msg__close:hover{background:color-mix(in srgb,currentColor 10%,transparent)}'
             . '.sb-msg__body{padding:1rem}.sb-msg__intro{margin:0 0 .75rem;font-size:.9rem}'
             . '.sb-msg__form{gap:.75rem}'
             . '.sb-msg__topics .sb-form-choices{flex-direction:row;flex-wrap:wrap;gap:.4rem}'
@@ -1083,6 +1083,19 @@ final class StudioStylesheet
             . '.sb-msg__chip span{padding:.35rem .75rem;border-radius:999px;border:1px solid var(--sb-border-default,#d1d5db);font-size:.85rem}'
             . '.sb-msg__chip input:checked+span{background:var(--sb-color-accent,#111);border-color:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff)}'
             . '.sb-msg__chip input:focus-visible+span{outline:2px solid var(--sb-color-accent,#111);outline-offset:2px}'
+            // The panel's fields take its colours and the site's font: a faint wash of the text colour, a border of it.
+            . '.sb-msg__panel .sb-form-group input:not([type="checkbox"]):not([type="radio"]),.sb-msg__panel .sb-form-group textarea,.sb-msg__panel .sb-form-group select{font:inherit;font-size:.9rem;color:inherit;background:var(--sb-msg-field,color-mix(in srgb,currentColor 5%,transparent));border:1px solid var(--sb-msg-line,color-mix(in srgb,currentColor 18%,transparent));border-radius:.6rem;padding:.6rem .75rem}'
+            . '.sb-msg__panel .sb-form-group :is(input,textarea)::placeholder{color:inherit;opacity:.5}'
+            . '.sb-msg__panel .sb-form-group :is(input,textarea,select):focus{outline:2px solid var(--sb-color-accent,#111);outline-offset:1px}'
+            // Theme: Light and Dark give the panel and the button fixed colours whatever the site's theme (Auto follows
+            // it). The colours are custom properties (--sb-msg-bg, -fg, -muted, -line, -field, -btn-bg, -btn-fg) a site can tune.
+            . '.sb-msg--light{--sb-msg-bg:#fff;--sb-msg-fg:#16171c;--sb-msg-muted:#5c6070;--sb-msg-line:rgba(22,23,28,.14);--sb-msg-field:#f4f4f2;--sb-msg-btn-bg:#fff;--sb-msg-btn-fg:#16171c}'
+            . '.sb-msg--dark{--sb-msg-bg:#151518;--sb-msg-fg:#f2f0eb;--sb-msg-muted:#a8a49c;--sb-msg-line:rgba(242,240,235,.14);--sb-msg-field:rgba(242,240,235,.06);--sb-msg-btn-bg:#151518;--sb-msg-btn-fg:#f2f0eb}'
+            . ':is(.sb-msg--light,.sb-msg--dark) .sb-msg__panel{background:var(--sb-msg-bg);color:var(--sb-msg-fg);--sb-text-body:var(--sb-msg-fg);--sb-text-heading:var(--sb-msg-fg);--sb-text-primary:var(--sb-msg-fg);--sb-text-muted:var(--sb-msg-muted);--sb-border-default:var(--sb-msg-line)}'
+            . '.sb-body :is(.sb-msg--light,.sb-msg--dark) .sb-msg__launcher[data-sb-msg-open]{background:var(--sb-msg-btn-bg);color:var(--sb-msg-btn-fg);box-shadow:0 10px 30px rgba(0,0,0,.18),0 0 0 1px var(--sb-msg-line)}'
+            . ':is(.sb-msg--light,.sb-msg--dark) .sb-msg__dot{box-shadow:0 0 0 2px var(--sb-msg-btn-bg)}'
+            // On a phone, while the panel is open, the button keeps only its photo or icon.
+            . '@media (max-width:600px){.sb-msg.is-open .sb-msg__launcher-text{max-width:0;opacity:0}.sb-msg.is-open .sb-msg__launcher{gap:0}.sb-msg.is-open .sb-msg__launcher--photo{padding:.35rem}}'
             // On the editor canvas the widget sits in the flow with its panel open, so it can be selected and read.
             . '.sb-msg--editor{position:static;max-width:none;align-items:flex-start}'
             // Wave text: letters the runtime makes, each set to a weight by the pointer; a touch screen rolls the weight.

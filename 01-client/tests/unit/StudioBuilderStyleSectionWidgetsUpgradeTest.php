@@ -112,6 +112,35 @@ unit('message widget: the button can show the photo, lines that take turns with 
     assert_true(!str_contains($html, 'sb-msg__launcher-photo') && str_contains($html, 'class="sb-msg__launcher sb-msg__launcher--lines"'), 'icon without a photo');
 });
 
+unit('message widget: Theme light or dark fixes its colours (custom properties a site can tune); Auto follows the site', function (): void {
+    $base = ['timezone' => 'UTC', 'hours_start' => '00:00', 'hours_end' => '00:00', 'days' => 'everyday'];
+    foreach (['light' => true, 'dark' => true, 'auto' => false] as $theme => $classed) {
+        $block = sbpm_block('core.message_widget', $base + ['theme' => $theme]);
+        assert_true(DocumentValidator::validate(sbsm_doc(sbpm_box([$block])), BlockRegistry::withAllCoreBlocks())->isValid(), $theme . ' valid');
+        $html = sbsm_render(sbpm_box([$block]));
+        assert_eq($classed, str_contains($html, 'sb-msg--' . $theme), $theme);
+    }
+    assert_true(!DocumentValidator::validate(sbsm_doc(sbpm_box([sbpm_block('core.message_widget', $base + ['theme' => 'neon'])])), BlockRegistry::withAllCoreBlocks())->isValid(), 'an unknown theme is refused');
+    $css = StudioStylesheet::widgetsCss();
+    assert_true(str_contains($css, '.sb-msg--dark{--sb-msg-bg:') && str_contains($css, '.sb-msg--light{--sb-msg-bg:#fff;'), 'both palettes');
+    assert_true(str_contains($css, '.sb-msg__panel .sb-form-group textarea') && str_contains($css, 'font:inherit'), 'fields take the panel colours and the site font');
+});
+
+unit('site scroll bar: default emits nothing; thin, branded (accent or own colours) and hidden style only the page bar', function (): void {
+    assert_eq('', \Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('default'));
+    assert_eq('', \Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('rainbow'), 'unknown style is the browser bar');
+    assert_eq('html{scrollbar-width:thin}', \Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('thin'));
+    $hidden = \Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('hidden');
+    assert_true(str_contains($hidden, 'html{scrollbar-width:none}') && str_contains($hidden, 'html::-webkit-scrollbar{display:none'), $hidden);
+    $accent = \Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('branded');
+    assert_true(str_contains($accent, 'scrollbar-color:var(--sb-color-accent,#888) transparent'), $accent);
+    $own = \Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('branded', '#FF5A1F', '#0B0B0C');
+    assert_true(str_contains($own, 'scrollbar-color:#ff5a1f #0b0b0c') && str_contains($own, 'html::-webkit-scrollbar-thumb{background:#ff5a1f;'), $own);
+    $bad = \Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('branded', 'red;}body{x:y', 'url(x)');
+    assert_true(!str_contains($bad, 'red') && !str_contains($bad, 'url('), 'only #rrggbb colours reach the CSS');
+    assert_true(!str_contains(\Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('branded'), 'body'), 'the page bar only');
+});
+
 unit('testimonial grid: typed testimonials render every card, a pager the runtime fills, and a dialog for the full text', function (): void {
     $items = [
         ['name' => 'Jonathan Cooper', 'text' => "Great <work>\nThanks", 'rating' => 4.5, 'meta' => 'United States', 'date' => '3 years ago'],
