@@ -19,8 +19,8 @@
 /* Three rules: big thin titles, the "when" as a small mono label. */
 .rk-rules .sb-tabset__title { font-size: 48px; font-weight: 200; letter-spacing: -2px; line-height: 1.05; }
 .rk-rules .sb-tabset__tab[aria-selected="false"] .sb-tabset__title { opacity: .55; }
-.rk-rules .sb-tabset__sub { font: 500 12px/1.4 "Geist Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: 1.4px; opacity: .7; }
-.rk-rules .sb-tabset__tab::before { font: 500 12px "Geist Mono", ui-monospace, monospace; }
+.rk-rules .sb-tabset__sub { font: 500 12px/1.4 "Geist Mono", GeistMonoFallback, ui-monospace, monospace; text-transform: uppercase; letter-spacing: 1.4px; opacity: .7; }
+.rk-rules .sb-tabset__tab::before { font: 500 12px "Geist Mono", GeistMonoFallback, ui-monospace, monospace; }
 .rk-ok p, .rk-fix p { display: inline-block; padding: 3px 8px; border-radius: 999px; }
 .rk-ok p { background: rgba(34, 197, 94, .14); }
 .rk-fix p { background: rgba(255, 90, 31, .16); }
@@ -65,10 +65,10 @@
 .rk-iq-card img { width: 100%; height: 240px; object-fit: cover; }
 
 /* Full-screen menu: the numbers and descriptions in the mono face, as every small label on the site. */
-.rk-fs .sb-nav__num, .rk-fs .sb-nav__desc, .rk-fs .sb-nav__preview-caption { font-family: "Geist Mono", ui-monospace, monospace; }
+.rk-fs .sb-nav__num, .rk-fs .sb-nav__desc, .rk-fs .sb-nav__preview-caption { font-family: "Geist Mono", GeistMonoFallback, ui-monospace, monospace; }
 
 /* Reviews grid: the small labels in the mono face. */
-.rk-tgrid :is(.sb-tgrid__count, .sb-tgrid__meta, .sb-tgrid__date, .sb-tgrid__more, .sb-tgrid__page, .sb-tgrid__dialog-who) { font-family: "Geist Mono", ui-monospace, monospace; }
+.rk-tgrid :is(.sb-tgrid__count, .sb-tgrid__meta, .sb-tgrid__date, .sb-tgrid__more, .sb-tgrid__page, .sb-tgrid__dialog-who) { font-family: "Geist Mono", GeistMonoFallback, ui-monospace, monospace; }
 
 /* Industry rows: the name gives way (and wraps) before the arrow leaves the screen on a phone. */
 .rk-ind-row > .rk-ind-name { min-width: 0; overflow-wrap: break-word; hyphens: none; }
@@ -103,7 +103,7 @@
 .rk-checks li::before { content: "✓"; color: var(--sb-color-accent); font-weight: 600; }
 .rk-rep-steps { counter-reset: rk-step; }
 .rk-step { counter-increment: rk-step; }
-.rk-step::before { content: counter(rk-step, decimal-leading-zero); font: 500 12px "Geist Mono", ui-monospace, monospace; letter-spacing: 1.2px; color: var(--sb-color-accent); }
+.rk-step::before { content: counter(rk-step, decimal-leading-zero); font: 500 12px "Geist Mono", GeistMonoFallback, ui-monospace, monospace; letter-spacing: 1.2px; color: var(--sb-color-accent); }
 .rk-rep-pricing > .sb-repeater > .rk-price:nth-child(2):not(:last-child) { background: #EDE8DF !important; border-color: #EDE8DF !important; }
 .rk-rep-pricing > .sb-repeater > .rk-price:nth-child(2):not(:last-child) :is(h3, p, div, a) { color: #0B0B0C !important; }
 .rk-rep-features > .sb-repeater > .rk-step:last-child { border-right: 0 !important; }
@@ -116,7 +116,7 @@
 .rk-tag .sb-field-value { display: inline-block; padding: 7px 12px; border-radius: 999px; }
 
 /* Hero proof row: mono labels between thin dividers, as the original. */
-.rk-proofs .rk-proof { font-family: "Geist Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: 1.2px; padding: 0 20px; border-left: 1px solid var(--sb-border-default); }
+.rk-proofs .rk-proof { font-family: "Geist Mono", GeistMonoFallback, ui-monospace, monospace; text-transform: uppercase; letter-spacing: 1.2px; padding: 0 20px; border-left: 1px solid var(--sb-border-default); }
 .rk-proofs .rk-proof:first-child { padding-left: 0; border-left: 0; }
 .rk-proofs .rk-proof p { margin: 0; }
 .rk-proofs .rk-proof strong { color: var(--sb-text-body); font-weight: 500; }
@@ -126,3 +126,26 @@
 
 /* Card grids: a card never pushes its words past its edge. */
 .rk-grid > * { min-width: 0; overflow-wrap: break-word; }
+
+/* Chapter list numbers: full strength, so the accent passes contrast on the light page. */
+.rk-chapters .sb-nav__num { opacity: 1; }
+
+/* Fallback faces sized to Geist's metrics (width per weight band, and line box), so the swap to the web font barely moves the text. */
+@font-face { font-family: GeistFallback; src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Helvetica"); font-weight: 100 250; size-adjust: 102.6%; ascent-override: 98.0%; descent-override: 28.8%; line-gap-override: 0%; }
+@font-face { font-family: GeistFallback; src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Helvetica"); font-weight: 251 350; size-adjust: 104.3%; ascent-override: 96.4%; descent-override: 28.3%; line-gap-override: 0%; }
+@font-face { font-family: GeistFallback; src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Helvetica"); font-weight: 351 450; size-adjust: 105.9%; ascent-override: 94.9%; descent-override: 27.9%; line-gap-override: 0%; }
+@font-face { font-family: GeistFallback; src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Helvetica"); font-weight: 451 1000; size-adjust: 108.3%; ascent-override: 92.8%; descent-override: 27.2%; line-gap-override: 0%; }
+@font-face { font-family: GeistMonoFallback; src: local("Courier New"), local("CourierNewPSMT"), local("Liberation Mono"); size-adjust: 100%; ascent-override: 100.5%; descent-override: 29.5%; line-gap-override: 0%; }
+
+/* Review grid on the light page: the current page reads light on rust, "Read more" on the dark standout card in orange. */
+.rk-tgrid .sb-tgrid__page[aria-current="true"] { color: #EDE8DF; }
+.rk-tgrid .sb-tgrid__card.is-first .sb-tgrid__more { color: #FF5A1F; }
+/* Filter counts: dimmed less, so they read on the orange current chip too. */
+.sb-filter__count { opacity: .85; }
+
+/* Service cards: a little lighter than the colours they sit on, light or dark (the section's own, or the page's while
+   the section follows the page). */
+.sb-body .rk-scard { background-color: color-mix(in srgb, var(--sb-page-bg, #EDE8DF) 93%, #fff); }
+.sb-body [data-sb-page-on] .rk-scard { background-color: color-mix(in srgb, var(--sb-paged-bg, var(--sb-page-bg, #EDE8DF)) 93%, #fff); }
+/* Filter chips: light text on the rust of the current one. */
+.sb-body .sb-filter__chip[aria-current] { color: #EDE8DF; }

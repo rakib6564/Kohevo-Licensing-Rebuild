@@ -27,14 +27,14 @@ const INK = '#0B0B0C';
 const BONE = '#EDE8DF';
 const NAVY = '#0D1A3A';
 const ORANGE = '#FF5A1F';
-const RUST = '#D9480F';
+const RUST = '#AE3A0B'; // the original #D9480F darkened to 4.6:1 on the light cards (5:1 on BONE), so small accent text reads
 const PERI = '#8EA2FF';
 const MUTED = '#8F8A82';
-const MUTED_BONE = '#6B665E';
+const MUTED_BONE = '#625D55'; // a shade darker than the original #6B665E, for 4.5:1 on the light cards too
 const LINE = '#2A2926';
 const LINE_BONE = '#D2CBBE';
-const SANS = 'Geist, system-ui, sans-serif';
-const MONO = 'Geist Mono, ui-monospace, monospace';
+const SANS = 'Geist, GeistFallback, system-ui, sans-serif';
+const MONO = 'Geist Mono, GeistMonoFallback, ui-monospace, monospace';
 
 function say(string $s): void { echo $s . "\n"; }
 
@@ -120,6 +120,7 @@ function import_media(): void
 {
     global $BUNDLE;
     $dst = getcwd() . '/uploads/media/rakib';
+    $made = 0;
     if (!is_dir($dst)) { mkdir($dst, 0755, true); }
     foreach (glob("{$BUNDLE}/media/*") ?: [] as $file) {
         $name = basename($file);
@@ -128,8 +129,14 @@ function import_media(): void
             $size = @getimagesize("{$dst}/{$name}") ?: [null, null, 'mime' => mime_content_type("{$dst}/{$name}") ?: ''];
             Media::register(MEDIA_DIR . $name, ['mime' => (string) ($size['mime'] ?? ''), 'size_bytes' => filesize("{$dst}/{$name}"), 'width' => $size[0] ?? null, 'height' => $size[1] ?? null, 'original_name' => $name]);
         }
+        // The library's WebP sizes, as an upload would make them: pages then serve srcsets instead of the full file.
+        global $tid;
+        if (Media::sizesEnabled() && Database::value('SELECT variants FROM media_files WHERE tenant_id = ? AND path = ?', [$tid, MEDIA_DIR . $name]) === null) {
+            $made++;
+            Media::generateVariants(MID($name), false);
+        }
     }
-    say('  + media');
+    say('  + media (' . $made . ' sized)');
 }
 
 function check_doc(array $doc): void
@@ -243,7 +250,7 @@ const PALETTE = [
     'ink'    => ['bg' => INK, 'fg' => BONE, 'muted' => MUTED, 'line' => LINE, 'accent' => ORANGE],
     'bone'   => ['bg' => BONE, 'fg' => INK, 'muted' => MUTED_BONE, 'line' => LINE_BONE, 'accent' => RUST],
     'navy'   => ['bg' => NAVY, 'fg' => '#E9ECF5', 'muted' => '#9AA6C4', 'line' => '#24335A', 'accent' => PERI],
-    'orange' => ['bg' => ORANGE, 'fg' => INK, 'muted' => '#5A1F08', 'line' => '#E04A12', 'accent' => INK],
+    'orange' => ['bg' => ORANGE, 'fg' => INK, 'muted' => '#4A1806', 'line' => '#E04A12', 'accent' => INK],
 ];
 /** The colours a section gives the whole page while it is on screen: all five, so the theme's text, muted, line and accent colours follow. */
 function THEME(string $name): array

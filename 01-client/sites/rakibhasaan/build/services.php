@@ -171,7 +171,9 @@ $sCard = CTOP('Card', [
     B('core.link', ['link' => L('Read more', '/services/'), 'style' => 'arrow'], [], ['color' => RUST, 'typography' => ['size' => '14px', 'weight' => '500']],
         ['dynamic' => ['link.label' => ['tag' => 'field', 'key' => 'card_label'], 'link.href' => ['tag' => 'post_url']]]),
 ], ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '14px', 'content_width' => 'full', 'padding_y' => 'none'], 'padding' => ['top' => '28px', 'right' => '26px', 'bottom' => '26px', 'left' => '26px'],
-    'border' => ['width' => '1px', 'style' => 'solid', 'color' => LINE_BONE, 'radius' => '20px'], 'background' => ['color' => 'rgba(255,255,255,0.4)'], 'dimensions' => ['min_height' => '340px']], ['classNames' => ['rk-scard']]);
+    'border' => ['width' => '1px', 'style' => 'solid', 'radius' => '20px'], 'border_token' => 'border.default', 'dimensions' => ['min_height' => '340px']], ['classNames' => ['rk-scard']]);
+// The hub's groups alternate light and dark: the card takes its section's colours (its fill is in site.css, .rk-scard).
+$sCard['children'] = array_map(static fn(array $ch): array => follow_page($ch, [strtolower(INK) => 'text.body', strtolower(MUTED_BONE) => 'text.muted', strtolower(LINE_BONE) => 'border.default', strtolower(RUST) => 'text.accent']), $sCard['children']);
 build_page('template-loop-service', 'Loop Item: Service', 'system', 'standalone', [$sCard], ['settings' => ['template_type' => 'loop', 'conditions' => ['rules' => [['action' => 'include', 'condition' => 'singular', 'value' => 'service']]]]]);
 
 // ── The items, from the original's pages ────────────────────────────────────────────

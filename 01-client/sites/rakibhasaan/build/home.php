@@ -144,10 +144,10 @@ $about = SEC('About', [
 ], '160px', '170px', [], ['interactions' => THEME('ink')]);
 
 // ── 8. Reviews ─────────────────────────────────────────────────────────────────
-$small = static fn(string $q, string $who): array => VBOX([P($q, INK, '18px'), EYE($who, '#5A1F08')], '8px', ['dimensions' => ['width' => '25%']], ['responsive' => ['mobile' => ['style' => ['dimensions' => ['width' => '100%']]]]]);
+$small = static fn(string $q, string $who): array => VBOX([P($q, INK, '18px'), EYE($who, '#4A1806')], '8px', ['dimensions' => ['width' => '25%']], ['responsive' => ['mobile' => ['style' => ['dimensions' => ['width' => '100%']]]]]);
 $reviews = SEC('Reviews', [
     H('“Always great to work with. He has done several sites for me, and all have been fantastic!”', 'h2', '58px', '32px', INK, ['interactions' => ['text' => ['effect' => 'lines', 'step_ms' => 80]]], '400'),
-    EYE('Thiago Fernan — Palm Flooring, New England', '#5A1F08'),
+    EYE('Thiago Fernan — Palm Flooring, New England', '#4A1806'),
     ROW([$small('“Outstanding job”', 'Jonathan Cooper'), $small('“A pleasure to work with”', 'Stéphanie Escouflaire'), $small('“This guy is really good”', 'Rafael'), $small('“I love my website”', 'Abonyi Tünde Anná')], '28px',
         ['margin' => ['top' => '56px'], 'padding' => ['top' => '28px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => '#E04A12']], [], ['layout' => ['direction' => 'column', 'gap' => '18px']]),
 ], '160px', '140px', ['layout' => ['gap' => '28px', 'content_max' => '1180px']], ['interactions' => THEME('orange')]);

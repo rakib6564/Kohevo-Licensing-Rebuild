@@ -59,7 +59,7 @@ $frame = B('layout.flex', ['direction' => 'column', 'gap' => 'none'], [
         ROW(array_map(static fn(string $c): array => B('core.icon', ['name' => 'circle', 'size' => 'sm'], [], ['color' => $c, 'dimensions' => ['width' => '10px']], ['classNames' => ['rk-dot']]), ['#FF5F57', '#FEBC2E', '#28C840']), '6px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], []),
         FVM('live', MUTED, ['url_label' => 'domain', 'fallback' => 'private build'], ['dimensions' => ['max_width' => '420px']]),
     ], '14px', ['padding' => ['top' => '12px', 'right' => '16px', 'bottom' => '12px', 'left' => '16px'], 'background' => ['color' => '#18181B'], 'border' => ['width' => '0 0 1px 0', 'style' => 'solid', 'color' => '#26262A']], ['align' => 'center'], [], ['classNames' => ['rk-bar']]),
-    FV('screen', BONE, '16px', 'div', [], ['fit' => 'cover', 'alt_field' => 'screen_alt'], ['classNames' => ['rk-shot']]),
+    FV('screen', BONE, '16px', 'div', [], ['fit' => 'cover', 'alt_field' => 'screen_alt', 'priority' => true], ['classNames' => ['rk-shot']]),
 ], ['background' => ['color' => '#141416'], 'border' => ['width' => '1px', 'style' => 'solid', 'color' => '#26262A', 'radius' => '18px'], 'shadow' => '0 60px 120px -40px rgba(0,0,0,0.9)'],
     ['classNames' => ['rk-frame'], 'interactions' => ['scroll' => ['scale' => 2]]]);
 $badge = static fn(string $label, string $key, string $after, string $cls): array => VBOX([EYE($label, MUTED), FV($key, BONE, '30px', 'div', ['typography' => ['weight' => '300', 'line_height' => '1', 'letter_spacing' => '-1px']], ['after' => $after])], '6px',
@@ -149,7 +149,7 @@ $result = SEC('The result', [
 
 // 7. In the client's words.
 $quote = SEC('In the client\'s words', [
-    EYE('06 — In the client\'s words', '#5A1F08'),
+    EYE('06 — In the client\'s words', '#4A1806'),
     P('“', INK, '120px', ['weight' => '200', 'line_height' => '0.8'], ['classNames' => ['rk-qmark']]),
     FV('quote', INK, '44px', 'div', ['typography' => ['weight' => '300', 'line_height' => '1.18', 'letter_spacing' => '-1.4px'], 'dimensions' => ['max_width' => '1100px']], [], ['responsive' => ['mobile' => ['style' => ['typography' => ['size' => '28px']]]]]),
     ROW([FV('quote_by', INK, '16px', 'div', ['typography' => ['weight' => '500']]), P('★★★★★', INK, '14px')], '14px', ['margin' => ['top' => '26px']], ['align' => 'center'], []),

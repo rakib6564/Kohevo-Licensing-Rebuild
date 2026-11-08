@@ -18,7 +18,7 @@ function TC(string $theme): array
     return match ($theme) {
         'bone' => ['fg' => INK, 'muted' => MUTED_BONE, 'line' => LINE_BONE, 'accent' => RUST, 'card' => 'rgba(11,11,12,0.04)'],
         'navy' => ['fg' => '#E9ECF5', 'muted' => '#9AA6C4', 'line' => '#24335A', 'accent' => PERI, 'card' => 'rgba(233,236,245,0.05)'],
-        'orange' => ['fg' => INK, 'muted' => '#5A1F08', 'line' => '#E04A12', 'accent' => INK, 'card' => 'rgba(11,11,12,0.06)'],
+        'orange' => ['fg' => INK, 'muted' => '#4A1806', 'line' => '#E04A12', 'accent' => INK, 'card' => 'rgba(11,11,12,0.06)'],
         default => ['fg' => BONE, 'muted' => MUTED, 'line' => LINE, 'accent' => ORANGE, 'card' => 'rgba(237,232,223,0.04)'],
     };
 }
@@ -253,7 +253,7 @@ function AUDITFORM(string $note, bool $onOrange = false): array
             'textarea' => ['background' => ['color' => 'rgba(0,0,0,0)'], 'color' => $fg, 'border' => ['sides' => 'bottom', 'width' => '1px', 'style' => 'solid', 'color' => $line, 'radius' => '0px'], 'typography' => ['size' => '18px']],
             'button' => ['background' => ['color' => $onOrange ? INK : ORANGE], 'color' => $onOrange ? BONE : INK, 'border' => ['radius' => '999px', 'width' => '0px'], 'padding' => ['top' => '16px', 'right' => '28px', 'bottom' => '16px', 'left' => '28px'], 'typography' => ['size' => '16px', 'weight' => 'medium', 'family' => 'body']],
         ]]),
-        P($note, $onOrange ? '#5A1F08' : MUTED, '13px'),
+        P($note, $onOrange ? '#4A1806' : MUTED, '13px'),
     ], '10px');
 }
 function S_CONTACT(int $n): array
