@@ -89,6 +89,12 @@ final class BlockRendererRegistry
         $registry->register(new CoreRenderers\MarqueeRenderer());
         $registry->register(new CoreRenderers\MegaMenuRenderer());
         $registry->register(new CoreRenderers\MegaItemRenderer());
+        $registry->register(new CoreRenderers\TabSetRenderer());
+        $registry->register(new CoreRenderers\TabRenderer());
+        $registry->register(new CoreRenderers\AccordionSetRenderer());
+        $registry->register(new CoreRenderers\AccordionItemRenderer());
+        $registry->register(new CoreRenderers\TimelineRenderer());
+        $registry->register(new CoreRenderers\ProgressRenderer());
         // Phase 6 — interactive blocks. Each one emits markup the Phase 2
         // runtime already knows how to drive; none of them require a new
         // runtime feature to be useful with JavaScript switched off.

@@ -4435,6 +4435,145 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "bar_color": "",
+                "height": 8,
+                "items": [
+                    {
+                        "label": "Design",
+                        "value": 90
+                    },
+                    {
+                        "label": "Development",
+                        "value": 80
+                    },
+                    {
+                        "label": "Search engines",
+                        "value": 70
+                    }
+                ],
+                "show_value": true,
+                "track_color": ""
+            },
+            "description": "Labelled bars that grow to their value",
+            "field_schema": [
+                {
+                    "key": "items",
+                    "type": "repeater",
+                    "label": "Bars",
+                    "required": false,
+                    "default": [
+                        {
+                            "label": "Design",
+                            "value": 90
+                        },
+                        {
+                            "label": "Development",
+                            "value": 80
+                        },
+                        {
+                            "label": "Search engines",
+                            "value": 70
+                        }
+                    ],
+                    "max_items": 12,
+                    "item_schema": [
+                        {
+                            "key": "label",
+                            "type": "string",
+                            "label": "Label",
+                            "required": true,
+                            "default": "",
+                            "max_length": 120
+                        },
+                        {
+                            "key": "value",
+                            "type": "number",
+                            "label": "Value (%)",
+                            "required": true,
+                            "default": 0.0,
+                            "min": 0,
+                            "max": 100
+                        }
+                    ]
+                },
+                {
+                    "key": "show_value",
+                    "type": "boolean",
+                    "label": "Show the value",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "bar_color",
+                    "type": "string",
+                    "label": "Bar colour",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40,
+                    "format": "color"
+                },
+                {
+                    "key": "track_color",
+                    "type": "string",
+                    "label": "Track colour",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40,
+                    "format": "color"
+                },
+                {
+                    "key": "height",
+                    "type": "number",
+                    "label": "Bar height (px)",
+                    "required": false,
+                    "default": 8,
+                    "min": 2,
+                    "max": 40,
+                    "integer_only": true
+                }
+            ],
+            "icon": "grid-dots",
+            "inline_text": [],
+            "label": "Progress bars",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Progress bars",
+            "type": "core.progress",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "content.posts",
                 "content.authors",
@@ -6018,6 +6157,125 @@
         },
         {
             "allowed_binding_providers": [],
+            "allowed_child_types": [
+                "layout.accordion_item"
+            ],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "allow_multiple": false
+            },
+            "description": "Rows that open and close, with any blocks inside",
+            "field_schema": [
+                {
+                    "key": "allow_multiple",
+                    "type": "boolean",
+                    "label": "Allow several rows open at once",
+                    "required": false,
+                    "default": false
+                }
+            ],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Accordion with blocks",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Accordion with blocks",
+            "type": "layout.accordion",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "open": false,
+                "title": "Question"
+            },
+            "description": "One row of an Accordion with blocks and its answer",
+            "field_schema": [
+                {
+                    "key": "title",
+                    "type": "string",
+                    "label": "Row title",
+                    "required": true,
+                    "default": "Question",
+                    "max_length": 200
+                },
+                {
+                    "key": "open",
+                    "type": "boolean",
+                    "label": "Open when the page loads",
+                    "required": false,
+                    "default": false
+                }
+            ],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Accordion row",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Accordion row",
+            "type": "layout.accordion_item",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
             "allowed_child_types": [],
             "allows_children": true,
             "binding_slots": [],
@@ -6803,6 +7061,232 @@
             ],
             "title": "Offcanvas",
             "type": "layout.offcanvas",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "subtitle": "",
+                "title": "Tab"
+            },
+            "description": "One tab of a Tabs with blocks and its panel",
+            "field_schema": [
+                {
+                    "key": "title",
+                    "type": "string",
+                    "label": "Tab title",
+                    "required": true,
+                    "default": "Tab",
+                    "max_length": 80
+                },
+                {
+                    "key": "subtitle",
+                    "type": "string",
+                    "label": "Line under the title",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120
+                }
+            ],
+            "icon": "grid-panes",
+            "inline_text": [],
+            "label": "Tab",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Tab",
+            "type": "layout.tab",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [
+                "layout.tab"
+            ],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "aria_label": "",
+                "autoplay_ms": 0,
+                "pause_on_hover": true,
+                "position": "top"
+            },
+            "description": "Tabs whose panels hold any blocks, and can turn by themselves",
+            "field_schema": [
+                {
+                    "key": "position",
+                    "type": "enum",
+                    "label": "Tabs position",
+                    "required": false,
+                    "default": "top",
+                    "allowed_values": [
+                        "top",
+                        "left"
+                    ]
+                },
+                {
+                    "key": "autoplay_ms",
+                    "type": "number",
+                    "label": "Turn by themselves every (ms, 0 = never)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 30000,
+                    "integer_only": true
+                },
+                {
+                    "key": "pause_on_hover",
+                    "type": "boolean",
+                    "label": "Pause while the pointer is over them",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "aria_label",
+                    "type": "string",
+                    "label": "Tabs name (for screen readers)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                }
+            ],
+            "icon": "grid-panes",
+            "inline_text": [],
+            "label": "Tabs with blocks",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Tabs with blocks",
+            "type": "layout.tabs",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "fill_color": "",
+                "line_color": "",
+                "numbered": true
+            },
+            "description": "Steps on a line that fills as the page scrolls",
+            "field_schema": [
+                {
+                    "key": "line_color",
+                    "type": "string",
+                    "label": "Line colour",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40,
+                    "format": "color"
+                },
+                {
+                    "key": "fill_color",
+                    "type": "string",
+                    "label": "Filled line colour",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40,
+                    "format": "color"
+                },
+                {
+                    "key": "numbered",
+                    "type": "boolean",
+                    "label": "Number the steps",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Timeline",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Timeline",
+            "type": "layout.timeline",
             "version": 1
         },
         {

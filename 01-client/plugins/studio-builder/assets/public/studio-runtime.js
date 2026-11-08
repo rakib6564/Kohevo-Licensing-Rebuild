@@ -1090,6 +1090,71 @@
   }
 
 
+/* ── Feature: timeline ───────────────────────────────────────────────────
+   * [data-sb-timeline] (layout.timeline): the line fills as the page scrolls, up to a point 72% down the screen
+   * (`--sb-tl-p`, 0 to 1), and each step that point has passed is marked (`is-passed`). Reduced motion: full at once.
+   */
+  function initTimeline(root) {
+    var els = qsa(root, '[data-sb-timeline]');
+    if (!els.length) return;
+    var still = reducedMotion();
+    var steps = els.map(function (el) {
+      var list = qs(el, '.sb-timeline__steps');
+      return list ? Array.prototype.filter.call(list.children, function (k) { return k.classList.contains('sb-block'); }) : [];
+    });
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var line = (global.innerHeight || 1) * 0.72;
+      els.forEach(function (el, n) {
+        var r = el.getBoundingClientRect();
+        el.style.setProperty('--sb-tl-p', still ? '1' : clamp((line - r.top) / Math.max(1, r.height), 0, 1).toFixed(3));
+        steps[n].forEach(function (step) { step.classList.toggle('is-passed', still || step.getBoundingClientRect().top < line); });
+      });
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      global.requestAnimationFrame(update);
+    }
+    var offs = [on(global, 'scroll', onScroll, { passive: true }), on(global, 'resize', onScroll, { passive: true })];
+    update();
+    mount(function () {
+      offs.forEach(function (off) { off(); });
+      els.forEach(function (el, n) {
+        el.style.removeProperty('--sb-tl-p');
+        steps[n].forEach(function (step) { step.classList.remove('is-passed'); });
+      });
+    });
+  }
+
+  /* ── Feature: progress bars ──────────────────────────────────────────────
+   * [data-sb-progress-bars] (core.progress): the stylesheet holds the bars empty until `is-in`, set once the block is
+   * well into view, and they grow to their values. Reduced motion or no observer: shown at once.
+   */
+  function initProgressBars(root) {
+    var els = qsa(root, '[data-sb-progress-bars]');
+    if (!els.length) return;
+    if (reducedMotion() || !('IntersectionObserver' in global)) {
+      els.forEach(function (el) { el.classList.add('is-in'); });
+      mount(function () { els.forEach(function (el) { el.classList.remove('is-in'); }); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-in');
+        io.unobserve(entry.target);
+      });
+    }, { rootMargin: CONFIG.revealMargin, threshold: 0.2 });
+    els.forEach(function (el) { io.observe(el); });
+    mount(function () {
+      io.disconnect();
+      els.forEach(function (el) { el.classList.remove('is-in'); });
+    });
+  }
+
+
 /* ── Feature: click and scroll interaction triggers ──────────────────────
    * The renderer marks a block with `data-sb-interaction-trigger`.
    *   click:  each click (re)plays the block's chosen animation: data-sb-play is removed, a reflow restarts
@@ -1846,8 +1911,10 @@
     var teardowns = [];
 
     groups.forEach(function (group) {
-      var tabs = qsa(group, '[data-sb-tab]');
-      var panels = qsa(group, '[data-sb-panel]');
+      // Its own tabs and panels only: a panel of Tabs with blocks can hold another tabs block.
+      var mine = function (el) { return el.closest('[data-sb-tabs]') === group; };
+      var tabs = qsa(group, '[data-sb-tab]').filter(mine);
+      var panels = qsa(group, '[data-sb-panel]').filter(mine);
       if (tabs.length < 2) return;
 
       tabs.forEach(function (tab, i) {
@@ -1875,6 +1942,9 @@
           panel.setAttribute('aria-hidden', active ? 'false' : 'true');
           if (panel.classList) panel.classList.toggle('is-active', active);
           panel.hidden = !active;
+          // A Tabs with blocks panel sits in its tab block's wrapper, which may have padding of its own: hide that too.
+          var wrap = panel.parentElement;
+          if (wrap && wrap.classList.contains('sb-block--layout-tab')) wrap.hidden = !active;
         });
         if (focus) tabs[next].focus();
       }
@@ -1896,6 +1966,47 @@
 
       var initial = Math.max(0, tabs.findIndex(function (t) { return t.getAttribute('aria-selected') === 'true'; }));
       select(initial, false);
+
+      // Autoplay (Tabs with blocks): while on screen, the chosen tab's bar fills over `data-sb-tabs-autoplay` ms, then the
+      // next tab is chosen. The pointer over the tabs (with `data-sb-tabs-pause`) or focus inside holds it; choosing a
+      // tab starts its time again. Reduced motion: no autoplay.
+      var every = parseInt(group.getAttribute('data-sb-tabs-autoplay') || '0', 10);
+      if (every > 0 && !reducedMotion()) {
+        var current = initial, elapsed = 0, seen = false, held = false, last = 0, raf = 0;
+        var pause = group.hasAttribute('data-sb-tabs-pause');
+        var bar = function (i) { return qs(tabs[i], '.sb-tabset__bar > i'); };
+        var paint = function () {
+          tabs.forEach(function (t, i) { var b = bar(i); if (b) b.style.transform = 'scaleX(' + (i === current ? Math.min(1, elapsed / every) : 0).toFixed(3) + ')'; });
+        };
+        var tick = function (now) {
+          var dt = last ? Math.min(100, now - last) : 0;
+          last = now;
+          if (seen && !held && !document.hidden) {
+            elapsed += dt;
+            if (elapsed >= every) { elapsed = 0; current = (current + 1) % tabs.length; select(current, false); }
+            paint();
+          }
+          raf = global.requestAnimationFrame(tick);
+        };
+        tabs.forEach(function (tab, i) { off.push(on(tab, 'click', function () { current = i; elapsed = 0; paint(); })); });
+        off.push(on(group, 'keydown', function () {
+          global.setTimeout(function () { var i = tabs.indexOf(document.activeElement); if (i !== -1) { current = i; elapsed = 0; paint(); } }, 0);
+        }));
+        if (pause) {
+          off.push(on(group, 'pointerenter', function () { held = true; }));
+          off.push(on(group, 'pointerleave', function () { held = group.contains(document.activeElement); }));
+        }
+        off.push(on(group, 'focusin', function () { held = true; }));
+        off.push(on(group, 'focusout', function (e) { if (!group.contains(e.relatedTarget)) held = false; }));
+        var io = 'IntersectionObserver' in global ? new IntersectionObserver(function (es) { seen = es[0].isIntersecting; }, { threshold: 0.35 }) : null;
+        if (io) io.observe(group); else seen = true;
+        raf = global.requestAnimationFrame(tick);
+        off.push(function () {
+          global.cancelAnimationFrame(raf);
+          if (io) io.disconnect();
+          tabs.forEach(function (t, i) { var b = bar(i); if (b) b.style.removeProperty('transform'); });
+        });
+      }
       teardowns.push(function () { off.forEach(function (un) { un(); }); });
     });
 
@@ -1913,11 +2024,13 @@
 
     groups.forEach(function (group) {
       var multiple = group.hasAttribute('data-sb-allow-multiple');
-      var items = qsa(group, '[data-sb-accordion-item]');
+      // Its own rows only (an answer of an Accordion with blocks can hold another accordion). The core Accordion's rows
+      // and those of an Accordion with blocks (the row is the block's wrapper) share the class.
+      var items = qsa(group, '.sb-accordion__item').filter(function (el) { return el.closest('[data-sb-accordion]') === group; });
       if (!items.length) return;
 
-      function panelOf(item) { return qs(item, '[data-sb-accordion-panel]'); }
-      function buttonOf(item) { return qs(item, '[data-sb-accordion-button]'); }
+      function panelOf(item) { return qs(item, ':scope > [data-sb-accordion-panel]'); }
+      function buttonOf(item) { return qs(item, ':scope > .sb-accordion__heading [data-sb-accordion-button]'); }
 
       function setState(item, open) {
         var panel = panelOf(item);
@@ -1952,7 +2065,8 @@
         button.setAttribute('aria-controls', panel.id);
         panel.setAttribute('role', 'region');
         panel.setAttribute('aria-labelledby', button.id);
-        setState(item, i === 0);
+        // The server's state: the first row of a core Accordion, or each row of an Accordion with blocks as it is set.
+        setState(item, button.getAttribute('aria-expanded') === 'true');
 
         off.push(on(button, 'click', function () {
           var isOpen = button.getAttribute('aria-expanded') === 'true';
@@ -3156,6 +3270,8 @@
     ['ticker', initTicker],
     ['horizontal', initHorizontal],
     ['hover-image', initHoverImage],
+    ['timeline', initTimeline],
+    ['progress-bars', initProgressBars],
     ['interactions', initInteractions],
     ['sticky', initSticky],
     ['overlays', initOverlays],

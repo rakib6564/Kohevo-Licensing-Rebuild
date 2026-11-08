@@ -70,6 +70,11 @@ export const PROP_PRESENTERS = Object.freeze({
     color_token: { showIf: (p) => !!p.color_token },
     columns_gap: { showIf: (p) => typeof p.columns === 'number' && p.columns > 1 },
   },
+  // Tabs with blocks: pausing means nothing until the tabs turn by themselves.
+  'layout.tabs': {
+    position: { pills: true },
+    pause_on_hover: { showIf: (p) => typeof p.autoplay_ms === 'number' && p.autoplay_ms > 0 },
+  },
   'core.dual_heading': {
     new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
     // The pause between words matters only once there are words to change to.

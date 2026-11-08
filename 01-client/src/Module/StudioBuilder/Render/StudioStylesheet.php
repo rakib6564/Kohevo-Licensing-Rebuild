@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '69';
+    public const VERSION = '70';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -701,6 +701,7 @@ final class StudioStylesheet
         $css .= '@media (min-width:768px) and (max-width:1023.98px){.sb-hide-tablet{display:none!important}}';
         $css .= '@media (max-width:767.98px){.sb-hide-mobile{display:none!important}}';
         $css .= self::scrollEffectsCss();
+        $css .= self::blockSetsCss();
         $css .= self::deviceCountsCss();
         $css .= self::formCss();
         $css .= self::shopCss();
@@ -932,6 +933,45 @@ final class StudioStylesheet
             $css .= '@media ' . $query . '{.sb-sticky.sb-sticky-off-' . $device . '{position:relative;top:auto;bottom:auto;transform:none}}';
         }
         return $css;
+    }
+
+    /**
+     * Tabs with blocks, Accordion with blocks, Timeline and Progress bars. Every panel and row is readable without script;
+     * studio-runtime.js hides the tabs not chosen, closes rows, fills the timeline (`--sb-tl-p`, `is-passed`) and lets the
+     * bars grow once seen (`is-in`). The timeline's line shows full until the runtime takes it over.
+     */
+    public static function blockSetsCss(): string
+    {
+        return '.sb-tabset{display:flex;flex-direction:column;gap:1.5rem}'
+            . '.sb-tabset--left{display:grid;grid-template-columns:minmax(12rem,1fr) 2fr;align-items:start;gap:2rem}'
+            . '@media (max-width:767.98px){.sb-tabset--left{grid-template-columns:1fr}}'
+            . '.sb-tabset__list{display:flex;flex-wrap:wrap;gap:.5rem}.sb-tabset--left>.sb-tabset__list{flex-direction:column;flex-wrap:nowrap}'
+            . '.sb-tabset__tab{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:.15rem;padding:.75rem 1rem;border:1px solid var(--sb-border-default,#e2e8f0);border-radius:.6rem;background:none;font:inherit;color:inherit;text-align:start;cursor:pointer;opacity:.7;overflow:hidden;transition:opacity .2s ease,border-color .2s ease}'
+            . '.sb-tabset__tab[aria-selected="true"]{opacity:1;border-color:currentColor}.sb-tabset__tab:hover{opacity:1}'
+            . '.sb-tabset__tab:focus-visible{outline:2px solid currentColor;outline-offset:2px}'
+            . '.sb-tabset__title{font-weight:600}.sb-tabset__sub{font-size:.85em;opacity:.75}'
+            . '.sb-tabset__bar{position:absolute;left:0;right:0;bottom:0;height:2px;background:transparent}'
+            . '.sb-tabset__bar>i{display:block;height:100%;background:var(--sb-color-accent,currentColor);transform-origin:0 50%;transform:scaleX(0)}'
+            . '.sb-tabset__panel:focus-visible{outline:2px solid currentColor;outline-offset:4px}'
+            . '.sb-tabset__label{margin:0 0 .5rem;font-weight:600;opacity:.6}'
+            . '.sb-tabset__empty,.sb-accordion__empty,.sb-timeline__empty{margin:0;padding:1rem;border:1px dashed var(--sb-border-default,#cbd5e1);border-radius:.5rem;opacity:.7}'
+            . '.sb-accordion-block--blocks .sb-accordion__panel>.sb-block+.sb-block{margin-top:.75rem}'
+            . '.sb-timeline{position:relative;--sb-tl-gutter:3.5rem}'
+            . '.sb-timeline__rail{position:absolute;top:.25rem;bottom:.25rem;left:calc(var(--sb-tl-gutter)/2 - 1px);width:2px;background:var(--sb-tl-line,var(--sb-border-default,#e2e8f0));border-radius:2px}'
+            . '.sb-timeline__fill{position:absolute;inset:0;background:var(--sb-tl-fill,var(--sb-color-accent,currentColor));border-radius:inherit;transform-origin:50% 0}'
+            . 'html[data-sb-ready] [data-sb-timeline] .sb-timeline__fill{transform:scaleY(var(--sb-tl-p,0))}'
+            . '.sb-timeline__steps{display:flex;flex-direction:column;gap:2rem;counter-reset:sb-tl}'
+            . '.sb-timeline__steps>.sb-block{margin-left:var(--sb-tl-gutter);counter-increment:sb-tl}:where(.sb-timeline__steps>.sb-block){position:relative}'
+            . '.sb-timeline__steps>.sb-block::before{content:"";display:block;position:absolute;top:.2rem;left:calc(var(--sb-tl-gutter)*-.5 - .5rem);width:1rem;height:1rem;border-radius:50%;box-sizing:border-box;border:2px solid var(--sb-tl-line,var(--sb-border-default,#cbd5e1));background:var(--sb-surface-page,#fff);transition:background-color .3s ease,border-color .3s ease,color .3s ease;z-index:1;opacity:1;mix-blend-mode:normal}'
+            . '.sb-timeline--numbered>.sb-timeline__steps>.sb-block::before{content:counter(sb-tl,decimal-leading-zero);width:2rem;height:2rem;top:0;left:calc(var(--sb-tl-gutter)*-.5 - 1rem);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:600;line-height:1}'
+            . '.sb-timeline__steps>.sb-block.is-passed::before{border-color:var(--sb-tl-fill,var(--sb-color-accent,currentColor));background:var(--sb-tl-fill,var(--sb-color-accent,currentColor));color:var(--sb-surface-page,#fff)}'
+            . '.sb-progress{display:flex;flex-direction:column;gap:1rem}'
+            . '.sb-progress__head{display:flex;justify-content:space-between;gap:1rem;margin-bottom:.4rem;font-size:.9em}'
+            . '.sb-progress__value{font-variant-numeric:tabular-nums;opacity:.75}'
+            . '.sb-progress__track{height:var(--sb-pg-h,8px);border-radius:999px;background:var(--sb-pg-track,var(--sb-border-default,#e2e8f0));overflow:hidden}'
+            . '.sb-progress__bar{display:block;height:100%;border-radius:inherit;background:var(--sb-pg-bar,var(--sb-color-accent,currentColor));transform-origin:0 50%;transform:scaleX(var(--sb-pg-v,0));transition:transform 1.2s cubic-bezier(.2,.8,.2,1)}'
+            . 'html[data-sb-ready] [data-sb-progress-bars]:not(.is-in) .sb-progress__bar{transform:scaleX(0);transition:none}'
+            . '@media (prefers-reduced-motion:reduce){.sb-progress__bar,.sb-timeline__steps>.sb-block::before{transition:none}}';
     }
 
     /**

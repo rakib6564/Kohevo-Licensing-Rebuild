@@ -21,6 +21,7 @@ use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MarqueeRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MegaItemRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MegaMenuRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\NavChrome;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\TabSetRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\VideoRenderer;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
@@ -1358,6 +1359,124 @@ final class BlockRegistry
                 ['key' => 'columns', 'type' => 'number', 'label' => 'Panel columns', 'required' => false, 'default' => 3, 'min' => MegaItemRenderer::MIN_COLUMNS, 'max' => MegaItemRenderer::MAX_COLUMNS, 'integer_only' => true],
             ]),
             allowsChildren: true,
+        ));
+
+        // 38d. layout.tabs — tabs whose panels hold any blocks; each child is a layout.tab (TabSetRenderer).
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'layout.tabs',
+            version: 1,
+            label: 'Tabs with blocks',
+            title: 'Tabs with blocks',
+            description: 'Tabs whose panels hold any blocks, and can turn by themselves',
+            category: 'layout',
+            icon: 'grid-panes',
+            schema: FieldSchema::define([
+                ['key' => 'position', 'type' => 'enum', 'label' => 'Tabs position', 'required' => false, 'allowed_values' => TabSetRenderer::POSITIONS, 'default' => 'top'],
+                ['key' => 'autoplay_ms', 'type' => 'number', 'label' => 'Turn by themselves every (ms, 0 = never)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => TabSetRenderer::MAX_AUTOPLAY, 'integer_only' => true],
+                ['key' => 'pause_on_hover', 'type' => 'boolean', 'label' => 'Pause while the pointer is over them', 'required' => false, 'default' => true],
+                ['key' => 'aria_label', 'type' => 'string', 'label' => 'Tabs name (for screen readers)', 'required' => false, 'default' => '', 'max_length' => 80],
+            ]),
+            allowsChildren: true,
+            allowedChildTypes: ['layout.tab'],
+        ));
+
+        // 38e. layout.tab — one tab of a Tabs with blocks: its title, and its child blocks are the panel.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'layout.tab',
+            version: 1,
+            label: 'Tab',
+            title: 'Tab',
+            description: 'One tab of a Tabs with blocks and its panel',
+            category: 'layout',
+            icon: 'grid-panes',
+            schema: FieldSchema::define([
+                ['key' => 'title', 'type' => 'string', 'label' => 'Tab title', 'required' => true, 'default' => 'Tab', 'max_length' => 80],
+                ['key' => 'subtitle', 'type' => 'string', 'label' => 'Line under the title', 'required' => false, 'default' => '', 'max_length' => 120],
+            ]),
+            allowsChildren: true,
+        ));
+
+        // 38f. layout.accordion — rows that open and close, whose answers hold any blocks; each child is a layout.accordion_item.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'layout.accordion',
+            version: 1,
+            label: 'Accordion with blocks',
+            title: 'Accordion with blocks',
+            description: 'Rows that open and close, with any blocks inside',
+            category: 'layout',
+            icon: 'list-check',
+            schema: FieldSchema::define([
+                ['key' => 'allow_multiple', 'type' => 'boolean', 'label' => 'Allow several rows open at once', 'required' => false, 'default' => false],
+            ]),
+            allowsChildren: true,
+            allowedChildTypes: ['layout.accordion_item'],
+        ));
+
+        // 38g. layout.accordion_item — one row of an Accordion with blocks: its question, and its child blocks are the answer.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'layout.accordion_item',
+            version: 1,
+            label: 'Accordion row',
+            title: 'Accordion row',
+            description: 'One row of an Accordion with blocks and its answer',
+            category: 'layout',
+            icon: 'list-check',
+            schema: FieldSchema::define([
+                ['key' => 'title', 'type' => 'string', 'label' => 'Row title', 'required' => true, 'default' => 'Question', 'max_length' => 200],
+                ['key' => 'open', 'type' => 'boolean', 'label' => 'Open when the page loads', 'required' => false, 'default' => false],
+            ]),
+            allowsChildren: true,
+        ));
+
+        // 38h. layout.timeline — steps on a line that fills as the page scrolls; each child block is a step.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'layout.timeline',
+            version: 1,
+            label: 'Timeline',
+            title: 'Timeline',
+            description: 'Steps on a line that fills as the page scrolls',
+            category: 'layout',
+            icon: 'list-check',
+            schema: FieldSchema::define([
+                ['key' => 'line_color', 'type' => 'string', 'label' => 'Line colour', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
+                ['key' => 'fill_color', 'type' => 'string', 'label' => 'Filled line colour', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
+                ['key' => 'numbered', 'type' => 'boolean', 'label' => 'Number the steps', 'required' => false, 'default' => true],
+            ]),
+            allowsChildren: true,
+        ));
+
+        // 38i. core.progress — labelled bars that grow to their value when they come into view.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.progress',
+            version: 1,
+            label: 'Progress bars',
+            title: 'Progress bars',
+            description: 'Labelled bars that grow to their value',
+            category: 'content',
+            icon: 'grid-dots',
+            schema: FieldSchema::define([
+                [
+                    'key'         => 'items',
+                    'type'        => 'repeater',
+                    'label'       => 'Bars',
+                    'required'    => false,
+                    'default'     => [
+                        ['label' => 'Design', 'value' => 90],
+                        ['label' => 'Development', 'value' => 80],
+                        ['label' => 'Search engines', 'value' => 70],
+                    ],
+                    'max_items'   => 12,
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => true, 'max_length' => 120],
+                        ['key' => 'value', 'type' => 'number', 'label' => 'Value (%)', 'required' => true, 'min' => 0, 'max' => 100],
+                    ]),
+                ],
+                ['key' => 'show_value', 'type' => 'boolean', 'label' => 'Show the value', 'required' => false, 'default' => true],
+                ['key' => 'bar_color', 'type' => 'string', 'label' => 'Bar colour', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
+                ['key' => 'track_color', 'type' => 'string', 'label' => 'Track colour', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
+                ['key' => 'height', 'type' => 'number', 'label' => 'Bar height (px)', 'required' => false, 'default' => 8, 'min' => 2, 'max' => 40, 'integer_only' => true],
+            ]),
+            allowsChildren: false,
         ));
 
         // 39. core.map — an OpenStreetMap embed centred on a point (no key, no tracking cookies).

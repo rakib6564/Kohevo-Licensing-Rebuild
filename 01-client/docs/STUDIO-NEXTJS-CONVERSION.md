@@ -608,8 +608,10 @@ Part rules are written with `!important`. Custom CSS can't override them, so an 
 |---|---|
 | Mobile menu toggle | `layout.offcanvas` |
 | Dropdown nav | Site menu with depth; `submenu`, `sublink`, `toggle` parts |
-| Accordion, FAQ | `core.accordion` |
-| Tabs | `core.tabs` |
+| Accordion, FAQ | `core.accordion` (plain-text answers); `layout.accordion` with `layout.accordion_item` rows when answers need links, lists or any blocks |
+| Tabs | `core.tabs` (plain-text panels); `layout.tabs` with `layout.tab` children for panels of any blocks, vertical tabs (`position: left`) or tabs that turn by themselves (`autoplay_ms`, with a time bar) |
+| Process timeline with a line that fills on scroll | `layout.timeline`: each child block is a step (numbered unless `numbered: false`) |
+| Skill or progress bars | `core.progress` |
 | Modal | `core.modal` |
 | Carousel, Swiper | `core.carousel`; check it can show the original's content, as slides have a fixed shape |
 | Lightbox | `core.gallery`; `core.video` with `lightbox` |
