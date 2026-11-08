@@ -110,3 +110,16 @@ unit('scroll effects: the markup and CSS match the browser fixture the runtime s
     }
     assert_eq(trim((string) file_get_contents($fixture)), $css . $html, 'ui/tests/fixtures/scroll-effects.html is stale — regenerate with SBSE_WRITE_FIXTURE=1');
 });
+
+unit('scroll effects: a top-sticky header can lie over the page; the next section starts under it by its measured height', function (): void {
+    assert_eq([], ScrollEffects::issues(['sticky' => ['edge' => 'top', 'overlay' => true]], '$'));
+    assert_true(ScrollEffects::issues(['sticky' => ['edge' => 'top', 'overlay' => 'yes']], '$') !== []);
+    assert_true(in_array('sb-sticky--overlay', ScrollEffects::render(['interactions' => ['sticky' => ['edge' => 'top', 'overlay' => true]]])['classes'], true));
+    assert_false(in_array('sb-sticky--overlay', ScrollEffects::render(['interactions' => ['sticky' => ['edge' => 'bottom', 'overlay' => true]]])['classes'], true), 'a bottom edge never overlays');
+    $css = StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-sticky--overlay{margin-bottom:calc(-1 * var(--sb-sticky-h,0px))}'), 'no overlap without the runtime');
+    assert_true(str_contains($css, '{position:relative;top:auto;bottom:auto;transform:none;margin-bottom:0}'), 'not sticky on a device, not over the page there either');
+    $js = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/assets/public/studio-runtime.js');
+    assert_true(str_contains($js, "el.style.setProperty('--sb-sticky-h', el.getBoundingClientRect().height + 'px')"));
+    assert_true(str_contains($js, "el.style.removeProperty('--sb-sticky-h')"));
+});

@@ -8,7 +8,8 @@ namespace Slate\Module\StudioBuilder\Document;
  * Sticky and parallax, the two scroll effects a block may carry in its `interactions`.
  *
  *   interactions.sticky   = {edge: top|bottom, offset: 0-400 (px), devices: [desktop, tablet, mobile],
- *                            shadow: bool, background: colour, hide_on_scroll: bool, shrink: bool}
+ *                            shadow: bool, background: colour, hide_on_scroll: bool, shrink: bool,
+ *                            overlay: bool (top edge: the page starts under it, as a transparent header needs)}
  *   interactions.parallax = {layer: background|element, speed: 5-80 (% of the scroll), direction: up|down,
  *                            devices: [desktop, tablet, mobile]}
  *   interactions.scroll   = {vertical, horizontal, rotate, scale: -10 to 10; transparency, blur: 0 to 10;
@@ -18,6 +19,8 @@ namespace Slate\Module\StudioBuilder\Document;
  *   interactions.page_colors = {background, text, muted, line, accent: colour}  the page takes these colours while the node is in the middle
  *                            of the screen, with a short blend
  *   interactions.adapt    = true  the node takes the page colours of the section beneath its bottom edge (a header)
+ *                         = 'text' only the text and theme colours: the node stays see-through, and once its sticky
+ *                           header is stuck it is frosted glass in the colour of that section (--sb-adapt-bg)
  *   interactions.spy      = true  of the node's links to sections of this page, the one whose section is on screen is
  *                            marked current (a chapter nav)
  *   interactions.progress = {edge: top|bottom, color: colour, height: 1-12 (px)}  a bar along that edge that fills as
@@ -91,7 +94,10 @@ final class ScrollEffects
         if (array_key_exists('mouse', $interactions)) {
             self::levelIssues($interactions['mouse'], self::MOUSE_FIELDS, "{$path}.mouse", $errors);
         }
-        foreach (['adapt', 'spy'] as $flag) {
+        if (array_key_exists('adapt', $interactions) && !is_bool($interactions['adapt']) && $interactions['adapt'] !== 'text') {
+            $errors[] = self::issue("{$path}.adapt", "adapt must be true, false or 'text'.");
+        }
+        foreach (['spy'] as $flag) {
             if (array_key_exists($flag, $interactions) && !is_bool($interactions[$flag])) {
                 $errors[] = self::issue("{$path}.{$flag}", "{$flag} must be true or false.");
             }
@@ -226,7 +232,7 @@ final class ScrollEffects
                 'edge'           => in_array($value, self::EDGES, true),
                 'offset'         => is_int($value) && $value >= 0 && $value <= self::MAX_OFFSET,
                 'devices'        => self::devicesValid($value),
-                'shadow', 'hide_on_scroll', 'shrink' => is_bool($value),
+                'shadow', 'hide_on_scroll', 'shrink', 'overlay' => is_bool($value),
                 'background'     => StyleValueGuard::isColor($value),
                 default          => null,
             };
@@ -304,6 +310,10 @@ final class ScrollEffects
             if ($edge === 'top' && ($sticky['shrink'] ?? false) === true) {
                 $effects[] = 'shrink';
             }
+            // Over the page: the next section starts under it (studio-runtime.js measures it into --sb-sticky-h).
+            if ($edge === 'top' && ($sticky['overlay'] ?? false) === true) {
+                $classes[] = 'sb-sticky--overlay';
+            }
             $attrs .= ' data-sb-sticky="' . $edge . '"';
             if ($effects !== []) {
                 $attrs .= ' data-sb-sticky-effect="' . implode(' ', $effects) . '"';
@@ -365,6 +375,10 @@ final class ScrollEffects
         if (($interactions['adapt'] ?? false) === true) {
             $classes[] = 'sb-adapt';
             $attrs .= ' data-sb-adapt';
+        } elseif (($interactions['adapt'] ?? null) === 'text') {
+            $classes[] = 'sb-adapt';
+            $classes[] = 'sb-adapt--text';
+            $attrs .= ' data-sb-adapt="text"';
         }
         if (($interactions['spy'] ?? false) === true) {
             $attrs .= ' data-sb-spy';

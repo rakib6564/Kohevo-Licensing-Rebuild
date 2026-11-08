@@ -72,3 +72,9 @@ test('wave text keeps its two weights and reach, clamped to the server ranges', 
   assert.deepEqual(normalizeTextEffect({ effect: 'wave' }), { effect: 'wave' });
   assert.ok(TEXT_EFFECTS.includes('wave'));
 });
+
+test('adapt: true, or "text" for a see-through header that follows only the text colours', () => {
+  assert.equal(normalizeInteractions({ adapt: 'text' }).adapt, 'text');
+  assert.equal(normalizeInteractions({ adapt: true }).adapt, true);
+  assert.equal(normalizeInteractions({ adapt: 'background' }).adapt, undefined);
+});

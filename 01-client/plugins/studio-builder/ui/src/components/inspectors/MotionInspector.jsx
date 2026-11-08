@@ -395,8 +395,14 @@ function PageEffectsGroup({ idPrefix, type, interactions, tokens, onChange }) {
             <ThemeColor id={`${idPrefix}-page-accent`} label={t('page_colors_accent')} value={pageColors && pageColors.accent} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), accent: v })} />
             <p className="sbx-hint">{t('page_colors_hint')}</p>
           </SwitchSection>
-          <Check label={t('adapt_colors')} checked={interactions.adapt === true} onChange={(e) => set('adapt', e.target.checked ? true : undefined)} />
+          <Check label={t('adapt_colors')} checked={interactions.adapt === true || interactions.adapt === 'text'} onChange={(e) => set('adapt', e.target.checked ? true : undefined)} />
           <p className="sbx-hint">{t('adapt_colors_hint')}</p>
+          {(interactions.adapt === true || interactions.adapt === 'text') && (
+            <>
+              <Check label={t('adapt_text_only')} checked={interactions.adapt === 'text'} onChange={(e) => set('adapt', e.target.checked ? 'text' : true)} />
+              <p className="sbx-hint">{t('adapt_text_only_hint')}</p>
+            </>
+          )}
 
           <Field label={t('progress_bar')}>
             <Pills

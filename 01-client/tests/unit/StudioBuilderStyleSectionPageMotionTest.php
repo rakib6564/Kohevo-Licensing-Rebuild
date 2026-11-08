@@ -281,3 +281,21 @@ unit('scroll layout: the markup and CSS match the browser fixture the runtime sp
     }
     assert_eq(trim((string) file_get_contents($fixture)), $css . $html, 'ui/tests/fixtures/scroll-layout.html is stale — regenerate with SBPM_WRITE_FIXTURE=1');
 });
+
+unit('page motion: adapt "text" follows the text colours only; the node stays see-through and frosts once its header is stuck', function (): void {
+    $issues = static fn(array $i): array => \Slate\Module\StudioBuilder\Document\ScrollEffects::issues($i, "\$");
+    assert_eq([], $issues(['adapt' => 'text']));
+    assert_true($issues(['adapt' => 'background']) !== [], 'only true, false or "text"');
+    $tag = sbpm_tag(['adapt' => 'text']);
+    assert_true(str_contains($tag, ' data-sb-adapt="text"'), 'the runtime reads the mode');
+    assert_true((bool) preg_match('/class="[^"]*\bsb-adapt sb-adapt--text\b/', $tag));
+    assert_false(str_contains(sbpm_tag(['adapt' => true]), 'sb-adapt--text'), 'true keeps painting the background');
+    $css = StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-adapt--text::after{content:"";display:block;position:absolute;inset:0;z-index:-1;'), 'a layer of its own: a Container\'s ::before is its overlay');
+    assert_true(str_contains($css, 'color-mix(in srgb,var(--sb-adapt-bg,var(--sb-surface-page,#fff)) 72%,transparent)'));
+    assert_true(str_contains($css, '.is-stuck .sb-adapt--text::after,.sb-adapt--text.is-stuck::after{opacity:1}'), 'clear until the page scrolls');
+    $js = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/assets/public/studio-runtime.js');
+    assert_true(str_contains($js, "if (a.el.getAttribute('data-sb-adapt') === 'text') {"));
+    assert_true(str_contains($js, "a.el.style.setProperty('--sb-adapt-bg', under.c.bg)"), 'the section colour is a variable, never the background');
+    assert_true(str_contains($js, "a.el.style.removeProperty('--sb-adapt-bg')"), 'and removed on teardown');
+});

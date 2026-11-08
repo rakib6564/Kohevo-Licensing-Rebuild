@@ -147,7 +147,7 @@ export function normalizeInteractions(raw) {
   if (mouse) out.mouse = mouse;
   const pageColors = normalizePageColors(i.page_colors);
   if (pageColors) out.page_colors = pageColors;
-  if (i.adapt === true) out.adapt = true;
+  if (i.adapt === true || i.adapt === 'text') out.adapt = i.adapt;
   if (i.spy === true) out.spy = true;
   const progress = normalizeProgress(i.progress);
   if (progress) out.progress = progress;
@@ -217,6 +217,7 @@ export function normalizeSticky(raw) {
   if (typeof raw.background === 'string' && raw.background.trim() !== '') out.background = raw.background.trim();
   if (raw.hide_on_scroll === true && raw.edge === 'top') out.hide_on_scroll = true;
   if (raw.shrink === true && raw.edge === 'top') out.shrink = true;
+  if (raw.overlay === true && raw.edge === 'top') out.overlay = true;
   return out;
 }
 

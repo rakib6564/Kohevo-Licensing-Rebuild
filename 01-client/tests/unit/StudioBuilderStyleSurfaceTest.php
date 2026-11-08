@@ -824,13 +824,13 @@ unit('text colours: post excerpt and content use variables the theme defines', f
     preg_match_all('/var\((--sb-[a-z0-9_-]+)/', $css, $m);
     $defined = array_map([\Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme::class, 'cssVarName'], array_keys(ThemeResolver::DEFAULT_TOKENS));
     // --sb-anim-* are set per element by the animation surface, --sb-ov-* by a Container's overlay, --sb-shape-* by its
-    // shape dividers, --sb-pbg-*, --sb-parallax-*, --sb-sticky-* and --sb-stuck-* by the scroll effects, and --sb-dc-*, --sb-tc-*
+    // shape dividers, --sb-pbg-*, --sb-parallax-*, --sb-sticky-*, --sb-stuck-* and --sb-adapt-* by the scroll effects, and --sb-dc-*, --sb-tc-*
     // and --sb-pv* by counts that differ per device (DeviceColumns), --sb-fw-* by a form field's width, and --sb-cw* by a
     // section's custom width, --sb-shop-* by a Shop widget (a Product grid's columns), --sb-nav-* by a Nav menu, and --sb-gal-* by a Gallery (each image's shape, the row height), not by the theme.
     // The page-level motion sets the rest: --sb-paged-* and --sb-page-progress on <html>, --sb-progress-*, --sb-stagger-*,
     // --sb-glow-*, --sb-mx/--sb-my, --sb-line*, --sb-item-*, --sb-hs-* and --sb-hover-* on the node or word (ScrollEffects,
     // studio-runtime.js). --sb-wave-* is a wave text's two weights, and --sb-page-* a themed section's own colours, set on the node.
-    $perElement = ['--sb-slide', '--sb-gal-', '--sb-il-', '--sb-anim-', '--sb-nav-', '--sb-mega-', '--sb-ov-', '--sb-shape-', '--sb-pbg-', '--sb-parallax-', '--sb-sticky-', '--sb-stuck-', '--sb-dc-', '--sb-tc-', '--sb-pv', '--sb-fw-', '--sb-cw', '--sb-shop-', '--sb-paged-', '--sb-page-progress', '--sb-progress-', '--sb-stagger-', '--sb-glow-', '--sb-mx', '--sb-my', '--sb-line', '--sb-item-', '--sb-hs-', '--sb-hover-', '--sb-tl-', '--sb-pg-', '--sb-ct-', '--sb-wave-', '--sb-page-', '--sb-tg-', '--sb-msg-'];
+    $perElement = ['--sb-slide', '--sb-gal-', '--sb-il-', '--sb-anim-', '--sb-nav-', '--sb-mega-', '--sb-ov-', '--sb-shape-', '--sb-pbg-', '--sb-parallax-', '--sb-sticky-', '--sb-stuck-', '--sb-dc-', '--sb-tc-', '--sb-pv', '--sb-fw-', '--sb-cw', '--sb-shop-', '--sb-paged-', '--sb-page-progress', '--sb-progress-', '--sb-stagger-', '--sb-glow-', '--sb-mx', '--sb-my', '--sb-line', '--sb-item-', '--sb-hs-', '--sb-hover-', '--sb-tl-', '--sb-pg-', '--sb-ct-', '--sb-wave-', '--sb-page-', '--sb-tg-', '--sb-msg-', '--sb-adapt-'];
     $missing = array_values(array_filter(array_diff(array_unique($m[1]), $defined), static function (string $v) use ($perElement): bool {
         foreach ($perElement as $prefix) {
             if (str_starts_with($v, $prefix)) {

@@ -549,7 +549,10 @@
         var under = at(Math.max(0, r.bottom + 1), a.el);
         if (under === a.hit) return;
         a.hit = under;
-        if (under && under.c.bg) a.el.style.setProperty('background-color', under.c.bg, 'important'); else a.el.style.removeProperty('background-color');
+        // adapt: 'text' keeps the node see-through: the section's background is only a variable, for its glass once stuck.
+        if (a.el.getAttribute('data-sb-adapt') === 'text') {
+          if (under && under.c.bg) a.el.style.setProperty('--sb-adapt-bg', under.c.bg); else a.el.style.removeProperty('--sb-adapt-bg');
+        } else if (under && under.c.bg) a.el.style.setProperty('background-color', under.c.bg, 'important'); else a.el.style.removeProperty('background-color');
         if (under && under.c.fg) a.el.style.setProperty('color', under.c.fg, 'important'); else a.el.style.removeProperty('color');
         // And the theme colours inside it (text, muted, border, accent), so a logo or link on theme colours follows too.
         tokenVars(a.el, under && under.c);
@@ -570,7 +573,7 @@
       sections.forEach(function (el) { el.removeAttribute('data-sb-page-on'); delete el.__sbPageSeen; });
       html.removeAttribute('data-sb-page-colors');
       NAMES.forEach(function (n) { setVar('--sb-paged-' + n, 'data-sb-paged-' + n, ''); });
-      adapters.forEach(function (a) { a.el.style.removeProperty('background-color'); a.el.style.removeProperty('color'); tokenVars(a.el, null); });
+      adapters.forEach(function (a) { a.el.style.removeProperty('background-color'); a.el.style.removeProperty('--sb-adapt-bg'); a.el.style.removeProperty('color'); tokenVars(a.el, null); });
     });
   }
 
@@ -3132,7 +3135,14 @@
       ticking = true;
       global.requestAnimationFrame(update);
     }
+    // A header over the page: the next section starts under it by its height, measured now and on every resize.
+    var overlays = nodes.filter(function (el) { return el.classList.contains('sb-sticky--overlay'); });
+    function measure() {
+      overlays.forEach(function (el) { el.style.setProperty('--sb-sticky-h', el.getBoundingClientRect().height + 'px'); });
+    }
+    measure();
     var offs = [on(global, 'scroll', onScroll, { passive: true }), on(global, 'resize', onScroll, { passive: true })];
+    if (overlays.length) offs.push(on(global, 'resize', measure, { passive: true }));
     // Keyboard users must never lose a hidden header: focus inside brings it back.
     nodes.forEach(function (el) {
       offs.push(on(el, 'focusin', function () { el.classList.remove('is-hidden'); }));
@@ -3144,6 +3154,7 @@
       nodes.forEach(function (el) {
         el.classList.remove('is-stuck', 'is-hidden', 'is-shrunk');
         el.removeAttribute('data-sb-stuck');
+        el.style.removeProperty('--sb-sticky-h');
       });
     });
   }

@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '81';
+    public const VERSION = '82';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -973,6 +973,15 @@ final class StudioStylesheet
             . '.sb-sticky.is-stuck[data-sb-sticky-effect~="shadow"]{box-shadow:0 8px 24px -8px rgba(15,23,42,.25)}'
             . '.sb-sticky.is-stuck[data-sb-sticky-effect~="background"]{background-color:var(--sb-stuck-bg)!important}'
             . '.sb-sticky.is-hidden{transform:translate3d(0,calc(-100% - var(--sb-sticky-offset,0px)),0)}'
+            // Over the page: the next section slides up under the header by the header's height (0 without the runtime).
+            . '.sb-sticky--overlay{margin-bottom:calc(-1 * var(--sb-sticky-h,0px))}'
+            // A header adapting its text only: see-through, frosted in the colour of the section beneath once stuck. The
+            // glass is a layer behind the content (::after: a Container's ::before is its overlay), so a blurred panel
+            // inside the header (a glass mega menu) still blurs the page.
+            . ':where(.sb-adapt--text){position:relative;isolation:isolate}'
+            . '.sb-adapt--text::after{content:"";display:block;position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .3s ease;'
+            . 'background-color:color-mix(in srgb,var(--sb-adapt-bg,var(--sb-surface-page,#fff)) 72%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}'
+            . '.is-stuck .sb-adapt--text::after,.sb-adapt--text.is-stuck::after{opacity:1}'
             // Shrink: the runtime's `is-shrunk` tightens the header's Containers and logo once the page has scrolled a little.
             . '.sb-sticky[data-sb-sticky-effect~="shrink"] :is(.sb-top,.sb-top img){transition:padding .2s ease,max-height .2s ease}'
             . '.sb-sticky.is-shrunk .sb-top{padding-top:.35rem!important;padding-bottom:.35rem!important}.sb-sticky.is-shrunk .sb-top img{max-height:2.25rem;width:auto}'
@@ -980,7 +989,7 @@ final class StudioStylesheet
             . '@media (prefers-reduced-motion:reduce){.sb-sticky,.sb-sticky :is(.sb-top,.sb-top img){transition:none!important}}'
             . self::pageMotionCss();
         foreach (['desktop' => '(min-width:1024px)', 'tablet' => '(min-width:768px) and (max-width:1023.98px)', 'mobile' => '(max-width:767.98px)'] as $device => $query) {
-            $css .= '@media ' . $query . '{.sb-sticky.sb-sticky-off-' . $device . '{position:relative;top:auto;bottom:auto;transform:none}}';
+            $css .= '@media ' . $query . '{.sb-sticky.sb-sticky-off-' . $device . '{position:relative;top:auto;bottom:auto;transform:none;margin-bottom:0}}';
         }
         return $css;
     }
