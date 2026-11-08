@@ -3896,6 +3896,107 @@
             "binding_slots": [],
             "category": "content",
             "default_props": {
+                "city": "",
+                "format": "24h",
+                "label": "Local time",
+                "seconds": false,
+                "show_offset": false,
+                "timezone": ""
+            },
+            "description": "Your local time, ticking, for a footer",
+            "field_schema": [
+                {
+                    "key": "label",
+                    "type": "string",
+                    "label": "Text before",
+                    "required": false,
+                    "default": "Local time",
+                    "max_length": 60
+                },
+                {
+                    "key": "city",
+                    "type": "string",
+                    "label": "City",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "timezone",
+                    "type": "string",
+                    "label": "Time zone (e.g. Europe/Brussels)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "format",
+                    "type": "enum",
+                    "label": "Clock",
+                    "required": false,
+                    "default": "24h",
+                    "allowed_values": [
+                        "24h",
+                        "12h"
+                    ]
+                },
+                {
+                    "key": "seconds",
+                    "type": "boolean",
+                    "label": "Show seconds",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "show_offset",
+                    "type": "boolean",
+                    "label": "Show the GMT offset",
+                    "required": false,
+                    "default": false
+                }
+            ],
+            "icon": "timer",
+            "inline_text": [],
+            "label": "Local time",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Local time",
+            "type": "core.local_time",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
                 "height": "md",
                 "latitude": 50.8503,
                 "longitude": 4.3517,
@@ -4082,6 +4183,295 @@
             ],
             "title": "Text Marquee",
             "type": "core.marquee",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "forms",
+            "default_props": {
+                "ask_name": true,
+                "avatar": null,
+                "away_text": "Away · I reply within a day",
+                "days": "weekdays",
+                "email_label": "Your email",
+                "hours_end": "18:00",
+                "hours_start": "09:00",
+                "intro": "Tell me about your project. I usually reply the same day.",
+                "launcher_icon": "message-circle",
+                "launcher_label": "Message me",
+                "message_label": "Message",
+                "message_placeholder": "",
+                "name": "",
+                "name_label": "Your name",
+                "notify_email": "",
+                "online_text": "Online now",
+                "open_after_scroll": 0,
+                "open_after_seconds": 0,
+                "position": "right",
+                "remember_closed": true,
+                "submit_text": "Send",
+                "success_message": "Thanks! I’ll get back to you soon.",
+                "timezone": "",
+                "title": "Let’s talk",
+                "topics": "New website\nRedesign\nSEO\nSomething else",
+                "topics_label": "What is it about?"
+            },
+            "description": "A floating message button with online status that sends through Forms",
+            "field_schema": [
+                {
+                    "key": "launcher_label",
+                    "type": "string",
+                    "label": "Button text",
+                    "required": false,
+                    "default": "Message me",
+                    "max_length": 40
+                },
+                {
+                    "key": "launcher_icon",
+                    "type": "string",
+                    "label": "Button icon",
+                    "required": false,
+                    "default": "message-circle",
+                    "max_length": 40,
+                    "format": "icon"
+                },
+                {
+                    "key": "position",
+                    "type": "enum",
+                    "label": "Corner",
+                    "required": false,
+                    "default": "right",
+                    "allowed_values": [
+                        "right",
+                        "left"
+                    ]
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "label": "Panel title",
+                    "required": false,
+                    "default": "Let’s talk",
+                    "max_length": 80
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "label": "Who answers",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "avatar",
+                    "type": "media_ref",
+                    "label": "Photo",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "intro",
+                    "type": "text",
+                    "label": "Intro text",
+                    "required": false,
+                    "default": "Tell me about your project. I usually reply the same day.",
+                    "max_length": 300
+                },
+                {
+                    "key": "timezone",
+                    "type": "string",
+                    "label": "Time zone (e.g. Europe/Brussels)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "hours_start",
+                    "type": "string",
+                    "label": "Online from (HH:MM)",
+                    "required": false,
+                    "default": "09:00",
+                    "max_length": 5
+                },
+                {
+                    "key": "hours_end",
+                    "type": "string",
+                    "label": "Online until (HH:MM)",
+                    "required": false,
+                    "default": "18:00",
+                    "max_length": 5
+                },
+                {
+                    "key": "days",
+                    "type": "enum",
+                    "label": "Online on",
+                    "required": false,
+                    "default": "weekdays",
+                    "allowed_values": [
+                        "weekdays",
+                        "mon_sat",
+                        "everyday"
+                    ]
+                },
+                {
+                    "key": "online_text",
+                    "type": "string",
+                    "label": "Online text",
+                    "required": false,
+                    "default": "Online now",
+                    "max_length": 80
+                },
+                {
+                    "key": "away_text",
+                    "type": "string",
+                    "label": "Away text",
+                    "required": false,
+                    "default": "Away · I reply within a day",
+                    "max_length": 80
+                },
+                {
+                    "key": "topics",
+                    "type": "text",
+                    "label": "Topic chips (one per line)",
+                    "required": false,
+                    "default": "New website\nRedesign\nSEO\nSomething else",
+                    "max_length": 600
+                },
+                {
+                    "key": "topics_label",
+                    "type": "string",
+                    "label": "Topics heading",
+                    "required": false,
+                    "default": "What is it about?",
+                    "max_length": 80
+                },
+                {
+                    "key": "ask_name",
+                    "type": "boolean",
+                    "label": "Ask for a name",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "name_label",
+                    "type": "string",
+                    "label": "Name field label",
+                    "required": false,
+                    "default": "Your name",
+                    "max_length": 60
+                },
+                {
+                    "key": "email_label",
+                    "type": "string",
+                    "label": "Email field label",
+                    "required": false,
+                    "default": "Your email",
+                    "max_length": 60
+                },
+                {
+                    "key": "message_label",
+                    "type": "string",
+                    "label": "Message field label",
+                    "required": false,
+                    "default": "Message",
+                    "max_length": 60
+                },
+                {
+                    "key": "message_placeholder",
+                    "type": "string",
+                    "label": "Message placeholder",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120
+                },
+                {
+                    "key": "submit_text",
+                    "type": "string",
+                    "label": "Send button text",
+                    "required": false,
+                    "default": "Send",
+                    "max_length": 40
+                },
+                {
+                    "key": "success_message",
+                    "type": "text",
+                    "label": "Success Message",
+                    "required": false,
+                    "default": "Thanks! I’ll get back to you soon.",
+                    "max_length": 500
+                },
+                {
+                    "key": "notify_email",
+                    "type": "string",
+                    "label": "Email Submissions To",
+                    "required": false,
+                    "default": "",
+                    "max_length": 200
+                },
+                {
+                    "key": "open_after_seconds",
+                    "type": "number",
+                    "label": "Open by itself after (seconds, 0 = never)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 600,
+                    "integer_only": true
+                },
+                {
+                    "key": "open_after_scroll",
+                    "type": "number",
+                    "label": "Open by itself after scrolling (% of the page, 0 = never)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 100,
+                    "integer_only": true
+                },
+                {
+                    "key": "remember_closed",
+                    "type": "boolean",
+                    "label": "Once closed, stop opening by itself",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "form",
+            "inline_text": [],
+            "label": "Message widget",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Message widget",
+            "type": "core.message_widget",
             "version": 1
         },
         {
@@ -4724,10 +5114,15 @@
                 "content_type": "",
                 "empty_message": "No posts found.",
                 "enable_pagination": true,
+                "filter_all_label": "All",
+                "filter_counts": true,
+                "filter_field": "",
                 "gap": "md",
                 "loop_template": "",
+                "open_in": "page",
                 "order": "desc",
                 "order_by": "published_at",
+                "pagination_style": "simple",
                 "per_page": 6,
                 "read_more_text": "Read More",
                 "show_author": true,
@@ -4921,6 +5316,51 @@
                     "label": "Pagination",
                     "required": false,
                     "default": true
+                },
+                {
+                    "key": "pagination_style",
+                    "type": "enum",
+                    "label": "Pager",
+                    "required": false,
+                    "default": "simple",
+                    "allowed_values": [
+                        "simple",
+                        "numbers"
+                    ]
+                },
+                {
+                    "key": "filter_field",
+                    "type": "string",
+                    "label": "Filter chips (a Taxonomy field key, or category)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64
+                },
+                {
+                    "key": "filter_all_label",
+                    "type": "string",
+                    "label": "First chip",
+                    "required": false,
+                    "default": "All",
+                    "max_length": 40
+                },
+                {
+                    "key": "filter_counts",
+                    "type": "boolean",
+                    "label": "Show counts on the chips",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "open_in",
+                    "type": "enum",
+                    "label": "Open items",
+                    "required": false,
+                    "default": "page",
+                    "allowed_values": [
+                        "page",
+                        "dialog"
+                    ]
                 },
                 {
                     "key": "loop_template",

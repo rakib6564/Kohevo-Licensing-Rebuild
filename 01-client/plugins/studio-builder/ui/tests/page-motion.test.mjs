@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  hasMotion, normalizeGlow, normalizeInteractions, normalizePageColors, normalizeProgress, normalizeStagger, normalizeTextEffect,
+  hasMotion, normalizeGlow, normalizeInteractions, normalizePageColors, normalizeProgress, normalizeStagger, normalizeTextEffect, TEXT_EFFECTS,
 } from '../src/core/motion.mjs';
 
 test('page colours: off with neither colour; blank colours dropped', () => {
@@ -63,4 +63,10 @@ test('marquee, sideways scroll and hover image: clamped, defaults dropped, and n
   const both = normalizeInteractions({ marquee: { speed: 4 }, horizontal: { offset: 0 }, hover_image: { size: 280 } });
   assert.deepEqual(both, { horizontal: { offset: 0 }, hover_image: { size: 280 } });
   assert.equal(hasMotion({ interactions: { marquee: { speed: 2 } } }), true);
+});
+
+test('wave text keeps its two weights and reach, clamped to the server ranges', () => {
+  assert.deepEqual(normalizeTextEffect({ effect: 'wave', low: 50, high: 1200, radius: 220.4, dim: 30 }), { effect: 'wave', low: 100, high: 900, radius: 220 });
+  assert.deepEqual(normalizeTextEffect({ effect: 'wave' }), { effect: 'wave' });
+  assert.ok(TEXT_EFFECTS.includes('wave'));
 });

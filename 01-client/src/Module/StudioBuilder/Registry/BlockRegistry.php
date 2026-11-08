@@ -21,6 +21,9 @@ use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MarqueeRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MegaItemRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MegaMenuRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\NavChrome;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\LocalTimeRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MessageWidgetRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\QueryLoopRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\TabSetRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\VideoRenderer;
 use Slate\Module\StudioBuilder\Render\Html;
@@ -460,6 +463,11 @@ final class BlockRegistry
                 ['key' => 'show_excerpt', 'type' => 'boolean', 'label' => 'Show Excerpt', 'required' => false, 'default' => true],
                 ['key' => 'read_more_text', 'type' => 'string', 'label' => 'Button Text', 'required' => false, 'default' => 'Read More', 'max_length' => 80],
                 ['key' => 'enable_pagination', 'type' => 'boolean', 'label' => 'Pagination', 'required' => false, 'default' => true],
+                ['key' => 'pagination_style', 'type' => 'enum', 'label' => 'Pager', 'required' => false, 'allowed_values' => QueryLoopRenderer::PAGER_STYLES, 'default' => 'simple'],
+                ['key' => 'filter_field', 'type' => 'string', 'label' => 'Filter chips (a Taxonomy field key, or category)', 'required' => false, 'default' => '', 'max_length' => 64, 'pattern' => '/^$|^[a-z][a-z0-9_]{0,63}$/'],
+                ['key' => 'filter_all_label', 'type' => 'string', 'label' => 'First chip', 'required' => false, 'default' => 'All', 'max_length' => 40],
+                ['key' => 'filter_counts', 'type' => 'boolean', 'label' => 'Show counts on the chips', 'required' => false, 'default' => true],
+                ['key' => 'open_in', 'type' => 'enum', 'label' => 'Open items', 'required' => false, 'allowed_values' => QueryLoopRenderer::OPEN_IN, 'default' => 'page'],
                 ['key' => 'loop_template', 'type' => 'string', 'label' => 'Loop Item', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'loop_template', 'pattern' => '/^[a-z0-9-]{0,64}$/'],
                 ['key' => 'empty_message', 'type' => 'string', 'label' => 'Empty Message', 'required' => false, 'default' => 'No posts found.', 'max_length' => 200],
             ]),
@@ -1500,6 +1508,66 @@ final class BlockRegistry
                 ['key' => 'font_size', 'type' => 'number', 'label' => 'Letter size', 'required' => false, 'default' => 11, 'min' => 6, 'max' => 24, 'integer_only' => true],
                 ['key' => 'spin_seconds', 'type' => 'number', 'label' => 'Seconds per turn (0 = still)', 'required' => false, 'default' => 14, 'min' => 0, 'max' => 120, 'integer_only' => true],
                 ['key' => 'direction', 'type' => 'enum', 'label' => 'Turns', 'required' => false, 'allowed_values' => ['clockwise', 'anticlockwise'], 'default' => 'clockwise'],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 38l. core.message_widget — a floating "message me" button and panel: online status, topic chips, a Forms form.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.message_widget',
+            version: 1,
+            label: 'Message widget',
+            title: 'Message widget',
+            description: 'A floating message button with online status that sends through Forms',
+            category: 'forms',
+            icon: 'form',
+            schema: FieldSchema::define([
+                ['key' => 'launcher_label', 'type' => 'string', 'label' => 'Button text', 'required' => false, 'default' => 'Message me', 'max_length' => 40],
+                ['key' => 'launcher_icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Button icon', 'required' => false, 'default' => 'message-circle'],
+                ['key' => 'position', 'type' => 'enum', 'label' => 'Corner', 'required' => false, 'allowed_values' => MessageWidgetRenderer::POSITIONS, 'default' => 'right'],
+                ['key' => 'title', 'type' => 'string', 'label' => 'Panel title', 'required' => false, 'default' => 'Let’s talk', 'max_length' => 80],
+                ['key' => 'name', 'type' => 'string', 'label' => 'Who answers', 'required' => false, 'default' => '', 'max_length' => 60],
+                ['key' => 'avatar', 'type' => 'media_ref', 'label' => 'Photo', 'required' => false, 'default' => null],
+                ['key' => 'intro', 'type' => 'text', 'label' => 'Intro text', 'required' => false, 'default' => 'Tell me about your project. I usually reply the same day.', 'max_length' => 300],
+                ['key' => 'timezone', 'type' => 'string', 'label' => 'Time zone (e.g. Europe/Brussels)', 'required' => false, 'default' => '', 'max_length' => 60, 'pattern' => MessageWidgetRenderer::ZONE_PATTERN],
+                ['key' => 'hours_start', 'type' => 'string', 'label' => 'Online from (HH:MM)', 'required' => false, 'default' => '09:00', 'max_length' => 5, 'pattern' => '/^$|^([01]\d|2[0-3]):[0-5]\d$/'],
+                ['key' => 'hours_end', 'type' => 'string', 'label' => 'Online until (HH:MM)', 'required' => false, 'default' => '18:00', 'max_length' => 5, 'pattern' => '/^$|^([01]\d|2[0-3]):[0-5]\d$/'],
+                ['key' => 'days', 'type' => 'enum', 'label' => 'Online on', 'required' => false, 'allowed_values' => MessageWidgetRenderer::DAYS, 'default' => 'weekdays'],
+                ['key' => 'online_text', 'type' => 'string', 'label' => 'Online text', 'required' => false, 'default' => 'Online now', 'max_length' => 80],
+                ['key' => 'away_text', 'type' => 'string', 'label' => 'Away text', 'required' => false, 'default' => 'Away · I reply within a day', 'max_length' => 80],
+                ['key' => 'topics', 'type' => 'text', 'label' => 'Topic chips (one per line)', 'required' => false, 'default' => "New website\nRedesign\nSEO\nSomething else", 'max_length' => 600],
+                ['key' => 'topics_label', 'type' => 'string', 'label' => 'Topics heading', 'required' => false, 'default' => 'What is it about?', 'max_length' => 80],
+                ['key' => 'ask_name', 'type' => 'boolean', 'label' => 'Ask for a name', 'required' => false, 'default' => true],
+                ['key' => 'name_label', 'type' => 'string', 'label' => 'Name field label', 'required' => false, 'default' => 'Your name', 'max_length' => 60],
+                ['key' => 'email_label', 'type' => 'string', 'label' => 'Email field label', 'required' => false, 'default' => 'Your email', 'max_length' => 60],
+                ['key' => 'message_label', 'type' => 'string', 'label' => 'Message field label', 'required' => false, 'default' => 'Message', 'max_length' => 60],
+                ['key' => 'message_placeholder', 'type' => 'string', 'label' => 'Message placeholder', 'required' => false, 'default' => '', 'max_length' => 120],
+                ['key' => 'submit_text', 'type' => 'string', 'label' => 'Send button text', 'required' => false, 'default' => 'Send', 'max_length' => 40],
+                ['key' => 'success_message', 'type' => 'text', 'label' => 'Success Message', 'required' => false, 'default' => 'Thanks! I’ll get back to you soon.', 'max_length' => 500],
+                ['key' => 'notify_email', 'type' => 'string', 'label' => 'Email Submissions To', 'required' => false, 'default' => '', 'max_length' => 200],
+                ['key' => 'open_after_seconds', 'type' => 'number', 'label' => 'Open by itself after (seconds, 0 = never)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => MessageWidgetRenderer::MAX_DELAY, 'integer_only' => true],
+                ['key' => 'open_after_scroll', 'type' => 'number', 'label' => 'Open by itself after scrolling (% of the page, 0 = never)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => 100, 'integer_only' => true],
+                ['key' => 'remember_closed', 'type' => 'boolean', 'label' => 'Once closed, stop opening by itself', 'required' => false, 'default' => true],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 38m. core.local_time — the owner's local time, ticking ("Brussels 14:32").
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.local_time',
+            version: 1,
+            label: 'Local time',
+            title: 'Local time',
+            description: 'Your local time, ticking, for a footer',
+            category: 'content',
+            icon: 'timer',
+            schema: FieldSchema::define([
+                ['key' => 'label', 'type' => 'string', 'label' => 'Text before', 'required' => false, 'default' => 'Local time', 'max_length' => 60],
+                ['key' => 'city', 'type' => 'string', 'label' => 'City', 'required' => false, 'default' => '', 'max_length' => 60],
+                ['key' => 'timezone', 'type' => 'string', 'label' => 'Time zone (e.g. Europe/Brussels)', 'required' => false, 'default' => '', 'max_length' => 60, 'pattern' => MessageWidgetRenderer::ZONE_PATTERN],
+                ['key' => 'format', 'type' => 'enum', 'label' => 'Clock', 'required' => false, 'allowed_values' => LocalTimeRenderer::FORMATS, 'default' => '24h'],
+                ['key' => 'seconds', 'type' => 'boolean', 'label' => 'Show seconds', 'required' => false, 'default' => false],
+                ['key' => 'show_offset', 'type' => 'boolean', 'label' => 'Show the GMT offset', 'required' => false, 'default' => false],
             ]),
             allowsChildren: false,
         ));

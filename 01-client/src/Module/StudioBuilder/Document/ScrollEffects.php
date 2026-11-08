@@ -25,6 +25,9 @@ namespace Slate\Module\StudioBuilder\Document;
  *   interactions.text     = {effect: light_words|lines, dim: 5-60 (%), step_ms: 0-400}  light_words lights the words up
  *                            one by one as the node crosses the screen (the rest at `dim` opacity); lines raises each
  *                            line from a mask as the node comes into view, `step_ms` apart
+ *   interactions.text     = {effect: wave, low: 100-900, high: 100-900, radius: 40-600 (px)}  each letter of a
+ *                            variable font grows from the `low` weight to the `high` one as the pointer comes within
+ *                            `radius` of it; on a touch screen the weight rolls through the letters by itself
  *   interactions.stagger  = {step_ms: 20-600}  the entrance animations inside the node play in turn, `step_ms` apart,
  *                            once the node comes into view
  *   interactions.glow     = {color: colour, size: 80-800 (px)}  a soft light follows the pointer over the node
@@ -52,7 +55,9 @@ final class ScrollEffects
     /** Scrolling and mouse effects: the attribute letter of each, and the lowest level it takes (the highest is 10). */
     public const SCROLL_FIELDS = ['vertical' => ['y', -10], 'horizontal' => ['x', -10], 'rotate' => ['r', -10], 'scale' => ['s', -10], 'transparency' => ['o', 0], 'blur' => ['b', 0]];
     public const MOUSE_FIELDS  = ['track' => ['t', -10], 'tilt' => ['i', 0], 'magnet' => ['m', 0]];
-    public const TEXT_EFFECTS  = ['light_words', 'lines'];
+    public const TEXT_EFFECTS  = ['light_words', 'lines', 'wave'];
+    public const WAVE_WEIGHT   = [100, 900];
+    public const WAVE_RADIUS   = [40, 600];
     public const DIM_RANGE     = [5, 60];
     public const TEXT_STEP     = [0, 400];
     public const STAGGER_STEP  = [20, 600];
@@ -91,7 +96,7 @@ final class ScrollEffects
         $shapes = [
             'page_colors' => ['background' => 'colour', 'text' => 'colour'],
             'progress'    => ['edge' => self::EDGES, 'color' => 'colour', 'height' => self::PROGRESS_HEIGHT],
-            'text'        => ['effect' => self::TEXT_EFFECTS, 'dim' => self::DIM_RANGE, 'step_ms' => self::TEXT_STEP],
+            'text'        => ['effect' => self::TEXT_EFFECTS, 'dim' => self::DIM_RANGE, 'step_ms' => self::TEXT_STEP, 'low' => self::WAVE_WEIGHT, 'high' => self::WAVE_WEIGHT, 'radius' => self::WAVE_RADIUS],
             'stagger'     => ['step_ms' => self::STAGGER_STEP],
             'glow'        => ['color' => 'colour', 'size' => self::GLOW_SIZE],
             'marquee'     => ['speed' => self::MARQUEE_SPEED, 'direction' => self::MARQUEE_DIRECTIONS, 'scroll' => 'bool', 'pause' => 'bool', 'width' => self::ITEM_WIDTH],
@@ -381,6 +386,12 @@ final class ScrollEffects
             $attrs .= ' data-sb-text="words:' . (self::field($text, 'dim', self::DIM_RANGE) ?? 18) . '"';
         } elseif ($effect === 'lines') {
             $attrs .= ' data-sb-text="lines:' . (self::field($text, 'step_ms', self::TEXT_STEP) ?? 100) . '"';
+        } elseif ($effect === 'wave') {
+            $low = self::field($text, 'low', self::WAVE_WEIGHT) ?? 300;
+            $high = self::field($text, 'high', self::WAVE_WEIGHT) ?? 800;
+            $attrs .= ' data-sb-wave="' . $low . ',' . $high . ',' . (self::field($text, 'radius', self::WAVE_RADIUS) ?? 160) . '"';
+            $vars[] = '--sb-wave-low:' . $low;
+            $vars[] = '--sb-wave-high:' . $high;
         }
 
         $step = self::field($interactions['stagger'] ?? null, 'step_ms', self::STAGGER_STEP);

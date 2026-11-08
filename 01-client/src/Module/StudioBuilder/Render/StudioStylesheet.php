@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '71';
+    public const VERSION = '72';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -702,6 +702,7 @@ final class StudioStylesheet
         $css .= '@media (max-width:767.98px){.sb-hide-mobile{display:none!important}}';
         $css .= self::scrollEffectsCss();
         $css .= self::blockSetsCss();
+        $css .= self::widgetsCss();
         $css .= self::deviceCountsCss();
         $css .= self::formCss();
         $css .= self::shopCss();
@@ -989,6 +990,67 @@ final class StudioStylesheet
             // Copy to clipboard: the label says so for a moment.
             . '.sb-button.is-copied{opacity:.85}'
             . '@media (prefers-reduced-motion:reduce){.sb-progress__bar,.sb-timeline__steps>.sb-block::before{transition:none}.sb-circle-text__ring{animation:none!important}}';
+    }
+
+    /**
+     * Phase 3 widgets: the message widget (a launcher in a corner and its panel; `:target` opens it without the
+     * runtime) and the local time.
+     */
+    public static function widgetsCss(): string
+    {
+        return '.sb-msg{position:fixed;z-index:60;bottom:1.25rem;display:flex;flex-direction:column;align-items:flex-end;gap:.75rem;max-width:calc(100vw - 2rem)}'
+            . '.sb-msg--right{right:1.25rem}.sb-msg--left{left:1.25rem;align-items:flex-start}'
+            . '.sb-msg__launcher{display:inline-flex;align-items:center;gap:.5rem;position:relative;padding:.75rem 1.1rem;border-radius:999px;background:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff);text-decoration:none;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.18);transition:transform .2s ease}'
+            . '.sb-msg__launcher:hover{transform:translateY(-2px)}'
+            . '.sb-msg__dot,.sb-msg__status-dot{width:.55rem;height:.55rem;border-radius:50%;background:#9ca3af;flex:none}'
+            . '.sb-msg__dot{position:absolute;top:.2rem;right:.2rem;box-shadow:0 0 0 2px var(--sb-color-accent,#111)}'
+            . '.sb-msg.is-online .sb-msg__dot,.sb-msg.is-online .sb-msg__status-dot{background:#22c55e}'
+            . '.sb-msg__panel{width:min(360px,calc(100vw - 2rem));max-height:min(620px,calc(100vh - 7rem));overflow:auto;background:var(--sb-surface-page,#fff);color:var(--sb-text-body,#111);border-radius:1rem;box-shadow:0 24px 60px rgba(0,0,0,.22);border:1px solid var(--sb-border-default,#e5e7eb)}'
+            . '.sb-msg__panel:target{display:block}'
+            . '.sb-msg__panel:not([hidden]){animation:sb-msg-in .25s ease}'
+            . '@keyframes sb-msg-in{from{opacity:0;translate:0 8px;scale:.98}}'
+            . '.sb-msg__head{display:flex;align-items:center;gap:.75rem;padding:1rem 1rem .75rem;border-bottom:1px solid var(--sb-border-default,#e5e7eb)}'
+            . '.sb-msg__avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:none}'
+            . '.sb-msg__who{flex:1;min-width:0}.sb-msg__title{font-size:1rem;margin:0;line-height:1.3}'
+            . '.sb-msg__status{display:flex;align-items:center;gap:.4rem;margin:.15rem 0 0;font-size:.8rem;opacity:.75}'
+            . '.sb-msg__close{display:inline-grid;place-items:center;width:2rem;height:2rem;border-radius:50%;color:inherit}'
+            . '.sb-msg__close:hover{background:rgba(0,0,0,.06)}'
+            . '.sb-msg__body{padding:1rem}.sb-msg__intro{margin:0 0 .75rem;font-size:.9rem}'
+            . '.sb-msg__form{gap:.75rem}'
+            . '.sb-msg__topics .sb-form-choices{flex-direction:row;flex-wrap:wrap;gap:.4rem}'
+            . '.sb-msg__topics legend{width:100%}'
+            . '.sb-msg__chip{position:relative;display:inline-flex}'
+            . '.sb-msg__chip input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}'
+            . '.sb-msg__chip span{padding:.35rem .75rem;border-radius:999px;border:1px solid var(--sb-border-default,#d1d5db);font-size:.85rem}'
+            . '.sb-msg__chip input:checked+span{background:var(--sb-color-accent,#111);border-color:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff)}'
+            . '.sb-msg__chip input:focus-visible+span{outline:2px solid var(--sb-color-accent,#111);outline-offset:2px}'
+            // On the editor canvas the widget sits in the flow with its panel open, so it can be selected and read.
+            . '.sb-msg--editor{position:static;max-width:none;align-items:flex-start}'
+            // Wave text: letters the runtime makes, each set to a weight by the pointer; a touch screen rolls the weight.
+            . '[data-sb-wave-on] .sb-wave__w{white-space:nowrap}'
+            . '[data-sb-wave-on] .sb-wave__l{font-weight:var(--sb-wave-low,300);transition:font-weight .3s ease}'
+            . 'html[data-sb-wave-auto] [data-sb-wave-on] .sb-wave__l{animation:sb-wave 2.8s ease-in-out infinite;animation-delay:calc(var(--i,0) * 70ms)}'
+            . '@keyframes sb-wave{50%{font-weight:var(--sb-wave-high,800)}}'
+            // Query Loop: filter chips, the gap in a numbered pager, and the dialog an item opens in.
+            . '.sb-filter{margin-bottom:1.5rem}'
+            . '.sb-filter__list{display:flex;flex-wrap:wrap;gap:.5rem;list-style:none;margin:0;padding:0}'
+            . '.sb-filter__chip{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .9rem;border-radius:999px;border:1px solid var(--sb-border-default,#e2e8f0);text-decoration:none;color:inherit;font-size:.875rem;transition:background-color .2s ease,color .2s ease,border-color .2s ease}'
+            . '.sb-filter__chip:hover{border-color:currentColor}'
+            . '.sb-filter__chip[aria-current]{background:var(--sb-color-accent,#111);border-color:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff)}'
+            . '.sb-filter__count{font-size:.75em;opacity:.65;font-variant-numeric:tabular-nums}'
+            . '.sb-query-loop [data-sb-terms][hidden]{display:none!important}'
+            . '.sb-pagination__gap{padding:0 .25rem;opacity:.6}'
+            . '.sb-loop-dialog{width:min(960px,calc(100vw - 2rem));max-height:calc(100vh - 2rem);padding:0;border:0;border-radius:1rem;background:var(--sb-surface-page,#fff);color:var(--sb-text-body,#111);box-shadow:0 30px 80px rgba(0,0,0,.35)}'
+            . '.sb-loop-dialog::backdrop{background:rgba(0,0,0,.55)}'
+            . '.sb-loop-dialog__bar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:.5rem;padding:.75rem 1rem;background:inherit;border-bottom:1px solid var(--sb-border-default,#e5e7eb)}'
+            . '.sb-loop-dialog__bar button{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .8rem;border-radius:999px;border:1px solid var(--sb-border-default,#e5e7eb);background:none;color:inherit;font:inherit;font-size:.875rem;cursor:pointer}'
+            . '.sb-loop-dialog__bar button:disabled{opacity:.4;cursor:default}'
+            . '.sb-loop-dialog__close{margin-left:auto}'
+            . '.sb-loop-dialog__body{min-height:12rem}'
+            . '.sb-loop-dialog__body[aria-busy="true"]{opacity:.5}'
+            . '.sb-local-time{margin:0;font-variant-numeric:tabular-nums}'
+            . '.sb-local-time__zone{opacity:.6;font-size:.85em}'
+            . '@media (prefers-reduced-motion:reduce){.sb-msg__panel:not([hidden]){animation:none}.sb-msg__launcher{transition:none}[data-sb-wave-on] .sb-wave__l{animation:none!important}}';
     }
 
     /**

@@ -2406,8 +2406,35 @@ final class StudioApplicationService
             CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE => $this->invalidator->invalidateComponent((string) ($pageRow['uuid'] ?? '')),
             'header_partial' => $this->invalidator->invalidateChrome('header'),
             'footer_partial' => $this->invalidator->invalidateChrome('footer'),
-            default => 0,
+            default => $this->invalidateSiblingItems($pageRow),
         };
+    }
+
+    /**
+     * An item of a content type was published or taken down: the other items' "next / previous item" links may now
+     * point elsewhere, so their compiled pages are rebuilt on their next visit.
+     *
+     * @param array<string, mixed> $pageRow
+     */
+    private function invalidateSiblingItems(array $pageRow): int
+    {
+        $tenantId = (int) ($pageRow['tenant_id'] ?? 0);
+        $pageId = (int) ($pageRow['id'] ?? 0);
+        if ($this->invalidator === null || $tenantId <= 0 || $pageId <= 0) {
+            return 0;
+        }
+        try {
+            $type = PageMeta::read($tenantId, $pageId)['type'];
+            $n = 0;
+            foreach ($type !== '' ? array_slice(PageMeta::pageIdsOfType($tenantId, $type), 0, 500) : [] as $id) {
+                if ($id !== $pageId) {
+                    $n += $this->invalidator->invalidatePage($id);
+                }
+            }
+            return $n;
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
     private function requireLocks(): StudioEditLockService

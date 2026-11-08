@@ -112,6 +112,7 @@ final class FieldValueRenderer implements BlockRendererInterface
                 return $e($choices[(string) $value] ?? $value);
             case 'multiselect':
             case 'checkboxes':
+            case 'terms':
                 return $list(array_map(static fn($v): string => $e($choices[(string) $v] ?? $v), is_array($value) ? $value : []));
             case 'list':
                 return $list(array_map($e, is_array($value) ? $value : []));

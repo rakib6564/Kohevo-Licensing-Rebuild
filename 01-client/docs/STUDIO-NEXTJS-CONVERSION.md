@@ -616,6 +616,13 @@ Part rules are written with `!important`. Custom CSS can't override them, so an 
 | Chapter or section nav that highlights as you read | `interactions.spy` on the menu or the box holding the `#section` links |
 | Copy email or code button | `core.button` with `copy_text` (the link still works without script) |
 | Rotating circular text badge | `core.circle_text` |
+| Floating "message me" chat bubble with online status | `core.message_widget` (sends through Forms; online from `timezone`, `hours_start`/`hours_end`, `days`) |
+| Footer local time | `core.local_time` |
+| Name that thickens under the cursor (variable font) | `interactions.text` with `effect: wave` on the heading |
+| Portfolio filter chips with counts | `core.query_loop` with `filter_field` (a Taxonomy field of the content type, or `category`) |
+| Numbered blog pagination | `core.query_loop` with `pagination_style: numbers` |
+| Case study opening over the grid, with previous/next | `core.query_loop` with `open_in: dialog` |
+| "Next project" link on a case study | Dynamic tags `next_post_title`/`next_post_url` (and `prev_post_*`) on a Button or Heading |
 | Modal | `core.modal` |
 | Carousel, Swiper | `core.carousel`; check it can show the original's content, as slides have a fixed shape |
 | Lightbox | `core.gallery`; `core.video` with `lightbox` |
@@ -636,7 +643,7 @@ Part rules are written with `!important`. Custom CSS can't override them, so an 
 | Page transitions | None; drop and report |
 | Count-up | `core.stats` |
 | Countdown | `core.countdown` |
-| Filter, sort, search on a list | `shop.products` has a filter; `theme.search_box`; otherwise a gap |
+| Filter, sort, search on a list | Query Loop `filter_field` chips; `shop.products` has a filter; `theme.search_box`; otherwise a gap |
 | Video on hover, GSAP timelines, canvas, 3D | Gap or widget; simplify with the owner's agreement |
 
 Entrance animation:
@@ -681,9 +688,18 @@ Page-level motion:
 - `marquee` `{speed: 1-10, direction: left|right, scroll, pause, width}`: the Container's children run past in a loop. `scroll` speeds it up and turns it with the page's scroll; `width` sizes each child (px).
 - `horizontal` `{offset: 0-400, width}`: from 1024px wide, the Container pins `offset` below the top and the page's scroll moves its children sideways. Smaller screens keep the Container's own layout. A Container is a marquee or horizontal, not both.
 - `hover_image` `{size: 120-600}`: each child row's Image is hidden on large screens with a mouse and follows the pointer over its row.
+- `text.effect: wave` `{low, high: 100-900, radius: 40-600}`: each letter's weight rises from `low` to `high` as the pointer comes within `radius` px; touch screens roll the weight through the letters. Set a variable font on the block, or the weights jump.
 - A Dual Color Heading's `rotate_words` (comma separated) replace its coloured part in turn, every `rotate_ms` (1000-10000).
 
 Hover movement runs only on devices that can hover, and only when the visitor allows motion. Keep that behaviour.
+
+**Phase 3 widgets and Query Loop options:**
+
+- `core.message_widget`: a floating button in a corner (`position`) opening a panel with name, photo (`avatar`), intro, online/away line and a form (name if `ask_name`, email, `topics` as chips, message). Publishing the page writes the form into Forms like a `core.form`, so submissions land in Forms › Submissions and `notify_email` gets them. It can open by itself after `open_after_seconds` or `open_after_scroll` %; once a visitor closes it, it stops (`remember_closed`). Without script the button still opens the panel (`#id`) and the form still posts.
+- `core.local_time`: `timezone` (IANA, e.g. `Europe/Brussels`; empty means the server's), `format: 24h|12h`, `seconds`, `show_offset`.
+- Taxonomy: give the content type a field of type `terms` (Taxonomy) listing its terms as choices, and tick them on each item. Any choice field (`select`, `radio`, `multiselect`, `checkboxes`) works too.
+- `core.query_loop`: `filter_field` (that field's key, or `category`), `filter_all_label`, `filter_counts`; when every item fits on one page the chips filter in place, otherwise each chip loads `?filter=<term>`. `pagination_style: numbers` counts the items and links each page. `open_in: dialog` opens an item's page over the list (its `<main>` and styles; scripts on that page do not run), with previous/next and Back to close.
+- Dynamic tags `next_post_title`, `next_post_url`, `prev_post_title`, `prev_post_url`: the items after and before this one of the same content type, in list order (newest first), wrapping round.
 
 **Small scripts:** a footer snippet can add a script to public pages (`studio_code_footer_snippet`, `script` allowed, 32 KB). It doesn't run in the editor or in Preview. Use one only for small, reported behaviour, such as an analytics event, that doesn't change layout.
 

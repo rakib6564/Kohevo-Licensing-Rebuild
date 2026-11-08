@@ -19,6 +19,7 @@ namespace Slate\Module\StudioBuilder\Service;
 use Slate\Data\Database;
 use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\FormFieldRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MessageWidgetRenderer;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 
 final class StudioFormSync
@@ -54,6 +55,11 @@ final class StudioFormSync
                     $out[] = $block;
                     continue;
                 }
+                // A message widget carries a form of its own, built from its settings.
+                if (($block['type'] ?? '') === 'core.message_widget') {
+                    $out[] = $block;
+                    continue;
+                }
                 $walk(is_array($block['children'] ?? null) ? $block['children'] : []);
             }
         };
@@ -71,6 +77,18 @@ final class StudioFormSync
     public static function definitionFor(array $form, string $pageTitle = ''): array
     {
         $props = is_array($form['props'] ?? null) ? $form['props'] : [];
+        if (($form['type'] ?? '') === 'core.message_widget') {
+            $email = trim((string) ($props['notify_email'] ?? ''));
+            return [
+                'slug'            => self::slugFor((string) ($form['id'] ?? '')),
+                'title'           => mb_substr(trim(($pageTitle !== '' ? $pageTitle . ' · ' : '') . 'Message widget'), 0, 200),
+                'fields'          => MessageWidgetRenderer::formFields($props),
+                'submit_label'    => mb_substr(trim((string) ($props['submit_text'] ?? 'Send')) ?: 'Send', 0, 80),
+                'success_message' => trim((string) ($props['success_message'] ?? '')),
+                'redirect_url'    => null,
+                'notify_email'    => $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) !== false ? $email : null,
+            ];
+        }
         $fields = [];
         $walk = static function (array $blocks) use (&$walk, &$fields): void {
             foreach ($blocks as $block) {

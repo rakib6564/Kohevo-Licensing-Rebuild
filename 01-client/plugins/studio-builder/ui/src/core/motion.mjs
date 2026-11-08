@@ -237,7 +237,9 @@ export function normalizeParallax(raw) {
 
 // ── Page-level motion (ScrollEffects.php holds the same ranges) ──
 
-export const TEXT_EFFECTS = Object.freeze(['light_words', 'lines']);
+export const TEXT_EFFECTS = Object.freeze(['light_words', 'lines', 'wave']);
+export const WAVE_WEIGHT = Object.freeze({ min: 100, max: 900, low: 300, high: 800 });
+export const WAVE_RADIUS = Object.freeze({ min: 40, max: 600, default: 160 });
 export const TEXT_DIM = Object.freeze({ min: 5, max: 60, default: 18 });
 export const TEXT_STEP = Object.freeze({ min: 0, max: 400, default: 100 });
 export const STAGGER_STEP = Object.freeze({ min: 20, max: 600, default: 80 });
@@ -280,6 +282,13 @@ export function normalizeTextEffect(raw) {
   if (raw.effect === 'light_words') {
     const dim = whole(raw.dim, TEXT_DIM);
     if (dim !== undefined) out.dim = dim;
+  } else if (raw.effect === 'wave') {
+    const low = whole(raw.low, WAVE_WEIGHT);
+    const high = whole(raw.high, WAVE_WEIGHT);
+    const radius = whole(raw.radius, WAVE_RADIUS);
+    if (low !== undefined) out.low = low;
+    if (high !== undefined) out.high = high;
+    if (radius !== undefined) out.radius = radius;
   } else {
     const step = whole(raw.step_ms, TEXT_STEP);
     if (step !== undefined) out.step_ms = step;

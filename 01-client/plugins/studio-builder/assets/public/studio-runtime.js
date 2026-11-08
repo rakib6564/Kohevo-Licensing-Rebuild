@@ -1249,6 +1249,405 @@
   }
 
 
+/* ── Feature: Query Loop filter chips ────────────────────────────────────
+   * `[data-sb-filter-local]`: the loop holds every item, so a chip shows its term's items in place (the others are
+   * hidden, their `data-sb-terms` not holding it) instead of loading `?filter=…`; the address follows, so a reload or a
+   * shared link shows the same. A loop with more items than one page keeps its links.
+   */
+
+  function initLoopFilters(root) {
+    var loops = qsa(root, '[data-sb-filter-local]');
+    if (!loops.length) return;
+    var offs = [];
+    loops.forEach(function (loop) {
+      var chips = qsa(loop, '[data-sb-filter-term]');
+      var items = qsa(loop, '[data-sb-terms]');
+      var server = items.map(function (it) { return it.hidden; });
+      var serverChip = chips.filter(function (c) { return c.hasAttribute('aria-current'); })[0] || null;
+      function show(term) {
+        chips.forEach(function (c) {
+          if (c.getAttribute('data-sb-filter-term') === term) c.setAttribute('aria-current', 'true');
+          else c.removeAttribute('aria-current');
+        });
+        items.forEach(function (it) {
+          var terms = [];
+          try { terms = JSON.parse(it.getAttribute('data-sb-terms') || '[]'); } catch (e) { terms = []; }
+          it.hidden = term !== '' && terms.indexOf(term) === -1;
+        });
+      }
+      chips.forEach(function (chip) {
+        offs.push(on(chip, 'click', function (e) {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return;
+          e.preventDefault();
+          var term = chip.getAttribute('data-sb-filter-term') || '';
+          show(term);
+          if (global.history && history.replaceState && global.URL) {
+            var url = new URL(global.location.href);
+            if (term) url.searchParams.set('filter', term); else url.searchParams.delete('filter');
+            history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+          }
+        }));
+      });
+      offs.push(function () {
+        items.forEach(function (it, i) { it.hidden = server[i]; });
+        chips.forEach(function (c) { if (c === serverChip) c.setAttribute('aria-current', 'true'); else c.removeAttribute('aria-current'); });
+      });
+    });
+    mount(function () { offs.forEach(function (off) { off(); }); });
+  }
+
+  /* ── Feature: Query Loop items in a dialog ───────────────────────────────
+   * `[data-sb-loop-dialog]`: a click on an item's link (to its `data-sb-item-url`) opens that item's page in a modal
+   * <dialog> over this one instead of leaving: the runtime fetches the page and shows its `<main>`, adding the styles
+   * that page needs. Previous / Next walk the loop's visible items; the address follows the item (Back closes the
+   * dialog), Escape and the close button go back to the list. A modified click, a failed fetch, or a browser without
+   * <dialog> just follows the link. Scripts on the item's page do not run in the dialog.
+   */
+
+  function initLoopDialogs(root) {
+    var loops = qsa(root, '[data-sb-loop-dialog]');
+    if (!loops.length || !global.fetch || !global.DOMParser || typeof global.HTMLDialogElement !== 'function') return;
+    var offs = [];
+    var added = [];
+    var cache = {};
+
+    function sameOrigin(url) {
+      try { return new URL(url, global.location.href).origin === global.location.origin; } catch (e) { return false; }
+    }
+    function load(url) {
+      if (!cache[url]) {
+        cache[url] = fetch(url, { credentials: 'same-origin', headers: { Accept: 'text/html' } })
+          .then(function (r) { if (!r.ok) throw new Error('item ' + r.status); return r.text(); })
+          .then(function (html) { return new DOMParser().parseFromString(html, 'text/html'); })
+          .catch(function (err) { delete cache[url]; throw err; });
+      }
+      return cache[url];
+    }
+    // The item page's own styles that this page lacks, added once.
+    function adoptStyles(doc) {
+      qsa(doc.head || doc, 'style, link[rel="stylesheet"]').forEach(function (node) {
+        var key = node.tagName === 'LINK' ? 'l:' + node.href : 's:' + node.textContent.length + ':' + node.textContent.slice(0, 200);
+        var exists = node.tagName === 'LINK'
+          ? qsa(document.head, 'link[rel="stylesheet"]').some(function (l) { return l.href === node.href; })
+          : qsa(document.head, 'style').some(function (st) { return st.textContent === node.textContent; });
+        if (exists || added.some(function (a) { return a.key === key; })) return;
+        var copy = document.importNode(node, true);
+        copy.setAttribute('data-sb-dialog-css', '');
+        document.head.appendChild(copy);
+        added.push({ key: key, node: copy });
+      });
+    }
+
+    loops.forEach(function (loop) {
+      var dialog = document.createElement('dialog');
+      dialog.className = 'sb-loop-dialog';
+      var bar = document.createElement('div');
+      bar.className = 'sb-loop-dialog__bar';
+      var button = function (cls, text) { var b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = text; bar.appendChild(b); return b; };
+      var prev = button('sb-loop-dialog__prev', '← ' + (loop.getAttribute('data-sb-label-prev') || 'Previous'));
+      var next = button('sb-loop-dialog__next', (loop.getAttribute('data-sb-label-next') || 'Next') + ' →');
+      var close = button('sb-loop-dialog__close', loop.getAttribute('data-sb-label-close') || 'Close');
+      var body = document.createElement('div');
+      body.className = 'sb-loop-dialog__body';
+      dialog.appendChild(bar);
+      dialog.appendChild(body);
+      document.body.appendChild(dialog);
+      var current = -1;
+      var opener = null;
+      // The item's address is pushed once when the dialog opens (Previous / Next replace it), so Back closes it.
+      var pushed = false;
+      var byHistory = false;
+
+      function visible() {
+        return qsa(loop, '[data-sb-item-url]').filter(function (it) { return !it.hidden && it.getAttribute('data-sb-item-url'); });
+      }
+      function show(index, push) {
+        var list = visible();
+        if (index < 0 || index >= list.length) return;
+        current = index;
+        var url = list[index].getAttribute('data-sb-item-url');
+        prev.disabled = index === 0;
+        next.disabled = index === list.length - 1;
+        body.setAttribute('aria-busy', 'true');
+        if (!dialog.open) dialog.showModal();
+        if (global.history && history.pushState) {
+          if (push) { history.pushState({ sbLoopDialog: true }, '', url); pushed = true; }
+          else if (pushed) history.replaceState({ sbLoopDialog: true }, '', url);
+        }
+        load(url).then(function (doc) {
+          if (current !== index) return;
+          adoptStyles(doc);
+          var main = doc.querySelector('main#main') || doc.querySelector('main') || doc.body;
+          body.innerHTML = main ? main.innerHTML : '';
+          var title = doc.querySelector('h1');
+          dialog.setAttribute('aria-label', (title ? title.textContent : doc.title || '').trim());
+          body.removeAttribute('aria-busy');
+          dialog.scrollTop = 0;
+          close.focus();
+        }, function () {
+          global.location.assign(url);
+        });
+      }
+      function shut() {
+        if (dialog.open) dialog.close();
+      }
+      offs.push(on(dialog, 'close', function () {
+        body.innerHTML = '';
+        current = -1;
+        if (pushed && !byHistory) history.back();
+        pushed = false;
+        byHistory = false;
+        if (opener && opener.focus) opener.focus();
+      }));
+      offs.push(on(dialog, 'click', function (e) { if (e.target === dialog) shut(); }));
+      offs.push(on(prev, 'click', function () { show(current - 1, false); }));
+      offs.push(on(next, 'click', function () { show(current + 1, false); }));
+      offs.push(on(close, 'click', function () { shut(); }));
+      offs.push(on(global, 'popstate', function () { if (dialog.open) { byHistory = true; dialog.close(); } }));
+      offs.push(on(loop, 'click', function (e) {
+        if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button > 0) return;
+        var link = e.target.closest ? e.target.closest('a[href]') : null;
+        var item = link && link.closest('[data-sb-item-url]');
+        if (!item || !loop.contains(item) || !sameOrigin(link.href)) return;
+        var target = new URL(item.getAttribute('data-sb-item-url'), global.location.href);
+        if (new URL(link.href).pathname !== target.pathname) return;
+        e.preventDefault();
+        opener = link;
+        show(visible().indexOf(item), true);
+      }));
+      offs.push(function () { if (dialog.open) dialog.close(); dialog.remove(); });
+    });
+    mount(function () {
+      offs.forEach(function (off) { off(); });
+      added.forEach(function (a) { a.node.remove(); });
+    });
+  }
+
+/* ── Feature: wave text ──────────────────────────────────────────────────
+   * `[data-sb-wave="low,high,radius"]`: the text is split into letters (words kept whole so lines break as before; the
+   * full text stays for screen readers in a hidden copy). With a mouse, each letter's weight rises from `low` toward
+   * `high` as the pointer comes within `radius` px of it; on a touch screen the stylesheet rolls the weight through the
+   * letters. Needs a variable font to look smooth; a static font jumps between its weights. Off with reduced motion.
+   */
+
+  function initWave(root) {
+    var els = qsa(root, '[data-sb-wave]');
+    if (!els.length || reducedMotion()) return;
+    var offs = [];
+    var waves = [];
+    els.forEach(function (el) {
+      var parts = (el.getAttribute('data-sb-wave') || '').split(',').map(Number);
+      var low = clamp(parts[0] || 300, 100, 900), high = clamp(parts[1] || 800, 100, 900), radius = clamp(parts[2] || 160, 40, 600);
+      var original = el.innerHTML;
+      var i = 0;
+      var hide = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap';
+      // Each word: its text for screen readers, and its letters (hidden from them) for the eye. Tags stay where they were.
+      var splitText = function (node) {
+        var frag = document.createDocumentFragment();
+        node.nodeValue.split(/(\s+)/).forEach(function (chunk) {
+          if (!chunk) return;
+          if (/^\s+$/.test(chunk)) { frag.appendChild(document.createTextNode(chunk)); return; }
+          var word = document.createElement('span');
+          word.className = 'sb-wave__w';
+          var sr = document.createElement('span');
+          sr.style.cssText = hide;
+          sr.textContent = chunk;
+          var shown = document.createElement('span');
+          shown.setAttribute('aria-hidden', 'true');
+          Array.from(chunk).forEach(function (ch) {
+            var l = document.createElement('span');
+            l.className = 'sb-wave__l';
+            l.textContent = ch;
+            l.style.setProperty('--i', String(i++));
+            shown.appendChild(l);
+          });
+          word.appendChild(sr);
+          word.appendChild(shown);
+          frag.appendChild(word);
+        });
+        node.parentNode.replaceChild(frag, node);
+      };
+      (function walk(node) {
+        var child = node.firstChild;
+        while (child) {
+          var next = child.nextSibling;
+          if (child.nodeType === 3) {
+            if (child.nodeValue.trim()) splitText(child);
+          } else if (child.nodeType === 1 && !/^(script|style|svg|br|img|video|iframe|input|textarea|select|button)$/i.test(child.nodeName)) {
+            walk(child);
+          }
+          child = next;
+        }
+      })(el);
+      el.setAttribute('data-sb-wave-on', '');
+      waves.push({ el: el, letters: qsa(el, '.sb-wave__l'), low: low, high: high, radius: radius });
+      offs.push(function () { el.innerHTML = original; el.removeAttribute('data-sb-wave-on'); });
+    });
+
+    if (global.matchMedia && global.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      var x = -1e4, y = -1e4, frame = 0;
+      var draw = function () {
+        frame = 0;
+        waves.forEach(function (w) {
+          var r = w.el.getBoundingClientRect();
+          var near = x > r.left - w.radius && x < r.right + w.radius && y > r.top - w.radius && y < r.bottom + w.radius;
+          if (!near && !w.lit) return;
+          w.lit = near;
+          w.letters.forEach(function (l) {
+            if (!near) { l.style.fontWeight = ''; return; }
+            var b = l.getBoundingClientRect();
+            var d = Math.hypot(x - (b.left + b.width / 2), y - (b.top + b.height / 2));
+            l.style.fontWeight = String(Math.round(w.low + (w.high - w.low) * Math.max(0, 1 - d / w.radius)));
+          });
+        });
+      };
+      offs.push(on(global, 'pointermove', function (e) { x = e.clientX; y = e.clientY; if (!frame) frame = global.requestAnimationFrame(draw); }, { passive: true }));
+      offs.push(on(document, 'pointerleave', function () { x = y = -1e4; if (!frame) frame = global.requestAnimationFrame(draw); }));
+      offs.push(function () { if (frame) global.cancelAnimationFrame(frame); });
+    } else {
+      document.documentElement.setAttribute('data-sb-wave-auto', '');
+      offs.push(function () { document.documentElement.removeAttribute('data-sb-wave-auto'); });
+    }
+    mount(function () { offs.forEach(function (off) { off(); }); });
+  }
+
+/* ── Feature: message widget ─────────────────────────────────────────────
+   * `[data-sb-msg]`: the launcher opens and closes its panel (the link's `#id` and `:target` already do without this),
+   * Escape closes it and gives focus back, a topic chip is a radio (no script needed). It opens by itself after
+   * `data-sb-open-after` seconds or `data-sb-open-scroll` % of the page, once; a visitor who closed it is not asked
+   * again (`data-sb-msg-remember`, kept in localStorage). The online dot and text follow the owner's hours in their
+   * time zone, checked every minute, as the cached page's own answer goes stale.
+   */
+
+  /** Weekday (1 = Monday) and minute of the day now in a time zone, or null when the browser does not know it. */
+  function zonedNow(zone) {
+    try {
+      var parts = new Intl.DateTimeFormat('en-GB', { timeZone: zone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+      var get = function (type) { var p = parts.filter(function (x) { return x.type === type; })[0]; return p ? p.value : ''; };
+      var day = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(get('weekday')) + 1;
+      return day ? { day: day, minute: (parseInt(get('hour'), 10) % 24) * 60 + parseInt(get('minute'), 10) } : null;
+    } catch (e) { return null; }
+  }
+
+  /** Same rule as MessageWidgetRenderer::isOnline: an end before the start runs past midnight. */
+  function onlineAt(now, hours, days) {
+    var m = /^(\d\d):(\d\d)-(\d\d):(\d\d)$/.exec(hours || '');
+    if (!now || !m) return null;
+    var from = +m[1] * 60 + +m[2];
+    var to = +m[3] * 60 + +m[4];
+    var on = function (d) { return days.indexOf(d) !== -1; };
+    if (from === to) return on(now.day);
+    if (from < to) return on(now.day) && now.minute >= from && now.minute < to;
+    return (on(now.day) && now.minute >= from) || (on(now.day === 1 ? 7 : now.day - 1) && now.minute < to);
+  }
+
+  function initMessageWidgets(root) {
+    var widgets = qsa(root, '[data-sb-msg]').filter(function (w) { return !w.classList.contains('sb-msg--editor'); });
+    if (!widgets.length) return;
+    var offs = [];
+    var timers = [];
+    widgets.forEach(function (w) {
+      var panel = qs(w, '.sb-msg__panel');
+      var launcher = qs(w, '[data-sb-msg-open]');
+      if (!panel || !launcher) return;
+      var key = 'sb-msg-closed:' + panel.id;
+      var remember = w.hasAttribute('data-sb-msg-remember');
+      var closedBefore = false;
+      try { closedBefore = remember && global.localStorage.getItem(key) === '1'; } catch (e) { closedBefore = false; }
+
+      function open(focus) {
+        panel.hidden = false;
+        launcher.setAttribute('aria-expanded', 'true');
+        w.classList.add('is-open');
+        if (focus) { var first = qs(panel, 'input:not([type="hidden"]):not([tabindex="-1"]),textarea'); if (first) first.focus(); }
+      }
+      function close(byVisitor) {
+        panel.hidden = true;
+        launcher.setAttribute('aria-expanded', 'false');
+        w.classList.remove('is-open');
+        if (global.location.hash === '#' + panel.id && global.history && history.replaceState) history.replaceState(null, '', global.location.pathname + global.location.search);
+        if (byVisitor && remember) { try { global.localStorage.setItem(key, '1'); } catch (e) { /* this view only */ } }
+      }
+      if (global.location.hash === '#' + panel.id) open(false);
+      var server = { online: w.classList.contains('is-online'), text: null };
+      offs.push(function () {
+        panel.hidden = true;
+        launcher.setAttribute('aria-expanded', 'false');
+        w.classList.remove('is-open');
+        w.classList.toggle('is-online', server.online);
+        w.classList.toggle('is-away', !server.online);
+        if (server.text !== null && text) text.textContent = server.text;
+      });
+
+      offs.push(on(launcher, 'click', function (e) {
+        e.preventDefault();
+        if (panel.hidden) open(true); else { close(true); launcher.focus(); }
+      }));
+      qsa(panel, '[data-sb-msg-close]').forEach(function (b) {
+        offs.push(on(b, 'click', function (e) { e.preventDefault(); close(true); launcher.focus(); }));
+      });
+      offs.push(on(document, 'keydown', function (e) {
+        if (e.key === 'Escape' && !panel.hidden) { close(true); launcher.focus(); }
+      }));
+
+      // Opening by itself: once, and never for a visitor who closed it.
+      var auto = function () { if (panel.hidden && !closedBefore && !w.__sbAutoOpened) { w.__sbAutoOpened = true; open(false); } };
+      var delay = parseInt(w.getAttribute('data-sb-open-after') || '0', 10);
+      if (delay > 0 && !closedBefore) timers.push(global.setTimeout(auto, delay * 1000));
+      var share = parseInt(w.getAttribute('data-sb-open-scroll') || '0', 10);
+      if (share > 0 && !closedBefore) {
+        offs.push(on(global, 'scroll', function () {
+          var max = document.documentElement.scrollHeight - global.innerHeight;
+          if (max > 0 && global.scrollY / max * 100 >= share) auto();
+        }, { passive: true }));
+      }
+
+      // Online status, in the owner's zone.
+      var zone = w.getAttribute('data-sb-tz') || '';
+      var days = (w.getAttribute('data-sb-days') || '').split(',').map(Number);
+      var status = qs(w, '[data-sb-msg-status]');
+      var text = status && qs(status, '[data-sb-msg-status-text]');
+      var who = w.getAttribute('data-sb-who') || '';
+      if (text) server.text = text.textContent;
+      var tick = function () {
+        var online = onlineAt(zonedNow(zone), w.getAttribute('data-sb-hours'), days);
+        if (online === null) return;
+        w.classList.toggle('is-online', online);
+        w.classList.toggle('is-away', !online);
+        if (text) text.textContent = (who ? who + ' · ' : '') + status.getAttribute(online ? 'data-sb-online' : 'data-sb-away');
+      };
+      tick();
+      timers.push(global.setInterval(tick, 60000));
+    });
+    mount(function () {
+      offs.forEach(function (off) { off(); });
+      timers.forEach(function (t) { global.clearTimeout(t); global.clearInterval(t); });
+    });
+  }
+
+  /* ── Feature: local time ─────────────────────────────────────────────────
+   * `[data-sb-clock]` shows the time in its `data-sb-tz`, ticking each second (or minute); the server's time stays
+   * when the browser does not know the zone.
+   */
+
+  function initClocks(root) {
+    var clocks = qsa(root, '[data-sb-clock]');
+    if (!clocks.length || !global.Intl) return;
+    var timers = [];
+    clocks.forEach(function (el) {
+      var seconds = el.hasAttribute('data-sb-seconds');
+      var fmt;
+      try {
+        fmt = new Intl.DateTimeFormat('en-US', { timeZone: el.getAttribute('data-sb-tz') || undefined, hour: el.hasAttribute('data-sb-h12') ? 'numeric' : '2-digit', minute: '2-digit', second: seconds ? '2-digit' : undefined, hourCycle: el.hasAttribute('data-sb-h12') ? 'h12' : 'h23' });
+      } catch (e) { return; }
+      var draw = function () { el.textContent = fmt.format(new Date()); };
+      draw();
+      timers.push(global.setInterval(draw, seconds ? 1000 : 15000));
+    });
+    mount(function () { timers.forEach(function (t) { global.clearInterval(t); }); });
+  }
+
+
 /* ── Feature: click and scroll interaction triggers ──────────────────────
    * The renderer marks a block with `data-sb-interaction-trigger`.
    *   click:  each click (re)plays the block's chosen animation: data-sb-play is removed, a reflow restarts
@@ -3358,6 +3757,7 @@
     ['page-colors', initPageColors],
     ['progress', initProgress],
     ['text-effects', initTextEffects],
+    ['wave', initWave],
     ['rotate', initRotate],
     ['glow', initGlow],
     ['smooth-scroll', initSmoothScroll],
@@ -3381,6 +3781,10 @@
     ['countdown', initCountdown],
     ['urlFill', initUrlFill],
     ['forms', initForms],
+    ['loopFilters', initLoopFilters],
+    ['loopDialogs', initLoopDialogs],
+    ['messageWidgets', initMessageWidgets],
+    ['clocks', initClocks],
     ['fragments', initFragments],
     ['variants', initVariants],
     ['shopGrid', initShopGrid],
