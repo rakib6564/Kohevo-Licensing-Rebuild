@@ -71,3 +71,12 @@ test('a device style takes its own line height and letter spacing, checked like 
   assert.equal(deviceAccepts('typography.letter_spacing', '-1.5px'), true);
   assert.equal(deviceAccepts('typography.letter_spacing', 'red'), false);
 });
+
+test('grid tracks may be as many columns as fit, as the server takes them', async () => {
+  const { isTracks, tracksCss } = await import('../src/core/styleSurface.mjs');
+  assert.equal(isTracks('repeat(auto-fit, minmax(220px, 1fr))'), true);
+  assert.equal(isTracks('repeat(auto-fill,minmax(14rem,1fr))'), true);
+  assert.equal(isTracks('repeat(3, 1fr)'), false);
+  assert.equal(isTracks('repeat(auto-fit, minmax(220px, 1fr)) 1fr'), false);
+  assert.equal(tracksCss('repeat(auto-fit, minmax(220px, 1fr))'), 'repeat(auto-fit,minmax(220px,1fr))');
+});

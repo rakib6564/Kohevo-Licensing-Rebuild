@@ -54,12 +54,15 @@ export function isMeasure(v, allowAuto = false) {
 
 /**
  * Grid column sizes (StyleSurface::isTracks): 1-12 tracks separated by spaces, each `auto`, `min-content`, `max-content`,
- * `<n>fr`, a plain length (px, rem, em, %, vw) or `minmax(a,b)` of two of those.
+ * `<n>fr`, a plain length (px, rem, em, %, vw) or `minmax(a,b)` of two of those; or as many columns as fit,
+ * `repeat(auto-fit|auto-fill, minmax(<length>, <size>))`.
  */
 export function isTracks(v) {
   if (typeof v !== 'string' || v.length > 200) return false;
   const one = '(?:auto|min-content|max-content|0|(?:\\d{1,4}(?:\\.\\d{1,3})?|\\.\\d{1,3})(?:fr|px|rem|em|%|vw))';
   const track = new RegExp(`^(?:${one}|minmax\\(\\s*${one}\\s*,\\s*${one}\\s*\\))$`);
+  // As many columns as fit, each at least a size: `repeat(auto-fit, minmax(220px, 1fr))`.
+  if (new RegExp(`^repeat\\(\\s*auto-(?:fit|fill)\\s*,\\s*minmax\\(\\s*\\d{1,4}(?:\\.\\d{1,3})?(?:px|rem|em)\\s*,\\s*${one}\\s*\\)\\s*\\)$`).test(v.trim())) return true;
   const tracks = v.trim().split(/\s+(?![^(]*\))/);
   return tracks.length >= 1 && tracks.length <= 12 && tracks[0] !== '' && tracks.every((t) => track.test(t));
 }

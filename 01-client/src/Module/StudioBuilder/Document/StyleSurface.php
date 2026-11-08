@@ -482,6 +482,10 @@ final class StyleSurface
         }
         $one = '(?:auto|min-content|max-content|0|(?:\d{1,4}(?:\.\d{1,3})?|\.\d{1,3})(?:fr|px|rem|em|%|vw))';
         $track = '(?:' . $one . '|minmax\(\s*' . $one . '\s*,\s*' . $one . '\s*\))';
+        // As many columns as fit, each at least a size: `repeat(auto-fit, minmax(220px, 1fr))` (a card grid that wraps).
+        if (preg_match('/^repeat\(\s*auto-(?:fit|fill)\s*,\s*minmax\(\s*(?:\d{1,4}(?:\.\d{1,3})?)(?:px|rem|em)\s*,\s*' . $one . '\s*\)\s*\)$/', trim($v)) === 1) {
+            return true;
+        }
         $tracks = preg_split('/\s+(?![^(]*\))/', trim($v)) ?: [];
         if ($tracks === [] || count($tracks) > 12) {
             return false;

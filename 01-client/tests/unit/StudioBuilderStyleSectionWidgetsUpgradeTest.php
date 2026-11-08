@@ -223,3 +223,10 @@ unit('progress: a row can show its own value, and the label, bar and value can s
     assert_true(str_contains($html, '<span class="sb-progress__value">72 &lt;b&gt;</span>') && str_contains($html, '<span class="sb-progress__value">10%</span>'), 'own value, escaped; else the share');
     assert_true(str_contains(sbsm_render(sbpm_box([sbpm_block('core.progress', ['items' => [['label' => 'A', 'value' => 5]]])])), '<div class="sb-progress" data-sb-progress-bars'), 'stacked by default');
 });
+
+unit('grid tracks: as many columns as fit, each at least a size, and nothing looser', function (): void {
+    assert_true(StyleSurface::isTracks('repeat(auto-fit, minmax(220px, 1fr))') && StyleSurface::isTracks('repeat(auto-fill,minmax(14rem,1fr))'), 'auto-fit and auto-fill');
+    foreach (['repeat(3, 1fr)', 'repeat(auto-fit, minmax(220px, 1fr)) 1fr', 'repeat(auto-fit, minmax(calc(1px), 1fr))', 'repeat(auto-fit, minmax(220px, 1fr));x:y'] as $bad) {
+        assert_true(!StyleSurface::isTracks($bad), $bad);
+    }
+});
