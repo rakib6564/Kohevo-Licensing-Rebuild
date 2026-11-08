@@ -99,7 +99,9 @@ final class OffcanvasRenderer implements BlockRendererInterface
         if ($showText && $text !== '') {
             $inner .= '<span class="sb-offcanvas-trigger__label">' . Html::e($text) . '</span>';
         }
-        $classes = ['sb-offcanvas-trigger', 'sb-button', 'sb-button--' . $variant, $icon !== '' ? 'sb-offcanvas-trigger--icon' : ''];
+        // With an icon, the text can give way to it on a phone; it stays for screen readers.
+        $classes = ['sb-offcanvas-trigger', 'sb-button', 'sb-button--' . $variant, $icon !== '' ? 'sb-offcanvas-trigger--icon' : '',
+            $icon !== '' && $showText && $text !== '' && !$scope->bool('trigger_text_mobile', true) ? 'sb-offcanvas-trigger--icon-sm' : ''];
         return '<a href="#' . Html::e($drawerId) . '"' . Html::classAttr($classes) . ' data-sb-offcanvas-open="' . Html::e($drawerId) . '"'
             . (!$showText || $text === '' ? ' aria-label="' . Html::e($label) . '"' : '')
             . ' aria-controls="' . Html::e($drawerId) . '">'

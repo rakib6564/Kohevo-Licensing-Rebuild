@@ -23,6 +23,7 @@ use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MegaMenuRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\NavChrome;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\LocalTimeRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MessageWidgetRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\TestimonialGridRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\QueryLoopRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\TabSetRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\VideoRenderer;
@@ -746,6 +747,7 @@ final class BlockRegistry
                 ['key' => 'trigger_icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Trigger Icon', 'required' => false, 'default' => 'none'],
                 ['key' => 'trigger_icon_size', 'type' => 'number', 'label' => 'Trigger Icon Size', 'required' => false, 'default' => 24, 'min' => 12, 'max' => 64, 'integer_only' => true],
                 ['key' => 'trigger_show_text', 'type' => 'boolean', 'label' => 'Show the trigger text', 'required' => false, 'default' => true],
+                ['key' => 'trigger_text_mobile', 'type' => 'boolean', 'label' => 'Show the trigger text on phones', 'required' => false, 'default' => true],
             ]),
             allowsChildren: true,
         ));
@@ -1581,6 +1583,66 @@ final class BlockRegistry
                 ['key' => 'format', 'type' => 'enum', 'label' => 'Clock', 'required' => false, 'allowed_values' => LocalTimeRenderer::FORMATS, 'default' => '24h'],
                 ['key' => 'seconds', 'type' => 'boolean', 'label' => 'Show seconds', 'required' => false, 'default' => false],
                 ['key' => 'show_offset', 'type' => 'boolean', 'label' => 'Show the GMT offset', 'required' => false, 'default' => false],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 38n. core.testimonial_grid — testimonials in a grid that pages like a carousel: a count, numbered pages and arrows,
+        // cards with a quote mark, stars, clamped text with "read full review" in a dialog, and an initials avatar. The
+        // testimonials come from a content type (one item each, its fields mapped here) or are typed on the block.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.testimonial_grid',
+            version: 1,
+            label: 'Testimonial grid',
+            title: 'Testimonial grid',
+            description: 'Reviews in a grid that pages like a carousel, from a content type or typed in',
+            category: 'content',
+            icon: 'quotes',
+            schema: FieldSchema::define([
+                ['key' => 'source', 'type' => 'enum', 'label' => 'Testimonials from', 'required' => false, 'allowed_values' => ['items', 'content_type'], 'default' => 'items'],
+                ['key' => 'content_type', 'type' => 'string', 'label' => 'Content type', 'required' => false, 'default' => '', 'max_length' => 40, 'pattern' => '/^([a-z][a-z0-9_-]{0,39})?$/'],
+                ['key' => 'text_field', 'type' => 'string', 'label' => 'Review text field', 'required' => false, 'default' => 'text', 'max_length' => 64, 'pattern' => TestimonialGridRenderer::FIELD_PATTERN],
+                ['key' => 'rating_field', 'type' => 'string', 'label' => 'Rating field (0 to 5)', 'required' => false, 'default' => 'rating', 'max_length' => 64, 'pattern' => TestimonialGridRenderer::FIELD_PATTERN],
+                ['key' => 'meta_fields', 'type' => 'string', 'label' => 'Detail fields under the name (comma-separated)', 'required' => false, 'default' => 'country', 'max_length' => 200, 'pattern' => '/^[a-z0-9_, ]{0,200}$/'],
+                ['key' => 'date_field', 'type' => 'string', 'label' => 'Date field', 'required' => false, 'default' => '', 'max_length' => 64, 'pattern' => TestimonialGridRenderer::FIELD_PATTERN],
+                ['key' => 'photo_field', 'type' => 'string', 'label' => 'Photo field (initials without one)', 'required' => false, 'default' => '', 'max_length' => 64, 'pattern' => TestimonialGridRenderer::FIELD_PATTERN],
+                ['key' => 'order', 'type' => 'enum', 'label' => 'Order', 'required' => false, 'allowed_values' => TestimonialGridRenderer::ORDERS, 'default' => 'newest'],
+                ['key' => 'min_length', 'type' => 'number', 'label' => 'Only reviews at least this long (characters)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => 2000, 'integer_only' => true],
+                ['key' => 'limit', 'type' => 'number', 'label' => 'Most reviews shown', 'required' => false, 'default' => 60, 'min' => 1, 'max' => TestimonialGridRenderer::MAX_ITEMS, 'integer_only' => true],
+                [
+                    'key'         => 'items',
+                    'type'        => 'repeater',
+                    'label'       => 'Testimonials (when typed in)',
+                    'required'    => false,
+                    'default'     => [
+                        ['name' => 'Jordan', 'text' => 'Clear, quick and easy to work with. The new site brings us calls every week.', 'rating' => 5, 'meta' => 'United States', 'date' => '2 months ago'],
+                        ['name' => 'Camille', 'text' => 'He understood what we needed at once and delivered ahead of time.', 'rating' => 5, 'meta' => 'Belgium', 'date' => '5 months ago'],
+                        ['name' => 'Sam', 'text' => 'Great communication from start to finish. I would hire him again.', 'rating' => 5, 'meta' => 'United Kingdom', 'date' => '1 year ago'],
+                    ],
+                    'max_items'   => 60,
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'name', 'type' => 'string', 'label' => 'Name', 'required' => true, 'max_length' => 80],
+                        ['key' => 'text', 'type' => 'text', 'label' => 'Review', 'required' => true, 'max_length' => 3000],
+                        ['key' => 'rating', 'type' => 'number', 'label' => 'Stars', 'required' => false, 'default' => 5, 'min' => 0, 'max' => 5],
+                        ['key' => 'meta', 'type' => 'string', 'label' => 'Details', 'required' => false, 'default' => '', 'max_length' => 120],
+                        ['key' => 'date', 'type' => 'string', 'label' => 'Date', 'required' => false, 'default' => '', 'max_length' => 40],
+                        ['key' => 'photo', 'type' => 'media_ref', 'label' => 'Photo', 'required' => false, 'default' => null],
+                    ]),
+                ],
+                ['key' => 'per_page', 'type' => 'number', 'label' => 'Per page', 'required' => false, 'default' => 6, 'min' => 1, 'max' => 24, 'integer_only' => true],
+                ['key' => 'per_page_tablet', 'type' => 'number', 'label' => 'Per page on a tablet', 'required' => false, 'default' => 4, 'min' => 1, 'max' => 24, 'integer_only' => true],
+                ['key' => 'per_page_mobile', 'type' => 'number', 'label' => 'Per page on a phone', 'required' => false, 'default' => 3, 'min' => 1, 'max' => 24, 'integer_only' => true],
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'default' => 3, 'min' => 1, 'max' => 4, 'integer_only' => true],
+                ['key' => 'columns_tablet', 'type' => 'number', 'label' => 'Columns on a tablet', 'required' => false, 'default' => 2, 'min' => 1, 'max' => 4, 'integer_only' => true],
+                ['key' => 'columns_mobile', 'type' => 'number', 'label' => 'Columns on a phone', 'required' => false, 'default' => 1, 'min' => 1, 'max' => 2, 'integer_only' => true],
+                ['key' => 'clamp_lines', 'type' => 'number', 'label' => 'Lines before "read full review" (0 = all)', 'required' => false, 'default' => 6, 'min' => 0, 'max' => 20, 'integer_only' => true],
+                ['key' => 'count_label', 'type' => 'string', 'label' => 'Count text ({from}, {to} and {total} fill in)', 'required' => false, 'default' => '{from}–{to} of {total} reviews', 'max_length' => 80],
+                ['key' => 'read_more_label', 'type' => 'string', 'label' => 'Read more text', 'required' => false, 'default' => 'Read full review', 'max_length' => 40],
+                ['key' => 'source_note', 'type' => 'string', 'label' => 'Note after the name in the full review (e.g. on Fiverr)', 'required' => false, 'default' => '', 'max_length' => 60],
+                ['key' => 'show_quote', 'type' => 'boolean', 'label' => 'Quote mark', 'required' => false, 'default' => true],
+                ['key' => 'show_stars', 'type' => 'boolean', 'label' => 'Stars', 'required' => false, 'default' => true],
+                ['key' => 'show_progress', 'type' => 'boolean', 'label' => 'Progress line under the grid', 'required' => false, 'default' => true],
+                ['key' => 'highlight_first', 'type' => 'boolean', 'label' => 'First card of each page stands out', 'required' => false, 'default' => true],
             ]),
             allowsChildren: false,
         ));

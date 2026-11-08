@@ -1692,6 +1692,140 @@
   }
 
 
+  /* ── Feature: testimonial grid ───────────────────────────────────────────
+   * `[data-sb-tgrid]` holds every testimonial; this shows one page at a time: `data-sb-tg-per` gives the number for a
+   * desktop, a tablet (under 1024px) and a phone (under 768px). It draws the numbered pages (first, last and the ones
+   * around the current, with gaps), the arrows, the count and the progress line, swipes on touch, keeps the first
+   * card of each page marked (`is-first`) and lets a card whose text is clamped open it whole in the <dialog>.
+   * A change of screen size keeps the first card shown on screen. Teardown shows every card again, as the server did.
+   */
+
+  function initTestimonialGrids(root) {
+    var grids = qsa(root, '[data-sb-tgrid]');
+    if (!grids.length) return;
+    var offs = [];
+    grids.forEach(function (w) {
+      var cards = qsa(w, '.sb-tgrid__card');
+      var nav = qs(w, '.sb-tgrid__nav'), pagesEl = qs(w, '[data-sb-tg-pages]');
+      var prev = qs(w, '[data-sb-tg-prev]'), next = qs(w, '[data-sb-tg-next]');
+      var countEl = qs(w, '[data-sb-tg-count]'), prog = qs(w, '.sb-tgrid__progress');
+      var dialog = qs(w, '.sb-tgrid__dialog');
+      if (!cards.length || !nav || !pagesEl || !prev || !next) return;
+      var serverCount = countEl ? countEl.textContent : '';
+      var label = countEl ? countEl.getAttribute('data-sb-tg-label') || '' : '';
+      var per3 = (w.getAttribute('data-sb-tg-per') || '6,4,3').split(',').map(function (n) { return Math.max(1, parseInt(n, 10) || 6); });
+      var marksFirst = w.classList.contains('sb-tgrid--first');
+      var total = cards.length, page = 0;
+      function per() { var x = global.innerWidth; return x < 768 ? per3[2] : x < 1024 ? per3[1] : per3[0]; }
+      function pad(n) { return (n < 10 ? '0' : '') + n; }
+      function pageCount() { return Math.ceil(total / per()); }
+      function render(scroll) {
+        var p = per(), n = pageCount();
+        page = Math.max(0, Math.min(page, n - 1));
+        cards.forEach(function (c, i) {
+          var show = i >= page * p && i < (page + 1) * p;
+          c.hidden = !show;
+          c.classList.remove('is-in');
+          if (marksFirst) c.classList.toggle('is-first', i === page * p);
+          if (show) {
+            c.style.setProperty('--i', String(i - page * p));
+            if (!reducedMotion()) { void c.offsetWidth; c.classList.add('is-in'); }
+          }
+        });
+        measure();
+        global.requestAnimationFrame(measure);
+        if (countEl) countEl.textContent = label.replace('{from}', pad(page * p + 1)).replace('{to}', pad(Math.min(total, (page + 1) * p))).replace('{total}', String(total));
+        prev.disabled = page === 0;
+        next.disabled = page >= n - 1;
+        var nums = [];
+        for (var k = 0; k < n; k++) {
+          if (k === 0 || k === n - 1 || Math.abs(k - page) <= 1) nums.push(k);
+          else if (nums[nums.length - 1] !== -1) nums.push(-1);
+        }
+        pagesEl.innerHTML = nums.map(function (x) {
+          return x < 0 ? '<span class="sb-tgrid__gap" aria-hidden="true">…</span>'
+            : '<button type="button" class="sb-tgrid__page" data-sb-tg-page="' + x + '" aria-current="' + (x === page) + '">' + pad(x + 1) + '</button>';
+        }).join('');
+        nav.hidden = n < 2;
+        if (prog) { prog.hidden = n < 2; prog.style.setProperty('--p', ((page + 1) / n * 100).toFixed(1) + '%'); }
+        if (scroll) {
+          var r = w.getBoundingClientRect();
+          if (r.top < 60) global.scrollBy({ top: r.top - 110, behavior: reducedMotion() ? 'auto' : 'smooth' });
+        }
+      }
+      // A clamped text can be told from a short one only once the page's cards are laid out (and the clamp,
+      // which waits for the runtime, applies): measured now, on the next frame and when the fonts arrive.
+      function measure() {
+        cards.forEach(function (c) {
+          var t = qs(c, '.sb-tgrid__text'), more = qs(c, '[data-sb-tg-more]');
+          if (t && more) more.hidden = c.hidden || t.scrollHeight <= t.clientHeight + 2;
+        });
+      }
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (w.isConnected) measure(); });
+      function go(to) { page = to; render(true); }
+      offs.push(on(prev, 'click', function () { go(page - 1); }));
+      offs.push(on(next, 'click', function () { go(page + 1); }));
+      offs.push(on(pagesEl, 'click', function (e) {
+        var b = e.target.closest ? e.target.closest('[data-sb-tg-page]') : null;
+        if (b) go(parseInt(b.getAttribute('data-sb-tg-page'), 10) || 0);
+      }));
+      // A sideways swipe on the cards turns the page.
+      var grid = qs(w, '.sb-tgrid__grid'), sx = null, sy = 0;
+      if (grid) {
+        offs.push(on(grid, 'touchstart', function (e) { var t = e.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true }));
+        offs.push(on(grid, 'touchend', function (e) {
+          if (sx === null) return;
+          var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+          sx = null;
+          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            if (dx < 0 && !next.disabled) go(page + 1);
+            else if (dx > 0 && !prev.disabled) go(page - 1);
+          }
+        }, { passive: true }));
+      }
+      var lastPer = per();
+      offs.push(on(global, 'resize', function () {
+        var p = per();
+        // A phone's address bar resizes the window as the page scrolls: same page size, so only measure again.
+        if (p === lastPer) { measure(); return; }
+        page = Math.floor(page * lastPer / p);
+        lastPer = p;
+        render(false);
+      }, { passive: true }));
+
+      // The whole review in the dialog: its text, and who wrote it with the block's note ("on Fiverr").
+      if (dialog && typeof dialog.showModal === 'function') {
+        var full = qs(dialog, '[data-sb-tg-full]'), whoEl = qs(dialog, '[data-sb-tg-who]'), note = dialog.getAttribute('data-sb-tg-note') || '';
+        var opener = null;
+        offs.push(on(w, 'click', function (e) {
+          var more = e.target.closest ? e.target.closest('[data-sb-tg-more]') : null;
+          if (!more || !w.contains(more)) return;
+          var card = more.closest('.sb-tgrid__card');
+          full.textContent = (qs(card, '.sb-tgrid__text') || {}).textContent || '';
+          var name = (qs(card, '.sb-tgrid__name') || {}).textContent || '';
+          whoEl.textContent = '— ' + name + (note ? ' · ' + note : '');
+          opener = more;
+          dialog.showModal();
+        }));
+        offs.push(on(dialog, 'click', function (e) {
+          if (e.target === dialog || (e.target.closest && e.target.closest('[data-sb-tg-close]'))) dialog.close();
+        }));
+        offs.push(on(dialog, 'close', function () { if (opener) opener.focus(); }));
+      }
+      render(false);
+      offs.push(function () {
+        if (dialog && dialog.open) dialog.close();
+        cards.forEach(function (c, i) { c.hidden = false; c.classList.remove('is-in'); c.style.removeProperty('--i'); if (marksFirst) c.classList.toggle('is-first', i === 0); });
+        qsa(w, '[data-sb-tg-more]').forEach(function (m) { m.hidden = true; });
+        pagesEl.innerHTML = '';
+        nav.hidden = true;
+        if (prog) prog.hidden = true;
+        if (countEl) countEl.textContent = serverCount;
+      });
+    });
+    mount(function () { offs.forEach(function (off) { off(); }); });
+  }
+
   /* ── Feature: nav menu preview ───────────────────────────────────────────
    * A Nav menu with `preview` has a panel of pictures (`.sb-nav__shot[data-sb-preview=i]`) and its links carry the
    * same index on their <li>. Hovering or focusing a link shows its picture; the last one shown stays until another
@@ -3861,6 +3995,7 @@
     ['messageWidgets', initMessageWidgets],
     ['clocks', initClocks],
     ['navPreviews', initNavPreviews],
+    ['testimonialGrids', initTestimonialGrids],
     ['fragments', initFragments],
     ['variants', initVariants],
     ['shopGrid', initShopGrid],

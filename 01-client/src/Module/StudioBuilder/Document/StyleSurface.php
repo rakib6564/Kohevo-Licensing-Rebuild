@@ -448,6 +448,9 @@ final class StyleSurface
                 return is_string($v) && preg_match('/^[1-9][0-9]{0,2}\/[1-9][0-9]{0,2}$/', $v) === 1;
             case 'padlen':
                 return self::isMeasure($v, false) && !str_starts_with(trim((string) $v), '-');
+            case 'lineheight':
+                // A line height as the block's own takes it: a length or a plain number (1.05).
+                return StyleValueGuard::isLineHeight($v);
             case 'color':
                 // A literal colour only: a token is not a CSS value, and would emit a declaration the browser ignores.
                 return is_string($v) && StyleValueGuard::isColor($v) && !StyleValueGuard::isToken(trim($v));
@@ -1454,7 +1457,8 @@ final class StyleSurface
         // Written as the custom property the boxed padding reads, so the padding follows a device's own width.
         $layout['content_max'] = ['length', '--sb-box'];
         return [
-            'typography' => ['size' => ['length', 'font-size']],
+            // A big heading needs its own tracking and line height on a phone, or tight desktop tracking crushes it.
+            'typography' => ['size' => ['length', 'font-size'], 'line_height' => ['lineheight', 'line-height'], 'letter_spacing' => ['length', 'letter-spacing', true]],
             'padding'    => $more['padding'],
             'margin'     => $more['margin'],
             'layout'     => $layout,
@@ -1469,7 +1473,7 @@ final class StyleSurface
     }
 
     /**
-     * Issues for one device's style override: a partial style limited to font size, padding, margin, the flex/grid layout (everything but the display type) and width, height, min-height and max-width.
+     * Issues for one device's style override: a partial style limited to font size, line height and letter spacing, padding, margin, the flex/grid layout (everything but the display type) and width, height, min-height and max-width.
      *
      * @return list<array{path: string, code: string, message: string}>
      */

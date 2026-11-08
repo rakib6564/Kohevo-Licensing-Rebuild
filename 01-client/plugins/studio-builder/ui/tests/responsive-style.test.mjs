@@ -63,3 +63,11 @@ test('a desktop edit keeps every style key outside the control group', () => {
   assert.deepEqual(sized.typography, { size: '2rem', weight: 'bold' });
   assert.equal(full.layout.gap, undefined, 'the input is not changed');
 });
+
+test('a device style takes its own line height and letter spacing, checked like the block\'s own', () => {
+  assert.deepEqual(RESPONSIVE_SCOPES.tracking, ['typography.line_height', 'typography.letter_spacing']);
+  assert.equal(deviceAccepts('typography.line_height', '1.05'), true);
+  assert.equal(deviceAccepts('typography.line_height', '1;x:y'), false);
+  assert.equal(deviceAccepts('typography.letter_spacing', '-1.5px'), true);
+  assert.equal(deviceAccepts('typography.letter_spacing', 'red'), false);
+});

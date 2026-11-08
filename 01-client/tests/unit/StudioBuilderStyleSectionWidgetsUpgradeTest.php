@@ -10,6 +10,9 @@
 declare(strict_types=1);
 
 use Slate\Module\StudioBuilder\Document\DocumentValidator;
+use Slate\Module\StudioBuilder\Document\StyleSurface;
+use Slate\Module\StudioBuilder\Provider\TestimonialItems;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\TestimonialGridRenderer;
 use Slate\Module\StudioBuilder\Menu\StudioMenus;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MessageWidgetRenderer;
@@ -107,4 +110,56 @@ unit('message widget: the button can show the photo, lines that take turns with 
     assert_true(str_contains($html, '>Online</span></span>'), 'the first line filled in');
     // No photo in the library: the icon stays, with its dot.
     assert_true(!str_contains($html, 'sb-msg__launcher-photo') && str_contains($html, 'class="sb-msg__launcher sb-msg__launcher--lines"'), 'icon without a photo');
+});
+
+unit('testimonial grid: typed testimonials render every card, a pager the runtime fills, and a dialog for the full text', function (): void {
+    $items = [
+        ['name' => 'Jonathan Cooper', 'text' => "Great <work>\nThanks", 'rating' => 4.5, 'meta' => 'United States', 'date' => '3 years ago'],
+        ['name' => 'doomreboot', 'text' => 'Short', 'rating' => 5, 'meta' => '', 'date' => ''],
+        ['name' => 'Sam', 'text' => 'A much longer review than the others here.', 'rating' => 5, 'meta' => '', 'date' => ''],
+    ];
+    $block = sbpm_block('core.testimonial_grid', ['items' => $items, 'per_page' => 2, 'per_page_tablet' => 2, 'per_page_mobile' => 1, 'columns' => 2, 'clamp_lines' => 4, 'source_note' => 'on Fiverr', 'order' => 'longest']);
+    assert_true(DocumentValidator::validate(sbsm_doc(sbpm_box([$block])), BlockRegistry::withAllCoreBlocks())->isValid(), 'valid');
+    $html = sbsm_render(sbpm_box([$block]));
+    assert_true((bool) preg_match('/<div class="sb-tgrid sb-tgrid--clamp sb-tgrid--first" id="[^"]+" data-sb-tgrid data-sb-tg-per="2,2,1" style="--sb-tg-cols:2;--sb-tg-cols-md:2;--sb-tg-cols-sm:1;--sb-tg-clamp:4">/', $html), $html);
+    assert_eq(3, substr_count($html, 'class="sb-tgrid__card'), 'every card is in the page');
+    assert_true(str_contains($html, '>01–03 of 3 reviews</p>'), 'the count for the whole list');
+    assert_true(str_contains($html, '<nav class="sb-tgrid__nav" aria-label="Review pages" hidden>'), 'the pager waits for the runtime');
+    assert_true(strpos($html, 'A much longer review') < strpos($html, 'Great &lt;work&gt;') && strpos($html, 'Great &lt;work&gt;') < strpos($html, '>Short<'), 'longest first');
+    assert_true(str_contains($html, 'class="sb-tgrid__card is-first" data-sb-tg-i="0"'), 'the first stands out');
+    assert_true(str_contains($html, 'aria-label="4.5 out of 5">★★★★★</span>') || str_contains($html, 'aria-label="4.5 out of 5">'), 'rating read out');
+    assert_true(str_contains($html, '<span class="sb-tgrid__avatar" aria-hidden="true">JC</span>') && str_contains($html, 'aria-hidden="true">DO</span>'), 'initials');
+    assert_true(str_contains($html, '<span class="sb-tgrid__meta">United States</span>') && str_contains($html, '<span class="sb-tgrid__date">3 years ago</span>'), 'details and date');
+    assert_true(str_contains($html, 'data-sb-tg-note="on Fiverr"') && str_contains($html, '<dialog class="sb-tgrid__dialog"'), 'the dialog');
+    assert_true(str_contains($html, '<button type="button" class="sb-tgrid__more" data-sb-tg-more hidden>Read full review</button>'), 'read more waits for a measure');
+
+    $min = sbsm_render(sbpm_box([sbpm_block('core.testimonial_grid', ['items' => $items, 'min_length' => 10])]));
+    assert_eq(2, substr_count($min, 'class="sb-tgrid__card'), 'shorter reviews left out');
+    assert_eq('', sbsm_render(sbpm_box([sbpm_block('core.testimonial_grid', ['items' => [], 'source' => 'items'])])) === '' ? '' : 'x', 'nothing to show, nothing on the page');
+    assert_true(!DocumentValidator::validate(sbsm_doc(sbpm_box([sbpm_block('core.testimonial_grid', ['text_field' => 'Text; drop'])])), BlockRegistry::withAllCoreBlocks())->isValid(), 'a field key is checked');
+});
+
+unit('testimonial grid: a content type item reads its title and mapped fields, rich text as plain', function (): void {
+    $map = ['text' => 'text', 'rating' => 'rating', 'meta' => ['country', 'price'], 'date' => 'when', 'photo' => 'photo'];
+    $t = TestimonialItems::item(' cj6105 ', ['text' => '<p>Truly <b>one</b> of the best &amp; kind</p><p>Again</p>', 'rating' => '7', 'country' => 'United States', 'price' => '', 'when' => '4 years ago', 'photo' => '/uploads/cj.jpg'], $map);
+    assert_eq(['name' => 'cj6105', 'text' => "Truly one of the best & kind\nAgain", 'rating' => 5.0, 'meta' => 'United States', 'date' => '4 years ago', 'photo' => '/uploads/cj.jpg'], $t, 'mapped and cleaned, rating capped');
+    assert_null(TestimonialItems::item('x', ['text' => '  '], $map), 'no text, no testimonial');
+    assert_eq(null, TestimonialItems::item('x', ['text' => 'ok', 'rating' => 'n/a'], $map)['rating'], 'no rating');
+    assert_eq('JC', TestimonialGridRenderer::initials('Jonathan Cooper'));
+    assert_eq('EV', TestimonialGridRenderer::initials('evburgessjr_01'));
+    assert_eq('ÉS', TestimonialGridRenderer::initials('élise sand'));
+    assert_true(str_contains(TestimonialGridRenderer::stars(3.0), '★★★<span class="sb-tgrid__star-off">★★</span>'), 'unlit stars');
+});
+
+unit('device styles: a phone or tablet may set its own line height and letter spacing', function (): void {
+    assert_eq([], StyleSurface::responsiveIssues(['typography' => ['size' => '48px', 'line_height' => '1.05', 'letter_spacing' => '-1.5px']], 'x'), 'accepted');
+    assert_true(StyleSurface::responsiveIssues(['typography' => ['line_height' => '1;x:y']], 'x') !== [], 'checked');
+    assert_eq(['(max-width:767.98px)' => 'font-size:48px !important;line-height:1.05 !important;letter-spacing:-1.5px !important'],
+        StyleSurface::responsiveRules(['mobile' => ['style' => ['typography' => ['size' => '48px', 'line_height' => '1.05', 'letter_spacing' => '-1.5px']]]]));
+});
+
+unit('offcanvas: the trigger text can give way to its icon on a phone, still read out', function (): void {
+    $html = sbsm_render(sbpm_box([sbpm_block('layout.offcanvas', ['drawer_id' => 'm', 'trigger_text' => 'Menu', 'trigger_icon' => 'menu', 'trigger_text_mobile' => false])]));
+    assert_true(str_contains($html, 'sb-offcanvas-trigger--icon sb-offcanvas-trigger--icon-sm') && str_contains($html, '<span class="sb-offcanvas-trigger__label">Menu</span>'), $html);
+    assert_true(str_contains(StudioStylesheet::css(), '.sb-offcanvas-trigger--icon-sm .sb-offcanvas-trigger__label{position:absolute;width:1px'), 'hidden visually only');
 });

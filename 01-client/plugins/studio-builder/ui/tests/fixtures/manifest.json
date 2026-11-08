@@ -6286,6 +6286,460 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "clamp_lines": 6,
+                "columns": 3,
+                "columns_mobile": 1,
+                "columns_tablet": 2,
+                "content_type": "",
+                "count_label": "{from}–{to} of {total} reviews",
+                "date_field": "",
+                "highlight_first": true,
+                "items": [
+                    {
+                        "date": "2 months ago",
+                        "meta": "United States",
+                        "name": "Jordan",
+                        "rating": 5,
+                        "text": "Clear, quick and easy to work with. The new site brings us calls every week."
+                    },
+                    {
+                        "date": "5 months ago",
+                        "meta": "Belgium",
+                        "name": "Camille",
+                        "rating": 5,
+                        "text": "He understood what we needed at once and delivered ahead of time."
+                    },
+                    {
+                        "date": "1 year ago",
+                        "meta": "United Kingdom",
+                        "name": "Sam",
+                        "rating": 5,
+                        "text": "Great communication from start to finish. I would hire him again."
+                    }
+                ],
+                "limit": 60,
+                "meta_fields": "country",
+                "min_length": 0,
+                "order": "newest",
+                "per_page": 6,
+                "per_page_mobile": 3,
+                "per_page_tablet": 4,
+                "photo_field": "",
+                "rating_field": "rating",
+                "read_more_label": "Read full review",
+                "show_progress": true,
+                "show_quote": true,
+                "show_stars": true,
+                "source": "items",
+                "source_note": "",
+                "text_field": "text"
+            },
+            "description": "Reviews in a grid that pages like a carousel, from a content type or typed in",
+            "field_schema": [
+                {
+                    "key": "source",
+                    "type": "enum",
+                    "label": "Testimonials from",
+                    "required": false,
+                    "default": "items",
+                    "allowed_values": [
+                        "items",
+                        "content_type"
+                    ]
+                },
+                {
+                    "key": "content_type",
+                    "type": "string",
+                    "label": "Content type",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40
+                },
+                {
+                    "key": "text_field",
+                    "type": "string",
+                    "label": "Review text field",
+                    "required": false,
+                    "default": "text",
+                    "max_length": 64
+                },
+                {
+                    "key": "rating_field",
+                    "type": "string",
+                    "label": "Rating field (0 to 5)",
+                    "required": false,
+                    "default": "rating",
+                    "max_length": 64
+                },
+                {
+                    "key": "meta_fields",
+                    "type": "string",
+                    "label": "Detail fields under the name (comma-separated)",
+                    "required": false,
+                    "default": "country",
+                    "max_length": 200
+                },
+                {
+                    "key": "date_field",
+                    "type": "string",
+                    "label": "Date field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64
+                },
+                {
+                    "key": "photo_field",
+                    "type": "string",
+                    "label": "Photo field (initials without one)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64
+                },
+                {
+                    "key": "order",
+                    "type": "enum",
+                    "label": "Order",
+                    "required": false,
+                    "default": "newest",
+                    "allowed_values": [
+                        "newest",
+                        "oldest",
+                        "title",
+                        "longest"
+                    ]
+                },
+                {
+                    "key": "min_length",
+                    "type": "number",
+                    "label": "Only reviews at least this long (characters)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2000,
+                    "integer_only": true
+                },
+                {
+                    "key": "limit",
+                    "type": "number",
+                    "label": "Most reviews shown",
+                    "required": false,
+                    "default": 60,
+                    "min": 1,
+                    "max": 200,
+                    "integer_only": true
+                },
+                {
+                    "key": "items",
+                    "type": "repeater",
+                    "label": "Testimonials (when typed in)",
+                    "required": false,
+                    "default": [
+                        {
+                            "name": "Jordan",
+                            "text": "Clear, quick and easy to work with. The new site brings us calls every week.",
+                            "rating": 5,
+                            "meta": "United States",
+                            "date": "2 months ago"
+                        },
+                        {
+                            "name": "Camille",
+                            "text": "He understood what we needed at once and delivered ahead of time.",
+                            "rating": 5,
+                            "meta": "Belgium",
+                            "date": "5 months ago"
+                        },
+                        {
+                            "name": "Sam",
+                            "text": "Great communication from start to finish. I would hire him again.",
+                            "rating": 5,
+                            "meta": "United Kingdom",
+                            "date": "1 year ago"
+                        }
+                    ],
+                    "max_items": 60,
+                    "item_schema": [
+                        {
+                            "key": "name",
+                            "type": "string",
+                            "label": "Name",
+                            "required": true,
+                            "default": "",
+                            "max_length": 80
+                        },
+                        {
+                            "key": "text",
+                            "type": "text",
+                            "label": "Review",
+                            "required": true,
+                            "default": "",
+                            "max_length": 3000
+                        },
+                        {
+                            "key": "rating",
+                            "type": "number",
+                            "label": "Stars",
+                            "required": false,
+                            "default": 5,
+                            "min": 0,
+                            "max": 5
+                        },
+                        {
+                            "key": "meta",
+                            "type": "string",
+                            "label": "Details",
+                            "required": false,
+                            "default": "",
+                            "max_length": 120
+                        },
+                        {
+                            "key": "date",
+                            "type": "string",
+                            "label": "Date",
+                            "required": false,
+                            "default": "",
+                            "max_length": 40
+                        },
+                        {
+                            "key": "photo",
+                            "type": "media_ref",
+                            "label": "Photo",
+                            "required": false,
+                            "default": null
+                        }
+                    ]
+                },
+                {
+                    "key": "per_page",
+                    "type": "number",
+                    "label": "Per page",
+                    "required": false,
+                    "default": 6,
+                    "min": 1,
+                    "max": 24,
+                    "integer_only": true
+                },
+                {
+                    "key": "per_page_tablet",
+                    "type": "number",
+                    "label": "Per page on a tablet",
+                    "required": false,
+                    "default": 4,
+                    "min": 1,
+                    "max": 24,
+                    "integer_only": true
+                },
+                {
+                    "key": "per_page_mobile",
+                    "type": "number",
+                    "label": "Per page on a phone",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 24,
+                    "integer_only": true
+                },
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Columns",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 4,
+                    "integer_only": true
+                },
+                {
+                    "key": "columns_tablet",
+                    "type": "number",
+                    "label": "Columns on a tablet",
+                    "required": false,
+                    "default": 2,
+                    "min": 1,
+                    "max": 4,
+                    "integer_only": true
+                },
+                {
+                    "key": "columns_mobile",
+                    "type": "number",
+                    "label": "Columns on a phone",
+                    "required": false,
+                    "default": 1,
+                    "min": 1,
+                    "max": 2,
+                    "integer_only": true
+                },
+                {
+                    "key": "clamp_lines",
+                    "type": "number",
+                    "label": "Lines before \"read full review\" (0 = all)",
+                    "required": false,
+                    "default": 6,
+                    "min": 0,
+                    "max": 20,
+                    "integer_only": true
+                },
+                {
+                    "key": "count_label",
+                    "type": "string",
+                    "label": "Count text ({from}, {to} and {total} fill in)",
+                    "required": false,
+                    "default": "{from}–{to} of {total} reviews",
+                    "max_length": 80
+                },
+                {
+                    "key": "read_more_label",
+                    "type": "string",
+                    "label": "Read more text",
+                    "required": false,
+                    "default": "Read full review",
+                    "max_length": 40
+                },
+                {
+                    "key": "source_note",
+                    "type": "string",
+                    "label": "Note after the name in the full review (e.g. on Fiverr)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "show_quote",
+                    "type": "boolean",
+                    "label": "Quote mark",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_stars",
+                    "type": "boolean",
+                    "label": "Stars",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_progress",
+                    "type": "boolean",
+                    "label": "Progress line under the grid",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "highlight_first",
+                    "type": "boolean",
+                    "label": "First card of each page stands out",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "quotes",
+            "inline_text": [],
+            "label": "Testimonial grid",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "count",
+                    "label": "Count"
+                },
+                {
+                    "key": "arrows",
+                    "label": "Arrows"
+                },
+                {
+                    "key": "pages",
+                    "label": "Page numbers"
+                },
+                {
+                    "key": "page_current",
+                    "label": "Current page number",
+                    "states": false
+                },
+                {
+                    "key": "card",
+                    "label": "Cards"
+                },
+                {
+                    "key": "featured",
+                    "label": "Standout card"
+                },
+                {
+                    "key": "quote",
+                    "label": "Quote mark"
+                },
+                {
+                    "key": "stars",
+                    "label": "Stars"
+                },
+                {
+                    "key": "text",
+                    "label": "Review text"
+                },
+                {
+                    "key": "more",
+                    "label": "Read more"
+                },
+                {
+                    "key": "footer",
+                    "label": "Reviewer row"
+                },
+                {
+                    "key": "avatar",
+                    "label": "Avatar"
+                },
+                {
+                    "key": "name",
+                    "label": "Name"
+                },
+                {
+                    "key": "meta",
+                    "label": "Details"
+                },
+                {
+                    "key": "progress",
+                    "label": "Progress line"
+                },
+                {
+                    "key": "dialog",
+                    "label": "Full review dialog",
+                    "states": false
+                }
+            ],
+            "title": "Testimonial grid",
+            "type": "core.testimonial_grid",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "content.posts",
                 "content.authors",
@@ -7601,6 +8055,7 @@
                 "trigger_icon_size": 24,
                 "trigger_show_text": true,
                 "trigger_text": "Open Menu",
+                "trigger_text_mobile": true,
                 "trigger_variant": "outline"
             },
             "description": "Slide-out navigation drawer",
@@ -7688,6 +8143,13 @@
                     "key": "trigger_show_text",
                     "type": "boolean",
                     "label": "Show the trigger text",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "trigger_text_mobile",
+                    "type": "boolean",
+                    "label": "Show the trigger text on phones",
                     "required": false,
                     "default": true
                 }
