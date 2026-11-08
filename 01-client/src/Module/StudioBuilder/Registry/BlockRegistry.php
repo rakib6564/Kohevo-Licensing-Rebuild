@@ -550,6 +550,9 @@ final class BlockRegistry
             schema: FieldSchema::define([
                 ['key' => 'before', 'type' => 'text', 'label' => 'Before text', 'required' => false, 'default' => 'Heading with', 'max_length' => 300],
                 ['key' => 'colored', 'type' => 'text', 'label' => 'Colored text', 'required' => false, 'default' => 'colored', 'max_length' => 300],
+                // More words for the coloured part, comma separated: it changes to each in turn, then back to its own.
+                ['key' => 'rotate_words', 'type' => 'string', 'label' => 'Rotating words', 'required' => false, 'default' => '', 'max_length' => 400],
+                ['key' => 'rotate_ms', 'type' => 'number', 'label' => 'Change every (ms)', 'required' => false, 'default' => 2800, 'min' => 1000, 'max' => 10000, 'integer_only' => true],
                 ['key' => 'after', 'type' => 'text', 'label' => 'After text', 'required' => false, 'default' => 'words', 'max_length' => 300],
                 ['key' => 'url', 'type' => 'url', 'label' => 'Link', 'required' => false, 'default' => null],
                 ['key' => 'new_tab', 'type' => 'boolean', 'label' => 'Open in a new tab', 'required' => false, 'default' => false],

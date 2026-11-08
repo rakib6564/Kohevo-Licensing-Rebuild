@@ -1595,6 +1595,8 @@
                 "colored": "colored",
                 "level": "h2",
                 "new_tab": false,
+                "rotate_ms": 2800,
+                "rotate_words": "",
                 "url": null
             },
             "description": "A heading with a coloured part",
@@ -1614,6 +1616,24 @@
                     "required": false,
                     "default": "colored",
                     "max_length": 300
+                },
+                {
+                    "key": "rotate_words",
+                    "type": "string",
+                    "label": "Rotating words",
+                    "required": false,
+                    "default": "",
+                    "max_length": 400
+                },
+                {
+                    "key": "rotate_ms",
+                    "type": "number",
+                    "label": "Change every (ms)",
+                    "required": false,
+                    "default": 2800,
+                    "min": 1000,
+                    "max": 10000,
+                    "integer_only": true
                 },
                 {
                     "key": "after",

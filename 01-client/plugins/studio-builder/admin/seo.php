@@ -35,6 +35,7 @@ $seoBingVerification   = $verifyTokens['bing'];
 // Web fonts and the business for structured data (their own forms below).
 $webFonts = (string) (Database::setting(\Slate\Module\StudioBuilder\Render\Seo\WebFonts::SETTING, $tenantId) ?: '');
 $business = \Slate\Module\StudioBuilder\Render\Seo\StructuredData::business($tenantId);
+$smoothScroll = (string) (Database::setting(\Slate\Module\StudioBuilder\Render\PageDocumentAssembler::SMOOTH_SCROLL_SETTING, $tenantId) ?: '') === '1';
 // The name the live pages use for %site_name%.
 try {
     $siteName = \Slate\Services\Content\TenantBranding::siteName();
@@ -59,6 +60,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Database::setSetting(\Slate\Module\StudioBuilder\Render\Seo\WebFonts::SETTING, $webFonts, $tenantId);
             sb_flash_redirect('seo.php', ['type' => 'success', 'msg' => __('studio_fonts_saved', 'Fonts saved. Every page loads them from its next visit.')]);
         }
+    } elseif (($_POST['_form'] ?? '') === 'scrolling') {
+        $smoothScroll = ($_POST['smooth_scroll'] ?? '') === '1';
+        Database::setSetting(\Slate\Module\StudioBuilder\Render\PageDocumentAssembler::SMOOTH_SCROLL_SETTING, $smoothScroll ? '1' : '0', $tenantId);
+        sb_flash_redirect('seo.php', ['type' => 'success', 'msg' => __('studio_scrolling_saved', 'Saved. Every page scrolls this way from its next visit.')]);
     } elseif (($_POST['_form'] ?? '') === 'business') {
         $business = \Slate\Module\StudioBuilder\Render\Seo\StructuredData::clean([
             'type' => (string) ($_POST['biz_type'] ?? ''), 'name' => (string) ($_POST['biz_name'] ?? ''), 'alternate_name' => (string) ($_POST['biz_alternate'] ?? ''),
@@ -300,6 +305,20 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 </div>
                 <div class="sb-card-actions">
                     <button type="submit" class="btn btn-primary"><?= sb_svg('save', 14) ?> <?= e(__('studio_fonts_save', 'Save fonts')) ?></button>
+                </div>
+            </form>
+            <!-- Smooth scrolling: one site-wide switch, read by studio-runtime.js on every public page -->
+            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/seo.php')) ?>" class="sb-stack" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--sb-border, #e5e7eb);">
+                <?= csrf_field() ?>
+                <input type="hidden" name="_form" value="scrolling">
+                <h3 class="sb-card__title"><?= e(__('studio_scrolling_title', 'Smooth scrolling')) ?></h3>
+                <label class="sb-field" style="display: flex; gap: 8px; align-items: flex-start;">
+                    <input type="checkbox" name="smooth_scroll" value="1" <?= $smoothScroll ? 'checked' : '' ?>>
+                    <span><?= e(__('studio_scrolling_label', 'Ease the page as visitors scroll with a mouse wheel')) ?></span>
+                </label>
+                <p class="sb-field__hint"><?= e(__('studio_scrolling_hint', 'Touch screens, the keyboard and the scroll bar keep their own scrolling, and visitors who ask their device for less motion never get it.')) ?></p>
+                <div class="sb-card-actions">
+                    <button type="submit" class="btn btn-primary"><?= sb_svg('save', 14) ?> <?= e(__('studio_scrolling_save', 'Save scrolling')) ?></button>
                 </div>
             </form>
         </div>

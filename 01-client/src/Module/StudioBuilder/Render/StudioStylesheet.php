@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '67';
+    public const VERSION = '68';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -926,11 +926,54 @@ final class StudioStylesheet
             . '.sb-sticky[data-sb-sticky-effect~="shrink"] :is(.sb-top,.sb-top img){transition:padding .2s ease,max-height .2s ease}'
             . '.sb-sticky.is-shrunk .sb-top{padding-top:.35rem!important;padding-bottom:.35rem!important}.sb-sticky.is-shrunk .sb-top img{max-height:2.25rem;width:auto}'
             . '.sb-site-header--partial:has(>.sb-sticky),.sb-site-footer--partial:has(>.sb-sticky){display:contents}'
-            . '@media (prefers-reduced-motion:reduce){.sb-sticky,.sb-sticky :is(.sb-top,.sb-top img){transition:none!important}}';
+            . '@media (prefers-reduced-motion:reduce){.sb-sticky,.sb-sticky :is(.sb-top,.sb-top img){transition:none!important}}'
+            . self::pageMotionCss();
         foreach (['desktop' => '(min-width:1024px)', 'tablet' => '(min-width:768px) and (max-width:1023.98px)', 'mobile' => '(max-width:767.98px)'] as $device => $query) {
             $css .= '@media ' . $query . '{.sb-sticky.sb-sticky-off-' . $device . '{position:relative;top:auto;bottom:auto;transform:none}}';
         }
         return $css;
+    }
+
+    /**
+     * The page-level motion of ScrollEffects; studio-runtime.js does the work and these rules only paint its results.
+     *
+     *  - Page colours: the runtime sets `--sb-paged-bg` / `--sb-paged-fg` (and the matching attribute) on <html> from the
+     *    section in the middle of the screen; the page blends to them. Text set in its own colour keeps it.
+     *  - Adapt: a node (a header) takes the colours of the section beneath it, set inline by the runtime.
+     *  - Progress bar: a span the runtime adds along the node's edge, scaled by `--sb-page-progress` (0 to 1).
+     *  - Text: `data-sb-text="lines:…"` holds its text out of sight for at most 1.2s while the runtime splits it into
+     *    words, so a heading does not flash before it rises; without the runtime it simply appears. Each word sits in
+     *    a mask and rises from it, a line at a time. `words:…` dims words the runtime lights up as the page scrolls.
+     *  - Stagger: the entrance animations inside a `data-sb-stagger` node wait for it to come into view, then play
+     *    `--sb-stagger-step` apart, by the index the runtime writes (`--i`). Without the runtime they play on load.
+     *  - Scroll into view, in browsers without scroll timelines: the runtime holds the animation (`data-sb-wait`) until
+     *    the block comes into view, instead of playing it while it is still off screen.
+     *  - Glow: a span the runtime adds behind the node's content, lit at the pointer.
+     * Reduced motion: no blends, no held text, nothing waits; the runtime starts none of these.
+     */
+    public static function pageMotionCss(): string
+    {
+        return 'html[data-sb-page-colors] body.sb-body{transition:background-color .6s ease,color .6s ease}'
+            . 'html[data-sb-paged-bg] body.sb-body{background:var(--sb-paged-bg)}'
+            . 'html[data-sb-paged-fg] body.sb-body{color:var(--sb-paged-fg);--sb-text-heading:var(--sb-paged-fg);--sb-text-body:var(--sb-paged-fg)}'
+            . ':where(.sb-adapt){transition:background-color .4s ease,color .4s ease}'
+            . '.sb-progress-bar{position:absolute;left:0;right:0;height:var(--sb-progress-h,3px);background:var(--sb-progress-color,var(--sb-color-accent,currentColor));transform-origin:0 50%;transform:scaleX(var(--sb-page-progress,0));pointer-events:none;z-index:2}'
+            . '[data-sb-progress="top"]>.sb-progress-bar{top:0}[data-sb-progress="bottom"]>.sb-progress-bar{bottom:0}'
+            . '@keyframes sb-text-hold{from,to{opacity:0}}'
+            . '[data-sb-text^="lines"]:not([data-sb-split]):not([class*="sb-animate-"]){animation:sb-text-hold 1.2s}'
+            . '.sb-wm{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.12em;margin-bottom:-.12em}'
+            . '.sb-wm>.sb-w{display:inline-block;transform:translateY(110%);transition:transform .9s cubic-bezier(.2,.8,.2,1);transition-delay:calc(var(--sb-line,0)*var(--sb-line-step,100ms))}'
+            . '[data-sb-lines-in] .sb-wm>.sb-w{transform:none}'
+            . '[data-sb-text^="words"] .sb-w{transition:opacity .25s ease}'
+            . '[data-sb-stagger] [class*="sb-animate-"]:not(.sb-interaction-scroll):not(.sb-interaction-click){animation-delay:calc(var(--sb-anim-delay,0s) + var(--i,0)*var(--sb-stagger-step,80ms));animation-timeline:auto}'
+            . 'html[data-sb-ready] [data-sb-stagger]:not(.is-in) [class*="sb-animate-"]:not(.sb-interaction-scroll):not(.sb-interaction-click){animation-play-state:paused}'
+            . 'html[data-sb-ready] [data-sb-wait]{animation-play-state:paused}'
+            . '.sb-glow-on{isolation:isolate}'
+            . '.sb-glow{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;opacity:0;transition:opacity .3s ease;'
+            . 'background:radial-gradient(var(--sb-glow-size,320px) circle at var(--sb-mx,50%) var(--sb-my,50%),var(--sb-glow-color,rgba(255,255,255,.12)),transparent 70%)}'
+            . '.sb-glow-on:hover>.sb-glow{opacity:1}'
+            . '@media (prefers-reduced-motion:reduce){html[data-sb-page-colors] body.sb-body,:where(.sb-adapt){transition:none}'
+            . '[data-sb-text^="lines"]{animation:none}.sb-wm>.sb-w{transform:none;transition:none}}';
     }
 
     /**

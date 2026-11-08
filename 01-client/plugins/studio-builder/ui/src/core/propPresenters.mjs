@@ -72,6 +72,8 @@ export const PROP_PRESENTERS = Object.freeze({
   },
   'core.dual_heading': {
     new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
+    // The pause between words matters only once there are words to change to.
+    rotate_ms: { showIf: (p) => typeof p.rotate_words === 'string' && p.rotate_words.trim() !== '' },
   },
   'core.quote': { align: { showIf: () => false } },
   'core.link': { align: { showIf: () => false } },
