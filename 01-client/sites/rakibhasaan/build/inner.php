@@ -102,7 +102,7 @@ function BLK(array $b, array $c, bool $lead = false): array
                 RICH('<p>' . $p['html'] . '</p>', $p['feat'] ? 'rgba(237,232,223,.75)' : $c['muted'], '15px'),
                 P($p['price'], $p['feat'] ? BONE : $c['fg'], '34px', ['weight' => '200', 'letter_spacing' => '-1.4px']),
                 $p['feat'] ? PILL($p['cta'] . '  →', '/free-audit/') : B('core.link', ['link' => L($p['cta'], '/free-audit/'), 'style' => 'arrow'], [], ['color' => $c['fg'], 'typography' => ['size' => '15px', 'weight' => '500']]),
-            ])), $c, '14px', $p['feat'] ? ['background' => ['color' => INK], 'border' => ['color' => INK]] : []), $b['items'], array_keys($b['items'])), min(3, count($b['items'])));
+            ])), $c, '14px', $p['feat'] ? ['background' => ['color' => INK], 'border' => ['color' => ORANGE]] : []), $b['items'], array_keys($b['items'])), min(3, count($b['items'])));
         case 'pricelist':
             return VBOX([
                 ROW([EYE($b['head'][0], $c['muted']), EYE($b['head'][1], $c['muted'], 'right')], '12px', ['padding' => ['bottom' => '12px'], 'border' => ['width' => '0 0 1px 0', 'style' => 'solid', 'color' => $c['line']]], ['justify' => 'between'], []),

@@ -187,6 +187,9 @@ $cardTpl = CTOP('Card', [
         ROW([FVM('country_short', MUTED_BONE), FVM('year', MUTED_BONE, ['before' => '· '])], '6px', ['dimensions' => ['width' => 'auto']], [], [])], '12px', ['margin' => ['top' => '16px']], ['justify' => 'between', 'align' => 'baseline'], []),
     FV('summary', MUTED_BONE, '15px', 'p', ['typography' => ['line_height' => '1.5']]),
 ], ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '6px', 'content_width' => 'full', 'padding_y' => 'none']], ['classNames' => ['rk-pcard']]);
+// Cards sit in light and dark sections alike, and the page colour follows the section on screen: the text takes the
+// page's colours (as the Service card does), so a title is never dark on the black page. The industry pill keeps its own.
+$cardTpl['children'] = array_map(static fn(array $ch): array => follow_page($ch, [strtolower(INK) => 'text.body', strtolower(MUTED_BONE) => 'text.muted', strtolower(LINE_BONE) => 'border.default', strtolower(RUST) => 'text.accent']), $cardTpl['children']);
 build_page('template-loop-project', 'Loop Item: Project', 'system', 'standalone', [$cardTpl], ['settings' => ['template_type' => 'loop', 'conditions' => ['rules' => [['action' => 'include', 'condition' => 'singular', 'value' => 'project']]]]]);
 
 // The items, newest first in the list (published in reverse so the list order matches the original's). The six on

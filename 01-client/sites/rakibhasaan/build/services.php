@@ -134,7 +134,7 @@ $steps = SEC('Steps', [
 $pricing = SEC('Pricing', [
     $twoCol($sHead('06', 'pricing', $cI, 'Pricing'), $rep('pricing', VBOX([
         FV('name', BONE, '30px', 'h3', ['typography' => ['weight' => '300', 'letter_spacing' => '-1px', 'line_height' => '1.1']]),
-        FV('text', 'rgba(237,232,223,0.72)', '15px', 'p', ['typography' => ['line_height' => '1.55']]),
+        FV('text', MUTED, '15px', 'p', ['typography' => ['line_height' => '1.55']]),
         FV('price', BONE, '34px', 'div', ['margin' => ['top' => 'auto'], 'typography' => ['weight' => '200', 'letter_spacing' => '-1.4px', 'line_height' => '1.1']]),
         B('core.link', ['link' => L('Get a quote', '/free-audit/'), 'style' => 'arrow'], [], ['color' => ORANGE, 'typography' => ['size' => '15px', 'weight' => '500']], ['dynamic' => ['link.label' => ['tag' => 'field', 'key' => 'cta']], 'when_field' => 'cta']),
     ], '14px', $cardStyle($cI) + ['dimensions' => ['min_height' => '300px']], ['classNames' => ['rk-price']]), 2, '10px')),

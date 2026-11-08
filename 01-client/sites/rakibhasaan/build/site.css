@@ -222,3 +222,7 @@
   .rk-photo-hero > .rk-bgpic--top:has(img[src*="portrait-tall"]) { top: -40px !important; height: 620px !important; }
   .rk-photo-hero > .rk-bgpic--top:has(img[src*="portrait-tall"]) img { object-position: 50% 0% !important; }
 }
+
+/* "Most chosen" on the featured package: an orange pill, readable on the dark featured card (it was dark text with no fill). */
+.rk-chip-on { align-self: flex-start; }
+.rk-chip-on p, p.rk-chip-on { display: inline-block; width: fit-content; background: #FF5A1F; color: #0B0B0C !important; padding: 5px 10px; border-radius: 999px; }
