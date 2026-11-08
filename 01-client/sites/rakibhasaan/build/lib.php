@@ -51,7 +51,7 @@ function B(string $type, array $props = [], array $children = [], array $style =
         'visibility' => ['auth_state' => 'any', 'devices' => ['base', 'sm', 'md', 'lg']],
         'bindings' => [], 'children' => array_values(array_filter($children)),
     ];
-    foreach (['responsive', 'style_parts', 'classNames', 'style_states', 'interactions', 'animation'] as $k) { if (!empty($opt[$k])) { $b[$k] = $opt[$k]; } }
+    foreach (['responsive', 'style_parts', 'classNames', 'style_states', 'interactions', 'animation', 'dynamic'] as $k) { if (!empty($opt[$k])) { $b[$k] = $opt[$k]; } }
     if (!empty($opt['devices'])) { $b['visibility']['devices'] = $opt['devices']; }
     return $b;
 }
@@ -127,7 +127,12 @@ function build_page(string $slug, string $title, string $pageType, string $route
         $pageId = (int) $created['page']['id'];
         $draft = $runtime->app->saveDraft($actor, $pageId, $doc, (int) $created['revision']['id'], 'manual', 'rakibhasaan.com build');
     }
+    if (!empty($opt['type'])) {
+        $r = \Slate\Module\StudioBuilder\Meta\PageMeta::save($tid, $pageId, (string) $opt['type'], $opt['fields'] ?? []);
+        if ($r['errors']) { throw new RuntimeException($slug . ': ' . json_encode($r['errors'])); }
+    }
     $runtime->app->publish($actor, $pageId, (int) $draft['revision']['id'], 'rakibhasaan.com build');
+    if (!empty($opt['date'])) { $runtime->app->setPublishDate($actor, $pageId, (string) $opt['date']); }
     say("  + {$pageType} /{$slug} (#{$pageId})");
     return $pageId;
 }

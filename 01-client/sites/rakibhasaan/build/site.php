@@ -43,7 +43,7 @@ $menu('header', 'Header', [
 ]);
 $menu('full', 'Full menu', [
     ['label' => 'Home', 'url' => '/'], ['label' => 'Work', 'url' => '/work/'], ['label' => 'Services', 'url' => '/services/'], ['label' => 'Process', 'url' => '/process/'],
-    ['label' => 'About', 'url' => '/about/'], ['label' => 'Reviews', 'url' => '/reviews/'], ['label' => 'FAQ', 'url' => '/faq/'], ['label' => 'Contact', 'url' => '/contact/'], ['label' => 'Free audit', 'url' => '/audit/'],
+    ['label' => 'About', 'url' => '/about/'], ['label' => 'Reviews', 'url' => '/reviews/'], ['label' => 'FAQ', 'url' => '/faq/'], ['label' => 'Contact', 'url' => '/contact/'], ['label' => 'Free audit', 'url' => '/free-audit/'],
 ]);
 say('  + menus');
 
@@ -68,7 +68,7 @@ $fullMenu = B('layout.offcanvas', ['drawer_id' => 'rk-menu', 'title' => '', 'pos
 $hdr = CTOP('Header', [
     $brand,
     $nav,
-    ROW([PILL('Free audit', '/audit/'), $fullMenu], '8px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], []),
+    ROW([PILL('Free audit', '/free-audit/'), $fullMenu], '8px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], []),
 ], ['padding' => ['top' => '16px', 'right' => '28px', 'bottom' => '16px', 'left' => '28px'], 'layout' => ['display' => 'flex', 'direction' => 'row', 'gap' => '24px', 'justify' => 'between', 'align' => 'center', 'content_width' => 'boxed', 'content_max' => '1440px']],
     ['interactions' => ['adapt' => true, 'progress' => ['edge' => 'bottom', 'color' => ORANGE, 'height' => 2]], 'responsive' => ['mobile' => ['style' => ['padding' => ['top' => '12px', 'right' => '16px', 'bottom' => '12px', 'left' => '16px']]]]]);
 build_page('default', 'Header', 'header_partial', 'standalone', [$hdr], ['settings' => ['sticky_header' => ['edge' => 'top', 'hide_on_scroll' => true, 'background' => 'rgba(11,11,12,0.86)']]]);
@@ -84,7 +84,7 @@ $ft = CTOP('Footer', [
     ROW([
         B('core.heading', ['text' => 'Have a project in mind?', 'level' => 'h2'], [], ['color' => BONE, 'typography' => ['size' => '96px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.95', 'letter_spacing' => '-5.2px'], 'dimensions' => ['max_width' => '620px']], ['responsive' => ['mobile' => ['style' => ['typography' => ['size' => '52px']]]]]),
         VBOX([
-            PILL('Start with a free audit  ↗', '/audit/', ORANGE, INK),
+            PILL('Start with a free audit  ↗', '/free-audit/', ORANGE, INK),
             EYE('Copy email'),
             B('core.button', ['link' => L('Support@rakibhasaan.com', 'mailto:Support@rakibhasaan.com'), 'variant' => 'ghost', 'copy_text' => 'Support@rakibhasaan.com', 'copied_label' => 'Copied'], [], [], ['style_parts' => ['button' => ['background' => ['color' => 'rgba(0,0,0,0)'], 'color' => BONE, 'padding' => ['top' => '0px', 'right' => '0px', 'bottom' => '0px', 'left' => '0px'], 'border' => ['width' => '0px'], 'typography' => ['size' => '18px', 'weight' => 'normal', 'family' => 'body']]]]),
         ], '12px', ['dimensions' => ['width' => 'auto']]),
@@ -98,7 +98,7 @@ $ft = CTOP('Footer', [
         ], '18px'), '30%'),
         W($col('Services', [['WordPress websites', '/wordpress-websites/'], ['Custom development', '/custom-development/'], ['SEO audits', '/seo/'], ['Web & mobile apps', '/apps/'], ['Shopify, Wix & Squarespace', '/platforms/'], ['Branding & video', '/branding/']]), '22%'),
         W($col('Site', [['Work', '/work/'], ['Construction', '/construction/'], ['Process', '/process/'], ['About', '/about/'], ['Reviews', '/reviews/'], ['FAQ', '/faq/']]), '22%'),
-        W($col('Contact', [['Free audit', '/audit/'], ['Contact', '/contact/'], ['Fiverr', 'https://fiverr.com/rakib_64/'], ['GitHub', 'https://github.com/rakib6564/']]), '18%'),
+        W($col('Contact', [['Free audit', '/free-audit/'], ['Contact', '/contact/'], ['Fiverr', 'https://fiverr.com/rakib_64/'], ['GitHub', 'https://github.com/rakib6564/']]), '18%'),
     ], '32px', ['margin' => ['top' => '56px', 'bottom' => '40px']], ['justify' => 'between'], ['layout' => ['direction' => 'column', 'gap' => '40px']]),
     B('core.divider', ['weight' => 'thin'], [], ['color' => LINE]),
     ROW([EYE('Designer + developer'), EYE('Est. 2018 · Dhaka, Bangladesh', MUTED, 'center'), EYE('250+ sites · 14 countries', MUTED, 'right')], '16px', ['padding' => ['top' => '18px', 'bottom' => '18px']], ['justify' => 'between'], ['layout' => ['direction' => 'column', 'gap' => '6px']]),
@@ -124,7 +124,7 @@ build_page('default', 'Footer', 'footer_partial', 'standalone', [$ft]);
 
 // ── Pages ──────────────────────────────────────────────────────────────────────
 $only = array_filter(explode(',', (string) getenv('RK_ONLY')));
-foreach (['home'] as $page) {
+foreach (['home', 'inner'] as $page) {
     if ($only === [] || in_array($page, $only, true)) { require __DIR__ . "/{$page}.php"; }
 }
 say('done');

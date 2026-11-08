@@ -54,8 +54,8 @@ $gallery = CTOP('Project gallery', [
 
 // ── 4. Industries ──────────────────────────────────────────────────────────────
 $rows = [
-    ['01', 'Construction', 8, $IMG['cdg'], '/construction/'], ['02', 'Logistics', 4, $IMG['redkey'], '/audit/'], ['03', 'Cleaning', 3, $IMG['safi'], '/audit/'],
-    ['04', 'Hospitality', 4, $IMG['villa'], '/audit/'], ['05', 'Law & coaching', 3, $IMG['law'], '/audit/'], ['06', 'Creative', 3, $IMG['tatiana'], '/audit/'],
+    ['01', 'Construction', 8, $IMG['cdg'], '/construction/'], ['02', 'Logistics', 4, $IMG['redkey'], '/free-audit/'], ['03', 'Cleaning', 3, $IMG['safi'], '/free-audit/'],
+    ['04', 'Hospitality', 4, $IMG['villa'], '/free-audit/'], ['05', 'Law & coaching', 3, $IMG['law'], '/free-audit/'], ['06', 'Creative', 3, $IMG['tatiana'], '/free-audit/'],
 ];
 $industryRows = array_map(static fn(array $r): array => ROW([
     EYE($r[0]),
@@ -138,7 +138,7 @@ $about = SEC('About', [
             B('core.heading', ['text' => 'One person, start to finish.', 'level' => 'h2'], [], ['color' => BONE, 'typography' => ['size' => '75px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.98', 'letter_spacing' => '-3.7px'], 'dimensions' => ['max_width' => '440px']], ['responsive' => ['mobile' => ['style' => ['typography' => ['size' => '46px']]]]]),
             P('I\'m Rakib Hasan, a WordPress designer and developer. You won\'t be handed to an account manager or a junior. I plan your pages, design them, build them, and I\'m still here after launch.', 'rgba(237,232,223,.7)', '18px', [], ['style' => ['dimensions' => ['max_width' => '540px']]]),
             B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap'], [$fact('Based in', 'Bangladesh, working worldwide'), $fact('Clients in', '14 countries, 5 continents'), $fact('Built on', 'WordPress + Elementor'), $fact('Rated', '5.0 from 101 reviews')], ['layout' => ['display' => 'flex', 'direction' => 'row', 'wrap' => 'wrap', 'gap' => '0px'], 'border' => ['width' => '0 0 1px 0', 'style' => 'solid', 'color' => LINE]]),
-            B('core.link', ['link' => L('Talk to me about your site', '/audit/'), 'style' => 'arrow'], [], ['color' => BONE, 'typography' => ['size' => '16px', 'weight' => '500']], ['interactions' => ['mouse' => ['magnet' => 4]]]),
+            B('core.link', ['link' => L('Talk to me about your site', '/free-audit/'), 'style' => 'arrow'], [], ['color' => BONE, 'typography' => ['size' => '16px', 'weight' => '500']], ['interactions' => ['mouse' => ['magnet' => 4]]]),
         ], '28px', ['padding' => ['top' => '100px']], ['responsive' => ['mobile' => ['style' => ['padding' => ['top' => '40px']]]]]), '50%'),
     ], '64px', ['margin' => ['top' => '64px']], ['justify' => 'between'], ['layout' => ['direction' => 'column', 'gap' => '32px']]),
 ], '160px', '170px', [], ['interactions' => THEME('ink')]);
@@ -163,7 +163,7 @@ $world = SEC('Worldwide', [
     VBOX([
         ROW([EYE('● Client map', '#22C55E'), B('core.local_time', ['label' => 'Dhaka', 'city' => '', 'timezone' => 'Asia/Dhaka', 'format' => '24h', 'seconds' => false, 'show_offset' => false], [], ['color' => '#9AA6C4', 'typography' => ['size' => '12px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.4px']])], '12px', [], ['justify' => 'between'], []),
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap'], array_map(static fn(array $c): array => P($c[0] . '  ' . $c[1], '#E9ECF5', '13px', ['font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1px'], ['classNames' => ['rk-country']]), $countries), ['layout' => ['display' => 'flex', 'direction' => 'row', 'wrap' => 'wrap', 'gap' => '10px']], ['interactions' => ['stagger' => ['step_ms' => 60]]]),
-        ROW([EYE('14 countries · 5 continents', '#9AA6C4'), B('core.link', ['link' => L('Your country next? →', '/audit/'), 'style' => 'plain'], [], ['color' => ORANGE, 'typography' => ['size' => '12px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.4px']])], '12px', ['padding' => ['top' => '18px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => '#24335A']], ['justify' => 'between'], []),
+        ROW([EYE('14 countries · 5 continents', '#9AA6C4'), B('core.link', ['link' => L('Your country next? →', '/free-audit/'), 'style' => 'plain'], [], ['color' => ORANGE, 'typography' => ['size' => '12px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.4px']])], '12px', ['padding' => ['top' => '18px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => '#24335A']], ['justify' => 'between'], []),
     ], '28px', ['background' => ['color' => '#08080A'], 'border' => ['width' => '1px', 'style' => 'solid', 'color' => '#24335A', 'radius' => '20px'], 'padding' => ['top' => '24px', 'right' => '22px', 'bottom' => '22px', 'left' => '22px']]),
 ], '120px', '120px', [], ['interactions' => THEME('navy')]);
 
@@ -184,7 +184,7 @@ $audit = SEC('Free audit', [
         ['style_parts' => ['highlight' => ['color' => ORANGE]], 'responsive' => ['mobile' => ['style' => ['typography' => ['size' => '68px']]]], 'interactions' => ['text' => ['effect' => 'lines', 'step_ms' => 120]]]),
     ROW([
         W(VBOX([B('core.circle_text', ['text' => 'Free audit · Top 5 fixes · No obligation · ', 'icon' => 'none', 'size' => 190, 'font_size' => 12, 'spin_seconds' => 22, 'direction' => 'clockwise'], [], ['color' => BONE]),
-            PILL('Start here', '/audit/', ORANGE, INK, ['classNames' => ['rk-start'], 'interactions' => ['mouse' => ['magnet' => 6]]])], '0px', [], ['classNames' => ['rk-start-wrap']]), '22%'),
+            PILL('Start here', '/free-audit/', ORANGE, INK, ['classNames' => ['rk-start'], 'interactions' => ['mouse' => ['magnet' => 6]]])], '0px', [], ['classNames' => ['rk-start-wrap']]), '22%'),
         W(VBOX([P('Send your website and industry. You\'ll get the top five things holding it back, free.', BONE, '22px', ['line_height' => '1.45'], ['style' => ['dimensions' => ['max_width' => '520px']]]), $form], '28px', [], ['classNames' => ['rk-anchor-form']]), '76%'),
     ], '40px', ['margin' => ['top' => '64px']], ['align' => 'center'], ['layout' => ['direction' => 'column', 'gap' => '32px']]),
 ], '160px', '110px', [], ['interactions' => THEME('ink'), 'classNames' => ['rk-anchor-audit']]);

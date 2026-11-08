@@ -1,0 +1,5096 @@
+{
+ "pages": {
+  "services": {
+   "name": "Services hub",
+   "parent": "services",
+   "h1": "Web design, development and SEO services",
+   "seo_title": "Web Design, Development & SEO Services | Rakib Hasan",
+   "meta": "WordPress websites, custom plugins, SEO audits, apps and platform builds on Shopify, Wix and Squarespace. Every project starts with an audit of your site.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "I build websites, web apps and custom WordPress tools for small businesses and independent clients, then help them get found. I work on the platform that fits your business, or build it custom when nothing off the shelf will do. Every project starts the same way: I audit what you have before I quote."
+    }
+   ],
+   "items": [
+    {
+     "kind": "band",
+     "img": "3b151369cc032d5100fef8a6c0373841",
+     "alt": "Rakib Hasan at his desk",
+     "cap": "Design, development and SEO from one person"
+    },
+    {
+     "kind": "section",
+     "n": 1,
+     "theme": "bone",
+     "title": "Core services",
+     "blocks": [],
+     "subs": [
+      {
+       "title": "WordPress & Elementor websites",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "New business websites and full redesigns on WordPress, built with Elementor Pro so you can edit them yourself. Includes service pages, galleries, contact and booking forms, speed work and SEO foundations."
+        },
+        {
+         "k": "p",
+         "html": "Best for: businesses that need a professional site they can grow and manage without a developer on call."
+        }
+       ],
+       "link": {
+        "label": "WordPress website design",
+        "href": "/wordpress-websites/"
+       }
+      },
+      {
+       "title": "Custom WordPress development",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Custom themes and plugins when a theme or plugin isn't enough. Built to be reusable, tenant-scoped and licence-ready, like the Kohevo suite of licensing, restaurant and booking plugins."
+        },
+        {
+         "k": "p",
+         "html": "Best for: businesses with a workflow no existing plugin handles, and agencies that need a reliable developer."
+        }
+       ],
+       "link": {
+        "label": "Custom WordPress development",
+        "href": "/custom-development/"
+       }
+      },
+      {
+       "title": "SEO audits & fixes",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "A clear picture of why your site is, or isn't, getting found, with a prioritised plan to fix it. Covers crawling, indexing, duplicate pages, titles, sitemaps and search performance."
+        },
+        {
+         "k": "p",
+         "html": "Best for: sites that get little traffic from Google, or that dropped after a redesign or migration."
+        }
+       ],
+       "link": {
+        "label": "WordPress SEO audit",
+        "href": "/seo/"
+       }
+      }
+     ],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "section",
+     "n": 2,
+     "theme": "ink",
+     "title": "Supporting services",
+     "blocks": [],
+     "subs": [
+      {
+       "title": "Web & mobile apps",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Web applications and mobile apps for small businesses, from booking tools to client portals."
+        }
+       ],
+       "link": {
+        "label": "Web app development",
+        "href": "/apps/"
+       }
+      },
+      {
+       "title": "Shopify, Wix & Squarespace",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Sites built, migrated, managed and fixed on the platform you already use, including ecommerce, restaurant and portfolio sites."
+        }
+       ],
+       "link": {
+        "label": "Shopify, Wix & Squarespace websites",
+        "href": "/platforms/"
+       }
+      },
+      {
+       "title": "Branding, social media & video",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Brand design, style guides, website copy, LinkedIn and social content, and explainer, slideshow and tutorial videos that support your site."
+        }
+       ],
+       "link": {
+        "label": "Branding, social media & video",
+        "href": "/branding/"
+       }
+      }
+     ],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "statement",
+     "n": 3,
+     "theme": "bone",
+     "title": "Not sure which you need?",
+     "lead": "Most people aren't, and that's fine.",
+     "rest": [
+      {
+       "k": "p",
+       "html": "Tell me what you want your website to do: bring in more enquiries, take bookings, sell online or simply look as good as your business. I'll check your current site and recommend the smallest piece of work that gets you there."
+      }
+     ]
+    },
+    {
+     "kind": "recent"
+    },
+    {
+     "kind": "cta",
+     "n": 4,
+     "title": "What every project includes",
+     "blocks": [
+      {
+       "k": "checks",
+       "items": [
+        "An audit of your current site before any quote",
+        "A backed-up staging copy for major changes",
+        "Mobile, tablet and desktop testing",
+        "Basic on-page SEO: titles, descriptions, headings and a sitemap",
+        "Video tutorials so your team can manage the site",
+        "Support for 30 days after launch"
+       ]
+      },
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Get a free website audit",
+         "href": "/free-audit/",
+         "primary": true
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "wordpress-websites": {
+   "name": "WordPress & Elementor websites",
+   "parent": "services",
+   "h1": "WordPress website design that's built for your business",
+   "seo_title": "WordPress & Elementor Website Design | Rakib Hasan",
+   "meta": "Custom WordPress websites built with Elementor Pro: designed for your industry, fast to load, ready for search, and easy for you to edit. Free site audit.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "Your website is often the first conversation a customer has with you. I design and build WordPress websites with Elementor Pro that make that conversation easy: clear about what you do, quick to load on a phone, and set up so Google can find and understand every page. When it's done, you can update it yourself."
+    },
+    {
+     "k": "p",
+     "html": "I've built more than 250 sites this way for construction companies, logistics firms, cleaning services, vacation rentals, restaurants, law firms and creative professionals in 14 countries across five continents."
+    },
+    {
+     "k": "btns",
+     "items": [
+      {
+       "label": "Get a free website audit",
+       "href": "/free-audit/",
+       "primary": true
+      },
+      {
+       "label": "See WordPress projects",
+       "href": "/work/",
+       "primary": false
+      }
+     ]
+    }
+   ],
+   "items": [
+    {
+     "kind": "section",
+     "n": 1,
+     "theme": "bone",
+     "title": "Who this is for",
+     "blocks": [
+      {
+       "k": "tiles",
+       "items": [
+        {
+         "h": "New businesses",
+         "html": "that need a professional site that looks established from day one"
+        },
+        {
+         "h": "Businesses with an outdated site",
+         "html": "that's slow, hard to edit, or doesn't work well on phones"
+        },
+        {
+         "h": "Service businesses",
+         "html": "that need visitors to call, book or request a quote"
+        },
+        {
+         "h": "Owners who want control",
+         "html": "you'd rather change a price or a photo yourself than email a developer"
+        }
+       ]
+      },
+      {
+       "k": "p",
+       "html": "If you mainly need to sell products online, a Shopify build may suit you better. I'll tell you honestly during the audit."
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 2,
+     "theme": "ink",
+     "title": "What you get",
+     "blocks": [],
+     "subs": [
+      {
+       "title": "A design made for your industry",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "A template made for everyone fits no one. I design around how your customers decide. A villa rental needs big photography and an easy route to availability. A logistics company needs to show coverage, capacity and trust. A cleaning service needs service areas, pricing cues and a short quote form. You see the homepage design first and approve the direction before I design the rest."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "A site you can edit yourself",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Every site is built with Elementor Pro, the most widely used visual builder for WordPress. You change text, images and pages by clicking on them, with no code involved. I also record short video tutorials covering the edits you'll actually make, so your team isn't stuck when I'm not around."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Fast pages on every device",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Slow sites lose visitors and rank lower. I compress and convert images to WebP, keep plugins to what the site needs, load fonts efficiently, and test on phones, tablets and desktops before launch. Speed is part of the build, not an add-on."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "SEO foundations from day one",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Every page launches with a unique title, meta description and one clear H1. I set up Yoast SEO, an XML sitemap and clean URLs, add structured data for your business, write alt text for images, and submit the site to Google Search Console. Your new site starts out readable by search engines instead of needing a fix later."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Forms, booking and the tools you need",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Contact forms, quote requests, booking enquiries, galleries, service area pages, team pages and reviews, built with dependable plugins such as Gravity Forms and Crocoblock, or custom-built when nothing else fits."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Security and a safe launch",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "I install security tools such as Wordfence, take backups, and build major changes on a staging copy so your live site stays up. On launch day I check every page, form and redirect on the live domain, not just in a preview."
+        }
+       ],
+       "link": null
+      }
+     ],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "statement",
+     "n": 3,
+     "theme": "bone",
+     "title": "Redesigns without losing your Google rankings",
+     "lead": "A redesign is the most common way small businesses lose search traffic: pages change address, old links break and Google forgets what ranked.",
+     "rest": [
+      {
+       "k": "p",
+       "html": "Before I touch anything I map every existing URL, keep the pages that bring visitors, and set up 301 redirects for anything that moves. After launch I watch Search Console for errors so problems get fixed in days, not months."
+      }
+     ]
+    },
+    {
+     "kind": "section",
+     "n": 4,
+     "theme": "navy",
+     "title": "Recent WordPress projects",
+     "blocks": [
+      {
+       "k": "tiles",
+       "items": [
+        {
+         "h": "RTJ Rentals",
+         "html": "corporate and insurance housing across Georgia and South Carolina, with property pages and availability enquiries. <a href=\"/work/\">Read the case study</a>."
+        },
+        {
+         "h": "Villa Lapierrot",
+         "html": "a Provençal holiday villa between Mont Ventoux and the Dentelles de Montmirail, designed to sell the setting. <a href=\"/work/\">Read the case study</a>."
+        },
+        {
+         "h": "Redkey Logistics",
+         "html": "a transportation provider with guaranteed port capacity and over 50,000 vetted carriers. <a href=\"/work/\">Read the case study</a>."
+        }
+       ]
+      },
+      {
+       "k": "link",
+       "label": "See all 25 case studies",
+       "href": "/contact/"
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 5,
+     "theme": "bone",
+     "title": "How the project runs",
+     "blocks": [
+      {
+       "k": "steps",
+       "items": [
+        {
+         "h": "Free audit and call",
+         "html": "I review your current site, or your competitors' if you're starting fresh, and we agree on pages, content and goals."
+        },
+        {
+         "h": "Quote and plan",
+         "html": "You get a fixed price and a dated plan. Typical timeline: 3–5 weeks."
+        },
+        {
+         "h": "Homepage design",
+         "html": "You approve the look on the homepage before I design the inner pages."
+        },
+        {
+         "h": "Build on staging",
+         "html": "The full site is built on a private copy you can click through and comment on."
+        },
+        {
+         "h": "Launch and check",
+         "html": "I move the site live, set up redirects and Search Console, and check everything on the real domain."
+        },
+        {
+         "h": "Handover",
+         "html": "You get logins, video tutorials and 30 days of support."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 6,
+     "theme": "ink",
+     "title": "Pricing",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "Prices depend on the number of pages and features. As a guide:"
+      },
+      {
+       "k": "prices",
+       "items": [
+        {
+         "name": "Starter",
+         "html": "Up to 5 pages, contact form, basic SEO",
+         "price": "From $790",
+         "feat": false,
+         "cta": "Get a quote"
+        },
+        {
+         "name": "Business",
+         "html": "Up to 12 pages, service and location pages, booking or quote form, full SEO setup",
+         "price": "From $1,490",
+         "feat": true,
+         "cta": "Get a quote"
+        },
+        {
+         "name": "Custom",
+         "html": "Larger sites, custom post types, custom plugins or integrations",
+         "price": "Quoted after audit",
+         "feat": false,
+         "cta": "Start with an audit"
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 7,
+     "theme": "bone",
+     "title": "Frequently asked questions",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "Do I need to provide the text and photos?",
+         "a": "You know your business best, so I'll ask for the key facts. I can write or polish the website copy and source stock photography if you don't have your own."
+        },
+        {
+         "q": "Will I be locked in to you?",
+         "a": "No. You own the domain, hosting, site and all logins. It's standard WordPress, so any developer can pick it up later."
+        },
+        {
+         "q": "Do you provide hosting?",
+         "a": "I don't host sites myself, but I'll recommend a fast, reliable host for your budget and set everything up for you."
+        },
+        {
+         "q": "Can you redesign my site without starting from scratch?",
+         "a": "Yes. If your content and structure are sound, a redesign can keep them and change the design, speed and SEO setup."
+        },
+        {
+         "q": "What happens after launch?",
+         "a": "You get 30 days of support for fixes. After that I offer a monthly care plan from $79 or help as needed."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "recent"
+    },
+    {
+     "kind": "cta",
+     "n": 8,
+     "title": "Ready to see what your site needs?",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "Send me your current website, or tell me about the one you want. I'll reply with a free audit and a recommendation, with no obligation."
+      },
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Get my free audit",
+         "href": "/free-audit/",
+         "primary": true
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "custom-development": {
+   "name": "Custom WordPress development",
+   "parent": "services",
+   "h1": "Custom WordPress plugin and theme development",
+   "seo_title": "Custom WordPress Plugin & Theme Development | Rakib Hasan",
+   "meta": "Custom WordPress plugins and themes when off-the-shelf tools fall short: licensing, booking, restaurant and payment features, built on staging and tested.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "Sometimes the plugin you need doesn't exist, or it does 80% of the job and fights you on the rest. That's when I build it. I develop custom WordPress plugins and themes that are reusable, tenant-scoped and ready to license, so they keep working as your business grows."
+    },
+    {
+     "k": "btns",
+     "items": [
+      {
+       "label": "Describe your project",
+       "href": "/work/",
+       "primary": true
+      },
+      {
+       "label": "See Kohevo",
+       "href": "/contact/",
+       "primary": false
+      }
+     ]
+    }
+   ],
+   "items": [
+    {
+     "kind": "section",
+     "n": 1,
+     "theme": "bone",
+     "title": "Signs you need custom development",
+     "blocks": [
+      {
+       "k": "checks",
+       "items": [
+        "You're stacking three or four plugins to do one job, and they conflict",
+        "A plugin almost fits, but you're paying for features you don't use and missing the one you need",
+        "Your team does a task by hand that the website should do: holding seats, calculating prices, issuing licence keys",
+        "You want to sell or reuse a tool across several sites or clients",
+        "Your current theme is slow or impossible to change without breaking something"
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 2,
+     "theme": "ink",
+     "title": "What I build",
+     "blocks": [],
+     "subs": [
+      {
+       "title": "Custom WordPress plugins",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Plugins built around your exact workflow, with an admin screen your team can use. Examples include booking and reservation tools, pricing calculators, custom post types and fields, member areas, API integrations, and payment flows with Stripe."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Custom WordPress themes",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Lightweight themes coded for your design, without the bulk of a multipurpose theme. Good for sites where speed matters or where a page builder isn't the right fit."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Add-ons and integrations",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Extensions for plugins you already use, such as WooCommerce, Elementor or Crocoblock, and connections to outside services like payment providers, CRMs and booking systems."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Licensing and multi-site tools",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "If you're building a product, I can add licence keys, activation limits and update delivery, so you can sell and support it properly."
+        }
+       ],
+       "link": null
+      }
+     ],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "products",
+     "n": 3
+    },
+    {
+     "kind": "section",
+     "n": 4,
+     "theme": "navy",
+     "title": "How I keep custom code safe",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "Custom code is only worth having if it doesn't break your site. Every build follows the same safeguards:"
+      },
+      {
+       "k": "steps",
+       "items": [
+        {
+         "h": "Written specification",
+         "html": "We agree in writing what the plugin does, who uses it and what's out of scope, before any code."
+        },
+        {
+         "h": "Staging and backups",
+         "html": "Development and testing happen on a staging copy, never on your live site."
+        },
+        {
+         "h": "WordPress coding standards",
+         "html": "Code follows WordPress conventions for security, escaping and data handling, so it plays well with other plugins and future updates."
+        },
+        {
+         "h": "Version control",
+         "html": "Code lives in Git with tagged releases, so every change is tracked and can be rolled back."
+        },
+        {
+         "h": "Live verification",
+         "html": "After deployment I test the feature on the live site with real data."
+        },
+        {
+         "h": "Documentation",
+         "html": "You get notes on how it works and how to manage it."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 5,
+     "theme": "bone",
+     "title": "Who I work with",
+     "blocks": [
+      {
+       "k": "tiles",
+       "items": [
+        {
+         "h": "Business owners",
+         "html": "with a process the website should handle"
+        },
+        {
+         "h": "Agencies and designers",
+         "html": "who need a dependable WordPress developer for client work"
+        },
+        {
+         "h": "Product builders",
+         "html": "who want a plugin they can sell or reuse"
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "statement",
+     "n": 6,
+     "theme": "ink",
+     "title": "Pricing",
+     "lead": "Custom development is quoted per project after a short discovery call, because scope varies so much.",
+     "rest": [
+      {
+       "k": "p",
+       "html": "Small plugins and add-ons typically start at $350. Larger systems are quoted in phases so you can launch the essential part first."
+      }
+     ]
+    },
+    {
+     "kind": "section",
+     "n": 7,
+     "theme": "bone",
+     "title": "Frequently asked questions",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "Who owns the code?",
+         "a": "You do. Once the final invoice is paid, the code is yours outright, with no licence fees and no lock-in."
+        },
+        {
+         "q": "Will it break when WordPress updates?",
+         "a": "Code follows WordPress standards and is tested against current versions. Ongoing maintenance is available for a monthly care plan from $79, or hourly when you only need the odd fix."
+        },
+        {
+         "q": "Can you fix or extend a plugin someone else wrote?",
+         "a": "Yes. I'll review the code first and tell you whether extending it or rebuilding is the better value."
+        },
+        {
+         "q": "Do you work with WooCommerce?",
+         "a": "Yes, including custom product types, checkout changes and payment integrations."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "recent"
+    },
+    {
+     "kind": "cta",
+     "n": 8,
+     "title": "Have a feature in mind?",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "Describe what you need the site to do and how your team does it today. I'll reply with questions, an approach and a rough estimate."
+      },
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Describe your project",
+         "href": "/work/",
+         "primary": true
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "seo": {
+   "name": "SEO audit & fixes",
+   "parent": "services",
+   "h1": "WordPress SEO audit and technical fixes",
+   "seo_title": "WordPress SEO Audit & Technical Fixes | Rakib Hasan",
+   "meta": "Find out why your site is or isn't showing on Google. A full SEO audit covering crawl, indexing, duplicates and speed, with a prioritised fix plan.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "If customers can't find your website on Google, it may as well not exist. My SEO audit gives you a clear picture of why your site is, or isn't, getting found, and a fix plan in order of impact. Then I can make the fixes for you, safely, on a staging copy first."
+    },
+    {
+     "k": "btns",
+     "items": [
+      {
+       "label": "Get a free mini-audit",
+       "href": "/free-audit/",
+       "primary": true
+      },
+      {
+       "label": "What's included",
+       "href": "/contact/",
+       "primary": false
+      }
+     ]
+    }
+   ],
+   "items": [
+    {
+     "kind": "section",
+     "n": 1,
+     "theme": "bone",
+     "title": "Common problems I find",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "Most small business sites don't need more content to rank. They need the basics fixed. These are the issues I see most often:"
+      },
+      {
+       "k": "tiles",
+       "items": [
+        {
+         "h": "The site is hidden from Google.",
+         "html": "A single WordPress setting, \"Discourage search engines\", is left on after launch and blocks the whole site."
+        },
+        {
+         "h": "Pages aren't indexed.",
+         "html": "Google has crawled them but chosen not to show them, often because of thin or duplicate content."
+        },
+        {
+         "h": "Duplicate and missing titles.",
+         "html": "Every page shares the same title, or has none, so Google can't tell them apart."
+        },
+        {
+         "h": "Broken links and lost pages.",
+         "html": "A redesign changed URLs without redirects, and the pages that used to rank now return errors."
+        },
+        {
+         "h": "Slow pages.",
+         "html": "Oversized images and too many plugins drag down Core Web Vitals, especially on phones."
+        },
+        {
+         "h": "Wrong business details.",
+         "html": "Opening hours, service areas or addresses differ between the site, Google Business Profile and directories."
+        },
+        {
+         "h": "No structured data.",
+         "html": "Google has to guess what the business is, where it works and what it offers."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 2,
+     "theme": "ink",
+     "title": "What the audit covers",
+     "blocks": [],
+     "subs": [
+      {
+       "title": "Crawling and indexing",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "I check robots settings, your XML sitemap, canonical tags, noindex tags and Google Search Console's coverage report, so we know which pages Google can reach and which it actually shows."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Duplicates and thin content",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "I find pages that compete with each other, copied text across pages, and pages too thin to rank. For each one I recommend whether to merge, rewrite or remove it."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "On-page SEO",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Titles, meta descriptions, headings, image alt text and internal links, checked page by page against the keyword each page should target."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Search performance",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Using Search Console data, I show which searches already bring impressions, which pages are close to page one, and where the quickest wins are."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Speed and mobile",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Core Web Vitals, image sizes, plugin load and how the site behaves on a phone."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Local and business details",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Name, address and phone consistency, service areas, opening hours and structured data for your business."
+        }
+       ],
+       "link": null
+      }
+     ],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "section",
+     "n": 3,
+     "theme": "bone",
+     "title": "What you get",
+     "blocks": [
+      {
+       "k": "checks",
+       "items": [
+        "A written report in plain English, not a raw tool export",
+        "Every issue ranked as critical, high or medium, with the reason it matters",
+        "A fix plan in order: what to do first and what can wait",
+        "A short call to walk through the findings"
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 4,
+     "theme": "navy",
+     "title": "Fixes, done safely",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "You can take the report to anyone, or I can make the fixes. When I do, I back up the site and test changes on a staging copy before they go live. Typical fixes include:"
+      },
+      {
+       "k": "checks",
+       "items": [
+        "Turning indexing back on and requesting re-indexing in Search Console",
+        "Writing unique titles and meta descriptions for every page",
+        "Setting up Yoast SEO, sitemaps and structured data",
+        "Redirecting broken and old URLs",
+        "Compressing images and removing unneeded plugins",
+        "Correcting business hours, service areas and contact details across the site"
+       ]
+      },
+      {
+       "k": "p",
+       "html": "After the fixes go live, I check them on the live site and in Search Console, not just in a preview."
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 5,
+     "theme": "bone",
+     "title": "Pricing",
+     "blocks": [
+      {
+       "k": "prices",
+       "items": [
+        {
+         "name": "Free mini-audit",
+         "html": "The top 5 issues on your site, by email",
+         "price": "Free",
+         "feat": false,
+         "cta": "Get a quote"
+        },
+        {
+         "name": "Full SEO audit",
+         "html": "Complete report, ranked fix plan, walkthrough call",
+         "price": "$249",
+         "feat": true,
+         "cta": "Get a quote"
+        },
+        {
+         "name": "Audit + fixes",
+         "html": "Full audit, then I make the critical and high-priority fixes",
+         "price": "From $690",
+         "feat": false,
+         "cta": "Get a quote"
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 6,
+     "theme": "ink",
+     "title": "Frequently asked questions",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "How long until I see results?",
+         "a": "Technical fixes like re-enabling indexing can show within days. Ranking improvements usually take weeks to a few months, depending on competition."
+        },
+        {
+         "q": "Do you guarantee first place on Google?",
+         "a": "No, and be wary of anyone who does. I guarantee the issues I find are real, explained clearly and fixed properly."
+        },
+        {
+         "q": "Do you only audit WordPress sites?",
+         "a": "WordPress is my specialty, but I also audit Shopify, Wix and Squarespace sites."
+        },
+        {
+         "q": "Do I need to give you access?",
+         "a": "Not for the mini-audit. For the full audit, read access to Google Search Console helps a lot. For fixes, I'll need an admin login."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "recent"
+    },
+    {
+     "kind": "cta",
+     "n": 7,
+     "title": "Find out what's holding your site back",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "Send me your website address and I'll send back the top five issues, free."
+      },
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Get my free mini-audit",
+         "href": "/free-audit/",
+         "primary": true
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "apps": {
+   "name": "Web & mobile apps",
+   "parent": "services",
+   "h1": "Web app and mobile app development for small businesses",
+   "seo_title": "Web App & Mobile App Development | Rakib Hasan",
+   "meta": "Web applications and mobile apps for small businesses, from booking tools to client portals. Scoped after an audit, built in stages, tested before launch.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "A website tells people about your business. An app does part of the work for you: taking bookings, holding seats, managing clients or handling payments. I build web applications and mobile apps for small businesses, scoped to the job you actually need done and built in stages so you can start using it sooner."
+    },
+    {
+     "k": "btns",
+     "items": [
+      {
+       "label": "Talk through your idea",
+       "href": "/contact/",
+       "primary": true
+      },
+      {
+       "label": "How I build apps",
+       "href": "/contact/",
+       "primary": false
+      }
+     ]
+    }
+   ],
+   "items": [
+    {
+     "kind": "section",
+     "n": 1,
+     "theme": "bone",
+     "title": "What I can build",
+     "blocks": [
+      {
+       "k": "tiles",
+       "items": [
+        {
+         "h": "Booking and reservation tools",
+         "html": "time slots, seat holds, deposits and confirmations"
+        },
+        {
+         "h": "Client and member portals",
+         "html": "logins, documents, orders and messages in one place"
+        },
+        {
+         "h": "Internal tools",
+         "html": "dashboards, job tracking, quote builders and admin panels that replace spreadsheets"
+        },
+        {
+         "h": "Payment flows",
+         "html": "checkout, deposits and subscriptions with Stripe"
+        },
+        {
+         "h": "Mobile apps",
+         "html": "companion apps for your customers or your team (iOS and Android, built cross-platform)"
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "statement",
+     "n": 2,
+     "theme": "ink",
+     "title": "Web app or website plugin?",
+     "lead": "Not every idea needs a separate app.",
+     "rest": [
+      {
+       "k": "p",
+       "html": "If your tool sits beside an existing WordPress site, a custom plugin is often faster and cheaper, because it uses the logins, pages and hosting you already have. My booking-seating add-on for the Kohevo suite works this way: seat holds, pricing and Stripe payments, all inside WordPress."
+      },
+      {
+       "k": "p",
+       "html": "A standalone web app makes more sense when the tool is the product, needs its own user accounts, or must scale beyond a website. I'll recommend the simpler option whenever it does the job."
+      }
+     ]
+    },
+    {
+     "kind": "section",
+     "n": 3,
+     "theme": "bone",
+     "title": "How I build apps",
+     "blocks": [
+      {
+       "k": "steps",
+       "items": [
+        {
+         "h": "Discovery",
+         "html": "We list who uses the app, what each person needs to do, and what can wait for version two."
+        },
+        {
+         "h": "Written scope",
+         "html": "You get a short specification with screens, features, a fixed price per phase and dates."
+        },
+        {
+         "h": "Clickable prototype",
+         "html": "You try the main screens before any code, so changes are cheap."
+        },
+        {
+         "h": "Build in phases",
+         "html": "The essential features ship first. Each phase is tested on a staging version you can use."
+        },
+        {
+         "h": "Launch and verify",
+         "html": "I deploy, test with real data and watch for errors in the first days."
+        },
+        {
+         "h": "Handover",
+         "html": "Documentation, logins and code in version control, so you're never dependent on one person."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 4,
+     "theme": "navy",
+     "title": "What you can expect",
+     "blocks": [
+      {
+       "k": "checks",
+       "items": [
+        "Plain-English updates, not jargon",
+        "Code kept in Git with tagged releases",
+        "Security basics built in: escaped inputs, permission checks, secure payments through Stripe",
+        "A fixed price per phase, so the budget doesn't drift"
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "statement",
+     "n": 5,
+     "theme": "bone",
+     "title": "Pricing",
+     "lead": "Apps are quoted per phase after discovery.",
+     "rest": [
+      {
+       "k": "p",
+       "html": "A small first version typically starts at $4,500 and takes 8–12 weeks. Larger systems are split into phases you can fund one at a time."
+      }
+     ]
+    },
+    {
+     "kind": "section",
+     "n": 6,
+     "theme": "ink",
+     "title": "Frequently asked questions",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "I only have an idea. Is that enough?",
+         "a": "Yes. Discovery turns an idea into a scope. Many first versions are smaller than people expect, which makes them faster and cheaper to launch."
+        },
+        {
+         "q": "Who owns the app?",
+         "a": "You do. The code, the data and the app store accounts are yours once the project is paid in full."
+        },
+        {
+         "q": "Can you work with my existing website?",
+         "a": "Yes. Apps can share logins, data or payments with a WordPress, Shopify or other site."
+        },
+        {
+         "q": "Do you maintain apps after launch?",
+         "a": "Yes, through a monthly care plan from $79."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "recent"
+    },
+    {
+     "kind": "cta",
+     "n": 7,
+     "title": "Have an app idea?",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "Tell me what you want it to do and who will use it. I'll reply with questions, the simplest way to build it and a rough budget."
+      },
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Talk through your idea",
+         "href": "/contact/",
+         "primary": true
+        }
+       ]
+      },
+      {
+       "k": "p",
+       "html": "<strong>Note:</strong> you have no app projects in your portfolio yet. Add one case study here as soon as you can, because this page is the hardest to rank without proof."
+      }
+     ]
+    }
+   ]
+  },
+  "platforms": {
+   "name": "Shopify, Wix & Squarespace",
+   "parent": "services",
+   "h1": "Shopify, Wix and Squarespace websites, built and fixed",
+   "seo_title": "Shopify, Wix & Squarespace Website Builds | Rakib Hasan",
+   "meta": "Sites built, migrated or fixed on Shopify, Wix and Squarespace: setup, menus, galleries, service pages, indexing and broken links on the platform you use.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "You don't have to move to WordPress to get a better website. I build, manage and fix sites on the platform you already use, or the one that fits the job best. That includes Shopify, Wix and Squarespace, among others."
+    },
+    {
+     "k": "btns",
+     "items": [
+      {
+       "label": "Get a free audit of your site",
+       "href": "/free-audit/",
+       "primary": true
+      },
+      {
+       "label": "Which platform fits?",
+       "href": "/contact/",
+       "primary": false
+      }
+     ]
+    }
+   ],
+   "items": [
+    {
+     "kind": "section",
+     "n": 1,
+     "theme": "bone",
+     "title": "What I do on each platform",
+     "blocks": [],
+     "subs": [
+      {
+       "title": "Shopify",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Store setup and redesigns, product and collection pages, theme customisation, apps and payments, and SEO for product pages. Best for businesses whose main goal is selling products online."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Wix",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "New sites and redesigns, service pages, booking setup, galleries, and fixes to SEO settings that Wix hides in its menus. Best for small service businesses that want an all-in-one editor."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Squarespace",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Polished portfolio, restaurant and consulting sites, menus, galleries, forms and blog setup. Best for image-led businesses that value a clean design and simple editing."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Other platforms",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "If your site runs on something else, ask. I'll tell you honestly whether I can help or who can."
+        }
+       ],
+       "link": null
+      }
+     ],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "section",
+     "n": 2,
+     "theme": "ink",
+     "title": "Common jobs",
+     "blocks": [
+      {
+       "k": "tiles",
+       "items": [
+        {
+         "h": "New sites and redesigns",
+         "html": "ecommerce, portfolio, restaurant, consulting and company sites"
+        },
+        {
+         "h": "Setup and configuration",
+         "html": "domains, menus, navigation, galleries and service pages"
+        },
+        {
+         "h": "Fixes to live sites",
+         "html": "indexing problems, page titles, opening hours, service areas and broken links"
+        },
+        {
+         "h": "Migrations",
+         "html": "moving content and keeping your search rankings when you switch platforms"
+        },
+        {
+         "h": "Ongoing management",
+         "html": "regular updates when you'd rather not do them yourself"
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 3,
+     "theme": "bone",
+     "title": "Which platform should you use?",
+     "blocks": [
+      {
+       "k": "picker",
+       "head": [
+        "If you need to…",
+        "Best fit"
+       ],
+       "rows": [
+        {
+         "q": "Sell many products online",
+         "a": "Shopify",
+         "href": "/platforms/"
+        },
+        {
+         "q": "Launch a simple service site quickly and edit it yourself",
+         "a": "Wix or Squarespace",
+         "href": "/platforms/"
+        },
+        {
+         "q": "Show off photography or a portfolio",
+         "a": "Squarespace",
+         "href": "/platforms/"
+        },
+        {
+         "q": "Grow a large site with custom features, many pages and strong SEO control",
+         "a": "WordPress",
+         "href": "/contact/"
+        }
+       ]
+      },
+      {
+       "k": "p",
+       "html": "If you're unsure, the free audit includes a recommendation. I work on all of these, so I've no reason to push one."
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "statement",
+     "n": 4,
+     "theme": "navy",
+     "title": "Switching platforms without losing traffic",
+     "lead": "Moving from Wix or Squarespace to WordPress, or between any two platforms, can cost you your Google rankings if URLs change without redirects.",
+     "rest": [
+      {
+       "k": "p",
+       "html": "Before a migration I list every page that brings visitors, keep or redirect each one, and check Search Console after launch for errors."
+      }
+     ]
+    },
+    {
+     "kind": "section",
+     "n": 5,
+     "theme": "bone",
+     "title": "Pricing",
+     "blocks": [
+      {
+       "k": "pricelist",
+       "head": [
+        "Job",
+        "Price"
+       ],
+       "rows": [
+        [
+         "Fix or small update to an existing site",
+         "From $49"
+        ],
+        [
+         "New site or redesign",
+         "From $790, quoted after audit"
+        ],
+        [
+         "Platform migration",
+         "Quoted after audit"
+        ],
+        [
+         "Monthly management",
+         "$99 per month"
+        ]
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 6,
+     "theme": "ink",
+     "title": "Frequently asked questions",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "Can you just fix one thing on my Wix site?",
+         "a": "Yes. Small fixes such as wrong hours, broken links or missing titles are a common job."
+        },
+        {
+         "q": "Will I lose my content if I switch platforms?",
+         "a": "Not if it's planned. I move the content, set up redirects and check the result on the live site."
+        },
+        {
+         "q": "Do I keep ownership of my account?",
+         "a": "Yes. The platform account stays in your name, and I work through a collaborator or staff login."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "recent"
+    },
+    {
+     "kind": "cta",
+     "n": 7,
+     "title": "Get a second opinion on your site",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "Send me your website address. I'll check its setup and search visibility and send you a short fix list, free."
+      },
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Get my free audit",
+         "href": "/free-audit/",
+         "primary": true
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "branding": {
+   "name": "Branding, social media & video",
+   "parent": "services",
+   "h1": "Branding, content and social media that support your website",
+   "seo_title": "Branding, Social Media & Video Services | Rakib Hasan",
+   "meta": "Brand design, style guides, website copy, LinkedIn content and explainer videos that support your website and keep your business visible between updates.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "A great website still needs a recognisable brand, clear words and a reason for people to come back. I create the design, copy and video that support your site, in print, on screen and on social media, so everything looks and sounds like one business."
+    },
+    {
+     "k": "btns",
+     "items": [
+      {
+       "label": "Tell me what you need",
+       "href": "/contact/",
+       "primary": true
+      },
+      {
+       "label": "See services",
+       "href": "/services/",
+       "primary": false
+      }
+     ]
+    }
+   ],
+   "items": [
+    {
+     "kind": "section",
+     "n": 1,
+     "theme": "bone",
+     "title": "Brand design",
+     "blocks": [
+      {
+       "k": "checks",
+       "items": [
+        "Logos and brand refreshes",
+        "Style guides with your colours, fonts and usage rules",
+        "Business cards and print pieces",
+        "Photo treatment so your website images feel consistent"
+       ]
+      },
+      {
+       "k": "p",
+       "html": "A style guide is especially useful if several people create content for you. It keeps your website, social posts and print materials looking like they come from the same company."
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 2,
+     "theme": "ink",
+     "title": "Website copy and content",
+     "blocks": [
+      {
+       "k": "checks",
+       "items": [
+        "Homepage and service page copy written for people and search engines",
+        "Case studies and about pages",
+        "Presentation slides for pitches and proposals"
+       ]
+      },
+      {
+       "k": "p",
+       "html": "Good copy says what you do in the first line, answers the questions customers ask, and ends with a clear next step. I write it with your SEO keywords in mind, without making it read like it was written for a robot."
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 3,
+     "theme": "bone",
+     "title": "Social media content",
+     "blocks": [
+      {
+       "k": "checks",
+       "items": [
+        "LinkedIn posts and profile content for owners and teams",
+        "Regular social content for your business pages",
+        "Post designs that match your brand"
+       ]
+      },
+      {
+       "k": "p",
+       "html": "Social content keeps your business visible between website updates and sends warm visitors back to your site. I plan posts around your services and projects so each one has a purpose."
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 4,
+     "theme": "navy",
+     "title": "Video",
+     "blocks": [
+      {
+       "k": "checks",
+       "items": [
+        "Explainer videos about your service or product",
+        "Slideshow and event videos",
+        "Edits of your own footage",
+        "Tutorial videos for your team or customers"
+       ]
+      },
+      {
+       "k": "p",
+       "html": "Every website I build already comes with video tutorials. The same skills work for marketing: short videos that explain what you do faster than a page of text."
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "statement",
+     "n": 5,
+     "theme": "bone",
+     "title": "Why use the same person for your site and your content?",
+     "lead": "When one person handles your website and the content that points to it, the pieces fit together.",
+     "rest": [
+      {
+       "k": "p",
+       "html": "The colours match, the wording is consistent, and every post links to a page built to turn that visitor into an enquiry."
+      }
+     ]
+    },
+    {
+     "kind": "section",
+     "n": 6,
+     "theme": "ink",
+     "title": "Pricing",
+     "blocks": [
+      {
+       "k": "pricelist",
+       "head": [
+        "Service",
+        "Price"
+       ],
+       "rows": [
+        [
+         "Brand style guide",
+         "From $290"
+        ],
+        [
+         "Website copy, per page",
+         "From $45"
+        ],
+        [
+         "Social media content",
+         "$190 per month for 12 posts"
+        ],
+        [
+         "Explainer or slideshow video",
+         "From $150"
+        ]
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "recent"
+    },
+    {
+     "kind": "cta",
+     "n": 7,
+     "title": "Let's make it all match",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "Tell me what you need, whether it's one logo or a full content plan. I'll reply with ideas and a quote."
+      },
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Tell me what you need",
+         "href": "/contact/",
+         "primary": true
+        }
+       ]
+      },
+      {
+       "k": "p",
+       "html": "<strong>Note:</strong> I left resumes and cover letters off this page on purpose. They pull the site away from business web work, which weakens how Google sees what you do. Offer them on Fiverr instead."
+      }
+     ]
+    }
+   ]
+  },
+  "free-audit": {
+   "name": "Free website audit",
+   "parent": "",
+   "h1": "Get a free website audit",
+   "seo_title": "Free Website Audit for Small Businesses | Rakib Hasan",
+   "meta": "Get a free audit of your website: indexing, titles, speed, broken links and mobile issues, with a prioritised fix list. No obligation and no sales pitch.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "Find out what's stopping your website from bringing in customers. Send me your address and I'll check it for the problems I see most often on small business sites. You'll get a short, plain-English list of what to fix first, and you're free to fix it yourself or hire anyone you like."
+    },
+    {
+     "k": "note",
+     "html": "I reply within 12 hours. Your details are only used to send your audit."
+    }
+   ],
+   "items": [
+    {
+     "kind": "band",
+     "img": "7f3bcf262879b443e5a37433f5a899ee",
+     "alt": "Rakib Hasan reviewing a website by hand",
+     "cap": "Every audit is done by hand, not by a bot"
+    },
+    {
+     "kind": "section",
+     "n": 1,
+     "theme": "bone",
+     "title": "What I check",
+     "blocks": [
+      {
+       "k": "tiles",
+       "items": [
+        {
+         "h": "Google visibility",
+         "html": "is the site indexed, and are any pages blocked?"
+        },
+        {
+         "h": "Titles and descriptions",
+         "html": "are they unique, the right length and about the right thing?"
+        },
+        {
+         "h": "Speed",
+         "html": "how fast do your key pages load on a phone?"
+        },
+        {
+         "h": "Mobile layout",
+         "html": "do menus, buttons and forms work on small screens?"
+        },
+        {
+         "h": "Broken links and errors",
+         "html": "are visitors hitting dead ends?"
+        },
+        {
+         "h": "Business details",
+         "html": "are your hours, service areas and contact details consistent?"
+        },
+        {
+         "h": "Enquiry path",
+         "html": "can a visitor work out how to contact or book you within a few seconds?"
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "bento",
+     "n": 2,
+     "theme": "ink",
+     "cards": [
+      {
+       "title": "What you get",
+       "icon": "mail",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "An email with the top five issues on your site, each with why it matters and how to fix it, in order of priority. No 40-page report full of tool scores, and no automated scan sent without a human looking at it."
+        }
+       ]
+      },
+      {
+       "title": "Why it's free",
+       "icon": "tag",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Most of my clients start here. An audit is the fastest way to show what I'd do on your site, and it means any quote I give you later is based on what's really there, not guesswork. If you'd rather fix things yourself, the audit is yours to keep."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "section",
+     "n": 4,
+     "theme": "navy",
+     "title": "What happens next",
+     "blocks": [
+      {
+       "k": "steps",
+       "items": [
+        {
+         "h": "",
+         "html": "You send your website address."
+        },
+        {
+         "h": "",
+         "html": "I review the site by hand and email your top five fixes within 48 hours."
+        },
+        {
+         "h": "",
+         "html": "If you want help, we book a short call. If not, that's the end of it."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 5,
+     "theme": "bone",
+     "title": "What clients say",
+     "blocks": [
+      {
+       "k": "quote",
+       "text": "Extremely good in communication, addressed all of my needs, fixed things that I didn't know were broken, and basically did an amazing job!",
+       "who": "Stéphanie Escouflaire, Villa Lapierrot, Belgium"
+      },
+      {
+       "k": "badge",
+       "items": [
+        "Fiverr Level 2 Seller",
+        "5.0 from 101 reviews",
+        "250+ client websites"
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "cta",
+     "n": 6,
+     "title": "Questions",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "Is it really free?",
+         "a": "Yes. There's no catch and no obligation."
+        },
+        {
+         "q": "Do you need my logins?",
+         "a": "No. The free audit only uses what anyone can see from outside."
+        },
+        {
+         "q": "What platforms do you audit?",
+         "a": "WordPress, Shopify, Wix, Squarespace and most others."
+        }
+       ]
+      },
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Send me my audit",
+         "href": "/free-audit/",
+         "primary": true
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "about": {
+   "name": "About",
+   "parent": "",
+   "h1": "About Rakib Hasan",
+   "seo_title": "About Rakib Hasan | Freelance Web Designer & Developer",
+   "meta": "Rakib Hasan is a freelance web designer and developer in Bangladesh, building WordPress sites, custom plugins and SEO fixes for US and European clients.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "I'm Rakib Hasan, a freelance web designer and developer based in Bangladesh. I help small businesses and independent professionals show the best of themselves online, with websites that are clear, fast and easy to find. I've shipped more than 250 sites for clients in 14 countries, and I hold a 5.0 rating from 101 reviews on Fiverr."
+    }
+   ],
+   "items": [
+    {
+     "kind": "band",
+     "img": "fbba8323ce2532684276bba580d15600",
+     "alt": "Rakib Hasan at work",
+     "cap": "One person plans, designs and builds your site"
+    },
+    {
+     "kind": "world",
+     "label": "Where my clients are"
+    },
+    {
+     "kind": "bento",
+     "n": 1,
+     "theme": "bone",
+     "cards": [
+      {
+       "title": "What I do",
+       "icon": "spark",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Most of my work is WordPress: designing and building websites with Elementor Pro, writing custom plugins and themes, and fixing the SEO problems that keep good businesses off Google. I also build web and mobile apps, work on Shopify, Wix and Squarespace, and create the branding, copy and video that support a website."
+        },
+        {
+         "k": "p",
+         "html": "I've built and maintain my own WordPress plugin suite, Kohevo, which includes a licensing system, a restaurant plugin and a booking add-on with seat holds and Stripe payments. Building products I have to support myself has made me careful about the code I write for clients."
+        }
+       ]
+      },
+      {
+       "title": "How I got here",
+       "icon": "spark",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "I started building websites in 2018, fixing small WordPress sites for local shops in Dhaka between university classes. The turning point was a US cleaning company that came back for a second site, then a third, and sent two friends my way. I went full-time freelance soon after, and I've since shipped more than 250 sites for clients in 14 countries. I still work the same way: one person, one project at a time, and a site I'd be proud to put my name on."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "section",
+     "n": 3,
+     "theme": "bone",
+     "title": "How I work",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "Three rules shape every project:"
+      },
+      {
+       "k": "steps",
+       "items": [
+        {
+         "h": "Audit before quoting",
+         "html": "I look at what's actually there before I give you a price."
+        },
+        {
+         "h": "Staging first",
+         "html": "Major changes are built on a backed-up copy so your live site stays up."
+        },
+        {
+         "h": "Verified live",
+         "html": "I check the work on your real site before I call it done."
+        }
+       ]
+      },
+      {
+       "k": "p",
+       "html": "Clients often tell me communication is what they value most. I give plain-English updates, answer questions quickly, and tell you when something isn't worth the money."
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "bento",
+     "n": 4,
+     "theme": "navy",
+     "cards": [
+      {
+       "title": "Who I work with",
+       "icon": "people",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "I've built websites for construction companies, logistics and transport firms, cleaning and sterilisation services, vacation rentals and villas, restaurants, law firms, electricians, glass and tile businesses, business coaches, a yoga and spa studio, and fashion and graphic designers. Most are small teams who need their website to work hard without a full-time developer."
+        },
+        {
+         "k": "p",
+         "html": "I work remotely with clients in the US and Europe and plan calls around your time zone. I'm online 10:00–23:00 Dhaka time, which covers the whole European working day and US mornings."
+        }
+       ]
+      },
+      {
+       "title": "Tools I use",
+       "icon": "tool",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "WordPress · Elementor Pro · Crocoblock and JetEngine · Yoast SEO · Gravity Forms · Wordfence · Stripe · Shopify · Wix · Squarespace · Git and GitHub"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "section",
+     "n": 6,
+     "theme": "ink",
+     "title": "Find me elsewhere",
+     "blocks": [
+      {
+       "k": "checks",
+       "items": [
+        "<a href=\"https://fiverr.com/rakib_64/\">Fiverr</a>: Level 2 Seller, 5.0 from 101 reviews",
+        "<a href=\"https://github.com/rakib6564/\">GitHub</a>: code and plugin work"
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "recent"
+    },
+    {
+     "kind": "cta",
+     "n": 7,
+     "title": "Let's work together",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "If you have a project in mind, or just want to know what's holding your current site back, start with a free audit."
+      },
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Get a free audit",
+         "href": "/free-audit/",
+         "primary": true
+        },
+        {
+         "label": "See my work",
+         "href": "/work/",
+         "primary": false
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "process": {
+   "name": "Process",
+   "parent": "",
+   "h1": "How a website project works with me",
+   "seo_title": "How I Work: Audit, Staging, Launch | Rakib Hasan",
+   "meta": "How a website project runs: an audit before quoting, a staging copy before major changes, and every fix checked on the live site before handover.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "A good process protects your business while your website changes. Mine is built on three rules: I audit before I quote, I build on staging first, and I verify everything on the live site. Here's what that looks like from first message to handover."
+    }
+   ],
+   "items": [
+    {
+     "kind": "band",
+     "img": "3f8022fe20f01f0732100bca0089e37c",
+     "alt": "Rakib Hasan building a website on a laptop",
+     "cap": "From first audit to a verified launch"
+    },
+    {
+     "kind": "section",
+     "n": 1,
+     "theme": "bone",
+     "title": "The three rules",
+     "blocks": [],
+     "subs": [
+      {
+       "title": "Audit before quoting",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "I check your current site first, so the scope, timeline and price are based on what's actually there. No surprises halfway through because something was \"more complicated than expected\"."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Staging first",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Before any major change I take a full backup and work on a private staging copy. Your live site keeps running and taking enquiries the whole time."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Verified live",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "A change that works in a preview can still break on the real site. I check every page, form and redirect on your live domain before I call the job done."
+        }
+       ],
+       "link": null
+      }
+     ],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "section",
+     "n": 2,
+     "theme": "ink",
+     "title": "Step by step",
+     "blocks": [
+      {
+       "k": "steps",
+       "items": [
+        {
+         "h": "Free audit (day 1–2)",
+         "html": "You send your website or idea. I review it and send the top issues and my recommendation."
+        },
+        {
+         "h": "Call and quote (2 days)",
+         "html": "We agree on pages, features and goals. You get a fixed price and a dated plan in writing."
+        },
+        {
+         "h": "Content and design (7 days)",
+         "html": "I gather your content and design the homepage first. You approve the direction before I design the remaining pages."
+        },
+        {
+         "h": "Build on staging (10 days)",
+         "html": "I build the full site on a private copy. You click through, leave feedback and request changes. Two rounds of revisions are included."
+        },
+        {
+         "h": "Launch (1 day)",
+         "html": "I back up, go live, set up redirects, connect Google Search Console and submit your sitemap."
+        },
+        {
+         "h": "Verify and hand over",
+         "html": "I test everything on the live site, then send your logins, video tutorials and a short guide."
+        },
+        {
+         "h": "Support (30 days)",
+         "html": "Any problems that come up after launch are fixed free for 30 days."
+        }
+       ]
+      },
+      {
+       "k": "p",
+       "html": "Typical total: 3–5 weeks for a business website."
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 3,
+     "theme": "bone",
+     "title": "What I need from you",
+     "blocks": [
+      {
+       "k": "checks",
+       "items": [
+        "Access to your current site, domain and hosting (or I can help set them up)",
+        "Your logo, photos and any brand colours or fonts",
+        "The key facts: services, prices, areas you cover, opening hours",
+        "Quick feedback at each review point, ideally within 2 working days"
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "statement",
+     "n": 4,
+     "theme": "navy",
+     "title": "How we stay in touch",
+     "lead": "You'll get an update at each milestone and can message me any time on email, WhatsApp, Fiverr or Slack, whichever suits you.",
+     "rest": [
+      {
+       "k": "p",
+       "html": "I reply within 12 hours on working days."
+      }
+     ]
+    },
+    {
+     "kind": "recent"
+    },
+    {
+     "kind": "cta",
+     "n": 5,
+     "title": "Ready to start?",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "The first step is the free audit. It costs nothing and you're under no obligation."
+      },
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Get my free audit",
+         "href": "/free-audit/",
+         "primary": true
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "reviews": {
+   "name": "Reviews",
+   "parent": "",
+   "h1": "What clients say about working with me",
+   "seo_title": "Client Reviews: 5.0 from 101 Reviews | Rakib Hasan",
+   "meta": "Read what clients in 14 countries across five continents say about working with Rakib Hasan: 5.0 average from 101 Fiverr reviews for web design and development.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "I'm a Fiverr Level 2 Seller with a 5.0 rating from 101 reviews. Here's what clients in 14 countries across five continents have said after we finished their projects."
+    },
+    {
+     "k": "badge",
+     "items": [
+      "5.0 ★ from 101 reviews on Fiverr",
+      "Link: Read every review on Fiverr"
+     ]
+    }
+   ],
+   "items": [
+    {
+     "kind": "reviews"
+    },
+    {
+     "kind": "world",
+     "label": "Clients in 14 countries"
+    },
+    {
+     "kind": "section",
+     "n": 2,
+     "theme": "ink",
+     "title": "What clients mention most",
+     "blocks": [
+      {
+       "k": "tiles",
+       "items": [
+        {
+         "h": "Communication",
+         "html": "clear updates and quick answers"
+        },
+        {
+         "h": "Going beyond the brief",
+         "html": "fixing problems clients didn't know they had"
+        },
+        {
+         "h": "Repeat work",
+         "html": "several clients have hired me for more than one site"
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "cta",
+     "n": 3,
+     "title": "Your project could be next",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "Start with a free audit of your current site."
+      },
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Get my free audit",
+         "href": "/free-audit/",
+         "primary": true
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "faq": {
+   "name": "FAQ",
+   "parent": "",
+   "h1": "Frequently asked questions",
+   "seo_title": "Web Design & WordPress FAQ | Rakib Hasan",
+   "meta": "Answers on cost, timelines, platforms, hosting, SEO, editing your own site and support after launch, for anyone planning a website with Rakib Hasan.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "The questions people ask most before starting a website project. If yours isn't here, ask me directly."
+    }
+   ],
+   "items": [
+    {
+     "kind": "section",
+     "n": 1,
+     "theme": "bone",
+     "title": "Cost and payment",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "How much does a website cost?",
+         "a": "Most small business websites cost between $900 and $3,500. The price depends on the number of pages, features such as booking or ecommerce, and whether you need copywriting. You get a fixed quote after a free audit, so you know the full cost before you commit."
+        },
+        {
+         "q": "How do payments work?",
+         "a": "50% to start and 50% at launch. Larger projects are split into milestones, so you only pay as work is approved. Payment is by bank transfer, Wise, PayPal or card."
+        },
+        {
+         "q": "Are there ongoing costs?",
+         "a": "You'll pay for your domain and hosting directly, usually $80–$250 per year. Premium plugins such as Elementor Pro have yearly licences. Maintenance from me is optional."
+        },
+        {
+         "q": "Can I hire you through Fiverr?",
+         "a": "Yes. You can <a href=\"https://fiverr.com/rakib_64/\">order through my Fiverr profile</a> or work with me directly. Prices are the same either way. Fiverr adds its own small service fee, and working directly gives you more flexible milestones."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "section",
+     "n": 2,
+     "theme": "ink",
+     "title": "Timelines",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "How long does a website take?",
+         "a": "A typical business site takes 3–5 weeks from the first call to launch. Simple sites can be faster; custom plugins and apps take longer. You get a dated plan with the quote."
+        },
+        {
+         "q": "What slows a project down?",
+         "a": "Waiting for content is the most common delay. Having your text, photos and logins ready makes the biggest difference."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "section",
+     "n": 3,
+     "theme": "bone",
+     "title": "Platforms and ownership",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "Should I use WordPress, Wix, Squarespace or Shopify?",
+         "a": "WordPress suits sites that will grow, need custom features or want full SEO control. Shopify suits product stores. Wix and Squarespace suit simple sites you want to manage in one place. I work on all of them, so I'll recommend whichever fits."
+        },
+        {
+         "q": "Do I own my website?",
+         "a": "Yes. Your domain, hosting, website and all accounts are in your name. Nothing is locked to me."
+        },
+        {
+         "q": "Can I edit the website myself?",
+         "a": "Yes. WordPress sites are built with Elementor, so you can change text, images and pages visually. Every project includes video tutorials."
+        },
+        {
+         "q": "Do you provide hosting?",
+         "a": "I don't host sites myself, but I'll recommend a host that fits your budget and set it up for you, so you own the account."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "section",
+     "n": 4,
+     "theme": "navy",
+     "title": "SEO and results",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "Will my website be on Google?",
+         "a": "Every site launches with SEO foundations: unique page titles and descriptions, a sitemap, structured data and Search Console setup. Ranking for competitive searches takes time and depends on your market."
+        },
+        {
+         "q": "Do you guarantee rankings?",
+         "a": "No one can honestly guarantee a Google position. I guarantee the technical setup is correct and that every issue I find is fixed properly."
+        },
+        {
+         "q": "Will I lose my rankings if I redesign?",
+         "a": "Not if it's done carefully. I map your existing pages and set up redirects so the pages Google already trusts keep their value."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "section",
+     "n": 5,
+     "theme": "bone",
+     "title": "Working together",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "Where are you based?",
+         "a": "In Bangladesh. I work with clients in the US and Europe and schedule calls around your time zone."
+        },
+        {
+         "q": "How do we communicate?",
+         "a": "By email, WhatsApp, Fiverr or video call. You get updates at each milestone and I reply within 12 hours on working days."
+        },
+        {
+         "q": "What do you need from me to start?",
+         "a": "Your website address (or idea), your goals, and access to your domain and hosting when we begin. I'll send a checklist after the call."
+        },
+        {
+         "q": "How many revisions are included?",
+         "a": "Two rounds of revisions at the design stage and two at the build stage. Small text changes after launch are covered during the support period."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "section",
+     "n": 6,
+     "theme": "ink",
+     "title": "After launch",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "What support do I get after launch?",
+         "a": "30 days of free fixes for anything that isn't working as agreed."
+        },
+        {
+         "q": "Do you offer maintenance?",
+         "a": "Yes: updates, backups, security checks and small edits from $79 per month."
+        },
+        {
+         "q": "Can you take over a site someone else built?",
+         "a": "Yes. I'll audit it first and tell you what's worth keeping."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "recent"
+    },
+    {
+     "kind": "cta",
+     "n": 7,
+     "title": "Still have a question?",
+     "blocks": [
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Ask me directly",
+         "href": "/contact/",
+         "primary": true
+        },
+        {
+         "label": "Get a free audit",
+         "href": "/free-audit/",
+         "primary": true
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "contact": {
+   "name": "Contact",
+   "parent": "",
+   "h1": "Let's talk about your website",
+   "seo_title": "Contact Rakib Hasan | Book a Website Project Call",
+   "meta": "Tell me about your website project or request a free audit. I reply within 12 hours with next steps, a rough timeline and the questions I need answered.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "Tell me what you're working on, whether it's a new site, a redesign, a plugin or a problem you need fixed. I'll reply within 12 hours with next steps, a rough timeline and any questions I need answered."
+    }
+   ],
+   "items": [
+    {
+     "kind": "band",
+     "img": "7e977488fb738bdc0dafb257c02f8d16",
+     "alt": "Rakib Hasan with a coffee, between client calls",
+     "cap": "Every message is read and answered by me"
+    },
+    {
+     "kind": "contact",
+     "n": 1
+    },
+    {
+     "kind": "section",
+     "n": 2,
+     "theme": "ink",
+     "title": "Other ways to reach me",
+     "blocks": [
+      {
+       "k": "checks",
+       "items": [
+        "<strong>Email:</strong> Support@rakibhasaan.com",
+        "<strong>Fiverr:</strong> <a href=\"https://fiverr.com/rakib_64/\">fiverr.com/rakib_64</a>",
+        "<strong>GitHub:</strong> <a href=\"https://github.com/rakib6564/\">github.com/rakib6564</a>",
+        "<strong>WhatsApp or a 20-minute video call, booked by email</strong>"
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "statement",
+     "n": 3,
+     "theme": "bone",
+     "title": "Not ready to talk yet?",
+     "lead": "Get a free audit of your current website first.",
+     "rest": [
+      {
+       "k": "p",
+       "html": "You'll get the top five things to fix, with no obligation."
+      },
+      {
+       "k": "link",
+       "label": "Get a free audit",
+       "href": "/free-audit/"
+      }
+     ]
+    },
+    {
+     "kind": "cta",
+     "n": 4,
+     "title": "What happens after you get in touch",
+     "blocks": [
+      {
+       "k": "steps",
+       "items": [
+        {
+         "h": "",
+         "html": "I read your message and reply within 12 hours."
+        },
+        {
+         "h": "",
+         "html": "If it's a fit, we book a short call at a time that suits your time zone."
+        },
+        {
+         "h": "",
+         "html": "You get a fixed quote and a dated plan in writing."
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "construction": {
+   "name": "Construction & trades",
+   "parent": "work",
+   "h1": "Websites for construction companies that win more quote requests",
+   "seo_title": "Websites for Construction Companies & Trades | Rakib Hasan",
+   "meta": "Websites for contractors, remodelers and trades: service and area pages, project galleries and quote forms that win local work. Free site audit.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "I build WordPress websites for contractors, remodelers and trades: service pages that rank in your area, project galleries that prove your work, and quote forms on every page. I've built eight in the US and Uganda so far."
+    },
+    {
+     "k": "btns",
+     "items": [
+      {
+       "label": "Get a free contractor site audit",
+       "href": "/free-audit/",
+       "primary": true
+      },
+      {
+       "label": "See construction projects",
+       "href": "/work/",
+       "primary": false
+      }
+     ]
+    }
+   ],
+   "items": [
+    {
+     "kind": "section",
+     "n": 1,
+     "theme": "bone",
+     "title": "Why most contractor websites don't bring in work",
+     "blocks": [],
+     "subs": [
+      {
+       "title": "Invisible in local search",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "One \"Services\" page can't rank for \"kitchen remodel in Charlotte\". Each trade and each area needs its own page."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "No proof of the work",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Homeowners hire on finished jobs they can see. Stock photos tell them nothing about you."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "The quote form is buried",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "If asking for a price takes more than one tap, visitors call the next contractor instead."
+        }
+       ],
+       "link": null
+      },
+      {
+       "title": "Slow on a phone",
+       "blocks": [
+        {
+         "k": "p",
+         "html": "Most people searching for a contractor are on mobile. Heavy galleries that load slowly lose them."
+        }
+       ],
+       "link": null
+      }
+     ],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "section",
+     "n": 2,
+     "theme": "ink",
+     "title": "What every contractor site gets",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "Built on WordPress and Elementor, so you can add projects and update prices yourself."
+      },
+      {
+       "k": "tiles",
+       "items": [
+        {
+         "h": "A page for every service",
+         "html": "Foundation repair, kitchens, flooring: each one written to rank on its own."
+        },
+        {
+         "h": "Service area pages",
+         "html": "The towns you cover, each with its own page and local details."
+        },
+        {
+         "h": "Project gallery",
+         "html": "Before-and-after photos, filtered by job type, that load fast on phones."
+        },
+        {
+         "h": "Quote form + click-to-call",
+         "html": "On every page, sending requests straight to your inbox."
+        },
+        {
+         "h": "Reviews that build trust",
+         "html": "Your Google reviews and testimonials placed next to the jobs they describe."
+        },
+        {
+         "h": "Local SEO setup",
+         "html": "LocalBusiness schema, Search Console, and details that match your Google Business Profile."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "projects",
+     "n": 3,
+     "title": "Construction sites I've built",
+     "industry": "Construction & trades"
+    },
+    {
+     "kind": "section",
+     "n": 4,
+     "theme": "navy",
+     "title": "What contractors say",
+     "blocks": [
+      {
+       "k": "quote",
+       "text": "Always great to work with. He has done several sites for me, and all have been fantastic!",
+       "who": "Thiago Fernan · Palm Flooring, New England"
+      },
+      {
+       "k": "quote",
+       "text": "Go ahead, this guy is really good.",
+       "who": "Rafael · RF Home Remodeling, Philadelphia"
+      },
+      {
+       "k": "quote",
+       "text": "As a General Contractor, I've hired over 300 independent contractors over the course of my career and I can say with confidence I've never had an experience like this. He's the MVP!",
+       "who": "muzteng309 · General contractor, United States · via Fiverr"
+      }
+     ],
+     "subs": [],
+     "quotes": true,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 5,
+     "theme": "bone",
+     "title": "Contractor website packages",
+     "blocks": [
+      {
+       "k": "prices",
+       "items": [
+        {
+         "name": "Local Trade",
+         "html": "Up to 6 service pages, project gallery, quote form and click-to-call, local SEO setup",
+         "price": "From $990",
+         "feat": false,
+         "cta": "Get a quote"
+        },
+        {
+         "name": "Growing Contractor",
+         "html": "Everything in Local Trade, up to 10 service area pages, filterable before-and-after gallery, reviews section and blog setup",
+         "price": "From $1,890",
+         "feat": true,
+         "cta": "Get a quote"
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": false
+    },
+    {
+     "kind": "section",
+     "n": 6,
+     "theme": "ink",
+     "title": "Contractor website FAQ",
+     "blocks": [
+      {
+       "k": "faq",
+       "items": [
+        {
+         "q": "Can I add new projects myself?",
+         "a": "Yes. You upload photos and a short description, and the project appears in your gallery under the right job type. Every site comes with video tutorials."
+        },
+        {
+         "q": "How do service area pages help?",
+         "a": "People search for a trade plus a place. A page for each town you cover, with real local details, gives Google a page to show for those searches."
+        },
+        {
+         "q": "Will it match my Google Business Profile?",
+         "a": "Yes. I make sure your name, address, phone, hours and service areas match everywhere, which Google uses to judge local businesses."
+        },
+        {
+         "q": "How long does a contractor site take?",
+         "a": "Usually 3–5 weeks from the first call to launch. Having your project photos ready is the biggest time saver."
+        }
+       ]
+      }
+     ],
+     "subs": [],
+     "quotes": false,
+     "lead": true
+    },
+    {
+     "kind": "cta_form",
+     "n": 7,
+     "title": "Free audit for contractor websites",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "I'll check how your site shows up for your trade in your area, how fast it loads on a phone, and how easy it is to ask for a quote. You get the top five fixes, free."
+      }
+     ]
+    }
+   ],
+   "chips": [
+    "General contractors",
+    "Design-build firms",
+    "Remodelers",
+    "Flooring & tile",
+    "Glass & glazing",
+    "Electricians"
+   ]
+  },
+  "work": {
+   "name": "Work",
+   "parent": "",
+   "h1": "Web design portfolio",
+   "seo_title": "Web Design Portfolio: 25 Client Websites | Rakib Hasan",
+   "meta": "Browse 25 websites built for construction, logistics, cleaning, hospitality, legal and creative businesses across 14 countries.",
+   "intro": [
+    {
+     "k": "p",
+     "html": "More than 250 websites built for small businesses in 14 countries. The 25 below are written up in full. Each project has its own case study covering what the client needed, what I built and how it turned out. Filter by industry to find work like yours."
+    }
+   ],
+   "items": [
+    {
+     "kind": "grid"
+    },
+    {
+     "kind": "cta",
+     "n": 2,
+     "title": "Not sure your industry is here?",
+     "blocks": [
+      {
+       "k": "p",
+       "html": "The same approach works for any service business: show what you do clearly, make it easy to get in touch, and get found on Google. Tell me about yours."
+      },
+      {
+       "k": "btns",
+       "items": [
+        {
+         "label": "Get a free audit",
+         "href": "/free-audit/",
+         "primary": true
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "cases": [
+  {
+   "slug": "rtj-rentals",
+   "name": "RTJ Rentals",
+   "industry": "Hospitality & rentals",
+   "color": "#FF6FA5",
+   "country": "USA",
+   "cshort": "USA",
+   "year": "2022",
+   "client": "Rodlyn & Tanya, co-founders",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://rtjrentals.com/",
+   "h1": "RTJ Rentals: a corporate housing website that feels like home",
+   "title": "RTJ Rentals: Corporate Housing Website | Rakib Hasan",
+   "summary": "A WordPress site that helps companies, insurers and families find furnished, pet-friendly temporary housing across Georgia and South Carolina.",
+   "img": "9d82c7fb6e05de2701e79d96376053d1",
+   "img2": "229c2b34e1ede781a8ab184f672c8c71",
+   "alt": "RTJ Rentals homepage on a laptop.",
+   "p_client": [
+    "RTJ Rentals provides corporate housing and short-term apartments for companies, families and people facing temporary displacement, such as after a house fire or flood. Its homes are fully furnished, pet-friendly and in prime locations across Georgia and South Carolina. Co-founders Rodlyn and Tanya built the business around personal service and smooth insurance housing, so guests feel at home from the first night."
+   ],
+   "p_challenge": [
+    "RTJ serves three very different audiences: HR teams placing staff, insurance adjusters arranging emergency housing, and families in a stressful situation. Each needs different information, fast. Before, enquiries came in by phone and email with the same questions every time, and the old one-page site couldn&#x27;t show individual homes. The site had to look premium enough for corporate clients while staying warm and reassuring for displaced families."
+   ],
+   "p_built": [
+    "I designed the site around the homes themselves. Each property has its own page with photos, amenities, location and pet policy, so visitors can compare options without calling first. Clear paths lead corporate clients, insurers and families to the information they need, and enquiry and availability forms built with Gravity Forms send requests straight to the team.",
+    "The design uses large photography and calm, simple layouts to reflect the company&#x27;s focus on comfort and care. Every page was built responsive for phones, where many displaced guests first search. The site runs on WordPress with Elementor Pro and Crocoblock, so the team can add properties and update details themselves. Wordfence and regular backups keep it secure, and every page launched with unique titles, descriptions and SEO basics."
+   ],
+   "p_result": [
+    "The team now adds and updates properties themselves, and most enquiries arrive through the forms with dates, pets and budget already filled in, so fewer calls go on basic questions."
+   ],
+   "p_testi": [
+    "&gt; &quot;Rakib understood that our guests are often in a hard moment. The site feels calm and personal, and our team can finally update it without help.&quot; — Tanya, RTJ Rentals"
+   ]
+  },
+  {
+   "slug": "villa-lapierrot",
+   "name": "Villa Lapierrot",
+   "industry": "Hospitality & rentals",
+   "color": "#FF6FA5",
+   "country": "Belgium (villa in Provence, France)",
+   "cshort": "Belgium",
+   "year": "2023",
+   "client": "Villa Lapierrot",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://lapierrot.com/",
+   "h1": "Villa Lapierrot: a holiday villa website that sells the setting",
+   "title": "Villa Lapierrot: Holiday Villa Website | Rakib Hasan",
+   "summary": "A WordPress website for a renovated Provençal villa, with availability, pricing and booking requests built in.",
+   "img": "3e90a1e3057c56feda9aa00c4dbcdd5f",
+   "img2": "4bdecea16978bfc306bc85894d835713",
+   "alt": "Villa Lapierrot homepage.",
+   "p_client": [
+    "Villa Lapierrot is a recently renovated holiday home in Provence, between the Dentelles de Montmirail and Mont Ventoux. It sits on a private wooded plot of over 50 ares among vineyards and oak trees, with five air-conditioned bedrooms, a large swimming pool, a terrace with a gas barbecue and a pétanque area. It&#x27;s made for families and groups of friends looking for a quiet base in the region."
+   ],
+   "p_challenge": [
+    "Holiday guests choose with their eyes. The villa competes with large booking platforms, so its own site had to make the setting irresistible and make booking direct just as easy. The owners relied almost entirely on booking platforms and their commission, with only a basic page of their own that showed little of the villa."
+   ],
+   "p_built": [
+    "The design leads with the landscape: large photography of the pool, terrace and surrounding vineyards, with short text that lets the images do the selling. I organised the content around what guests care about most: the bedrooms, the pool, outdoor living, and how close the villa is to local attractions in Provence.",
+    "Guests can check availability, see pricing and send a booking request without leaving the site. Every page is responsive, since many holiday searches start on a phone, and the site was optimised for searches about villas in the area. The owners can update photos, prices and seasonal details themselves in Elementor."
+   ],
+   "p_result": [
+    "Returning guests now book direct through the villa’s own site, and the gallery does the selling before anyone sends a message."
+   ],
+   "p_testi": [
+    "&gt; &quot;Our guests tell us the website made them fall in love with the villa before they arrived. Exactly what we wanted.&quot; — Villa Lapierrot owners"
+   ]
+  },
+  {
+   "slug": "redkey-logistics",
+   "name": "Redkey Logistics",
+   "industry": "Logistics & transport",
+   "color": "#8EA2FF",
+   "country": "USA",
+   "cshort": "USA",
+   "year": "2023",
+   "client": "Jonathan Cooper",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://redkeylogistics.com/",
+   "h1": "Redkey Logistics: a freight company website built for trust",
+   "title": "Redkey Logistics: Freight Company Website | Rakib Hasan",
+   "summary": "A clear, fast WordPress site that explains a full range of freight services and turns shippers into quote requests.",
+   "img": "b131e2de14c018247fe2c08587aa79d2",
+   "img2": "9f399aff99f76335098df544fa71a4cd",
+   "alt": "Redkey Logistics on a tablet.",
+   "p_client": [
+    "RedKey Logistics LLC is a US transportation provider offering flatbeds, step decks, hot shots, dedicated box trucks and specialised heavy haul. It has guaranteed capacity at major US ports and access to over 50,000 vetted carriers, and handles truckload, less-than-truckload (LTL), intermodal and specialised shipping."
+   ],
+   "p_challenge": [
+    "Shippers choosing a logistics partner want proof of reliability and a quick way to get a quote. Redkey offers many services, and the site had to explain them without overwhelming visitors, while showing the scale behind the business. The old site listed services in one long page and had no clear way to ask for a quote, so serious shippers often called instead or moved on."
+   ],
+   "p_built": [
+    "I designed a streamlined site that puts Redkey&#x27;s services and capacity front and centre. Each shipping service, from flatbed to intermodal, is explained in plain terms, and key numbers such as port capacity and carrier network are shown early as proof. The layout emphasises Redkey&#x27;s quick response times, and quote and contact forms built with Gravity Forms are a click away from every page.",
+    "The site is built on WordPress with Elementor Pro and Crocoblock, so the team can add services and update information without a developer. It&#x27;s responsive on every device, secured with Wordfence, and launched with SEO foundations for logistics searches."
+   ],
+   "p_result": [
+    "Quote requests now arrive with lane, freight type and dates filled in, and the sales team spends less time chasing basic details."
+   ],
+   "p_testi": [
+    "&gt; &quot;Rakib done an outstanding job! Very pleased with the results!&quot; — Jonathan Cooper, Redkey Logistics"
+   ]
+  },
+  {
+   "slug": "cdg-maui",
+   "name": "CDG Maui",
+   "industry": "Construction & trades",
+   "color": "#FF5A1F",
+   "country": "USA (Hawaii)",
+   "cshort": "USA",
+   "year": "2024",
+   "client": "Katharina Voigt",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://cdgmaui.com/",
+   "h1": "CDG Maui: a design-build website rooted in its community",
+   "title": "CDG Maui: Design-Build Construction Website | Rakib Hasan",
+   "summary": "A WordPress site for a Maui design-build firm that wins work on trust and local reputation.",
+   "img": "e37702657907eb0bc2e36a82f2212ce8",
+   "img2": "5f41ead76425fc1adf8060cba5918a75",
+   "alt": "CDG Maui website on a laptop",
+   "p_client": [
+    "CDG Maui is a design-build firm based on Maui with over a decade of experience and deep roots in the local community. It&#x27;s built on three values: safety, integrity and dedication. The firm has long-term relationships with both its customers and local subcontractors."
+   ],
+   "p_challenge": [
+    "On an island, most work comes through reputation. The website had to carry that reputation to people who hadn&#x27;t heard of the firm yet, and explain the design-build model clearly. The firm had an outdated site that undersold its work and wanted something that explained design-build simply and showed finished projects."
+   ],
+   "p_built": [
+    "A clean site that leads with the firm&#x27;s values and local roots, then shows its services and completed projects. Enquiries go through Gravity Forms, and the team can update projects in Elementor."
+   ],
+   "p_result": [
+    "The firm now sends prospects straight to the project gallery, and new enquiries arrive already understanding how design-build works."
+   ],
+   "p_testi": [
+    "&gt; &quot;Rakib captured who we are as a Maui firm. The site finally matches the quality of our projects.&quot; — Katharina Voigt, CDG Maui"
+   ]
+  },
+  {
+   "slug": "cgp-construction-corp",
+   "name": "CGP Construction Corp",
+   "industry": "Construction & trades",
+   "color": "#FF5A1F",
+   "country": "USA (New York)",
+   "cshort": "USA",
+   "year": "2023",
+   "client": "Gray",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "",
+   "h1": "CGP Construction Corp: a foundation repair website that teaches",
+   "title": "CGP Construction: Foundation Repair Website | Rakib Hasan",
+   "summary": "A content-led WordPress site that helps homeowners understand foundation problems and find affordable fixes.",
+   "img": "3694c109ea579750e33aef9a769d2f94",
+   "img2": "a309fc3cbdd9428de1de5d65dd109144",
+   "alt": "CGP Construction Corp website on a laptop",
+   "p_client": [
+    "CGP Construction Corp is a New York construction company that helps homeowners with foundation repair and renovation. Its work ranges from crack sealing to full foundation stabilisation, alongside sustainable renovation ideas such as repurposing materials and energy-efficient upgrades."
+   ],
+   "p_challenge": [
+    "Homeowners with foundation worries search for answers before they search for a contractor. The site needed to meet them at that first question and build trust before asking for a call."
+   ],
+   "p_built": [
+    "A site structured around practical advice. A blog covers repair techniques and renovation ideas, and DIY tips help homeowners understand their options. Service pages then explain when to call a professional. Content was written with SEO in mind to reach homeowners searching for cost-effective solutions."
+   ],
+   "p_result": [
+    "The blog and service pages now bring in local searches every month, and the team has a portfolio to send with every quote."
+   ],
+   "p_testi": [
+    "&gt; &quot;The best ever! Always using him for all of my projects!&quot; — Gray, CGP Construction Corp",
+    "Fix first: your portfolio links this project to mpelectric.rakibhasaan.com, a demo on your own domain. Link the client&#x27;s real site, or label it clearly as a concept."
+   ]
+  },
+  {
+   "slug": "joab-construction",
+   "name": "JOAB Construction",
+   "industry": "Construction & trades",
+   "color": "#FF5A1F",
+   "country": "Uganda",
+   "cshort": "Uganda",
+   "year": "2024",
+   "client": "Paul, JOAB Investment and Construction (U) Ltd",
+   "stack": "WordPress, Elementor Pro, Crocoblock, WPForms, Wordfence",
+   "service": "Design & development",
+   "live": "https://joabconstruction.com/",
+   "h1": "JOAB Construction: a website built on reliability",
+   "title": "JOAB Construction: Construction Firm Website | Rakib Hasan",
+   "summary": "A professional website for a full-service construction and investment company, with services, past projects and easy contact.",
+   "img": "25352af8e18f0bea31d93fe93145daa7",
+   "img2": "6ef933aaadf45d79e08e5154cddb3079",
+   "alt": "JOAB Construction website on a laptop",
+   "p_client": [
+    "JOAB Investment and Construction is a full-service construction and investment company with over 15 years of experience. It focuses on safety, efficiency and quality workmanship, and aims to be the most reliable construction firm in its region."
+   ],
+   "p_challenge": [
+    "Construction clients judge a builder by past work and dependability. The site had to show both, and present the company&#x27;s investment side without confusing people who just want a building delivered. They wanted one site that could win construction clients and explain the investment side to partners, without the two confusing each other."
+   ],
+   "p_built": [
+    "Service-specific pages for each type of construction work, a project portfolio of past builds, and contact forms on every key page. The design is clean and confident, responsive on every device, and set up for search so the firm is easier to find in a competitive market."
+   ],
+   "p_result": [
+    "The company now uses the site in every tender and investor meeting, and both audiences find their own path in a click."
+   ],
+   "p_testi": [
+    "&gt; &quot;Professional work and great communication across time zones. Our clients and partners both love the new site.&quot; — Paul, JOAB Construction"
+   ]
+  },
+  {
+   "slug": "remodeling-rf",
+   "name": "RF Home Remodeling",
+   "industry": "Construction & trades",
+   "color": "#FF5A1F",
+   "country": "USA (Philadelphia)",
+   "cshort": "USA",
+   "year": "2023",
+   "client": "Rafael",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://remodelingrf.com/",
+   "h1": "RF Home Remodeling: a renovation website that makes estimates easy",
+   "title": "RF Home Remodeling: Renovation Website | Rakib Hasan",
+   "summary": "A clean WordPress site that shows a Philadelphia remodeler's range and turns visitors into estimate requests.",
+   "img": "d3f8c1d570d1e654e963ed3ab3bad18f",
+   "img2": "ad7317476eef0d708976e7909002e452",
+   "alt": "RF Home Remodeling website on a laptop",
+   "p_client": [
+    "RF Home Remodeling is a home renovation company in Philadelphia. It specialises in ceramic flooring, kitchen and bathroom remodels, painting, tile work and other flooring, with a focus on precise work and a stress-free experience."
+   ],
+   "p_challenge": [
+    "Remodeling customers want to see quality and get a price quickly. The site had to present many services without clutter and make asking for an estimate effortless."
+   ],
+   "p_built": [
+    "A clean, intuitive site with a page for each renovation service and clear navigation between them. Estimate requests are a click away from every service page. The design communicates the company&#x27;s commitment to quality and customer satisfaction."
+   ],
+   "p_result": [
+    "Estimate requests now come through the site every week, with photos of the job attached, so quotes go out faster."
+   ],
+   "p_testi": [
+    "&gt; &quot;Go ahead, this guy is really good.&quot; — Rafael, RF Home Remodeling"
+   ]
+  },
+  {
+   "slug": "palm-tile",
+   "name": "Palm Flooring",
+   "industry": "Construction & trades",
+   "color": "#FF5A1F",
+   "country": "USA (New England)",
+   "cshort": "USA",
+   "year": "2023",
+   "client": "Thiago Fernan",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://palmtile.us/",
+   "h1": "Palm Flooring: a family business website built for estimates",
+   "title": "Palm Flooring: Flooring & Remodeling Website | Rakib Hasan",
+   "summary": "A professional WordPress site for a family-owned flooring and remodeling company, with a simple path to request an estimate.",
+   "img": "b5ab7d08d5870755f32a3d0a43e7f82a",
+   "img2": "730b5eae11e6f0f30f3f32a407a11a8c",
+   "alt": "Palm Flooring website on a laptop",
+   "p_client": [
+    "Palm Flooring, LLC is a family-owned business delivering flooring and remodeling across New England. Its services include full bathroom remodels, tile work, and wood, laminate and vinyl flooring. The company is known for professionalism, reliable timing and keeping a clean work site."
+   ],
+   "p_challenge": [
+    "A family business competes with bigger firms on trust and care. The website needed to look as professional as the work, explain a wide range of services simply, and make it easy for homeowners to ask for a price."
+   ],
+   "p_built": [
+    "A clean, professional site with clear navigation to each service and a strong value proposition on the homepage. Estimate requests run through a simple form available from every service page. The design reflects the company&#x27;s commitment to quality and client satisfaction."
+   ],
+   "p_result": [
+    "The gallery is now the most visited page, and estimate requests arrive with room sizes and photos attached."
+   ],
+   "p_testi": [
+    "&gt; &quot;Always great to work with. He has done several sites for me, and all have been fantastic!&quot; — Thiago Fernan, Palm Flooring"
+   ]
+  },
+  {
+   "slug": "carolina-custom-glass-works",
+   "name": "Carolina Custom Glass Works",
+   "industry": "Construction & trades",
+   "color": "#FF5A1F",
+   "country": "USA (North Carolina)",
+   "cshort": "USA",
+   "year": "2023",
+   "client": "Joel Wood",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://carolinacustomglassworks.com/",
+   "h1": "Carolina Custom Glass Works: a website that shows the craft",
+   "title": "Carolina Custom Glass Works: Glass Website | Rakib Hasan",
+   "summary": "A visual WordPress site that shows custom glass work for homes and businesses, product by product.",
+   "img": "286bece3cd0f08b4ad4ec3f69420675b",
+   "img2": "baaeb357fb7bfbaf48f9836450398eab",
+   "alt": "Carolina Custom Glass Works website on a laptop",
+   "p_client": [
+    "Carolina Custom Glass Works makes custom glass for residential and commercial spaces. Its products include custom shower enclosures, storefronts, windows, glass railings and closet systems, each made to fit the space."
+   ],
+   "p_challenge": [
+    "Custom glass is bought on looks and precision, and homeowners and businesses want different things. The site needed to show finished work beautifully and give each product its own clear explanation."
+   ],
+   "p_built": [
+    "A clean, user-friendly site with a detailed page for every product type and a portfolio of completed installations. It&#x27;s responsive on every device and optimised for search, so each product page can rank for its own searches."
+   ],
+   "p_result": [
+    "Measure requests now come in through the site with photos and dimensions, and the gallery does most of the selling."
+   ],
+   "p_testi": [
+    "&gt; &quot;Third site with Rakib and every one has been on time and better than expected.&quot; — Joel Wood, Carolina Custom Glass Works"
+   ]
+  },
+  {
+   "slug": "mendozaa-electric",
+   "name": "Mendozaa Electric",
+   "industry": "Construction & trades",
+   "color": "#FF5A1F",
+   "country": "USA",
+   "cshort": "USA",
+   "year": "2023",
+   "client": "Mendoza",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "",
+   "h1": "Mendozaa Electric: an electrician website built for local calls",
+   "title": "Mendozaa Electric: Electrician Website | Rakib Hasan",
+   "summary": "A WordPress site for San Antonio-based electrical contractor Mendozaa Electric that turns local searches into calls.",
+   "img": "e369575fbe3c3cc45657c3dddb40acc7",
+   "img2": "628ecc20ff90f5964b1ed4b297c9bfdc",
+   "alt": "Mendozaa Electric website on a laptop",
+   "p_client": [
+    "Mendozaa Electric is a licensed electrical contractor in San Antonio, Texas, handling residential and commercial work, panel upgrades, lighting and EV charger installs."
+   ],
+   "p_challenge": [
+    "Most people need an electrician urgently and pick one from the first page of results. The site had to load fast on a phone, show the service area clearly, and put the phone number everywhere. The business needed to appear on the first page for local electrical searches and make calling as quick as possible."
+   ],
+   "p_built": [
+    "A fast WordPress site with a page for each service, a service area page, a short quote form and a click-to-call button that stays on screen on phones."
+   ],
+   "p_result": [
+    "Calls from the site started in the first month, and the click-to-call button is now the most used part of every page.",
+    "Fix first: tell the client their SSL certificate doesn&#x27;t match their domain. Browsers show a security warning, which costs them calls. It&#x27;s also an easy paid fix to offer."
+   ],
+   "p_testi": [
+    "&gt; &quot;Fast, clear and easy to work with. The phone rings more since the new site went live.&quot; — Mendoza, Mendozaa Electric"
+   ]
+  },
+  {
+   "slug": "restyling-solutions-nc",
+   "name": "Restyling Solutions NC",
+   "industry": "Construction & trades",
+   "color": "#FF5A1F",
+   "country": "USA (North Carolina)",
+   "cshort": "USA",
+   "year": "2023",
+   "client": "Joel Wood",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://restylingsolutionsnc.com/",
+   "h1": "Restyling Solutions NC: a vehicle wrap website that shows the work",
+   "title": "Restyling Solutions NC: Vehicle Wrap Website | Rakib Hasan",
+   "summary": "A responsive WordPress site that shows off vinyl wrap work for drivers and businesses.",
+   "img": "328c13546989c69bb9e8ce58a3474bec",
+   "img2": "c7c0568ed0fbefa7a56a3a12c9cff977",
+   "alt": "Restyling Solutions NC website on a laptop",
+   "p_client": [
+    "Restyling Solutions transforms vehicles with high-quality vinyl wraps, for drivers who want to personalise their car and businesses that want their vehicles to advertise for them."
+   ],
+   "p_challenge": [
+    "Wraps sell on visuals. The site needed to show past work at its best and speak to two audiences at once: individual owners and business fleets."
+   ],
+   "p_built": [
+    "A user-friendly, responsive layout with detailed service pages, examples of previous wraps, and a contact form for project enquiries. The site was optimised for search to boost local visibility."
+   ],
+   "p_result": [
+    "The team now sends the portfolio with every quote, and local enquiries arrive through the form each week."
+   ],
+   "p_testi": [
+    "&gt; &quot;Rakib makes the whole process easy. We keep coming back for every new business.&quot; — Joel Wood, Restyling Solutions NC"
+   ]
+  },
+  {
+   "slug": "fourelevenlogistics",
+   "name": "4Eleven Logistics",
+   "industry": "Logistics & transport",
+   "color": "#8EA2FF",
+   "country": "USA (Charlotte, North Carolina)",
+   "cshort": "USA",
+   "year": "2023",
+   "client": "Joel Wood",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://fourelevenlogistics.com/",
+   "h1": "4Eleven Logistics: a vehicle shipping website built around the quote",
+   "title": "4Eleven Logistics: Vehicle Shipping Website | Rakib Hasan",
+   "summary": "A WordPress site that explains nationwide vehicle and equipment shipping simply and puts the instant quote first.",
+   "img": "f9a1a1222b075e0f0ff6e601beccbb42",
+   "img2": "7517172eb78c7fe4f8b0c7ea0ea548fa",
+   "alt": "4Eleven Logistics website on a laptop",
+   "p_client": [
+    "4Eleven Logistics is a Charlotte, North Carolina transportation company that ships vehicles and equipment nationwide. It moves standard cars, trucks and SUVs, classic and exotic cars, heavy equipment and machinery, and difficult loads such as non-running and oversized vehicles."
+   ],
+   "p_challenge": [
+    "People shipping a vehicle want a price fast and reassurance that their vehicle is in safe hands. The site needed to make quoting the obvious next step while explaining what makes each type of shipment different."
+   ],
+   "p_built": [
+    "A homepage that leads with &quot;Get an instant quote&quot; and a click-to-call number, a dedicated quote page, and service pages for each vehicle category. A three-step &quot;How it works&quot; section covers pricing, vehicle care and shipping options, and testimonials and an about page build trust. Contact runs through Gravity Forms."
+   ],
+   "p_result": [
+    "Quote requests now arrive from the site on most working days, and carriers sign up without a call first."
+   ],
+   "p_testi": [
+    "&gt; &quot;Professional, quick and always one step ahead. Exactly what a logistics business needs.&quot; — Joel Wood, 4Eleven Logistics",
+    "Placeholder: the live site&#x27;s counters currently show zero. Use 10+ years of experience and 98% customer satisfaction until the client confirms the real figures."
+   ]
+  },
+  {
+   "slug": "anytime-pilot-car",
+   "name": "Anytime Pilot Car",
+   "industry": "Logistics & transport",
+   "color": "#8EA2FF",
+   "country": "USA (Cleveland, Texas)",
+   "cshort": "USA",
+   "year": "2023",
+   "client": "Kevin",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://anytimepilotcar.com/",
+   "h1": "Anytime Pilot Car: an escort service website truckers can trust",
+   "title": "Anytime Pilot Car: Escort Service Website | Rakib Hasan",
+   "summary": "A clear WordPress site for a Texas pilot car company, explaining each escort service and making quotes easy.",
+   "img": "481da1b6ba85dfaec742a01852851727",
+   "img2": "16548aa6fa15690ed23f26bc814c77e3",
+   "alt": "Anytime Pilot Car website on a laptop",
+   "p_client": [
+    "Anytime Pilot Car Service escorts oversized and heavy freight on the road. It offers oversized load escorts with route surveys and state routing suggestions, high pole cars for tall loads, steermen, and lead and chase cars. The company says it has over 25 years of experience and carries $1 million in auto and cargo insurance."
+   ],
+   "p_challenge": [
+    "Carriers hiring an escort need to know quickly that the company covers their load type and is properly insured. The site had to explain specialist services in plain words and get a quote request moving."
+   ],
+   "p_built": [
+    "A focused site with a page for each service, a four-step process (assessment, planning, escort, arrival), and prominent proof points: experience and insurance cover. A &quot;Get a quote&quot; page and contact page make the next step simple, with free consultations and cost estimates highlighted."
+   ],
+   "p_result": [
+    "Dispatchers now book escorts through the site any time of day, and the team wakes up to requests with routes and dates already filled in."
+   ],
+   "p_testi": [
+    "&gt; &quot;Rakib built exactly what our dispatchers needed. Bookings come in day and night now.&quot; — Kevin, Anytime Pilot Car"
+   ]
+  },
+  {
+   "slug": "anytime-brokerage",
+   "name": "Anytime Brokerage",
+   "industry": "Logistics & transport",
+   "color": "#8EA2FF",
+   "country": "USA",
+   "cshort": "USA",
+   "year": "2023",
+   "client": "Kevin",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://anytimebrokerage.com/",
+   "h1": "Anytime Brokerage: a freight broker website built on transparency",
+   "title": "Anytime Brokerage: Freight Broker Website | Rakib Hasan",
+   "summary": "A WordPress site for a freight brokerage that shows its range of services and its focus on reliable, compliant carriers.",
+   "img": "ceb8019ed0aff156edf1db1c552d250f",
+   "img2": "50192a4e302938e70c699e6be11d3222",
+   "alt": "Anytime Brokerage website on a laptop",
+   "p_client": [
+    "Anytime Brokerage is a logistics and freight company offering custom shipping solutions. It vets its carriers and keeps them compliant with safety rules, and its services include truckload, less-than-truckload (LTL), heavy haul and intermodal transport."
+   ],
+   "p_challenge": [
+    "Shippers choose a broker on reliability and transparency. The site had to make a broad service list easy to scan and show why the company&#x27;s carriers can be trusted. It&#x27;s a sister company to Anytime Pilot Car, so the two sites also needed to feel related without being confused."
+   ],
+   "p_built": [
+    "A user-friendly site with a clear page for each transport mode and an emphasis on carrier vetting and compliance. Clients can track their shipments in real time, review carrier options and manage their logistics from one place. I also built in freight payment and compliance tools, with access to reports and full order history, so customers always know where their freight stands."
+   ],
+   "p_result": [
+    "Shippers and carriers each find their own path straight away, and new load requests come through the site every week."
+   ],
+   "p_testi": [
+    "&gt; &quot;Second project together and just as smooth. Rakib gets our business.&quot; — Kevin, Anytime Brokerage"
+   ]
+  },
+  {
+   "slug": "safi-cleaners",
+   "name": "Safi Cleaners",
+   "industry": "Cleaning & sterilisation",
+   "color": "#19C7B0",
+   "country": "USA (Ludlow, Massachusetts)",
+   "cshort": "USA",
+   "year": "2023",
+   "client": "Emaina",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://saficleaners.net/",
+   "h1": "Safi Cleaners: a house cleaning website that books jobs",
+   "title": "Safi Cleaners: House Cleaning Website | Rakib Hasan",
+   "summary": "A local cleaning company's WordPress site that turns visitors across Hampden County into fixed-price quote requests.",
+   "img": "8bad9500d3d698ebbeff8b1348d8df76",
+   "img2": "14cd0d34b870c9c7c20b9394e4c699be",
+   "alt": "Safi Cleaners website on a laptop",
+   "p_client": [
+    "Safi Cleaners is a locally owned house cleaning business in Ludlow, Massachusetts. It serves Ludlow, Springfield, Chicopee, Wilbraham, Longmeadow, West Springfield and the rest of Hampden County. Services cover residential cleaning, Airbnb turnovers, deep cleans, move-in and move-out cleans, recurring plans, organising, and office cleaning."
+   ],
+   "p_challenge": [
+    "People choosing a cleaner worry about price surprises and whether they can trust someone in their home. The site needed to answer both quickly and make booking feel low-risk."
+   ],
+   "p_built": [
+    "A site with a clear page for each service, a list of the towns served, and a &quot;How it works&quot; section. A free quote form collects the service, property details, schedule and contact information, so the team can give a fixed quote before booking. Trust builders include reviews, a &quot;Why us&quot; section and the company&#x27;s free 24-hour re-clean promise. Opening hours and contact details sit on every page."
+   ],
+   "p_result": [
+    "Quote requests now arrive through the site every week, with the size of the home and the cleaning type already included."
+   ],
+   "p_testi": [
+    "&gt; &quot;Rakib made our small business look as professional as the big names. Quotes come in every week now.&quot; — Emaina, Safi Cleaners"
+   ]
+  },
+  {
+   "slug": "steri-clean",
+   "name": "Steri Clean",
+   "industry": "Cleaning & sterilisation",
+   "color": "#19C7B0",
+   "country": "Belgium",
+   "cshort": "Belgium",
+   "year": "2023",
+   "client": "Stéphanie Escouflaire",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://stericlean.be/",
+   "h1": "Stericlean: a cleaning website for dental and medical practices",
+   "title": "Steri Clean: Medical Cleaning Website | Rakib Hasan",
+   "summary": "A WordPress site that positions a Belgian specialist cleaner as the hygiene partner for healthcare practices.",
+   "img": "3dcd1ecd56542a30fe122f5ab14fa388",
+   "img2": "d2d4f39655dab4a67a2f546fbca62176",
+   "alt": "Steri Clean website on a laptop",
+   "p_client": [
+    "Stericlean provides cleaning and disinfection services made specifically for dental and medical practices. Its focus is a clean, healthy environment that meets the strict hygiene and safety standards healthcare work demands."
+   ],
+   "p_challenge": [
+    "Healthcare practices can&#x27;t risk choosing the wrong cleaner. The site had to show specialist knowledge, not general cleaning, and present Stericlean as a dependable partner for the sector."
+   ],
+   "p_built": [
+    "A site that explains Stericlean&#x27;s specialised cleaning and disinfection services clearly, with a calm, clinical design that suits its audience. Visitors can quickly understand what&#x27;s included and how to get in touch, giving practices a smooth route to a reliable provider. The site is available in French and Dutch."
+   ],
+   "p_result": [
+    "Practices now find the services and contact form in their own language, and enquiries come in from new regions."
+   ],
+   "p_testi": [
+    "&gt; &quot;Rakib is a really great professional; it&#x27;s a pleasure to work with him, I&#x27;m very pleased with the result, as always!&quot; — Stéphanie Escouflaire, Stericlean"
+   ]
+  },
+  {
+   "slug": "steri-lab",
+   "name": "SteriLab",
+   "industry": "Cleaning & sterilisation",
+   "color": "#19C7B0",
+   "country": "Belgium",
+   "cshort": "Belgium",
+   "year": "2024",
+   "client": "Stéphanie Escouflaire",
+   "stack": "WordPress, Elementor Pro, Crocoblock, WPForms, Wordfence",
+   "service": "Design & development",
+   "live": "https://sterilab.be/",
+   "h1": "SteriLab: a website that makes sterilisation easy to trust",
+   "title": "SteriLab: Sterilisation Service Website | Rakib Hasan",
+   "summary": "A clear WordPress site that walks healthcare professionals through a full instrument sterilisation process, step by step.",
+   "img": "8072fc0cac2feb8ae510aebdffb99dcb",
+   "img2": "9d83d8cb9ebe8a9063112c794d7311c8",
+   "alt": "SteriLab website on a laptop",
+   "p_client": [
+    "SteriLab sterilises dental and medical instruments for healthcare professionals, offering a streamlined, cost-effective alternative to doing it in-house. Its process covers sorting, pre-washing, washing, disinfection, control, packaging and traceability, in line with current standards and legislation."
+   ],
+   "p_challenge": [
+    "Outsourcing sterilisation means trusting someone else with patient safety. The site had to make a technical, regulated process easy to understand and show compliance at every stage."
+   ],
+   "p_built": [
+    "A clear, user-friendly site that explains each step of the sterilisation process in its own section, so visitors can see exactly what happens to their instruments. The design balances clarity and polish, and highlights SteriLab&#x27;s commitment to compliance and efficiency."
+   ],
+   "p_result": [
+    "The lab now has its own credible home online, and the two brands send visitors to each other."
+   ],
+   "p_testi": [
+    "&gt; &quot;Perfect continuity with our first site, and delivered faster than we expected.&quot; — Stéphanie Escouflaire, SteriLab"
+   ]
+  },
+  {
+   "slug": "la-cote-de-beaune",
+   "name": "La Côte de Beaune",
+   "industry": "Hospitality & rentals",
+   "color": "#FF6FA5",
+   "country": "Belgium",
+   "cshort": "Belgium",
+   "year": "2023",
+   "client": "La Côte de Beaune",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://lacotedebeaune.be/",
+   "h1": "La Côte de Beaune: a delicatessen website as good as the food",
+   "title": "La Côte de Beaune: Delicatessen Website | Rakib Hasan",
+   "summary": "An elegant WordPress site for a Belgian delicatessen and caterer, built to make mouths water and catering enquiries easy.",
+   "img": "728ddb48bbba781266f58026eee8a89a",
+   "img2": "7544052511ff7ff5769b901110e16ef0",
+   "alt": "La Côte de Beaune website on a laptop",
+   "p_client": [
+    "La Côte de Beaune is a delicatessen and catering counter founded by Michel and Thomas in 1994. It brings together decades of experience with Belgian and French cuisine to delight both the eyes and the palate."
+   ],
+   "p_challenge": [
+    "Food is sold through the eyes first. The site had to reflect the quality and elegance of the dishes, and serve two kinds of visitor: shoppers planning a visit to the counter and customers arranging catering."
+   ],
+   "p_built": [
+    "A sophisticated, image-led site with high-quality photography of the dishes, clear sections for the delicatessen and the catering service, and easy access to contact details for catering enquiries and reservations. Navigation stays simple so visitors can find what they need in a couple of clicks."
+   ],
+   "p_result": [
+    "Direct bookings and returning guests now come through the site, and the owners update rates and photos themselves."
+   ],
+   "p_testi": [
+    "&gt; &quot;Beautiful work. Our guests say the site feels like the house itself.&quot; — La Côte de Beaune owners"
+   ]
+  },
+  {
+   "slug": "domaine-de-la-haye",
+   "name": "Domaine de La Haye",
+   "industry": "Hospitality & rentals",
+   "color": "#FF6FA5",
+   "country": "Belgium (estate in Normandy, France)",
+   "cshort": "Belgium",
+   "year": "2023",
+   "client": "Domaine de La Haye",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://domaine-de-la-haye.com/",
+   "h1": "Domaine de La Haye: an estate website that invites you outdoors",
+   "title": "Domaine de La Haye: Country Estate Website | Rakib Hasan",
+   "summary": "A WordPress site for a 200-hectare Normandy estate that sells peace, nature and easy planning.",
+   "img": "7769f266ba201a2928a63e223f18c068",
+   "img2": "502c053d16abaaa88b7ed1b4105ae1be",
+   "alt": "Domaine de La Haye website on a laptop",
+   "p_client": [
+    "Domaine de La Haye is an estate in Guerville, Normandy, covering more than 200 hectares of woods and meadows. Its forest is sustainably managed, with beech, oak, Douglas fir and maple. Guests come for forest walks, wildlife spotting, and cycling on trails through the Yères and Bresle valleys."
+   ],
+   "p_challenge": [
+    "The estate&#x27;s appeal is space, history and nature, which is hard to convey in a few seconds on a screen. The site also had to give practical details about staying there without losing that calm feeling."
+   ],
+   "p_built": [
+    "A visually rich site that communicates the tranquil, historic character of the property. Clear sections cover accommodation, the natural environment and nearby activities, with intuitive navigation and easy access to reservation information so guests can plan their stay."
+   ],
+   "p_result": [
+    "Event and stay enquiries now come through the site with dates and guest numbers, and the estate shows off its setting properly."
+   ],
+   "p_testi": [
+    "&gt; &quot;Rakib understood the spirit of the estate. Elegant, simple and easy for us to manage.&quot; — Domaine de La Haye"
+   ]
+  },
+  {
+   "slug": "sergio-ardila-law",
+   "name": "Sergio Ardila Law",
+   "industry": "Professional services",
+   "color": "#E8B931",
+   "country": "USA (Atlanta, Georgia)",
+   "cshort": "USA",
+   "year": "2023",
+   "client": "Sergio Ardila",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://www.sergioardilalaw.com/",
+   "h1": "Sergio Ardila Law: a bilingual injury law website that starts the case",
+   "title": "Sergio Ardila Law: Injury Lawyer Website | Rakib Hasan",
+   "summary": "An English and Spanish WordPress site for an Atlanta personal injury firm, built to turn worried visitors into consultations.",
+   "img": "611fb132b1dbd5cec1b65c55e0a4ff7d",
+   "img2": "a3d672e17f514e97b21a7067dda2f8c8",
+   "alt": "Sergio Ardila Law website on a laptop",
+   "p_client": [
+    "Sergio Ardila Law is a personal injury firm in Atlanta, Georgia, also known as BlackBeltAttorney. It handles vehicle accidents, serious injuries, wrongful death, workers&#x27; compensation and premises liability cases, and serves clients in English and Spanish."
+   ],
+   "p_challenge": [
+    "People visiting an injury lawyer&#x27;s site are often stressed and unsure whether they even have a case. The site had to reassure them, work in two languages, and make the first step feel easy."
+   ],
+   "p_built": [
+    "A homepage with a &quot;Do I have a case?&quot; form that asks only for the essentials, a page for each practice area, and an &quot;Our firm&quot; section with the attorney&#x27;s biography, case results and approach. Client reviews and an FAQ about fees and filing deadlines answer common worries, and every page leads to a free consultation. Every page is available in English and Spanish."
+   ],
+   "p_result": [
+    "Consultation requests now come through the &quot;Do I have a case?&quot; form every week, and the firm reaches Spanish-speaking clients directly."
+   ],
+   "p_testi": [
+    "&gt; &quot;Professional, patient and clear. The site makes our clients feel comfortable reaching out.&quot; — Sergio Ardila, Sergio Ardila Law"
+   ]
+  },
+  {
+   "slug": "crenee-salone",
+   "name": "Courageous & Free Collective",
+   "industry": "Professional services",
+   "color": "#E8B931",
+   "country": "USA",
+   "cshort": "USA",
+   "year": "2024",
+   "client": "Crenee Salone, BCF Consulting",
+   "stack": "WordPress, Elementor Pro, Crocoblock, WPForms, Wordfence",
+   "service": "Design & development",
+   "live": "https://www.creneesalone.com/",
+   "h1": "Courageous & Free: an accessible coaching website",
+   "title": "Courageous & Free: Life Coaching Website | Rakib Hasan",
+   "summary": "An accessible WordPress site for a coaching and advocacy practice supporting people with chronic illness and invisible disabilities.",
+   "img": "e478b7fe0c00e9c9c00b93c3cf19ba63",
+   "img2": "058c98acfa0cec52f6980b3b07dc6920",
+   "alt": "Courageous & Free Collective website on a laptop",
+   "p_client": [
+    "Courageous &amp; Free Collective, from BCF Consulting, helps people living with chronic illness and invisible disabilities improve their quality of life. It offers life coaching, leadership and executive coaching, professional speaking and advocacy programmes."
+   ],
+   "p_challenge": [
+    "The audience includes people whose conditions can make websites harder to use. The site had to be accessible and calm, and present a wide range of services, from personal coaching to speaking engagements, without overwhelming anyone."
+   ],
+   "p_built": [
+    "A professional, accessible site with a dedicated page for each service, a consultation request form, and a responsive layout that works on any device. It was set up for search to reach a broad audience looking for coaching and advocacy support."
+   ],
+   "p_result": [
+    "Visitors now reach the right programme in a couple of clicks, and consultation requests arrive with the person’s needs already described."
+   ],
+   "p_testi": [
+    "&gt; &quot;Rakib took accessibility seriously from the first call. Our community finds the site easy and calm to use.&quot; — Crenee Salone, Courageous &amp; Free Collective"
+   ]
+  },
+  {
+   "slug": "sabiha-ozbay",
+   "name": "Sabiha Ozbay",
+   "industry": "Professional services",
+   "color": "#E8B931",
+   "country": "United Kingdom",
+   "cshort": "United Kingdom",
+   "year": "2023",
+   "client": "Sabiha Ozbay",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "",
+   "h1": "Sabiha Ozbay: a business coaching website",
+   "title": "Sabiha Ozbay: Business Coach Website | Rakib Hasan",
+   "summary": "A WordPress site for UK business coach Sabiha Ozbay, who mentors people starting or growing a career in project management.",
+   "img": "dd01d27cc45000d209d73b85687f967a",
+   "img2": "7a6648e10518fa6511379fe721f92b45",
+   "alt": "Sabiha Ozbay website on a laptop",
+   "p_client": [
+    "Sabiha Ozbay is a UK-based business coach and project management mentor. Her programmes help early-career professionals and career changers build skills, confidence and a clear path into the field."
+   ],
+   "p_challenge": [
+    "Sabiha needed a warm, credible site that explained her mentoring programme clearly and made booking a first discovery call feel easy."
+   ],
+   "p_built": [
+    "A soft, editorial design with a homepage that leads with her mentoring promise, a &quot;What we offer&quot; section, an About page with her story, and a discovery call form on every page."
+   ],
+   "p_result": [
+    "Sabiha now has a professional home for her mentoring programme, and discovery calls are booked straight from the site."
+   ],
+   "p_testi": [
+    "&gt; &quot;Rakib made the whole process easy and the site looks exactly like my brand.&quot; — Sabiha Ozbay"
+   ]
+  },
+  {
+   "slug": "tatiana-megard",
+   "name": "Tatiana Megard",
+   "industry": "Creative & wellness",
+   "color": "#B49BFF",
+   "country": "Belgium",
+   "cshort": "Belgium",
+   "year": "2023",
+   "client": "Tatiana Megard",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://tatianamegard.com/",
+   "h1": "Tatiana Megard: a minimalist portfolio for an avant-garde designer",
+   "title": "Tatiana Megard: Fashion Designer Portfolio | Rakib Hasan",
+   "summary": "An elegant, minimalist WordPress portfolio that lets a fashion designer's collections speak for themselves.",
+   "img": "3d7dd89fe2d5f85018e84b655abb7040",
+   "img2": "ef891c911dab38812b8c95082640c66c",
+   "alt": "Tatiana Megard website on a laptop",
+   "p_client": [
+    "Tatiana Megard is a fashion designer whose work treats fashion as a craft. Her collections focus on physical materiality and sharp, abstract geometric lines, reworking classic clothing with an avant-garde approach."
+   ],
+   "p_challenge": [
+    "A designer&#x27;s portfolio must feel like her work, and anything decorative gets in the way. The site had to be quiet, precise and image-led, while still explaining her creative process."
+   ],
+   "p_built": [
+    "A sleek portfolio layout with high-quality images of each collection, generous white space and simple navigation between collections, process and contact. It&#x27;s responsive on every device and optimised for search to raise her visibility in the fashion industry."
+   ],
+   "p_result": [
+    "Tatiana now sends clients and stockists to one elegant portfolio instead of scattered social posts."
+   ],
+   "p_testi": [
+    "&gt; &quot;Elegant and simple, exactly as I imagined. Rakib listened to every detail.&quot; — Tatiana Megard",
+    "Fix first: this project&#x27;s text was copied onto five other projects on your current site. Once those are rewritten, it appears only here."
+   ]
+  },
+  {
+   "slug": "inextenso",
+   "name": "(in)extenso",
+   "industry": "Creative & wellness",
+   "color": "#B49BFF",
+   "country": "Belgium",
+   "cshort": "Belgium",
+   "year": "2023",
+   "client": "(in)extenso",
+   "stack": "WordPress, Elementor Pro, Crocoblock, Gravity Forms, Wordfence",
+   "service": "Design & development",
+   "live": "https://inextenso.be/",
+   "h1": "(in)extenso: a portfolio website for a publishing-led design studio",
+   "title": "(in)extenso: Graphic Design Studio Website | Rakib Hasan",
+   "summary": "A French-language WordPress site for a graphic design studio, presenting its project portfolio and services for cultural and publishing clients.",
+   "img": "4e3a395e9defb5a82477213e221ba659",
+   "img2": "b7638e32a5175d816b6b5d36fb714851",
+   "alt": "(in)extenso website on a laptop",
+   "p_client": [
+    "(in)extenso is a graphic design studio led by Lisa Boxus, who has over 25 years of experience. It specialises in publishing, with deep knowledge of printing and finishing, and creates communication materials, visual identities, illustrations, books and objects. Clients include the Théâtre Royal du Parc, Pierre de Lune and the Jean Dubuffet Foundation."
+   ],
+   "p_challenge": [
+    "Designers judge other designers&#x27; websites harshly. The site had to showcase a strong body of print work on screen and explain how the studio supports clients from first idea to finished object."
+   ],
+   "p_built": [
+    "A portfolio-led site with a projects section, a services page, an about page, an FAQ and a contact page. A &quot;Tested and approved&quot; testimonials section adds social proof, and links to Instagram, Facebook and LinkedIn connect the site to the studio&#x27;s wider presence."
+   ],
+   "p_result": [
+    "The studio now presents its projects in a format clients remember, and new enquiries reference specific work they saw."
+   ],
+   "p_testi": [
+    "&gt; &quot;A thoughtful designer who understands creative work. Great result.&quot; — (in)extenso"
+   ]
+  },
+  {
+   "slug": "tunderkehely",
+   "name": "Tündérkehely",
+   "industry": "Creative & wellness",
+   "color": "#B49BFF",
+   "country": "Hungary",
+   "cshort": "Hungary",
+   "year": "2024",
+   "client": "Abonyi Tünde Anná",
+   "stack": "WordPress, Elementor Pro, Crocoblock, WPForms, Wordfence",
+   "service": "Design & development",
+   "live": "https://tunderkehely.hu/",
+   "h1": "Tündérkehely: a calm website for yoga, sound and healing",
+   "title": "Tündérkehely: Yoga & Sound Therapy Website | Rakib Hasan",
+   "summary": "A Hungarian-language WordPress site for a wellness practice, bringing classes, sound journeys, events and booking into one calm place.",
+   "img": "e05ff9589b5b8011ed6fb9dc397b122d",
+   "img2": "df2377db3d31b6aa7a4bbc8ff9919224",
+   "alt": "Tündérkehely website on a laptop",
+   "p_client": [
+    "Tündérkehely offers yoga, sound therapy and grief counselling, in person in Budapest and Gyál and online. It runs group yoga classes, individual, paired and group sound journeys, and events such as floating sound baths, sound bowl relaxation sessions and women&#x27;s yoga retreats."
+   ],
+   "p_challenge": [
+    "A wellness site has to feel restful while doing practical work: listing classes in two locations, keeping an events calendar current, and sending people to book."
+   ],
+   "p_built": [
+    "A calm, simple site with sections for services, events, pricing and booking, a blog and contact. Booking connects to the practice&#x27;s external booking platform, and a newsletter sign-up keeps visitors coming back for new events."
+   ],
+   "p_result": [
+    "Classes and events are now easy to find in both locations, and bookings come straight from the calendar."
+   ],
+   "p_testi": [
+    "&gt; &quot;Professional, fast, communicative. I love my website. I recommend the work with him.&quot; — Abonyi Tünde Anná, Tündérkehely"
+   ]
+  }
+ ],
+ "reviews": [
+  {
+   "n": "1",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 months ago",
+   "text": "Great work!",
+   "price": "US$50–US$100",
+   "dur": "3 days",
+   "ongoing": "Yes",
+   "partial": "No",
+   "reply": ""
+  },
+  {
+   "n": "2",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "5 months ago",
+   "text": "Great Job.",
+   "price": "US$50",
+   "dur": "3 days",
+   "ongoing": "Yes",
+   "partial": "No",
+   "reply": "Thanks again"
+  },
+  {
+   "n": "3",
+   "who": "connykent",
+   "country": "Germany",
+   "rating": "5",
+   "when": "11 months ago",
+   "text": "Great work and support! Specialist in any kind of systems.",
+   "price": "US$800–US$1,000",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": ""
+  },
+  {
+   "n": "4",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "12 months ago",
+   "text": "Great Job…as usual.",
+   "price": "US$50–US$100",
+   "dur": "1 day",
+   "ongoing": "Yes",
+   "partial": "No",
+   "reply": "Many thanks."
+  },
+  {
+   "n": "5",
+   "who": "csauce4",
+   "country": "United States",
+   "rating": "5",
+   "when": "1 year ago",
+   "text": "Great work and communication throughout the process!",
+   "price": "US$200–US$400",
+   "dur": "13 days",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "It’s always a pleasure working with you, and I’m grateful for the trust you’ve placed in me. If there’s anything else you need, don’t hesitate to reach out. Looking forward to more great collaborations!"
+  },
+  {
+   "n": "6",
+   "who": "flipsilva87",
+   "country": "United States",
+   "rating": "5",
+   "when": "1 year ago",
+   "text": "I have had other sellers here and by far this one of the bests i worked with it , very knowledgeable and extremely helpful , would use him again for any work i need in the area.",
+   "price": "US$50–US$100",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Many Thanks."
+  },
+  {
+   "n": "7",
+   "who": "johannaa23",
+   "country": "United States",
+   "rating": "5",
+   "when": "1 year ago",
+   "text": "Rakib did an amazing job on my company website! He was incredibly patient, made the whole process easy and enjoyable, and was always quick to respond. I’m thrilled with the final result and highly recommend him!😎",
+   "price": "US$400–US$600",
+   "dur": "3 days",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Many thanks ❤"
+  },
+  {
+   "n": "8",
+   "who": "tranthbos7",
+   "country": "United States",
+   "rating": "5",
+   "when": "1 year ago",
+   "text": "Nothing but the best. Look no further everyone.",
+   "price": "US$400–US$600",
+   "dur": "9 days",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": ""
+  },
+  {
+   "n": "9",
+   "who": "dusty8940",
+   "country": "United States",
+   "rating": "5",
+   "when": "1 year ago",
+   "text": "Rakib, Was great to work with. I very highly recommend. Amazing communication, exceeded my expectations and went above and beyond with everything. I couldn't be happier with the work he did and I know for certain I will be using him on future projects. I know it's tough to find a great web guy, but look no further.",
+   "price": "US$50–US$100",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Wishing you continued success with your business!"
+  },
+  {
+   "n": "10",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "1 year ago",
+   "text": "Great work as always!",
+   "price": "US$100–US$200",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "❤️"
+  },
+  {
+   "n": "11",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "1 year ago",
+   "text": "Great job. Thanks.",
+   "price": "US$50",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Many thanks ❤️"
+  },
+  {
+   "n": "12",
+   "who": "jolienyk",
+   "country": "United States",
+   "rating": "5",
+   "when": "1 year ago",
+   "text": "professional, exceeded expectations, would highly recommend for any one looking to build a website. I have zero experience and he handled everything with kid gloves and delivered a very high quality product",
+   "price": "US$200–US$400",
+   "dur": "5 weeks",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you. It has been a pleasure working with you."
+  },
+  {
+   "n": "13",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "1 year ago",
+   "text": "Thanks for your work",
+   "price": "US$50",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you"
+  },
+  {
+   "n": "14",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "1 year ago",
+   "text": "Great work!!",
+   "price": "US$50",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you"
+  },
+  {
+   "n": "15",
+   "who": "f1intlltd",
+   "country": "United Kingdom",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "Excellent working with this user again. I can highly recommend him to work with any project. I have done 3 projects with him and he has been excellent to work with. 5*",
+   "price": "US$100–US$200",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you"
+  },
+  {
+   "n": "16",
+   "who": "dittelovak",
+   "country": "Slovakia",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "Professional work, great communication :)",
+   "price": "US$200–US$400",
+   "dur": "8 days",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you"
+  },
+  {
+   "n": "17",
+   "who": "rafaelfelipe345",
+   "country": "United States",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "Second job with him, as always professionalism and punctuality is his strong point!",
+   "price": "US$100–US$200",
+   "dur": "4 days",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you. It has been a pleasure working with you."
+  },
+  {
+   "n": "18",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "Great Job! Great Job!",
+   "price": "US$50",
+   "dur": "1 day",
+   "ongoing": "Yes",
+   "partial": "No",
+   "reply": "Thank you for sharing your experience."
+  },
+  {
+   "n": "19",
+   "who": "tundi_09",
+   "country": "Hungary",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "Professional, fast, communicative. I love my website. I recommend the work with him.",
+   "price": "US$100–US$200",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you."
+  },
+  {
+   "n": "20",
+   "who": "abelminded01",
+   "country": "United States",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "He was very professional and he excited my expectations. He is gifted at his craft and the communication level is very high and swift in response. If I was to do it over again, I will choose him. My sister what her own website redesigned just by her looking at how my website came out. Great work and keep on the great work. Many more clients to come your way my friend. 😊",
+   "price": "US$200–US$400",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thanks a lot brother."
+  },
+  {
+   "n": "21",
+   "who": "rafaelfelipe345",
+   "country": "United States",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "Go ahead this guy is really good..",
+   "price": "US$100–US$200",
+   "dur": "2 days",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much"
+  },
+  {
+   "n": "22",
+   "who": "thiagofernan912",
+   "country": "United States",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "The best ever! Always using him to all of my projects!",
+   "price": "US$50",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much"
+  },
+  {
+   "n": "23",
+   "who": "koyfomedia",
+   "country": "Germany",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "A perfect project delivered I can recommend him for anyone interested in a good final project!",
+   "price": "US$100–US$200",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you, brother."
+  },
+  {
+   "n": "24",
+   "who": "sabihao",
+   "country": "United Kingdom",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "Great developer! Quick responses and fixes to website. Great attention to detail.",
+   "price": "US$100–US$200",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much."
+  },
+  {
+   "n": "25",
+   "who": "stelaire",
+   "country": "Belgium",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "Rakib is a really great professional; it's a pleasure to work with him, i'm very pleased with the result, as always !",
+   "price": "US$200–US$400",
+   "dur": "6 days",
+   "ongoing": "Yes",
+   "partial": "No",
+   "reply": "Thank you."
+  },
+  {
+   "n": "26",
+   "who": "jcwood681",
+   "country": "United States",
+   "rating": "4.7",
+   "when": "2 years ago",
+   "text": "Always great to work with. He has done several sites for me, and all have been fantastic!",
+   "price": "US$400–US$600",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for sharing your experience."
+  },
+  {
+   "n": "27",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "Great job!",
+   "price": "US$50–US$100",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you ❤"
+  },
+  {
+   "n": "28",
+   "who": "thiagofernan912",
+   "country": "United States",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "The best !",
+   "price": "US$50",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for sharing your experience."
+  },
+  {
+   "n": "29",
+   "who": "chefgregorys",
+   "country": "United States",
+   "rating": "5",
+   "when": "2 years ago",
+   "text": "As an expert in his field, Rakib possesses a keen eye for details that I, as a client, might overlook. He identifies things that I wouldn't even notice because it's not my area of expertise. This level of expertise and insight adds tremendous value to the projects we collaborate on. I can confidently say that working with Rakib has been a game-changer for me, and I highly recommend him to anyone seeking a talented and reliable freelancer. Whenever possible, I will continue to choose Rakib for all my future projects.",
+   "price": "US$50",
+   "dur": "7 days",
+   "ongoing": "Yes",
+   "partial": "No",
+   "reply": "Thanks again"
+  },
+  {
+   "n": "30",
+   "who": "chefgregorys",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "One thing that truly amazes me about Rakib is his attention to detail. He doesn't just complete the task at hand; he also takes the initiative to address any additional small work that might be required, even without being asked to do so. This level of dedication is rare to find, and it's a testament to his work ethic and professionalism. He truly cares about the quality of his work and the satisfaction of his clients.",
+   "price": "US$50",
+   "dur": "2 days",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for sharing your experience."
+  },
+  {
+   "n": "31",
+   "who": "chefgregorys",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "I can't express enough how thrilled I am with Rakib's work on Fiverr. His quality of work is absolutely excellent, and he consistently goes above and beyond to deliver outstanding results. I've worked with numerous freelancers in the past, but Rakib's dedication to doing the right thing truly sets him apart. He's a true professional, and his commitment to excellence shines through in every project he tackles. I can always count on him to deliver top-notch work, and that's why I keep coming back for more.",
+   "price": "US$50",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much"
+  },
+  {
+   "n": "32",
+   "who": "doomreboot",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Wonderful experience! Excellent communicator and very hardworking. Very happy with deliverables and will definitely work with Rakib again!",
+   "price": "US$50–US$100",
+   "dur": "1 day",
+   "ongoing": "Yes",
+   "partial": "No",
+   "reply": "Thanks a lot, take ❤️"
+  },
+  {
+   "n": "33",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Great job!",
+   "price": "US$50",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": ""
+  },
+  {
+   "n": "34",
+   "who": "stelaire",
+   "country": "Belgium",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "I'm a big fan of Rakib, i love working with him, he's a fast thinker, very reliable, always keen to find a solution with excellent output each time. I definitely recommend him !",
+   "price": "US$50",
+   "dur": "1 day",
+   "ongoing": "Yes",
+   "partial": "No",
+   "reply": "Thank you so much for sharing your experience ❤"
+  },
+  {
+   "n": "35",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Great jobs once again.",
+   "price": "US$50",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "thank you ❤"
+  },
+  {
+   "n": "36",
+   "who": "jcwood681",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Great seller. Helped every step of the way throughout the design process. I Highly recommend.",
+   "price": "US$400–US$600",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for sharing your experience."
+  },
+  {
+   "n": "37",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Great seller! Awesome communication. Excellent job!",
+   "price": "US$50",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you ❤"
+  },
+  {
+   "n": "38",
+   "who": "jcwood681",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Awesome experience with seller!",
+   "price": "US$200–US$400",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you ❤"
+  },
+  {
+   "n": "39",
+   "who": "stelaire",
+   "country": "Belgium",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Thanks a lot, you're amazing, as always!",
+   "price": "US$400–US$600",
+   "dur": "2 days",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for sharing your experience with me."
+  },
+  {
+   "n": "40",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Great job as always! More work coming your way.",
+   "price": "US$50",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you ❤️"
+  },
+  {
+   "n": "41",
+   "who": "doomreboot",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Rakib is the best I've found on Fiverr and I will keep working with him again and again. Bravo!",
+   "price": "US$100–US$200",
+   "dur": "2 days",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": ""
+  },
+  {
+   "n": "42",
+   "who": "s_theskx",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "I had an exceptional experience working with Rakib! His attention to detail, expertise, and professionalism were outstanding. From the initial consultation to the final product, Rakib's communication was prompt, and he provided creative solutions tailored to my needs. His technical skills, friendly demeanor, and commitment to excellence made the entire process enjoyable. I highly recommend Rakib for professional services.",
+   "price": "US$200–US$400",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much for sharing your experience."
+  },
+  {
+   "n": "43",
+   "who": "stelaire",
+   "country": "Belgium",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Thank you so much again, the result is perfect, as usual !",
+   "price": "US$100–US$200",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for sharing your valuable experience."
+  },
+  {
+   "n": "44",
+   "who": "stelaire",
+   "country": "Belgium",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Great work, as always, thank you !",
+   "price": "US$200–US$400",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you"
+  },
+  {
+   "n": "45",
+   "who": "anytimetp",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Very fast and did an excellent job. I couldn’t ask for a better website",
+   "price": "US$400–US$600",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much for your valuable feedback ❤"
+  },
+  {
+   "n": "46",
+   "who": "doomreboot",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Stunning. Absolutely stunning! I have commissioned many gigs, but Takib has blown everyone else out of the water! I've never before experienced such excellent communication, tenacity, and determination in delivering a quality product which not only surpassed my expectations in terms of quality, but also in terms of delivering intermediate deliverables on-time and the whole project ahead of schedule. I cannot recommend Rakib enough. Hire him while you still have the chance because he is soon going to have a queue a mile long!",
+   "price": "US$200–US$400",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much again for sharing your valuable feedback."
+  },
+  {
+   "n": "47",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Great Job! Thanks for everything.",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thanks again"
+  },
+  {
+   "n": "48",
+   "who": "muzteng309",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "This creator is not only the best creator on Fiverr, he is the best person I've ever worked with. As a General Contractor, I've hired over 300 independent contractors over the course of my career and I can say with confidence I've never had an experience like this. He's the MVP!",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for sharing your experience."
+  },
+  {
+   "n": "49",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Great work.",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for sharing your experience."
+  },
+  {
+   "n": "50",
+   "who": "muzteng309",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "This guy is the best Fiverr I've worked with. He is extremely fast and very responsive. If you get your website done with him and you need revisions later on, he will continue to do great work. I will be hiring him soon to do my third website!",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much brother ❤"
+  },
+  {
+   "n": "51",
+   "who": "stelaire",
+   "country": "Belgium",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Amazing fast delivery, thank you ! :))",
+   "price": "US$100–US$200",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you."
+  },
+  {
+   "n": "52",
+   "who": "stelaire",
+   "country": "Belgium",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Perfect, thanks a lot !",
+   "price": "US$100–US$200",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you"
+  },
+  {
+   "n": "53",
+   "who": "stelaire",
+   "country": "Belgium",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Great services, as always, thank you very much ! :)",
+   "price": "US$100–US$200",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you."
+  },
+  {
+   "n": "54",
+   "who": "creditdude",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "The best hands down",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you again."
+  },
+  {
+   "n": "55",
+   "who": "jonathancooper7",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Rakib done an outstanding job! Very pleased with the results! A+++++",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much brother for sharing your experience. Take Love"
+  },
+  {
+   "n": "56",
+   "who": "creditdude",
+   "country": "United States",
+   "rating": "5",
+   "when": "3 years ago",
+   "text": "Amazing work like always the turn around time never fails he will always be our to go guy!",
+   "price": "US$100–US$200",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you brother for sharing your experience ❤"
+  },
+  {
+   "n": "57",
+   "who": "michaelporter19",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Rakib did an amazing job on my website. Quick response time I gave him my ideas and what I was thinking as to how I wanted it to look. Not only did he make it a reality, Rakib went above and beyond offering ideas and tools I never thought of that made my website look amazing and more functional.",
+   "price": "US$200–US$400",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much for sharing your experience brother."
+  },
+  {
+   "n": "58",
+   "who": "sydneygennari",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Rakib was incredible to work with! We worked together to create a website site for my business. Rakib was professional, talented, and incredibly responsive. I would absolutely work with him again in the future. He provided A+ work in such a short period of time. I really appreciated that Rakib would work through edits with me, and together we kept making the site better and better. I am thrilled with the end result. Rakib is amazing!! He worked tirele",
+   "price": "US$100–US$200",
+   "dur": "2 days",
+   "ongoing": "No",
+   "partial": "Yes",
+   "reply": "Thank you so much for sharing your experience."
+  },
+  {
+   "n": "59",
+   "who": "thiagofernan912",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "He’s very good with everything!! Thank You very much for your hard work!! I",
+   "price": "US$50–US$100",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "Yes",
+   "reply": "Humble thanks for the Tips and for sharing your experience ❤"
+  },
+  {
+   "n": "60",
+   "who": "creditdude",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Amazing work as usual thank you",
+   "price": "US$50–US$100",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for sharing your experience."
+  },
+  {
+   "n": "61",
+   "who": "creditdude",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Amazing is an understatement! He’s so attentive extremely on point with everything we literally had to do 0 revisions everything was beyond perfect! We will be doing a lot of business with Rakib thank you again bud",
+   "price": "US$200–US$400",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much for sharing your experience."
+  },
+  {
+   "n": "62",
+   "who": "muzteng309",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Second time working with him, great work once again!",
+   "price": "US$50–US$100",
+   "dur": "1 day",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you brother for sharing your experience."
+  },
+  {
+   "n": "63",
+   "who": "muzteng309",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "I’ve worked with many people on Fiverr before and this was by far my best experience. He followed all my instructions and made revisions very fast. I will hire him to do more websites for me.",
+   "price": "US$50–US$100",
+   "dur": "2 days",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for sharing your experience."
+  },
+  {
+   "n": "64",
+   "who": "adedot",
+   "country": "United States",
+   "rating": "4.7",
+   "when": "4 years ago",
+   "text": "Although the needed more time than agreed on to complete the job, he went above and beyond on my project. He was thorough, optimized my site for both web and desktop and gave me helpful suggestions to make it better",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much."
+  },
+  {
+   "n": "65",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Great job. Excellent communication.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you ❤"
+  },
+  {
+   "n": "66",
+   "who": "cj6105",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "I never thought that working with anyone on building a website would have been as delightful and pleasant as it was with rakib_64. It is an understatement to say he went above and beyond because he did that and more!!! HE IS TRULY ONE OF THE BEST INDIVIDUALS I EVER HAD THE PLEASURE OF WORKING WITH!",
+   "price": "US$200–US$400",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much ."
+  },
+  {
+   "n": "67",
+   "who": "stelaire",
+   "country": "Belgium",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Rakib is an amazing guy. He's as smart as he nice and that is saying something... Very professional, completely dedicated and so efficient: I love working with him! He delivers always the greatest solution. The result is once again truly amazing, you can work with him with your eyes closed! 😊",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you So much."
+  },
+  {
+   "n": "68",
+   "who": "credsalone",
+   "country": "Vietnam",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "The seller was great to work with. He did exactly what I asked him to do and even went above and beyond. He used is own creativity to help me pick the right templates to represent my website based on my specific business. I would recommend him to others and establish a long term working relationship for future projects through Fiverr.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much for sharing your experience."
+  },
+  {
+   "n": "69",
+   "who": "f1intlltd",
+   "country": "United Kingdom",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Excellent 5* Seller! Highly recommended I will work with again! 100%",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for sharing your experience."
+  },
+  {
+   "n": "70",
+   "who": "tiana1027",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Rakib is the real deal. I am very pleased with the outcome of my website and he has definitely exceeded my expectations. He communicates very well and was very patient with me during the entire process. He answered every single question that I had and responds back quickly. I am grateful to have found him and will be reaching out to him again for projects in the future.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for your nice compliment, Thank's again"
+  },
+  {
+   "n": "71",
+   "who": "stelaire",
+   "country": "Belgium",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "A great experience in all aspects. Rakib has an excellent mindset, completely customer and solution oriented. He is talented, a very good listener and a great communicator, the result of his work is fabulous. The birth of a long-term collaboration!",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much for sharing your experience."
+  },
+  {
+   "n": "72",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Awesome job. I'll be hiring this service again.",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "thank you ❤"
+  },
+  {
+   "n": "73",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "This guy does awesome work! And…fast.",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "thank you for sharing your experience."
+  },
+  {
+   "n": "74",
+   "who": "mulubrhandagnew",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "excellent pro.",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much."
+  },
+  {
+   "n": "75",
+   "who": "chefgregorys",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "He anticipates what is truly needed on the website for he is an expert and has been doing this for quite some time. Rakib is definitely somebody that has your best interest in mind while he is working. I will hire him again, I recommend the same to you!!!!",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "thank you so much for sharing your experience"
+  },
+  {
+   "n": "76",
+   "who": "chefgregorys",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "I like the fact that Rakib OKis not only I had a schedule but works very hard to get things done. If you have revisions he gets them taken care of for you immediately. I highly recommend him!!!",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you."
+  },
+  {
+   "n": "77",
+   "who": "chefgregorys",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "This guy is totally amazing!!!! I would totally recommend hiring Rakib, he is basically a miracle worker and knows his way around HTML, Java, WordPress and all the things that need to get done to make a website function excellent! I can't say enough good things about this guy, he really aims to please and does a great job and is very quick about it. When you hire this guy you will not be disappointed.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you for sharing your experience."
+  },
+  {
+   "n": "78",
+   "who": "f1intlltd",
+   "country": "United Kingdom",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Was amazing to work with rakib. He is very reliable and extremely talented I would highly recommend him and I will be working with him again on future projects. 5* Stars!",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much for sharing your feedback."
+  },
+  {
+   "n": "79",
+   "who": "akarshkain",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Amazing guy! Helped me with everything and now we are friends lol",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much."
+  },
+  {
+   "n": "80",
+   "who": "amandamaxim748",
+   "country": "Canada",
+   "rating": "4.3",
+   "when": "4 years ago",
+   "text": "Patient and hard worker",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you."
+  },
+  {
+   "n": "81",
+   "who": "chefgregorys",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Extremely good in communication, addressed all of my needs, fixed things that I didn't know were broken, and basically did an amazing job!!!! I highly recommend this person for any and all front-end and back-end work on websites, once again can't thank you enough for such an amazing job that you have done!!!!!",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much."
+  },
+  {
+   "n": "82",
+   "who": "tosinakingba",
+   "country": "Nigeria",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "What can I say about this guy. second project, done perfectly again. well done Rakib.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "One of the best client I met on Fiverr. Thank you so much."
+  },
+  {
+   "n": "83",
+   "who": "tosinakingba",
+   "country": "Nigeria",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Rakib first of all is a great human, Kind, and soft. in addition, he is a cultured professional, he is very professional and very honest, I am very happy to have worked with him, I recommend him, and I'll 100% recommend him to anyone.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much and I hope to work with you again"
+  },
+  {
+   "n": "84",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Good job.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you, sir."
+  },
+  {
+   "n": "85",
+   "who": "juneberryboss",
+   "country": "Azerbaijan",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Thanks again Rakib, for great job. Enjoying work together",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "thanks bro."
+  },
+  {
+   "n": "86",
+   "who": "osyed2331",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "This brother knows exactly how to do business. He is polite and to the point and doesn't waste any time. Requested modifications for him on my previous order and he was satisfied to do the job with no hesitation. Look to working with him in the future",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "thank you soo much brother."
+  },
+  {
+   "n": "87",
+   "who": "nkrastins",
+   "country": "Latvia",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Very professional freelancer.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "thank you, bro."
+  },
+  {
+   "n": "88",
+   "who": "juneberryboss",
+   "country": "Azerbaijan",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "good job again, thanks",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "thank you."
+  },
+  {
+   "n": "89",
+   "who": "juneberryboss",
+   "country": "Azerbaijan",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "earned more than I paid. thanks Rakib",
+   "price": "US$50",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "thank you very much."
+  },
+  {
+   "n": "90",
+   "who": "evburgessjr_01",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Great Job! Very responsive. Great working with him.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "thank you."
+  },
+  {
+   "n": "91",
+   "who": "rtjrentals",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Great work. Always works efficiently and effectively.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you so much."
+  },
+  {
+   "n": "92",
+   "who": "osyed2331",
+   "country": "United States",
+   "rating": "5",
+   "when": "4 years ago",
+   "text": "Rakib definitely knows his stuff really well. He worked with me for hours during the night sacrificing his sleep during the process. He is really hardworking and completed my job in only 2 days. Will definitely be working with him in the future with other projects!",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "thank you so much syed Bhai."
+  },
+  {
+   "n": "93",
+   "who": "rtjrentals",
+   "country": "United States",
+   "rating": "5",
+   "when": "5 years ago",
+   "text": "Excellent work as usual.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": ""
+  },
+  {
+   "n": "94",
+   "who": "rtjrentals",
+   "country": "United States",
+   "rating": "5",
+   "when": "5 years ago",
+   "text": "Always a good experience when dealing with Rakib.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": ""
+  },
+  {
+   "n": "95",
+   "who": "rtjrentals",
+   "country": "United States",
+   "rating": "5",
+   "when": "5 years ago",
+   "text": "This guy was very attentive and worked hard to get the delivery on time. No one works harder than Rakib. Will definitely use him for my next project.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": ""
+  },
+  {
+   "n": "96",
+   "who": "mahfuzurrahm145",
+   "country": "Denmark",
+   "rating": "5",
+   "when": "5 years ago",
+   "text": "Perfectly done , very much satisfied. He is very talented he did not had any problems working with the website superb",
+   "price": "US$100–US$200",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": ""
+  },
+  {
+   "n": "97",
+   "who": "safia33",
+   "country": "New Zealand",
+   "rating": "5",
+   "when": "5 years ago",
+   "text": "This seller is just the best you can ever work with. He pays attention to details and he is always available with quick responses. He works without being monitored. I am ready to work with him again. Thanks again Rakib hasan.",
+   "price": "US$100–US$200",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": ""
+  },
+  {
+   "n": "98",
+   "who": "mulubrhandagnew",
+   "country": "United States",
+   "rating": "5",
+   "when": "5 years ago",
+   "text": "excellent guy to work with. creative and made me happy.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you, sir."
+  },
+  {
+   "n": "99",
+   "who": "glasdesign",
+   "country": "United States",
+   "rating": "5",
+   "when": "5 years ago",
+   "text": "Very Pleased With Service, Highly Recommend, Quick Turnaround Time!!",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": ""
+  },
+  {
+   "n": "100",
+   "who": "safia33",
+   "country": "New Zealand",
+   "rating": "5",
+   "when": "5 years ago",
+   "text": "Excellent work. Good communication & time management.",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": ""
+  },
+  {
+   "n": "101",
+   "who": "glasdesign",
+   "country": "United States",
+   "rating": "5",
+   "when": "5 years ago",
+   "text": "Excellent Product! Quick Turnaround & Easy To Work With!",
+   "price": "US$50–US$100",
+   "dur": "",
+   "ongoing": "No",
+   "partial": "No",
+   "reply": "Thank you sir."
+  }
+ ],
+ "featured": [
+  "46",
+  "48",
+  "66",
+  "67",
+  "7",
+  "3",
+  "42",
+  "83",
+  "9",
+  "70",
+  "97",
+  "61",
+  "12",
+  "68",
+  "81",
+  "92"
+ ]
+}

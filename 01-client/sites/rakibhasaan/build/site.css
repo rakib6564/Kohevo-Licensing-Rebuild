@@ -49,3 +49,17 @@
   .rk-ind-row .sb-block--core-image { display: none; }
   .rk-badge { right: 10px; bottom: 10px; }
 }
+
+/* Case studies: a term list reads as plain text; short labels stay on one line. */
+.rk-case-hero ul, .rk-case-ind ul, .rk-pcard ul { list-style: none; margin: 0; padding: 0; display: inline; }
+.rk-case-hero li, .rk-case-ind li, .rk-pcard li { display: inline; }
+.rk-label-row > .sb-block--core-text { flex: none; white-space: nowrap; }
+.rk-case-hero .sb-block--theme-field-value img, .rk-case-gal .sb-block--theme-field-value img { width: 100%; height: auto; border-radius: 18px; display: block; }
+
+/* Project cards: the title is a link, but reads as a title. */
+.rk-pcard .sb-block--theme-post-title a { color: inherit; text-decoration: none; }
+.rk-pcard .sb-block--theme-post-title a:hover { color: var(--sb-color-accent); }
+
+/* Recent work marquee: cards of one size. */
+.rk-iq-card { width: 320px; flex: none; }
+.rk-iq-card img { width: 100%; height: 240px; object-fit: cover; }
