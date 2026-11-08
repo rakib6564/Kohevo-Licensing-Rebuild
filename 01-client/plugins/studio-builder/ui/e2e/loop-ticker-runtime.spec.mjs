@@ -26,8 +26,12 @@ test('the loop\'s items scroll in the row, and go back into the loop when the ru
   await expect(track).toHaveCount(1);
   await expect(track.locator('.sb-query-loop__item:not([data-sb-copy])')).toHaveCount(4);
   await expect(page.locator('.sb-query-loop__grid > .sb-query-loop__item')).toHaveCount(0);
+  await expect(page.locator('.sb-block--core-query-loop')).toBeHidden();
+  // The row sits where the loop was, first in the Container.
+  expect(await page.evaluate(() => document.querySelector('[data-sb-ticker]').firstElementChild.className)).toBe('sb-ticker-track');
   await page.evaluate(() => window.StudioRuntime.disable());
   await expect(page.locator('.sb-query-loop__grid > .sb-query-loop__item')).toHaveCount(4);
   await expect(page.locator('.sb-ticker-track')).toHaveCount(0);
+  await expect(page.locator('.sb-block--core-query-loop')).toBeVisible();
   await expect(page.locator('[data-sb-copy]')).toHaveCount(0);
 });

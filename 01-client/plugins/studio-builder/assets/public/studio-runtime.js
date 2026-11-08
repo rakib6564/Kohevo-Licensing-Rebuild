@@ -858,17 +858,22 @@
     var kids = blockChildren(el);
     // A Query Loop alone in the node lends its items: the row scrolls the listed items, not the one list. The loop
     // stays where it was (its chips and pager with it) and gets its items back on undo.
-    var loopGrid = kids.length === 1 && kids[0].classList.contains('sb-block--core-query-loop') ? kids[0].querySelector('.sb-query-loop__grid') : null;
+    var loopBlock = kids.length === 1 && kids[0].classList.contains('sb-block--core-query-loop') ? kids[0] : null;
+    var loopGrid = loopBlock ? loopBlock.querySelector('.sb-query-loop__grid') : null;
     if (loopGrid) {
       kids = Array.prototype.slice.call(loopGrid.children);
-      (frame || el).appendChild(track);
       kids.forEach(function (k) { track.appendChild(k); });
-      if (frame) el.appendChild(frame);
+      if (frame) frame.appendChild(track);
+      // The row takes the loop's place; the emptied loop steps aside until the items go back.
+      el.insertBefore(frame || track, loopBlock);
+      var wasHidden = loopBlock.hidden;
+      loopBlock.hidden = true;
       return {
         track: track,
         undo: function () {
           kids.forEach(function (k) { loopGrid.appendChild(k); });
           (frame || track).remove();
+          loopBlock.hidden = wasHidden;
         }
       };
     }

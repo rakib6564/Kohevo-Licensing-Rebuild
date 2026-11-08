@@ -216,3 +216,10 @@ unit('post titles: a linked item title keeps its colour over the site link colou
     StudioStylesheet::resetCache();
     assert_true(str_contains(StudioStylesheet::css(), '.sb-body .sb-post-title a:not(.sb-button):not(.sb-heading__link),.sb-body a.sb-post-link:not(.sb-button):not(.sb-heading__link){color:inherit}'));
 });
+
+unit('progress: a row can show its own value, and the label, bar and value can sit on one line', function (): void {
+    $html = sbsm_render(sbpm_box([sbpm_block('core.progress', ['items' => [['label' => 'United States', 'value' => 71, 'note' => '72 <b>'], ['label' => 'Belgium', 'value' => 10]], 'layout' => 'inline'])]));
+    assert_true(str_contains($html, '<div class="sb-progress sb-progress--inline" data-sb-progress-bars'), $html);
+    assert_true(str_contains($html, '<span class="sb-progress__value">72 &lt;b&gt;</span>') && str_contains($html, '<span class="sb-progress__value">10%</span>'), 'own value, escaped; else the share');
+    assert_true(str_contains(sbsm_render(sbpm_box([sbpm_block('core.progress', ['items' => [['label' => 'A', 'value' => 5]]])])), '<div class="sb-progress" data-sb-progress-bars'), 'stacked by default');
+});

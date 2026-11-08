@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '76';
+    public const VERSION = '77';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -1012,6 +1012,10 @@ final class StudioStylesheet
             . '.sb-progress__head{display:flex;justify-content:space-between;gap:1rem;margin-bottom:.4rem;font-size:.9em}'
             . '.sb-progress__value{font-variant-numeric:tabular-nums;opacity:.75}'
             . '.sb-progress__track{height:var(--sb-pg-h,8px);border-radius:999px;background:var(--sb-pg-track,var(--sb-border-default,#e2e8f0));overflow:hidden}'
+            // Inline: the label, the bar and the value on one line (a chart of counts, say).
+            . '.sb-progress--inline .sb-progress__item{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) auto;align-items:center;column-gap:16px}'
+            . '.sb-progress--inline .sb-progress__head{display:contents}.sb-progress--inline .sb-progress__label{grid-column:1;grid-row:1}'
+            . '.sb-progress--inline .sb-progress__track{grid-column:2;grid-row:1;margin:0}.sb-progress--inline .sb-progress__value{grid-column:3;grid-row:1;min-width:2ch;text-align:right}'
             . '.sb-progress__bar{display:block;height:100%;border-radius:inherit;background:var(--sb-pg-bar,var(--sb-color-accent,currentColor));transform-origin:0 50%;transform:scaleX(var(--sb-pg-v,0));transition:transform 1.2s cubic-bezier(.2,.8,.2,1)}'
             . 'html[data-sb-ready] [data-sb-progress-bars]:not(.is-in) .sb-progress__bar{transform:scaleX(0);transition:none}'
             // The list look (a picker): numbered rows with an arrow that turns towards the chosen answer.

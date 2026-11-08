@@ -5110,6 +5110,7 @@
                         "value": 70
                     }
                 ],
+                "layout": "stacked",
                 "show_value": true,
                 "track_color": ""
             },
@@ -5152,6 +5153,14 @@
                             "default": 0.0,
                             "min": 0,
                             "max": 100
+                        },
+                        {
+                            "key": "note",
+                            "type": "string",
+                            "label": "Shown value (instead of the %)",
+                            "required": false,
+                            "default": "",
+                            "max_length": 20
                         }
                     ]
                 },
@@ -5161,6 +5170,17 @@
                     "label": "Show the value",
                     "required": false,
                     "default": true
+                },
+                {
+                    "key": "layout",
+                    "type": "enum",
+                    "label": "Layout",
+                    "required": false,
+                    "default": "stacked",
+                    "allowed_values": [
+                        "stacked",
+                        "inline"
+                    ]
                 },
                 {
                     "key": "bar_color",

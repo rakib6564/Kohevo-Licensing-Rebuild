@@ -3569,6 +3569,7 @@ return [
     'studio_tgrid_prev' => 'Avis précédents',
     'studio_tgrid_next' => 'Avis suivants',
     'studio_tgrid_stars' => '%s sur 5',
+    'studio_field_shown_value_instead_of_the' => 'Valeur affichée (au lieu du %)',
     'studio_field_rows_look' => 'Aspect des lignes',
     'studio_field_open_icon' => 'Icône d’ouverture',
     'studio_ui_opt_lines' => 'Lignes',

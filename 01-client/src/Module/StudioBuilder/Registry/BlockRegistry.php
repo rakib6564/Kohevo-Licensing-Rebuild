@@ -1510,9 +1510,11 @@ final class BlockRegistry
                     'item_schema' => FieldSchema::define([
                         ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => true, 'max_length' => 120],
                         ['key' => 'value', 'type' => 'number', 'label' => 'Value (%)', 'required' => true, 'min' => 0, 'max' => 100],
+                        ['key' => 'note', 'type' => 'string', 'label' => 'Shown value (instead of the %)', 'required' => false, 'default' => '', 'max_length' => 20],
                     ]),
                 ],
                 ['key' => 'show_value', 'type' => 'boolean', 'label' => 'Show the value', 'required' => false, 'default' => true],
+                ['key' => 'layout', 'type' => 'enum', 'label' => 'Layout', 'required' => false, 'allowed_values' => ['stacked', 'inline'], 'default' => 'stacked'],
                 ['key' => 'bar_color', 'type' => 'string', 'label' => 'Bar colour', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
                 ['key' => 'track_color', 'type' => 'string', 'label' => 'Track colour', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
                 ['key' => 'height', 'type' => 'number', 'label' => 'Bar height (px)', 'required' => false, 'default' => 8, 'min' => 2, 'max' => 40, 'integer_only' => true],

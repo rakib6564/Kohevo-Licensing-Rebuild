@@ -251,7 +251,8 @@ final class BlockParts
             'chip'      => ['label' => 'Chips', 'selectors' => ['.sb-field-chips>li']],
             'link'      => ['label' => 'Link', 'selectors' => ['.sb-field-value a']],
             'image'     => ['label' => 'Image', 'selectors' => ['.sb-field-value img']],
-            'affix'     => ['label' => 'Text before and after', 'selectors' => ['.sb-field-value__before', '.sb-field-value__after']],
+            // Under .sb-field-value, or a font-size rule for a block's children outweighs it.
+            'affix'     => ['label' => 'Text before and after', 'selectors' => ['.sb-field-value>.sb-field-value__before', '.sb-field-value>.sb-field-value__after']],
         ],
         'core.map' => [
             'frame' => ['label' => 'Map frame', 'selectors' => ['.sb-map']],
