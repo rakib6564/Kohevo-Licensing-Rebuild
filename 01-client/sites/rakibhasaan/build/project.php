@@ -16,7 +16,7 @@ declare(strict_types=1);
 use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Meta\PageRoutes;
 
-$INDUSTRY = ['Construction & trades' => '#FF5A1F', 'Logistics & transport' => '#8EA2FF', 'Cleaning & sterilisation' => '#19C7B0', 'Hospitality & rentals' => '#FF6FA5', 'Professional services' => '#E8B931', 'Creative & wellness' => '#B49BFF'];
+$INDUSTRY = ['Construction & trades' => '#FF5A1F', 'Logistics & transport' => '#9BCB3C', 'Cleaning & sterilisation' => '#19C7B0', 'Hospitality & rentals' => '#FF6FA5', 'Professional services' => '#E8B931', 'Creative & wellness' => '#E07A5F'];
 PageMeta::savePostTypes($tid, array_replace(PageMeta::postTypes($tid), ['project' => [
     'key' => 'project', 'singular' => 'Project', 'plural' => 'Projects', 'route' => PROJECT_ROUTE, 'is_system' => false, 'description' => 'Case studies: one page each, drawn by the Single: Project template', 'show_in_menu' => true,
     'rewrite' => true, 'rewrite_slug' => trim(PROJECT_ROUTE, '/'), 'hide_field_names' => false, 'edit_link' => true, 'menu_icon' => 'briefcase', 'menu_position' => 1,
