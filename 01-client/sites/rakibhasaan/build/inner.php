@@ -75,7 +75,7 @@ function BLK(array $b, array $c, bool $lead = false): array
         case 'badge':
             return ROW(array_map(static fn(string $t): array => P($t, $c['fg'], '13px', [], ['classNames' => ['rk-chip']]), $b['items']), '8px', [], ['wrap' => 'wrap'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']]);
         case 'faq':
-            return B('layout.accordion', ['allow_multiple' => false], array_map(static fn(array $f): array => B('layout.accordion_item', ['title' => $f['q'], 'open' => false], [RICH('<p>' . $f['a'] . '</p>', $c['muted'], '16px')]), $b['items']),
+            return B('layout.accordion', ['allow_multiple' => false, 'look' => 'lines', 'icon' => 'plus'], array_map(static fn(array $f): array => B('layout.accordion_item', ['title' => $f['q'], 'open' => false], [RICH('<p>' . $f['a'] . '</p>', $c['muted'], '16px')]), $b['items']),
                 ['color' => $c['fg'], 'typography' => ['size' => '19px', 'font_family' => SANS, 'weight' => '400']], ['classNames' => ['rk-faq']]);
         case 'tiles':
             return GRID(array_map(static fn(array $t, int $i): array => CARD([EYE(NUM($i + 1), $c['muted']), P($t['h'], $c['fg'], '21px', ['weight' => '500', 'line_height' => '1.25']), RICH('<p>' . $t['html'] . '</p>', $c['muted'], '15px')], $c, '10px'), $b['items'], array_keys($b['items'])), count($b['items']) % 3 === 0 ? 3 : 2);
@@ -299,29 +299,36 @@ function S_PRODUCTS(int $n): array
 function S_REVIEWS(array $reviews, array $featured): array
 {
     $bars = static fn(array $rows): array => B('core.progress', ['items' => array_map(static fn(array $x): array => ['label' => $x[0], 'value' => (int) round($x[1] * 100 / 101)], $rows), 'show_value' => false, 'bar_color' => ORANGE, 'track_color' => '#232120', 'height' => 4], [], ['color' => BONE, 'typography' => ['size' => '14px']], ['classNames' => ['rk-bars']]);
-    $box = static fn(string $h, array $kids): array => CARD([EYE($h, MUTED), ...$kids], TC('ink'), '12px');
-    $stats = SEC('Review stats', [ROW([
-        W(VBOX([EYE('Fiverr · rakib_64 · Level 2', MUTED), H('4.99', 'div', '140px', '96px', BONE), P('★★★★★', ORANGE, '22px'), RICH('<p>Average of all <strong>101 reviews</strong>. 98 are five stars. Every category on the profile is rated 5: communication, quality and value.</p>', 'rgba(237,232,223,.75)', '16px'),
-            ROW(array_map(static fn(array $k): array => VBOX([P($k[0], BONE, '24px', ['weight' => '300']), EYE($k[1], MUTED)], '2px', ['dimensions' => ['width' => 'auto']]), [['101', 'Reviews'], ['13', 'Countries'], ['1 hr', 'Avg. response'], ['89', 'Replied to']]), '28px', ['margin' => ['top' => '10px']], ['wrap' => 'wrap'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']]),
-        ], '12px'), '34%'),
-        W(VBOX([
-            $box('Where clients are', [$bars([['United States · 72', 72], ['Belgium · 10', 10], ['United Kingdom · 4', 4], ['Azerbaijan · 3', 3], ['Germany · 2', 2], ['Nigeria · 2', 2], ['New Zealand · 2', 2], ['8 more countries · 6', 6]])]),
-            $box('What they hired me for', [$bars([['Construction websites · 39', 39], ['Ecommerce websites · 33', 33], ['Portfolio & resume · 20', 20], ['Consulting & coaching · 4', 4], ['Transport & logistics · 3', 3], ['Restaurants · 2', 2]])]),
-            $box('Clients who came back', [P('evburgessjr_01 ×20 · stelaire ×10 · chefgregorys ×7 · muzteng309 ×4 · creditdude ×4 · rtjrentals ×4', BONE, '15px'), P('evburgessjr_01 has hired me 20 times.', MUTED, '14px')]),
-        ], '14px'), '62%'),
-    ], '40px', [], ['justify' => 'between'])], '120px', '100px', [], ['interactions' => THEME('ink')]);
+    $box = static fn(string $h, array $kids, array $item = []): array => CARD([EYE($h, MUTED), ...$kids], TC('ink'), '14px', ['layout' => $item]);
+    $num = static fn(string $n, string $l): array => VBOX([P($n, BONE, '26px', ['weight' => '300']), EYE($l, MUTED)], '4px', ['dimensions' => ['width' => 'auto']]);
+    $chip = static fn(string $t): array => P($t, BONE, '14px', [], ['classNames' => ['rk-chip']]);
+    // The original's bento: the score card down the left, two charts, and the clients who came back across the bottom.
+    $score = CARD([
+        EYE('Fiverr · rakib_64 · Level 2', MUTED), H('4.99', 'div', '150px', '104px', BONE), P('★★★★★', ORANGE, '22px'),
+        RICH('<p>Average of all <strong>101 reviews</strong>. 98 are five stars. Every category on the profile is rated 5: communication, quality and value.</p>', 'rgba(237,232,223,.75)', '16px'),
+        ROW([$num('101', 'Reviews'), $num('13', 'Countries'), $num('1 hr', 'Avg. response'), $num('89', 'Replied to')], '28px',
+            ['margin' => ['top' => 'auto'], 'padding' => ['top' => '22px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => LINE]], ['wrap' => 'wrap', 'justify' => 'between'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']]),
+    ], TC('ink'), '14px', ['layout' => ['row_span' => 2], 'background' => ['gradient' => 'radial-gradient(120% 90% at 100% 0%, rgba(255,90,31,0.28) 0%, rgba(255,90,31,0.06) 45%, rgba(11,11,12,0) 70%)']]);
+    $stats = SEC('Review stats', [B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap', 'align' => 'stretch'], [
+        $score,
+        $box('Where clients are', [$bars([['United States · 72', 72], ['Belgium · 10', 10], ['United Kingdom · 4', 4], ['Azerbaijan · 3', 3], ['Germany · 2', 2], ['Nigeria · 2', 2], ['New Zealand · 2', 2], ['8 more countries · 6', 6]])]),
+        $box('What they hired me for', [$bars([['Construction websites · 39', 39], ['Ecommerce websites · 33', 33], ['Portfolio & resume · 20', 20], ['Consulting & coaching · 4', 4], ['Transport & logistics · 3', 3], ['Restaurants · 2', 2]])]),
+        $box('Clients who came back', [
+            ROW(array_map($chip, ['evburgessjr_01 ×20', 'stelaire ×10', 'chefgregorys ×7', 'muzteng309 ×4', 'creditdude ×4', 'rtjrentals ×4']), '8px', [], ['wrap' => 'wrap'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']]),
+            P('evburgessjr_01 has hired me 20 times.', MUTED, '14px'),
+        ], ['column_span' => 2]),
+    ], ['layout' => ['display' => 'grid', 'columns' => 3, 'gap' => '16px']], ['responsive' => [
+        'tablet' => ['style' => ['layout' => ['columns' => 2]]],
+        'mobile' => ['style' => ['layout' => ['columns' => 1]]],
+    ]])], '120px', '100px', [], ['interactions' => THEME('ink')]);
 
-    $short = [];
-    foreach ($reviews as $r) {
-        $t = trim((string) $r['text']);
-        $k = strtolower(trim($t, '.! '));
-        if (mb_strlen($t) < 48 && !isset($short[$k])) { $short[$k] = $t; }
-    }
-    $short = array_values($short);
-    $half = intdiv(count($short), 2);
-    $chip = static fn(string $t): array => P('★ ' . $t, INK, '16px', [], ['classNames' => ['rk-mq-chip']]);
-    $row = static fn(array $items, string $dir): array => B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'nowrap'], array_map($chip, array_slice($items, 0, 12)), ['layout' => ['display' => 'flex', 'direction' => 'row', 'gap' => '12px']], ['interactions' => ['marquee' => ['speed' => 3, 'direction' => $dir, 'scroll' => true, 'pause' => true]]]);
-    $marquee = CTOP('Short reviews', [$row(array_slice($short, 0, $half), 'left'), $row(array_slice($short, $half), 'right')], ['padding' => ['top' => '70px', 'right' => '0px', 'bottom' => '40px', 'left' => '0px'], 'layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '14px', 'content_width' => 'full']], ['interactions' => THEME('bone')]);
+    // The short reviews scroll past in two rows: the same Review items, the ones under 48 characters.
+    $marquee = CTOP('Short reviews', [B('core.testimonial_grid', [
+        'source' => 'content_type', 'content_type' => 'review', 'text_field' => 'text', 'rating_field' => 'rating', 'meta_fields' => '', 'date_field' => '', 'photo_field' => '',
+        'order' => 'newest', 'min_length' => 0, 'max_length' => 47, 'limit' => 60, 'items' => [], 'layout' => 'ticker', 'ticker_rows' => 2, 'ticker_speed' => 3,
+        'show_stars' => true, 'show_name' => false,
+    ], [], ['typography' => ['size' => '16px', 'font_family' => SANS]], ['classNames' => ['rk-tgrid', 'rk-ticker']])],
+        ['padding' => ['top' => '70px', 'right' => '0px', 'bottom' => '40px', 'left' => '0px'], 'layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '14px', 'content_width' => 'full']], ['interactions' => THEME('bone')]);
 
     $grid = SEC('In their own words', [
         ROW([W(VBOX([EYE('Client reviews', MUTED_BONE), H2('In their own words', TC('bone'))], '14px'), '50%'), W(RICH('<p>Copied exactly as they appear on Fiverr, typos and all. <a href="https://fiverr.com/rakib_64/">Read all 101 on Fiverr</a>.</p>', MUTED_BONE, '17px'), '40%')], '40px', ['margin' => ['bottom' => '40px']], ['justify' => 'between', 'align' => 'end']),
@@ -383,93 +390,16 @@ function ITEMS(array $items, array $cases, array $data): array
             case 'reviews': array_push($out, ...S_REVIEWS($data['reviews'], $data['featured'])); break;
             case 'projects': $out[] = S_PROJECTS($it); break;
             case 'grid': $out[] = S_WORKGRID(); break;
+            case 'servicelist': $out[] = S_SERVICES($it); break;
+            case 'faqlist': $out[] = S_FAQS($it); break;
             default: throw new RuntimeException('Unknown section kind ' . $it['kind']);
         }
     }
     return $out;
 }
 
-// ── Projects: a content type with an Industry taxonomy, its items, a card and a Single template ──
-$INDUSTRY = ['Construction & trades' => '#FF5A1F', 'Logistics & transport' => '#8EA2FF', 'Cleaning & sterilisation' => '#19C7B0', 'Hospitality & rentals' => '#FF6FA5', 'Professional services' => '#E8B931', 'Creative & wellness' => '#B49BFF'];
-PageMeta::savePostTypes($tid, array_replace(PageMeta::postTypes($tid), ['project' => [
-    'key' => 'project', 'singular' => 'Project', 'plural' => 'Projects', 'route' => PROJECT_ROUTE, 'is_system' => false, 'description' => 'Case studies', 'show_in_menu' => true,
-    'rewrite' => true, 'rewrite_slug' => trim(PROJECT_ROUTE, '/'), 'hide_field_names' => false, 'edit_link' => true, 'menu_icon' => 'briefcase', 'menu_position' => 1,
-    'columns' => [['label' => 'Industry', 'source' => 'industry', 'prefix' => '', 'suffix' => '', 'sortable' => true], ['label' => 'Year', 'source' => 'year', 'prefix' => '', 'suffix' => '', 'sortable' => true]],
-    'filters' => [],
-]]));
-$field = static fn(string $key, string $label, string $kind = 'text', array $options = []): array => ['id' => 'f_' . substr(md5('project' . $key), 0, 8), 'post_type' => 'project', 'label' => $label, 'key' => $key, 'type' => $kind, 'required' => false, 'placeholder' => '', 'help' => '', 'options' => $options];
-$others = array_values(array_filter(PageMeta::allFields($tid), static fn(array $f): bool => ($f['post_type'] ?? '') !== 'project'));
-PageMeta::saveFields($tid, array_merge($others, [
-    $field('industry', 'Industry', 'terms', ['choices' => array_map(static fn(string $k): array => ['value' => $k, 'label' => explode(' &', $k)[0]], array_keys($INDUSTRY))]),
-    $field('client', 'Client'), $field('country', 'Country'), $field('year', 'Year'), $field('service', 'Service'), $field('stack', 'Stack', 'textarea'), $field('live', 'Live site', 'url'),
-    $field('screen', 'Laptop image', 'image'), $field('phone', 'Phone image', 'image'),
-    $field('the_client', 'The client', 'richtext'), $field('challenge', 'The challenge', 'richtext'), $field('built', 'What I built', 'richtext'), $field('result', 'The result', 'richtext'), $field('testimonial', 'Testimonial', 'richtext'),
-]));
-PageRoutes::forget($tid);
-say('  + project type');
-
-/** Field value blocks on the Single template. */
-function FV(string $key, string $color, string $size, string $tag = 'div', array $more = []): array
-{
-    return B('theme.field_value', ['field' => $key, 'tag' => $tag], [], ['color' => $color, 'typography' => ['size' => $size, 'font_family' => SANS, 'line_height' => '1.6']] + $more);
-}
-$fact = static fn(string $label, string $key): array => VBOX([EYE($label, MUTED), FV($key, BONE, '16px')], '6px', ['dimensions' => ['width' => 'auto']]);
-$para = static fn(int $n, string $title, string $key, string $theme): array => SEC($title, [
-    ROW([EYE(NUM($n), TC($theme)['muted']), P($title, TC($theme)['fg'], '15px', ['weight' => '500']), B('core.divider', ['weight' => 'thin'], [], ['color' => TC($theme)['line'], 'dimensions' => ['width' => '100%']])], '18px', ['margin' => ['bottom' => '32px']], ['align' => 'center'], [], ['classNames' => ['rk-label-row']]),
-    FV($key, TC($theme)['fg'], '26px', 'div', ['dimensions' => ['max_width' => '980px']]),
-], '90px', '90px', [], ['interactions' => THEME($theme), 'classNames' => ['rk-case-txt']]);
-$single = [
-    CTOP('Project hero', [
-        ROW([B('core.link', ['link' => L('Work', '/work/'), 'style' => 'plain'], [], ['color' => MUTED, 'typography' => ['size' => '12px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.2px']]), EYE('/', LINE), B('theme.post_title', ['level' => 'h6'], [], ['color' => BONE, 'typography' => ['size' => '12px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.2px']])], '10px', [], ['align' => 'center'], []),
-        ROW([FV('industry', MUTED, '12px', 'span', ['typography' => ['size' => '12px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.2px']]), EYE('·'), FV('country', MUTED, '12px', 'span', ['typography' => ['size' => '12px', 'font_family' => MONO, 'transform' => 'uppercase']]), EYE('·'), FV('year', MUTED, '12px', 'span', ['typography' => ['size' => '12px', 'font_family' => MONO]])], '8px', ['margin' => ['top' => '48px']], ['align' => 'center'], [], ['classNames' => ['rk-case-ind']]),
-        B('theme.post_title', ['level' => 'h1'], [], ['color' => BONE, 'margin' => ['top' => '18px'], 'typography' => ['size' => '88px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.98', 'letter_spacing' => '-4.4px'], 'dimensions' => ['max_width' => '1100px']], ['responsive' => ['mobile' => ['style' => ['typography' => ['size' => '44px']]]]]),
-        B('theme.post_excerpt', [], [], ['color' => 'rgba(237,232,223,.75)', 'margin' => ['top' => '20px'], 'typography' => ['size' => '20px', 'font_family' => SANS, 'line_height' => '1.5'], 'dimensions' => ['max_width' => '760px']]),
-        FV('screen', BONE, '16px', 'div', ['margin' => ['top' => '48px']]),
-        ROW([$fact('Client', 'client'), $fact('Industry', 'industry'), $fact('Country', 'country'), $fact('Service', 'service'), $fact('Stack', 'stack'), $fact('Live site', 'live')], '36px',
-            ['padding' => ['top' => '24px', 'bottom' => '24px'], 'margin' => ['top' => '40px'], 'border' => ['width' => '1px 0 1px 0', 'style' => 'solid', 'color' => LINE]], ['wrap' => 'wrap'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap', 'gap' => '20px']]),
-    ], ['padding' => ['top' => '140px', 'right' => '28px', 'bottom' => '60px', 'left' => '28px'], 'layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '0px', 'content_width' => 'boxed', 'content_max' => '1440px']],
-        ['interactions' => THEME('ink'), 'classNames' => ['rk-case-hero'], 'responsive' => ['mobile' => ['style' => ['padding' => ['top' => '100px', 'right' => '20px', 'bottom' => '40px', 'left' => '20px']]]]]),
-    $para(1, 'The client', 'the_client', 'bone'),
-    $para(2, 'The challenge', 'challenge', 'bone'),
-    $para(3, 'What I built', 'built', 'ink'),
-    SEC('On every screen', [ROW([EYE('04', '#9AA6C4'), P('On every screen', '#E9ECF5', '15px', ['weight' => '500'])], '18px', ['margin' => ['bottom' => '32px']], ['align' => 'center'], []),
-        ROW([W(FV('screen', BONE, '16px', 'div', []), '64%'), W(FV('phone', BONE, '16px', 'div', []), '32%')], '24px', [], ['align' => 'center'])], '90px', '90px', [], ['interactions' => THEME('navy'), 'classNames' => ['rk-case-gal']]),
-    $para(5, 'The result', 'result', 'bone'),
-    SEC('In the client\'s words', [EYE('06 — In the client\'s words', '#5A1F08'), FV('testimonial', INK, '40px', 'div', ['margin' => ['top' => '24px'], 'typography' => ['size' => '40px', 'font_family' => SANS, 'weight' => '300', 'line_height' => '1.2']]), FV('client', '#5A1F08', '13px', 'div', ['margin' => ['top' => '20px'], 'typography' => ['size' => '13px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.2px']])],
-        '110px', '110px', [], ['interactions' => THEME('orange'), 'classNames' => ['rk-case-quote']]),
-    SEC('Next project', [
-        EYE('Next project', MUTED),
-        B('core.heading', ['text' => 'Next project', 'level' => 'h2', 'url' => '/work/'], [], ['color' => BONE, 'typography' => ['size' => '96px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '1', 'letter_spacing' => '-4.8px'], 'margin' => ['top' => '14px']],
-            ['dynamic' => ['text' => ['tag' => 'next_post_title', 'after' => ' →'], 'url' => ['tag' => 'next_post_url']], 'responsive' => ['mobile' => ['style' => ['typography' => ['size' => '48px']]]], 'classNames' => ['rk-next']]),
-        ROW([PILL('Start a project like this  →', '/free-audit/'), B('core.button', ['link' => L('All 25 projects  →', '/work/'), 'variant' => 'outline'], [], [], ['style_parts' => ['button' => ['background' => ['color' => 'rgba(0,0,0,0)'], 'color' => BONE, 'border' => ['width' => '1px', 'style' => 'solid', 'color' => LINE, 'radius' => '999px'], 'padding' => ['top' => '13px', 'right' => '22px', 'bottom' => '13px', 'left' => '22px'], 'typography' => ['size' => '15px', 'weight' => 'medium', 'family' => 'body']]]])], '10px', ['margin' => ['top' => '36px']], ['wrap' => 'wrap'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']]),
-    ], '110px', '120px', [], ['interactions' => THEME('ink')]),
-];
-build_page('template-single-project', 'Single: Project', 'system', 'standalone', $single, ['settings' => ['template_type' => 'single', 'conditions' => ['rules' => [['action' => 'include', 'condition' => 'singular', 'value' => 'project']]]]]);
-
-$cardTpl = CTOP('Card', [
-    B('layout.flex', ['direction' => 'column', 'gap' => 'none'], [
-        B('theme.post_image', [], [], ['dimensions' => ['height' => '300px', 'width' => '100%', 'overflow' => 'hidden'], 'border' => ['radius' => '16px']], ['classNames' => ['rk-pcard-img']]),
-        FV('industry', INK, '11px', 'span', ['typography' => ['size' => '11px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1px'], 'background' => ['color' => BONE], 'padding' => ['top' => '6px', 'right' => '11px', 'bottom' => '6px', 'left' => '11px'], 'border' => ['radius' => '999px'], 'position' => ['mode' => 'absolute', 'top' => '14px', 'left' => '14px']]),
-    ], ['position' => ['mode' => 'relative']]),
-    ROW([B('theme.post_title', ['level' => 'h3', 'link_to_post' => true], [], ['color' => INK, 'typography' => ['size' => '28px', 'font_family' => SANS, 'weight' => '300', 'line_height' => '1.15', 'letter_spacing' => '-0.8px']]), ROW([FV('country', MUTED_BONE, '11px', 'span', ['typography' => ['size' => '11px', 'font_family' => MONO, 'transform' => 'uppercase']]), FV('year', MUTED_BONE, '11px', 'span', ['typography' => ['size' => '11px', 'font_family' => MONO]])], '6px', ['dimensions' => ['width' => 'auto']], [], [])], '12px', ['margin' => ['top' => '16px']], ['justify' => 'between', 'align' => 'baseline'], []),
-    B('theme.post_excerpt', [], [], ['color' => MUTED_BONE, 'typography' => ['size' => '15px', 'font_family' => SANS, 'line_height' => '1.5']]),
-], ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '6px', 'content_width' => 'full', 'padding_y' => 'none']], ['classNames' => ['rk-pcard']]);
-build_page('template-loop-project', 'Loop Item: Project', 'system', 'standalone', [$cardTpl], ['settings' => ['template_type' => 'loop', 'conditions' => ['rules' => [['action' => 'include', 'condition' => 'singular', 'value' => 'project']]]]]);
-
-// The items, newest first in the list (published in reverse so the list order matches the original's).
-$rich = static fn(array $paras): string => implode('', array_map(static fn(string $h): string => '<p>' . $h . '</p>', $paras));
-foreach (array_reverse($DATA['cases']) as $i => $p) {
-    build_page($p['slug'], $p['name'], 'page', 'standalone', [CTOP('Body', [P($p['summary'], BONE, '18px')], ['layout' => ['display' => 'flex', 'direction' => 'column']])], [
-        'seo_title' => $p['title'] ?: $p['name'] . ' | Rakib Hasan', 'seo_desc' => $p['summary'], 'image' => MFILE($p['img']),
-        'settings' => ['category' => $p['industry'], 'excerpt' => $p['summary']], 'date' => date('Y-m-d H:i:s', strtotime('2026-01-01') + $i * 3600),
-        'type' => 'project', 'fields' => [
-            'industry' => [$p['industry']], 'client' => $p['client'], 'country' => $p['country'], 'year' => $p['year'], 'service' => $p['service'], 'stack' => $p['stack'], 'live' => $p['live'],
-            'screen' => MEDIA_DIR . MFILE($p['img']), 'phone' => MEDIA_DIR . MFILE($p['img2']),
-            'the_client' => $rich($p['p_client']), 'challenge' => $rich($p['p_challenge']), 'built' => $rich($p['p_built']), 'result' => $rich($p['p_result']), 'testimonial' => $rich($p['p_testi']),
-        ],
-    ]);
-}
-say('  + ' . count($DATA['cases']) . ' projects');
+// ── Projects: a content type, its single template, card and items (project.php) ──
+require __DIR__ . '/project.php';
 
 // ── Reviews: a content type with no pages of its own; the Testimonial grid reads its items ──
 PageMeta::savePostTypes($tid, array_replace(PageMeta::postTypes($tid), ['review' => [
@@ -507,21 +437,48 @@ function LOOP(array $props): array
     return B('core.query_loop', array_replace(['source' => 'posts', 'content_type' => 'project', 'per_page' => 24, 'columns' => 3, 'gap' => 'lg', 'order_by' => 'published_at', 'order' => 'desc',
         'show_featured_image' => true, 'show_date' => false, 'show_author' => false, 'show_category' => true, 'show_excerpt' => true, 'enable_pagination' => true, 'pagination_style' => 'numbers', 'empty_message' => 'No projects yet.'], $props), [], [], ['classNames' => ['rk-loop']]);
 }
+/** Service items of one group, as cards. */
+function S_SERVICES(array $s): array
+{
+    $c = TC($s['theme']);
+    return SEC($s['title'], [VBOX([LABEL($s['n'], $c), H2($s['title'], $c)], '18px', ['margin' => ['bottom' => '40px']]),
+        LOOP(['content_type' => 'service', 'category' => $s['group'], 'per_page' => 12, 'columns' => 3, 'enable_pagination' => false, 'order_by' => 'published_at', 'order' => 'desc'])],
+        '120px', '120px', [], ['interactions' => THEME($s['theme'])]);
+}
 function S_WORKGRID(): array
 {
-    return SEC('Projects', [LOOP(['filter_field' => 'industry', 'filter_all_label' => 'All', 'filter_counts' => true, 'open_in' => 'dialog'])], '90px', '120px', [], ['interactions' => THEME('bone')]);
+    return SEC('Projects', [LOOP(['filter_field' => 'industry', 'filter_all_label' => 'All', 'filter_counts' => true, 'open_in' => 'page', 'per_page' => 48])], '90px', '120px', [], ['interactions' => THEME('bone')]);
 }
 function S_PROJECTS(array $s): array
 {
     $c = TC('navy');
-    return SEC($s['title'], [VBOX([LABEL($s['n'], $c), H2($s['title'], $c)], '18px', ['margin' => ['bottom' => '40px']]), LOOP(['category' => $s['industry'], 'open_in' => 'dialog', 'enable_pagination' => false])], '120px', '120px', [], ['interactions' => THEME('navy'), 'classNames' => ['rk-on-navy']]);
+    return SEC($s['title'], [VBOX([LABEL($s['n'], $c), H2($s['title'], $c)], '18px', ['margin' => ['bottom' => '40px']]), LOOP(['category' => $s['industry'], 'open_in' => 'page', 'enable_pagination' => false])], '120px', '120px', [], ['interactions' => THEME('navy'), 'classNames' => ['rk-on-navy']]);
 }
+
+// ── Services: a content type, its templates and items (services.php) ──
+require __DIR__ . '/services.php';
+// ── FAQs: a content type the FAQ page lists by topic (faq.php) ──
+require __DIR__ . '/faq.php';
 
 // ── Pages ──────────────────────────────────────────────────────────────────────
 $names = ['services' => 'Services', 'wordpress-websites' => 'WordPress websites', 'custom-development' => 'Custom development', 'seo' => 'SEO audits', 'apps' => 'Web & mobile apps', 'platforms' => 'Shopify · Wix · Squarespace', 'branding' => 'Branding & video'];
 $onlyPages = array_filter(explode(',', (string) getenv('RK_PAGES')));
 foreach ($DATA['pages'] as $slug => $p) {
     if ($onlyPages !== [] && !in_array($slug, $onlyPages, true)) { continue; }
+    if (in_array($slug, SERVICE_SLUGS, true)) { continue; } // Service items (services.php)
+    if ($slug === 'faq') {
+        foreach ($p['items'] as $k => $it) {
+            if (($it['kind'] ?? '') === 'section') { $p['items'][$k] = ['kind' => 'faqlist'] + $it; }
+        }
+    }
+    if ($slug === 'services') {
+        // The hub lists the Service items, core and supporting, with the Loop Item: Service card.
+        foreach ($p['items'] as $k => $it) {
+            if (in_array($it['title'] ?? '', ['Core services', 'Supporting services'], true)) {
+                $p['items'][$k] = ['kind' => 'servicelist', 'n' => $it['n'], 'theme' => $it['theme'], 'title' => $it['title'], 'group' => $it['title'] === 'Core services' ? 'Core' : 'Supporting'];
+            }
+        }
+    }
     $crumbs = [['Home', '/']];
     if ($p['parent'] === 'services') { $crumbs[] = ['Services', '/services/']; }
     if ($p['parent'] === 'work') { $crumbs[] = ['Industries', '/work/']; }

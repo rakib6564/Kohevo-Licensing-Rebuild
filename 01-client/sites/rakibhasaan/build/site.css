@@ -51,8 +51,8 @@
 }
 
 /* Case studies: a term list reads as plain text; short labels stay on one line. */
-.rk-case-hero ul, .rk-case-ind ul, .rk-pcard ul { list-style: none; margin: 0; padding: 0; display: inline; }
-.rk-case-hero li, .rk-case-ind li, .rk-pcard li { display: inline; }
+.rk-case-hero ul, .rk-case-ind ul, .rk-pcard ul, .rk-card ul { list-style: none; margin: 0; padding: 0; display: inline; }
+.rk-case-hero li, .rk-case-ind li, .rk-pcard li, .rk-card li { display: inline; }
 .rk-label-row > .sb-block--core-text { flex: none; white-space: nowrap; }
 .rk-case-hero .sb-block--theme-field-value img, .rk-case-gal .sb-block--theme-field-value img { width: 100%; height: auto; border-radius: 18px; display: block; }
 
@@ -72,3 +72,44 @@
 
 /* Industry rows: the name gives way (and wraps) before the arrow leaves the screen on a phone. */
 .rk-ind-row > .rk-ind-name { min-width: 0; overflow-wrap: anywhere; }
+
+/* Short reviews ticker: the rows fade out at both edges. */
+.rk-ticker .sb-tgrid__row { -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+
+/* Project single: the browser frame, its badges, the stack band, the facts, the story and the screens. */
+.rk-dots p, .rk-dots { margin: 0; display: flex; gap: 6px; }
+.rk-dots span { width: 10px; height: 10px; border-radius: 50%; background: #3A3A40; display: inline-block; }
+.rk-dots span:nth-child(1) { background: #FF5F57; } .rk-dots span:nth-child(2) { background: #FEBC2E; } .rk-dots span:nth-child(3) { background: #28C840; }
+.rk-bar .sb-field-value--url { flex: 1; margin: 0 auto; padding: 6px 14px; border-radius: 999px; background: #0E0E10; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rk-bar .sb-field-value a { color: inherit; text-decoration: none; }
+.rk-shot img, .rk-show-a img, .rk-show-b img, .rk-thumb img { display: block; width: 100%; height: auto; }
+.rk-show-a img, .rk-show-b img, .rk-thumb img { border-radius: 18px; }
+.rk-stage { position: relative; }
+.rk-stage > [class*="rk-badge-"] { position: absolute; z-index: 3; }
+.rk-badge-l { left: -18px; bottom: 30px; } .rk-badge-r { right: -18px; top: 30%; }
+.rk-stack .sb-field-chips > li { border: 0; padding: 0 28px 0 0; }
+.rk-stack .sb-field-chips > li::after { content: "✦"; margin-left: 28px; font-size: .6em; vertical-align: middle; }
+.rk-inline-list ul { list-style: none; margin: 0; padding: 0; }
+.rk-inline-list li { display: inline; } .rk-inline-list li + li::before { content: ", "; }
+.rk-fact-live a { text-decoration: none; }
+.rk-qmark p { margin: 0 0 -30px; }
+@media (max-width: 767.98px) { .rk-stage > [class*="rk-badge-"] { display: none; } }
+.rk-frame { overflow: hidden; }
+
+/* Service single: the checklist as ticked rows, the steps numbered, the middle price stands out. */
+.rk-checks ul { list-style: none; margin: 0; padding: 0; counter-reset: rk-check; }
+.rk-checks li { display: flex; gap: 14px; align-items: baseline; padding: 14px 0; border-bottom: 1px solid var(--sb-border-default); }
+.rk-checks li::before { content: "✓"; color: var(--sb-color-accent); font-weight: 600; }
+.rk-rep-steps { counter-reset: rk-step; }
+.rk-step { counter-increment: rk-step; }
+.rk-step::before { content: counter(rk-step, decimal-leading-zero); font: 500 12px "Geist Mono", ui-monospace, monospace; letter-spacing: 1.2px; color: var(--sb-color-accent); }
+.rk-rep-pricing > .sb-repeater > .rk-price:nth-child(2):not(:last-child) { background: #EDE8DF !important; border-color: #EDE8DF !important; }
+.rk-rep-pricing > .sb-repeater > .rk-price:nth-child(2):not(:last-child) :is(h3, p, div, a) { color: #0B0B0C !important; }
+.rk-rep-features > .sb-repeater > .rk-step:last-child { border-right: 0 !important; }
+.rk-step-row::before { margin-right: 22px; }
+.rk-faq .sb-accordion__item, .rk-faq details { border-bottom: 1px solid var(--sb-border-default); }
+
+/* Service cards: the title is a link that reads as a title. Home cards: the industry tag is a pill in its colour. */
+.rk-scard .sb-block--theme-post-title a, .rk-card .sb-block--theme-post-title a { color: inherit; text-decoration: none; }
+.rk-scard .sb-block--theme-post-title a:hover, .rk-card .sb-block--theme-post-title a:hover { color: var(--sb-color-accent); }
+.rk-tag .sb-field-value { display: inline-block; padding: 7px 12px; border-radius: 999px; }

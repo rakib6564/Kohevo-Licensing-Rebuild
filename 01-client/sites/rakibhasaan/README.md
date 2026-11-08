@@ -16,13 +16,22 @@ FAQ, Contact, Free audit (at `/free-audit/`: `/audit` is reserved by the platfor
 
 - `build/export.py <rakibhasaan-site checkout>` rewrites `data/pages.json` from the original's `copy.md` with the
   original generator's own parser; run it when the copy changes, then the build.
-- Case studies are a **Project** content type (`/case-study/<slug>/`): an Industry taxonomy, fields for each part,
-  a Single template with a "Next project" link (dynamic tags) and a card template. The Work page is a Query Loop with
-  industry chips and items opening in a dialog.
-- Reviews are a **Review** content type with no pages of its own (fields: text, stars, country, price, when), one
-  item per Fiverr review (101). The Reviews page shows them with the **Testimonial grid** widget: reviews of 48
-  characters or more (66), the original's picked ones first, then longest first, newest first in the list; 6 per page
-  on a desktop, 4 on a tablet, 3 on a phone, with "Read full review" in a dialog. Add a review and it shows first.
+- **The site is dynamic: repeated content lives in content types, drawn by templates and listed by Query Loops.**
+  - **Project** (`/case-study/<slug>/`, `build/project.php`): industry, heading, summary, client, country, year,
+    service, stack (one per line), live site, desktop and phone screenshots, the four chapters, weeks / PageSpeed /
+    pages, the client's quote, a short line and the industry colour. *Single: Project* draws every case study from
+    these (browser-framed hero, stack ticker, facts, chapter list that follows the reader, screens, result numbers,
+    quote, call to action, next project); a section whose field is empty is left out. Work and Construction list
+    them with Query Loops (one page each, no popup; industry chips filter in place); the home page's six are the
+    *featured* items, shown with their own card (*Loop Item: Project (home)*).
+  - **Service** (`/wordpress-websites/` …, `build/services.php`): heading, intro, buttons, card text, best-for line,
+    group, and the page's sections as fields: highlights, features, statement, checklist, steps, pricing and
+    questions (repeaters), and the closing call to action. *Single: Service* draws them in a fixed order; the
+    Services hub lists the items by group (category) with *Loop Item: Service*.
+  - **Review** (no pages): 101 Fiverr reviews. The Reviews page shows the 66 longer ones with the **Testimonial
+    grid** (6/4/3 per page, "read full review" dialog) and the short ones scrolling as its ticker layout.
+  - **FAQ** (no pages): one item per question, the topic as its category; the FAQ page lists each topic with a
+    Query Loop drawn as accordion rows (*Loop Item: FAQ*).
 - Full-screen menu: the off-canvas widget's full-screen position with the Nav menu's numbers, captions and preview
   pictures (set on each item of the "Full menu" on the Menus screen).
 - Phones: headings keep proportional tracking (per-device letter spacing), stacked rows line up left, the header
@@ -36,8 +45,11 @@ FAQ, Contact, Free audit (at `/free-audit/`: `/audit` is reserved by the platfor
 - Header: the Industries and Services dropdowns are plain sub-menus, not the original's mega panel with a featured
   case study.
 - In-page links (`#bd-audit`) go to the Free audit page instead.
-- Work: 24 projects per page (the Query Loop's limit), so the 25th is on page 2 and the chips reload the page.
 - Case studies are one page each instead of one page with a picker.
+- Service pages show their sections in one fixed order (highlights, features, statement, checklist, steps, pricing,
+  questions); a few sections of the original are folded into features rows (the platform picker, a second checklist)
+  and the Kohevo products strip on Custom development is not shown.
+- Home: the six featured projects follow the list order (newest first), not the original's hand-picked order.
 
 ## Placeholder content to replace before launch
 

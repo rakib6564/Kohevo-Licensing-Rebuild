@@ -79,25 +79,25 @@ $work = [
     ['05', 'Sergio Ardila Law', 'Law', $IMG['law'], 'Bilingual injury law firm in Atlanta · 2023', '#E8B931'],
     ['06', 'Tatiana Megard', 'Creative', $IMG['tatiana'], 'Avant-garde fashion portfolio · Belgium · 2023', '#B49BFF'],
 ];
-$card = static fn(array $w): array => VBOX([
+// The six featured projects, from the Project items: a card of their own (navy, the industry tag in its colour, the
+// short line), chosen by the Query Loop by name, so the Work page keeps its own card.
+$homeCard = CTOP('Card', [
     B('layout.flex', ['direction' => 'column', 'gap' => 'none'], [
-        PIC($w[3], $w[1] . ' website', '300px', '220px', '14px'),
-        EYE($w[2], INK, 'left'),
-    ], ['position' => ['mode' => 'relative']], ['classNames' => ['rk-card-media']]),
-    ROW([H($w[1], 'h3', '36px', '28px', '#E9ECF5', [], '300'), EYE($w[0], '#9AA6C4', 'right')], '12px', ['margin' => ['top' => '18px']], ['justify' => 'between', 'align' => 'end'], []),
-    P($w[4], '#9AA6C4', '15px'),
-], '6px', [], ['classNames' => ['rk-card'], 'style_parts' => []]);
-$cards = array_map(static function (array $w) use ($card): array {
-    $c = $card($w);
-    // The industry tag sits on the image in its own colour.
-    $c['children'][0]['children'][1]['style'] += ['background' => ['color' => $w[5]], 'padding' => ['top' => '7px', 'right' => '12px', 'bottom' => '7px', 'left' => '12px'], 'border' => ['radius' => '999px'], 'position' => ['mode' => 'absolute', 'top' => '14px', 'left' => '14px']];
-    $c['children'][0]['children'][1]['classNames'] = ['rk-tag'];
-    return $c;
-}, $work);
+        B('theme.post_image', [], [], ['dimensions' => ['height' => '300px', 'width' => '100%'], 'border' => ['radius' => '14px']], ['classNames' => ['rk-pcard-img'], 'responsive' => ['mobile' => ['style' => ['dimensions' => ['height' => '220px']]]]]),
+        FV('industry', INK, '11px', 'span', ['typography' => ['size' => '11px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.1px', 'line_height' => '1.3'], 'position' => ['mode' => 'absolute', 'top' => '14px', 'left' => '14px']],
+            ['bg_field' => 'color'], ['classNames' => ['rk-tag']]),
+    ], ['position' => ['mode' => 'relative']]),
+    B('theme.post_title', ['level' => 'h3', 'link_to_post' => true], [], ['color' => '#E9ECF5', 'margin' => ['top' => '18px'], 'typography' => ['size' => '36px', 'font_family' => SANS, 'weight' => '300', 'line_height' => '1.05', 'letter_spacing' => '-1.6px']], ['responsive' => ['mobile' => ['style' => ['typography' => ['size' => '28px']]]]]),
+    FV('tagline', '#9AA6C4', '15px', 'p', [], [], ['when_field' => 'tagline']),
+], ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '6px', 'content_width' => 'full', 'padding_y' => 'none']], ['classNames' => ['rk-card']]);
+build_page('template-loop-project-home', 'Loop Item: Project (home)', 'system', 'standalone', [$homeCard], ['settings' => ['template_type' => 'loop']]);
+$homeCardUuid = (string) \Slate\Data\Database::value("SELECT uuid FROM studiobuilder_pages WHERE tenant_id = ? AND slug = 'template-loop-project-home' AND status <> 'archived'", [$tid]);
+$featuredLoop = B('core.query_loop', ['source' => 'posts', 'content_type' => 'project', 'featured_only' => true, 'loop_template' => $homeCardUuid, 'per_page' => 6, 'columns' => 3, 'gap' => 'lg',
+    'order_by' => 'published_at', 'order' => 'desc', 'show_featured_image' => true, 'show_date' => false, 'show_author' => false, 'show_category' => false, 'show_excerpt' => false, 'enable_pagination' => false, 'empty_message' => ''], [], [], ['classNames' => ['rk-loop', 'rk-home-loop']]);
 $workSec = SEC('Selected work', [
     ROW([EYE('03 — Selected work', '#9AA6C4'), B('core.dual_heading', ['before' => 'One from every', 'colored' => 'world', 'after' => '', 'level' => 'h2'], [], ['typography' => ['size' => '72px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '0.95', 'letter_spacing' => '-3.6px']], ['style_parts' => ['highlight' => ['color' => PERI]], 'responsive' => ['mobile' => ['style' => ['typography' => ['size' => '44px']]]]])],
         '16px', ['margin' => ['bottom' => '40px']], ['justify' => 'between', 'align' => 'end'], ['layout' => ['direction' => 'column', 'gap' => '10px']]),
-    B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap', 'align' => 'stretch'], $cards, ['layout' => ['display' => 'flex', 'direction' => 'row', 'wrap' => 'wrap', 'gap' => '28px']],
+    B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap', 'align' => 'stretch'], [$featuredLoop], ['layout' => ['display' => 'flex', 'direction' => 'row', 'wrap' => 'wrap', 'gap' => '28px']],
         ['interactions' => ['horizontal' => ['offset' => 90, 'width' => 520]], 'classNames' => ['rk-work'], 'responsive' => ['mobile' => ['style' => ['layout' => ['direction' => 'column']]]]]),
 ], '130px', '130px', [], ['interactions' => THEME('navy')]);
 

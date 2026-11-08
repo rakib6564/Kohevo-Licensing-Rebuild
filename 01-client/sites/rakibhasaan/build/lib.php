@@ -51,8 +51,10 @@ function B(string $type, array $props = [], array $children = [], array $style =
         'visibility' => ['auth_state' => 'any', 'devices' => ['base', 'sm', 'md', 'lg']],
         'bindings' => [], 'children' => array_values(array_filter($children)),
     ];
-    foreach (['responsive', 'style_parts', 'classNames', 'style_states', 'interactions', 'animation', 'dynamic'] as $k) { if (!empty($opt[$k])) { $b[$k] = $opt[$k]; } }
+    foreach (['responsive', 'style_parts', 'classNames', 'style_states', 'interactions', 'animation', 'dynamic', 'attributes'] as $k) { if (!empty($opt[$k])) { $b[$k] = $opt[$k]; } }
     if (!empty($opt['devices'])) { $b['visibility']['devices'] = $opt['devices']; }
+    // Shown only when the item being drawn has a value in this field (a Single or Loop template).
+    if (!empty($opt['when_field'])) { $b['visibility']['when_field'] = $opt['when_field']; }
     return scale_tracking($b);
 }
 
@@ -84,7 +86,8 @@ function CTOP(string $label, array $children, array $style, array $extra = []): 
         'visibility' => ['auth_state' => 'any', 'devices' => ['base', 'sm', 'md', 'lg']],
         'children' => array_values(array_filter($children)),
     ]);
-    foreach (['responsive', 'interactions', 'classNames', 'animation'] as $k) { if (!empty($extra[$k])) { $c[$k] = $extra[$k]; } }
+    foreach (['responsive', 'interactions', 'classNames', 'animation', 'attributes'] as $k) { if (!empty($extra[$k])) { $c[$k] = $extra[$k]; } }
+    if (!empty($extra['when_field'])) { $c['visibility']['when_field'] = $extra['when_field']; }
     $pc = $extra['interactions']['page_colors'] ?? null;
     if (is_array($pc) && isset($pc['text'], $pc['muted'], $pc['line'], $pc['accent'])) {
         $map = [strtolower($pc['text']) => 'text.body', strtolower($pc['muted']) => 'text.muted', strtolower($pc['line']) => 'border.default'];
@@ -167,7 +170,8 @@ function build_page(string $slug, string $title, string $pageType, string $route
 /** A column of blocks. */
 function VBOX(array $kids, string $gap = '0px', array $style = [], array $opt = []): array
 {
-    return B('layout.flex', ['direction' => 'column', 'gap' => 'none', 'wrap' => 'nowrap', 'align' => 'stretch'], $kids, ['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => $gap]] + $style, $opt);
+    // A layout the caller gives (a grid item's span, say) joins the column's own.
+    return B('layout.flex', ['direction' => 'column', 'gap' => 'none', 'wrap' => 'nowrap', 'align' => 'stretch'], $kids, array_replace_recursive(['layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => $gap]], $style), $opt);
 }
 /** A row of blocks that stacks on a phone. */
 function ROW(array $kids, string $gap = '0px', array $style = [], array $layout = [], array $mobile = ['layout' => ['direction' => 'column']], array $opt = []): array
@@ -209,7 +213,9 @@ function P(string $text, string $color = BONE, string $size = '18px', array $mor
 /** A pill button. */
 function PILL(string $label, string $href, string $bg = ORANGE, string $fg = INK, array $opt = []): array
 {
-    return B('core.button', ['link' => L($label, $href), 'variant' => 'primary'] + ($opt['props'] ?? []), [], [], ['style_parts' => ['button' => ['background' => ['color' => $bg], 'color' => $fg, 'border' => ['width' => '0px', 'radius' => '999px'], 'padding' => ['top' => '13px', 'right' => '22px', 'bottom' => '13px', 'left' => '22px'], 'typography' => ['size' => '15px', 'weight' => 'medium', 'family' => 'body']]]] + array_diff_key($opt, ['props' => 1]));
+    // A caller's own parts (an outline, say) go over the pill's.
+    $parts = array_replace_recursive(['button' => ['background' => ['color' => $bg], 'color' => $fg, 'border' => ['width' => '0px', 'radius' => '999px'], 'padding' => ['top' => '13px', 'right' => '22px', 'bottom' => '13px', 'left' => '22px'], 'typography' => ['size' => '15px', 'weight' => 'medium', 'family' => 'body']]], $opt['style_parts'] ?? []);
+    return B('core.button', ['link' => L($label, $href), 'variant' => 'primary'] + ($opt['props'] ?? []), [], [], ['style_parts' => $parts] + array_diff_key($opt, ['props' => 1, 'style_parts' => 1]));
 }
 function PIC(string $file, string $alt, string $h, string $mh = '', string $radius = '14px'): array
 {
@@ -255,4 +261,15 @@ function follow_page(array $node, array $map): array
     foreach (($node['responsive'] ?? []) as $d => $r) { if (is_array($r['style'] ?? null)) { $node['responsive'][$d]['style'] = $style($r['style']); } }
     foreach (($node['children'] ?? []) as $i => $child) { if (is_array($child)) { $node['children'][$i] = follow_page($child, $map); } }
     return $node;
+}
+
+/** A Field value block. */
+function FV(string $key, string $color, string $size, string $tag = 'div', array $style = [], array $props = [], array $opt = []): array
+{
+    return B('theme.field_value', ['field' => $key, 'tag' => $tag] + $props, [], array_replace_recursive(['color' => $color, 'typography' => ['size' => $size, 'font_family' => SANS, 'line_height' => '1.6']], $style), $opt);
+}
+/** A mono label set as a Field value ("Year 2023"). */
+function FVM(string $key, string $color, array $props = [], array $style = []): array
+{
+    return FV($key, $color, '11px', 'span', array_replace_recursive(['typography' => ['size' => '11px', 'font_family' => MONO, 'transform' => 'uppercase', 'letter_spacing' => '1.1px', 'line_height' => '1.3']], $style), $props);
 }
