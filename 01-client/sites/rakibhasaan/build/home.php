@@ -18,8 +18,8 @@ $stat = static fn(string $n, string $label): array => VBOX([
     EYE($label, MUTED, 'right'),
 ], '6px', ['dimensions' => ['width' => 'auto']]);
 $hero = CTOP('Hero', [
-    // Rakib in the ember light on wide screens; on a phone the tall portrait, his face above the words.
-    BGPIC('rakib-hero-ember.jpg', 'right', true, ['md', 'lg']),
+    // The studio portrait: its wide framing on desktop and tablet, the tall one on a phone (the face above the words).
+    BGPIC('rakib-portrait-studio.jpg', 'right', true, ['md', 'lg']),
     BGPIC('rakib-portrait-tall.jpg', 'top', false, ['base', 'sm']),
     ROW([EYE('Freelance designer + developer', BONE), EYE('Available from December 2026', BONE, 'right')], '16px', [], ['justify' => 'between'], ['layout' => ['direction' => 'column', 'gap' => '6px']]),
     B('core.dual_heading', ['before' => 'Websites built for', 'colored' => 'contractors', 'rotate_words' => 'truckers, cleaners, villas, lawyers, artists', 'rotate_ms' => 2200, 'after' => '', 'level' => 'h1'], [],
