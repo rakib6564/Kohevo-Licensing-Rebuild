@@ -148,6 +148,13 @@
 .sb-body .rk-scard { background-color: color-mix(in srgb, var(--sb-page-bg, #EDE8DF) 93%, #fff); }
 .sb-body [data-sb-page-on] .rk-scard { background-color: color-mix(in srgb, var(--sb-paged-bg, var(--sb-page-bg, #EDE8DF)) 93%, #fff); }
 /* Filter chips: light text on the rust of the current one. */
-.sb-body .sb-filter__chip[aria-current] { color: #EDE8DF; }
+.sb-body .sb-filter a.sb-filter__chip[aria-current] { color: #EDE8DF; }
+.sb-body .sb-filter a.sb-filter__chip[aria-current] .sb-filter__count { opacity: 1; }
 /* The browser frame's bar and screenshot span the frame before the picture arrives, so its space is held (no layout shift). */
 .rk-frame, .rk-frame > * { align-self: stretch; }
+/* Header links and the Menu button follow the header's colours (it adapts to the section beneath): links a little dimmer
+   than the name, the button on a faint wash of the same colour. */
+[data-sb-adapt] .rk-nav .sb-nav__link:not([aria-current]) { opacity: .78; }
+[data-sb-adapt] .sb-offcanvas-trigger { background-color: color-mix(in srgb, currentColor 9%, transparent); }
+/* Read by screen readers, not shown. */
+.rk-sr { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

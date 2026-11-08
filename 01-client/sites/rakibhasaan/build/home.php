@@ -67,6 +67,8 @@ $industryRows = array_map(static fn(array $r): array => ROW([
 ], '28px', ['padding' => ['top' => '18px', 'bottom' => '18px'], 'border' => ['width' => '0 0 1px 0', 'style' => 'solid', 'color' => LINE]], ['align' => 'center'], ['layout' => ['direction' => 'row', 'gap' => '14px']], ['classNames' => ['rk-ind-row']]), $rows);
 $industries = SEC('Industries', [
     ROW([EYE('02 — Pick your world'), P('Six industries · 250+ sites', MUTED, '18px', [], [])], '16px', ['padding' => ['bottom' => '32px'], 'border' => ['width' => '0 0 1px 0', 'style' => 'solid', 'color' => LINE]], ['justify' => 'between', 'align' => 'center'], []),
+    // A heading for the list (read by screen readers, not shown), so the industries' h3 names follow an h2.
+    B('core.heading', ['text' => 'Industries', 'level' => 'h2'], [], [], ['classNames' => ['rk-sr']]),
     VBOX($industryRows, '0px', [], ['interactions' => ['hover_image' => ['size' => 320]]]),
 ], '140px', '140px', [], ['interactions' => THEME('ink'), 'classNames' => ['rk-anchor-industries']]);
 

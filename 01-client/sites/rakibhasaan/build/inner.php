@@ -454,7 +454,8 @@ function S_SERVICES(array $s): array
 }
 function S_WORKGRID(): array
 {
-    return SEC('Projects', [LOOP(['filter_field' => 'industry', 'filter_all_label' => 'All', 'filter_counts' => true, 'open_in' => 'page', 'per_page' => 48])], '90px', '120px', [], ['interactions' => THEME('bone')]);
+    // A heading for the list (read by screen readers, not shown), so the cards' h3 titles follow an h2.
+    return SEC('Projects', [B('core.heading', ['text' => 'All projects', 'level' => 'h2'], [], [], ['classNames' => ['rk-sr']]), LOOP(['filter_field' => 'industry', 'filter_all_label' => 'All', 'filter_counts' => true, 'open_in' => 'page', 'per_page' => 48])], '90px', '120px', [], ['interactions' => THEME('bone')]);
 }
 function S_PROJECTS(array $s): array
 {

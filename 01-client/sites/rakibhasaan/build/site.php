@@ -59,9 +59,10 @@ $brandRow = static fn(): array => ROW([
     B('core.icon', ['name' => 'circle', 'size' => 'sm'], [], ['color' => ORANGE, 'dimensions' => ['width' => '12px']], ['classNames' => ['rk-dot']]),
     B('core.link', ['link' => L('Rakib Hasan', '/'), 'style' => 'plain'], [], ['color' => BONE, 'typography' => ['size' => '16px', 'font_family' => SANS, 'weight' => '500', 'letter_spacing' => '-0.3px']]),
 ], '8px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], []);
-$brand = $brandRow();
+// In the header the name follows the colours of what it passes over (the header adapts); in the full menu it stays light.
+$brand = follow_page($brandRow(), [strtolower(BONE) => 'text.body', strtolower(ORANGE) => 'text.accent']);
 $nav = B('core.nav_menu', ['menu' => 'header', 'items' => [], 'layout' => 'horizontal', 'align' => 'center', 'aria_label' => 'Main', 'toggle_breakpoint' => 'none'], [], ['typography' => ['size' => '14px', 'font_family' => SANS, 'weight' => '400']], ['classNames' => ['rk-nav'], 'style_parts' => [
-    'link' => ['color' => 'rgba(237,232,223,.72)'], 'current' => ['color' => BONE],
+    'link' => ['color' => 'text.body'], 'current' => ['color' => 'text.body'],
     'submenu' => ['background' => ['color' => '#141416'], 'border' => ['radius' => '14px']], 'sublink' => ['color' => BONE],
 ], 'devices' => ['lg']]);
 // The full-screen menu: the brand where the header's is, two columns of numbered links with a line under each,
@@ -88,7 +89,7 @@ $fullMenu = B('layout.offcanvas', ['drawer_id' => 'rk-menu', 'title' => '', 'pos
         ROW($fsLinks([['Support@rakibhasaan.com', 'mailto:Support@rakibhasaan.com'], ['Fiverr', 'https://fiverr.com/rakib_64/'], ['GitHub', 'https://github.com/rakib6564/']]), '22px', ['dimensions' => ['width' => 'auto']], ['wrap' => 'wrap'], []),
     ], '20px', ['padding' => ['top' => '22px', 'right' => '28px', 'bottom' => '22px', 'left' => '28px'], 'border' => ['width' => '1px 0 0 0', 'style' => 'solid', 'color' => '#22211F'], 'margin' => ['top' => 'auto']], ['justify' => 'between', 'align' => 'center', 'wrap' => 'wrap'], ['layout' => ['direction' => 'column', 'align' => 'start']]),
 ], [], ['style_parts' => [
-    'trigger' => ['background' => ['color' => 'rgba(237,232,223,.08)'], 'color' => BONE, 'border' => ['radius' => '999px'], 'padding' => ['top' => '11px', 'right' => '18px', 'bottom' => '11px', 'left' => '18px'], 'typography' => ['size' => '14px', 'weight' => 'medium', 'family' => 'body']],
+    'trigger' => ['color' => 'text.body', 'border' => ['radius' => '999px'], 'padding' => ['top' => '11px', 'right' => '18px', 'bottom' => '11px', 'left' => '18px'], 'typography' => ['size' => '14px', 'weight' => 'medium', 'family' => 'body']],
     'panel' => ['background' => ['color' => INK], 'color' => BONE],
     'header' => ['padding' => ['top' => '16px', 'right' => '28px', 'bottom' => '16px', 'left' => '28px']],
     'close' => ['color' => BONE, 'background' => ['color' => '#1C1B19']],
