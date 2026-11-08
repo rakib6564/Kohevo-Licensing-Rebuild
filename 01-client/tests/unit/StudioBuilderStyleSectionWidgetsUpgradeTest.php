@@ -138,7 +138,8 @@ unit('site scroll bar: default emits nothing; thin, branded (accent or own colou
     assert_true(str_contains($own, 'scrollbar-color:#ff5a1f #0b0b0c') && str_contains($own, 'html::-webkit-scrollbar-thumb{background:#ff5a1f;'), $own);
     $bad = \Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('branded', 'red;}body{x:y', 'url(x)');
     assert_true(!str_contains($bad, 'red') && !str_contains($bad, 'url('), 'only #rrggbb colours reach the CSS');
-    assert_true(!str_contains(\Slate\Module\StudioBuilder\Render\SiteScrollbar::cssFor('branded'), 'body'), 'the page bar only');
+    assert_true(str_contains($accent, 'body{scrollbar-color:auto}') && !str_contains($accent, 'body{scrollbar-width'), 'the page bar only: boxes inside the page get the browser colours back');
+    assert_true(str_contains(StudioStylesheet::widgetsCss(), '.sb-msg__panel{scrollbar-width:none}'), 'the chat panel scrolls without a bar');
 });
 
 unit('testimonial grid: typed testimonials render every card, a pager the runtime fills, and a dialog for the full text', function (): void {

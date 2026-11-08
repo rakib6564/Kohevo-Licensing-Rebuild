@@ -44,7 +44,9 @@ final class SiteScrollbar
         return match (self::style($style)) {
             'thin' => 'html{scrollbar-width:thin}',
             'hidden' => 'html{scrollbar-width:none}html::-webkit-scrollbar{display:none;width:0;height:0}',
-            'branded' => 'html{scrollbar-width:thin;scrollbar-color:' . $thumb . ' ' . $track . '}'
+            // scrollbar-color is inherited: the page's bar takes it from <html>, and <body> hands the browser's back
+            // to every scrolling box inside the page (a chat panel, a table) so only the page's bar is branded.
+            'branded' => 'html{scrollbar-width:thin;scrollbar-color:' . $thumb . ' ' . $track . '}body{scrollbar-color:auto}'
                 . 'html::-webkit-scrollbar{width:10px;height:10px;background:' . $track . '}'
                 . 'html::-webkit-scrollbar-thumb{background:' . $thumb . ';border-radius:999px;border:2px solid transparent;background-clip:padding-box}'
                 . 'html::-webkit-scrollbar-thumb:hover{border-width:1px}',

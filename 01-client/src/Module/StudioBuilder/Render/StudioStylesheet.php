@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '79';
+    public const VERSION = '80';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -1050,15 +1050,15 @@ final class StudioStylesheet
             . '.sb-msg__launcher:hover{transform:translateY(-2px)}'
             // The button's text column: the label, and the lines that take turns under it (fading between them).
             . '.sb-msg__launcher-text{display:flex;flex-direction:column;min-width:0;max-width:18rem;line-height:1.2;white-space:nowrap;overflow:hidden;transition:max-width .35s ease,opacity .25s ease}'
-            . '.sb-msg__launcher-sub{font-size:.72rem;font-weight:400;opacity:.72;transition:filter .3s ease}.sb-msg__launcher-sub[data-fade]{filter:opacity(0)}'
-            . '.sb-msg__launcher--photo{padding:.35rem 1.1rem .35rem .35rem;gap:.7rem}'
-            . '.sb-msg__launcher-photo{position:relative;flex:none;display:block;width:44px;height:44px}'
+            . '.sb-msg__launcher-label{font-size:.88rem}.sb-msg__launcher-sub{font-size:.7rem;font-weight:400;opacity:.72;transition:filter .3s ease}.sb-msg__launcher-sub[data-fade]{filter:opacity(0)}'
+            . '.sb-msg__launcher--photo{padding:.3rem .95rem .3rem .3rem;gap:.6rem}'
+            . '.sb-msg__launcher-photo{position:relative;flex:none;display:block;width:38px;height:38px}'
             . '.sb-msg__launcher-photo img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}'
             . '.sb-msg__launcher-photo .sb-msg__dot{top:auto;bottom:1px;right:1px}'
             // Shrunk while the visitor scrolls down: only the photo or icon is left, until they scroll up or open it.
             . '.sb-msg.is-compact:not(.is-open) .sb-msg__launcher-text{max-width:0;opacity:0}'
             . '.sb-msg.is-compact:not(.is-open) .sb-msg__launcher{gap:0}'
-            . '.sb-msg.is-compact:not(.is-open) .sb-msg__launcher--photo{padding:.35rem}'
+            . '.sb-msg.is-compact:not(.is-open) .sb-msg__launcher--photo{padding:.3rem}'
             // The launcher and the close button are links: the site's link colour must not reach them.
             . '.sb-body .sb-msg .sb-msg__launcher[data-sb-msg-open]{color:var(--sb-text-inverse,#fff)}.sb-body .sb-msg .sb-msg__close[data-sb-msg-close]{color:inherit}'
             . '.sb-msg__dot,.sb-msg__status-dot{width:.55rem;height:.55rem;border-radius:50%;background:#9ca3af;flex:none}'
@@ -1068,24 +1068,31 @@ final class StudioStylesheet
             . '.sb-msg__panel:target{display:block}'
             . '.sb-msg__panel:not([hidden]){animation:sb-msg-in .25s ease}'
             . '@keyframes sb-msg-in{from{opacity:0;translate:0 8px;scale:.98}}'
-            . '.sb-msg__head{display:flex;align-items:center;gap:.75rem;padding:1rem 1rem .75rem;border-bottom:1px solid var(--sb-border-default,#e5e7eb)}'
-            . '.sb-msg__avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:none}'
-            . '.sb-msg__who{flex:1;min-width:0}.sb-msg__title{font-size:1rem;margin:0;line-height:1.3}'
-            . '.sb-msg__status{display:flex;align-items:center;gap:.4rem;margin:.15rem 0 0;font-size:.8rem;opacity:.75}'
+            . '.sb-msg__head{display:flex;align-items:center;gap:.6rem;padding:.75rem .85rem .65rem;border-bottom:1px solid var(--sb-border-default,#e5e7eb)}'
+            . '.sb-msg__avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:none}'
+            . '.sb-msg__who{flex:1;min-width:0}.sb-msg__title{font-size:.92rem;margin:0;line-height:1.25}'
+            . '.sb-msg__status{display:flex;align-items:center;gap:.4rem;margin:.1rem 0 0;font-size:.74rem;opacity:.75}'
             . '.sb-msg__close{display:inline-grid;place-items:center;width:2rem;height:2rem;border-radius:50%;color:inherit}'
             . '.sb-msg__close:hover{background:color-mix(in srgb,currentColor 10%,transparent)}'
-            . '.sb-msg__body{padding:1rem}.sb-msg__intro{margin:0 0 .75rem;font-size:.9rem}'
-            . '.sb-msg__form{gap:.75rem}'
-            . '.sb-msg__topics .sb-form-choices{flex-direction:row;flex-wrap:wrap;gap:.4rem}'
+            . '.sb-msg__body{padding:.8rem .85rem .9rem}.sb-msg__intro{margin:0 0 .6rem;font-size:.84rem;line-height:1.45}'
+            . '.sb-msg__form{gap:.6rem}'
+            . '.sb-msg__topics .sb-form-choices{flex-direction:row;flex-wrap:wrap;gap:.35rem}'
             . '.sb-msg__topics legend{width:100%}'
             . '.sb-msg__chip{position:relative;display:inline-flex}'
             . '.sb-msg__chip input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}'
-            . '.sb-msg__chip span{padding:.35rem .75rem;border-radius:999px;border:1px solid var(--sb-border-default,#d1d5db);font-size:.85rem}'
+            . '.sb-msg__chip span{display:block;padding:.28rem .65rem;border-radius:999px;border:1px solid var(--sb-border-default,#d1d5db);font-size:.78rem;line-height:1.3}'
             . '.sb-msg__chip input:checked+span{background:var(--sb-color-accent,#111);border-color:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff)}'
             . '.sb-msg__chip input:focus-visible+span{outline:2px solid var(--sb-color-accent,#111);outline-offset:2px}'
             // The panel's fields take its colours and the site's font: a faint wash of the text colour, a border of it.
-            . '.sb-msg__panel .sb-form-group input:not([type="checkbox"]):not([type="radio"]),.sb-msg__panel .sb-form-group textarea,.sb-msg__panel .sb-form-group select{font:inherit;font-size:.9rem;color:inherit;background:var(--sb-msg-field,color-mix(in srgb,currentColor 5%,transparent));border:1px solid var(--sb-msg-line,color-mix(in srgb,currentColor 18%,transparent));border-radius:.6rem;padding:.6rem .75rem}'
+            . '.sb-msg__panel .sb-form-group input:not([type="checkbox"]):not([type="radio"]),.sb-msg__panel .sb-form-group textarea,.sb-msg__panel .sb-form-group select{font:inherit;font-size:.9rem;color:inherit;background:var(--sb-msg-field,color-mix(in srgb,currentColor 5%,transparent));border:1px solid var(--sb-msg-line,color-mix(in srgb,currentColor 18%,transparent));border-radius:.55rem;padding:.48rem .7rem;line-height:1.4}'
             . '.sb-msg__panel .sb-form-group :is(input,textarea)::placeholder{color:inherit;opacity:.5}'
+            // A compact panel: small labels, a short message box, a small Send button; it scrolls (when it must) with
+            // no bar of its own, and the focus the widget moves into it draws no ring around the whole panel.
+            . '.sb-msg__panel .sb-form-group label,.sb-msg__panel .sb-form-choices legend{font-size:.78rem;margin-bottom:.25rem}'
+            . '.sb-msg__panel .sb-form-group{gap:.25rem}.sb-msg__panel .sb-form-group input:not([type="checkbox"]):not([type="radio"]),.sb-msg__panel .sb-form-group textarea{font-size:.86rem}'
+            . '.sb-msg__panel .sb-form-group textarea{min-height:4.25rem}'
+            . '.sb-msg__panel .sb-form__actions button,.sb-msg__panel button[type="submit"]{padding:.5rem 1.05rem;font-size:.84rem;border-radius:.55rem}'
+            . '.sb-msg__panel{scrollbar-width:none}.sb-msg__panel::-webkit-scrollbar{display:none}.sb-msg__panel:focus{outline:none}'
             . '.sb-msg__panel .sb-form-group :is(input,textarea,select):focus{outline:2px solid var(--sb-color-accent,#111);outline-offset:1px}'
             // Theme: Light and Dark give the panel and the button fixed colours whatever the site's theme (Auto follows
             // it). The colours are custom properties (--sb-msg-bg, -fg, -muted, -line, -field, -btn-bg, -btn-fg) a site can tune.
