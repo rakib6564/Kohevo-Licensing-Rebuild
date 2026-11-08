@@ -26,6 +26,13 @@ namespace Slate\Module\StudioBuilder\Document;
  *   interactions.stagger  = {step_ms: 20-600}  the entrance animations inside the node play in turn, `step_ms` apart,
  *                            once the node comes into view
  *   interactions.glow     = {color: colour, size: 80-800 (px)}  a soft light follows the pointer over the node
+ *   interactions.marquee  = {speed: 1-10, direction: left|right, scroll: bool, pause: bool, width: 80-800 (px)}  the
+ *                            node's children run past in an endless line; `scroll` speeds them up and turns them with
+ *                            the page's scroll, `pause` slows them while the pointer is over them, `width` sizes each
+ *   interactions.horizontal = {offset: 0-400 (px), width: 80-1200 (px)}  on large screens the node pins (`offset` below
+ *                            the top) and scrolling the page moves its children sideways, in one row
+ *   interactions.hover_image = {size: 120-600 (px)}  on large screens with a mouse, each child's picture is hidden in
+ *                            the row and follows the pointer while it is over that row
  *
  * The renderer turns them into classes, `data-sb-*` attributes and custom properties only; the stylesheet holds the CSS and
  * studio-runtime.js the scroll work (the stuck state, hiding on scroll, the parallax offset). Without JavaScript a sticky
@@ -49,6 +56,11 @@ final class ScrollEffects
     public const STAGGER_STEP  = [20, 600];
     public const PROGRESS_HEIGHT = [1, 12];
     public const GLOW_SIZE     = [80, 800];
+    public const MARQUEE_SPEED = [1, 10];
+    public const MARQUEE_DIRECTIONS = ['left', 'right'];
+    public const ITEM_WIDTH    = [80, 800];
+    public const PANEL_WIDTH   = [80, 1200];
+    public const HOVER_IMAGE_SIZE = [120, 600];
 
     /**
      * @param array<string, mixed> $interactions
@@ -78,8 +90,14 @@ final class ScrollEffects
             'text'        => ['effect' => self::TEXT_EFFECTS, 'dim' => self::DIM_RANGE, 'step_ms' => self::TEXT_STEP],
             'stagger'     => ['step_ms' => self::STAGGER_STEP],
             'glow'        => ['color' => 'colour', 'size' => self::GLOW_SIZE],
+            'marquee'     => ['speed' => self::MARQUEE_SPEED, 'direction' => self::MARQUEE_DIRECTIONS, 'scroll' => 'bool', 'pause' => 'bool', 'width' => self::ITEM_WIDTH],
+            'horizontal'  => ['offset' => [0, self::MAX_OFFSET], 'width' => self::PANEL_WIDTH],
+            'hover_image' => ['size' => self::HOVER_IMAGE_SIZE],
         ];
-        $needs = ['progress' => 'edge', 'text' => 'effect', 'stagger' => 'step_ms', 'glow' => 'color'];
+        $needs = ['progress' => 'edge', 'text' => 'effect', 'stagger' => 'step_ms', 'glow' => 'color', 'marquee' => 'speed', 'horizontal' => 'offset', 'hover_image' => 'size'];
+        if (array_key_exists('marquee', $interactions) && array_key_exists('horizontal', $interactions)) {
+            $errors[] = self::issue("{$path}.horizontal", 'A node is a marquee or scrolls sideways, not both.');
+        }
         foreach ($shapes as $key => $fields) {
             if (array_key_exists($key, $interactions)) {
                 self::shapeIssues($interactions[$key], $fields, $needs[$key] ?? null, "{$path}.{$key}", $errors);
@@ -146,6 +164,9 @@ final class ScrollEffects
     {
         if ($field === 'colour') {
             return StyleValueGuard::isColor($value);
+        }
+        if ($field === 'bool') {
+            return is_bool($value);
         }
         if (is_array($field) && count($field) === 2 && is_int($field[0] ?? null) && is_int($field[1] ?? null)) {
             return is_int($value) && $value >= $field[0] && $value <= $field[1];
@@ -371,6 +392,39 @@ final class ScrollEffects
             if ($size !== null) {
                 $vars[] = '--sb-glow-size:' . $size . 'px';
             }
+        }
+
+        // Marquee and sideways scrolling rearrange the children, so a node does one; sideways wins, as the validator says.
+        $horizontal = $interactions['horizontal'] ?? null;
+        $offset = self::field($horizontal, 'offset', [0, self::MAX_OFFSET]);
+        $marquee = $interactions['marquee'] ?? null;
+        $speed = self::field($marquee, 'speed', self::MARQUEE_SPEED);
+        if ($offset !== null) {
+            $attrs .= ' data-sb-horizontal';
+            $vars[] = '--sb-hs-offset:' . $offset . 'px';
+            $width = self::field($horizontal, 'width', self::PANEL_WIDTH);
+            if ($width !== null) {
+                $vars[] = '--sb-item-w:' . $width . 'px';
+            }
+        } elseif ($speed !== null) {
+            $parts = [(string) $speed, self::field($marquee, 'direction', self::MARQUEE_DIRECTIONS) ?? 'left'];
+            if (self::field($marquee, 'scroll', 'bool') === true) {
+                $parts[] = 'scroll';
+            }
+            if (self::field($marquee, 'pause', 'bool') === true) {
+                $parts[] = 'pause';
+            }
+            $attrs .= ' data-sb-ticker="' . implode(' ', $parts) . '"';
+            $width = self::field($marquee, 'width', self::ITEM_WIDTH);
+            if ($width !== null) {
+                $vars[] = '--sb-item-w:' . $width . 'px';
+            }
+        }
+
+        $size = self::field($interactions['hover_image'] ?? null, 'size', self::HOVER_IMAGE_SIZE);
+        if ($size !== null) {
+            $attrs .= ' data-sb-hover-image';
+            $vars[] = '--sb-hover-size:' . $size . 'px';
         }
 
         return ['classes' => $classes, 'attrs' => $attrs, 'vars' => $vars];

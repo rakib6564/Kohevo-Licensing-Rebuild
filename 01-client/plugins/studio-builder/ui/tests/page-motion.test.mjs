@@ -48,3 +48,19 @@ test('interactions: the new effects survive a trigger change, the magnet joins t
     assert.equal(hasMotion({ interactions: { [key]: now[key] } }), true, key);
   }
 });
+
+import { normalizeHorizontal, normalizeHoverImage, normalizeMarquee } from '../src/core/motion.mjs';
+
+test('marquee, sideways scroll and hover image: clamped, defaults dropped, and never marquee and sideways at once', () => {
+  assert.equal(normalizeMarquee({ direction: 'left' }), null);
+  assert.deepEqual(normalizeMarquee({ speed: 30, direction: 'up', scroll: 'yes', pause: true, width: 5 }), { speed: 10, pause: true, width: 80 });
+  assert.deepEqual(normalizeMarquee({ speed: 3, direction: 'right', scroll: true }), { speed: 3, direction: 'right', scroll: true });
+  assert.equal(normalizeHorizontal({ width: 400 }), null);
+  assert.deepEqual(normalizeHorizontal({ offset: 0 }), { offset: 0 }, '0 is a real offset');
+  assert.deepEqual(normalizeHorizontal({ offset: 900, width: 2000 }), { offset: 400, width: 1200 });
+  assert.equal(normalizeHoverImage({}), null);
+  assert.deepEqual(normalizeHoverImage({ size: 50 }), { size: 120 });
+  const both = normalizeInteractions({ marquee: { speed: 4 }, horizontal: { offset: 0 }, hover_image: { size: 280 } });
+  assert.deepEqual(both, { horizontal: { offset: 0 }, hover_image: { size: 280 } });
+  assert.equal(hasMotion({ interactions: { marquee: { speed: 2 } } }), true);
+});

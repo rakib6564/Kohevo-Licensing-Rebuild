@@ -156,6 +156,13 @@ export function normalizeInteractions(raw) {
   if (stagger) out.stagger = stagger;
   const glow = normalizeGlow(i.glow);
   if (glow) out.glow = glow;
+  // A node runs its children past as a marquee or scrolls them sideways, never both: sideways wins, as on the server.
+  const horizontal = normalizeHorizontal(i.horizontal);
+  if (horizontal) out.horizontal = horizontal;
+  const marquee = horizontal ? null : normalizeMarquee(i.marquee);
+  if (marquee) out.marquee = marquee;
+  const hoverImage = normalizeHoverImage(i.hover_image);
+  if (hoverImage) out.hover_image = hoverImage;
   return out;
 }
 
@@ -295,6 +302,43 @@ export function normalizeGlow(raw) {
   return out;
 }
 
+export const MARQUEE_SPEED = Object.freeze({ min: 1, max: 10, default: 4 });
+export const ITEM_WIDTH = Object.freeze({ min: 80, max: 800 });
+export const PANEL_WIDTH = Object.freeze({ min: 80, max: 1200 });
+export const HOVER_IMAGE_SIZE = Object.freeze({ min: 120, max: 600, default: 280 });
+
+/** `interactions.marquee`, or null when it is off (no speed). */
+export function normalizeMarquee(raw) {
+  if (!plainObject(raw)) return null;
+  const speed = whole(raw.speed, MARQUEE_SPEED);
+  if (speed === undefined) return null;
+  const out = { speed };
+  if (raw.direction === 'right') out.direction = 'right';
+  if (raw.scroll === true) out.scroll = true;
+  if (raw.pause === true) out.pause = true;
+  const width = whole(raw.width, ITEM_WIDTH);
+  if (width !== undefined) out.width = width;
+  return out;
+}
+
+/** `interactions.horizontal`, or null when it is off (no offset; 0 is a real offset). */
+export function normalizeHorizontal(raw) {
+  if (!plainObject(raw)) return null;
+  const offset = whole(raw.offset, STICKY_OFFSET);
+  if (offset === undefined) return null;
+  const out = { offset };
+  const width = whole(raw.width, PANEL_WIDTH);
+  if (width !== undefined) out.width = width;
+  return out;
+}
+
+/** `interactions.hover_image`, or null when it is off. */
+export function normalizeHoverImage(raw) {
+  if (!plainObject(raw)) return null;
+  const size = whole(raw.size, HOVER_IMAGE_SIZE);
+  return size === undefined ? null : { size };
+}
+
 /** True when the block carries any motion at all (drives the panel's summary). */
 export function hasMotion(block) {
   const anim = block && block.animation;
@@ -302,6 +346,7 @@ export function hasMotion(block) {
   return Boolean(
     (anim && anim.type && anim.type !== 'none')
     || (inter && (inter.trigger || inter.sticky || inter.parallax || inter.scroll || inter.mouse || inter.page_colors
-      || inter.adapt || inter.progress || inter.text || inter.stagger || inter.glow))
+      || inter.adapt || inter.progress || inter.text || inter.stagger || inter.glow || inter.marquee || inter.horizontal
+      || inter.hover_image))
   );
 }
