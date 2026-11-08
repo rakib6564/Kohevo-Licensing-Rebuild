@@ -35,3 +35,21 @@ test('the loop\'s items scroll in the row, and go back into the loop when the ru
   await expect(page.locator('.sb-block--core-query-loop')).toBeVisible();
   await expect(page.locator('[data-sb-copy]')).toHaveCount(0);
 });
+
+test('a widget\'s own list scrolls: its items move into the track and come back on teardown', async ({ page }) => {
+  const list = '<ul class="sb-field-chips sb-field-chips--ticker" data-sb-ticker="5 left" style="display:flex;gap:20px;width:400px;overflow:hidden;list-style:none;margin:0;padding:0">'
+    + ['WordPress', 'Elementor Pro', 'Crocoblock', 'Gravity Forms'].map((t) => `<li style="flex:none;white-space:nowrap">${t}</li>`).join('') + '</ul>';
+  await page.route('http://localhost/chips', (route) => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html><head><meta charset="utf-8"></head><body class="sb-body"><div class="sb-block sb-block--theme-field-value">${list}</div></body></html>` }));
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('http://localhost/chips');
+  await page.addScriptTag({ url: 'http://localhost/runtime.js' });
+  const track = page.locator('[data-sb-ticker] > .sb-ticker-track');
+  await expect(track.locator('li:not([data-sb-copy])')).toHaveCount(4);
+  const x0 = await track.evaluate((t) => t.getBoundingClientRect().x);
+  await page.waitForTimeout(700);
+  const x1 = await track.evaluate((t) => t.getBoundingClientRect().x);
+  expect(x1).toBeLessThan(x0);
+  await page.evaluate(() => window.StudioRuntime.disable());
+  await expect(page.locator('[data-sb-ticker] > li')).toHaveCount(4);
+  await expect(page.locator('.sb-ticker-track')).toHaveCount(0);
+});

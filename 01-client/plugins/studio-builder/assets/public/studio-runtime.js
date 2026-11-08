@@ -855,7 +855,9 @@
     track.className = className;
     if (gap && gap !== 'normal') track.style.gap = gap;
     // Blocks only: a Container's background video, slideshow and shape dividers (and layers this file added) stay put.
+    // A widget's own list that scrolls (a Field value's chips, a Testimonial ticker row) has no child blocks: its items move.
     var kids = blockChildren(el);
+    if (!kids.length && !el.classList.contains('sb-block')) kids = Array.prototype.slice.call(el.children);
     // A Query Loop alone in the node lends its items: the row scrolls the listed items, not the one list. The loop
     // stays where it was (its chips and pager with it) and gets its items back on undo.
     var loopBlock = kids.length === 1 && kids[0].classList.contains('sb-block--core-query-loop') ? kids[0] : null;
