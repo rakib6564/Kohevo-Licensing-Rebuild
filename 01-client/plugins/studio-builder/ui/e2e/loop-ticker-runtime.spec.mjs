@@ -12,6 +12,10 @@ const html = `<!doctype html><html><head><meta charset="utf-8"></head><body clas
   + `<div class="sb-block sb-block--core-query-loop"><div class="sb-query-loop"><div class="sb-query-loop__grid">${items}</div></div></div>`
   + `</div></body></html>`;
 
+// The stylesheet's track rules (StudioStylesheet), which every real page has: without them the track is a block and its
+// items stack, so a set has no width and nothing scrolls.
+const TRACK_CSS = '.sb-ticker-track{display:flex;flex-wrap:nowrap;width:max-content;will-change:transform}.sb-ticker-track>*{flex:none;max-width:none}';
+
 test.beforeEach(async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'one viewport is enough');
   await page.route('http://localhost/loop', (route) => route.fulfill({ contentType: 'text/html', body: html }));
@@ -39,7 +43,7 @@ test('the loop\'s items scroll in the row, and go back into the loop when the ru
 test('a widget\'s own list scrolls: its items move into the track and come back on teardown', async ({ page }) => {
   const list = '<ul class="sb-field-chips sb-field-chips--ticker" data-sb-ticker="5 left" style="display:flex;gap:20px;width:400px;overflow:hidden;list-style:none;margin:0;padding:0">'
     + ['WordPress', 'Elementor Pro', 'Crocoblock', 'Gravity Forms'].map((t) => `<li style="flex:none;white-space:nowrap">${t}</li>`).join('') + '</ul>';
-  await page.route('http://localhost/chips', (route) => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html><head><meta charset="utf-8"></head><body class="sb-body"><div class="sb-block sb-block--theme-field-value">${list}</div></body></html>` }));
+  await page.route('http://localhost/chips', (route) => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html><head><meta charset="utf-8"><style>${TRACK_CSS}</style></head><body class="sb-body"><div class="sb-block sb-block--theme-field-value">${list}</div></body></html>` }));
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('http://localhost/chips');
   await page.addScriptTag({ url: 'http://localhost/runtime.js' });

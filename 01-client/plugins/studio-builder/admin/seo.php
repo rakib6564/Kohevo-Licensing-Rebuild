@@ -339,7 +339,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     </select>
                     <p class="sb-field__hint"><?= e(__('studio_scrollbar_hint', 'For the page\'s own scroll bar only. Hidden keeps scrolling with the wheel, touch screens and the keyboard, but visitors lose the bar\'s sense of where they are on long pages.')) ?></p>
                 </div>
-                <div class="sb-field" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="sb-field" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
                     <label><span class="sb-field__label"><?= e(__('studio_scrollbar_thumb', 'Branded bar colour')) ?></span>
                         <input type="text" name="scrollbar_thumb" class="form-control" value="<?= e($scrollbarThumb) ?>" placeholder="<?= e(__('studio_scrollbar_thumb_ph', 'The accent colour')) ?>" pattern="#[0-9A-Fa-f]{6}" maxlength="7" spellcheck="false"></label>
                     <label><span class="sb-field__label"><?= e(__('studio_scrollbar_track', 'Branded track colour')) ?></span>

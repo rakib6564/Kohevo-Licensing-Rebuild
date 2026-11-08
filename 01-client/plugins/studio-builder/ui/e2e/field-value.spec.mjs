@@ -38,7 +38,8 @@ test('a custom field value of the page shows in the Field value block on the can
     const id = await box.getAttribute('data-overlay-for');
 
     await showEdit(page);
-    const field = page.getByTestId('meta-field-select');
+    // The block has three field pickers (Field, image description, background colour): Field is the first.
+    const field = page.getByTestId('meta-field-select').first();
     await expect(field.locator(`option[value="${key}"]`)).toHaveCount(1); // the field defined above is in the list
     await field.selectOption(key);
     await expect.poll(() => frameEval(page, `[data-sb-node="${id}"] .sb-field-value`, (el) => el.textContent), { timeout: 20_000 }).toContain(value);
