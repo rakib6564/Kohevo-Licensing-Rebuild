@@ -149,3 +149,5 @@
 .sb-body [data-sb-page-on] .rk-scard { background-color: color-mix(in srgb, var(--sb-paged-bg, var(--sb-page-bg, #EDE8DF)) 93%, #fff); }
 /* Filter chips: light text on the rust of the current one. */
 .sb-body .sb-filter__chip[aria-current] { color: #EDE8DF; }
+/* The browser frame's bar and screenshot span the frame before the picture arrives, so its space is held (no layout shift). */
+.rk-frame, .rk-frame > * { align-self: stretch; }
