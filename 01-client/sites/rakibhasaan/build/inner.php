@@ -539,5 +539,5 @@ foreach ($DATA['pages'] as $slug => $p) {
     $intro = $p;
     if ($slug === 'free-audit') { $intro['intro'] = array_values(array_filter($p['intro'], static fn(array $b): bool => $b['k'] !== 'note')); }
     // Its share card (og-<slug>.png from build/og/make-og.cjs), when there is one.
-    build_page($slug, $p['name'], 'page', 'standalone', [HERO($intro, $crumbs, $side, $below, $photo), ...ITEMS($p['items'], $DATA['cases'], $DATA)], ['seo_title' => $p['seo_title'], 'seo_desc' => $p['meta'], 'image' => 'og-' . $slug . '.png']);
+    build_page($slug, $p['name'], 'page', 'standalone', [HERO($intro, $crumbs, $side, $below, $photo), ...ITEMS($p['items'], $DATA['cases'], $DATA)], ['seo_title' => $p['seo_title'], 'seo_desc' => $p['meta'], 'image' => 'og-' . $slug . OG_V . '.png']);
 }
