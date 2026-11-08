@@ -9,7 +9,7 @@
  *     handle also takes the arrow keys. Each item's arrow opens its settings: label, address, CSS classes, new tab, and
  *     Move / Remove. Bulk select removes several items at once.
  *
- * The form still posts a flat list where each row carries its `depth` (items[i][label|url|new_tab|class|depth]), which
+ * The form still posts a flat list where each row carries its `depth` (items[i][label|url|new_tab|class|description|image|depth]), which
  * StudioMenus::validate() turns into the stored tree, so menus saved by the earlier form read back unchanged.
  *
  * Used by menu-new.php and menu-edit.php. Expects: $menuForm = ['key','name','items'], $isNew (bool),
@@ -69,6 +69,12 @@ $sbMenuRow = static function (array $item, string $i) use ($typeByUrl, $customTy
                     <input type="text" name="items[<?= e($i) ?>][url]" maxlength="<?= StudioMenus::MAX_URL ?>" list="sb-menu-paths" placeholder="<?= e(__('studio_menu_url', '/about or https://…')) ?>" value="<?= e($url) ?>" data-field="url"></label>
                 <label class="sb-field"><span class="sb-field__label"><?= e(__('studio_menu_css_class', 'CSS classes (optional)')) ?></span>
                     <input type="text" name="items[<?= e($i) ?>][class]" maxlength="<?= StudioMenus::MAX_CLASS ?>" value="<?= e((string) ($item['class'] ?? '')) ?>" data-field="class" spellcheck="false"></label>
+                <label class="sb-field"><span class="sb-field__label"><?= e(__('studio_menu_description', 'Description (optional)')) ?></span>
+                    <input type="text" name="items[<?= e($i) ?>][description]" maxlength="<?= StudioMenus::MAX_DESCRIPTION ?>" value="<?= e((string) ($item['description'] ?? '')) ?>" data-field="description">
+                    <small class="sb-field__hint"><?= e(__('studio_menu_description_help', 'A Nav menu can show it under the label, such as in a full-screen menu.')) ?></small></label>
+                <label class="sb-field"><span class="sb-field__label"><?= e(__('studio_menu_image', 'Preview image (optional)')) ?></span>
+                    <input type="text" name="items[<?= e($i) ?>][image]" maxlength="<?= StudioMenus::MAX_URL ?>" placeholder="<?= e(__('studio_menu_image_placeholder', '/media/… or https://…')) ?>" value="<?= e((string) ($item['image'] ?? '')) ?>" data-field="image" spellcheck="false">
+                    <small class="sb-field__hint"><?= e(__('studio_menu_image_help', 'A Nav menu with previews shows it while the link is hovered.')) ?></small></label>
                 <label class="sb-mi__check"><input type="checkbox" name="items[<?= e($i) ?>][new_tab]" value="1"<?= !empty($item['new_tab']) ? ' checked' : '' ?> data-field="new_tab"> <span><?= e(__('studio_menu_open_new_tab', 'Open the link in a new tab')) ?></span></label>
             </div>
             <div class="sb-mi__move" data-move-links>
@@ -420,7 +426,7 @@ $sbMenuRow = static function (array $item, string $i) use ($typeByUrl, $customTy
         else if (btn.hasAttribute('data-move')) move(li, btn.getAttribute('data-move'));
     });
     list.addEventListener('input', function (e) {
-        if (e.target.hasAttribute('data-field')) { e.target.setCustomValidity(''); markDirty(); if (e.target.getAttribute('data-field') !== 'class') refresh(); }
+        if (e.target.hasAttribute('data-field')) { e.target.setCustomValidity(''); markDirty(); if (['class', 'description', 'image'].indexOf(e.target.getAttribute('data-field')) < 0) refresh(); }
     });
     list.addEventListener('change', function (e) {
         if (e.target.hasAttribute('data-pick')) updateBulk();

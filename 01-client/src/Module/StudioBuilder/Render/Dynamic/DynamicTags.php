@@ -56,6 +56,10 @@ final class DynamicTags
         'post_type'         => ['post', 'Post Type', ['text']],
         'post_url'          => ['post', 'Post URL', ['url']],
         'featured_image'    => ['post', 'Featured Image', ['image', 'url']],
+        'next_post_title'   => ['post', 'Next Item Title', ['text']],
+        'next_post_url'     => ['post', 'Next Item URL', ['url']],
+        'prev_post_title'   => ['post', 'Previous Item Title', ['text']],
+        'prev_post_url'     => ['post', 'Previous Item URL', ['url']],
         'field'             => ['post', 'Post Custom Field', ['text', 'url', 'number', 'image'], 'field'],
         'author_name'       => ['author', 'Author Name', ['text']],
         'archive_title'     => ['archive', 'Archive Title', ['text']],
@@ -307,6 +311,10 @@ final class DynamicTags
             'post_type' => self::typeLabel($attr('content_type'), $context),
             'post_url' => $attr('post_url', 'page_url'),
             'featured_image' => self::featured($context, $media),
+            'next_post_title' => self::adjacent($context, 'next', 'title'),
+            'next_post_url' => self::adjacent($context, 'next', 'url'),
+            'prev_post_title' => self::adjacent($context, 'prev', 'title'),
+            'prev_post_url' => self::adjacent($context, 'prev', 'url'),
             'author_name' => $attr('author_name'),
             'archive_title' => $attr('term'),
             'archive_description' => $attr('archive_description'),
@@ -320,6 +328,21 @@ final class DynamicTags
             default => '',
         };
         return $rich && $config['tag'] !== 'field' ? Html::e($text) : $text;
+    }
+
+    /** The title or address of the item listed after (`next`) or before (`prev`) this one, of the same content type. */
+    private static function adjacent(RenderContext $context, string $side, string $part): string
+    {
+        $id = self::attr($context, ['meta_page_id', 'post_id', 'page_id']);
+        if (!ctype_digit($id)) {
+            return '';
+        }
+        try {
+            $item = \Slate\Module\StudioBuilder\Meta\AdjacentItems::of($context->tenantId, (int) $id)[$side];
+        } catch (\Throwable) {
+            return '';
+        }
+        return $item === null ? '' : (string) $item[$part];
     }
 
     /** @param list<string> $names */

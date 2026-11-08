@@ -1,12 +1,13 @@
 // Per-device style overrides: the editor half of `StyleSurface::responsiveRules()`.
 //
 // Desktop is the block's own `style`. Tablet and mobile keep a partial style under
-// `block.responsive.<device>.style`, limited to the paths the server accepts there (font size, padding, margin,
+// `block.responsive.<device>.style`, limited to the paths the server accepts there (font size, line height, letter spacing, padding, margin,
 // the flex / grid layout, and width, height, min-height and max-width). The editor only edits these document values; the server turns them into @media rules and is the only
 // place that writes CSS. A cleared field is removed, and an override left empty is removed with it.
 
 import { asObject } from './doc.mjs';
 import { getPath, isMeasure, setPath, surfaceAccepts } from './styleSurface.mjs';
+import { acceptsDraft } from './styleValues.mjs';
 
 export const DEVICE_KEYS = Object.freeze(['desktop', 'tablet', 'mobile']);
 export const OVERRIDE_DEVICES = Object.freeze(['tablet', 'mobile']);
@@ -14,6 +15,7 @@ export const OVERRIDE_DEVICES = Object.freeze(['tablet', 'mobile']);
 /** The control groups that can differ per device (each is a list of style paths). */
 export const RESPONSIVE_SCOPES = Object.freeze({
   size: ['typography.size'],
+  tracking: ['typography.line_height', 'typography.letter_spacing'],
   spacing: ['margin.top', 'margin.right', 'margin.bottom', 'margin.left', 'padding.top', 'padding.right', 'padding.bottom', 'padding.left'],
   gap: ['layout.gap', 'layout.row_gap', 'layout.column_gap'],
   // The flex / grid layout of a container: every layout field but the display type, which stays one value for all devices.
@@ -25,6 +27,8 @@ export const RESPONSIVE_SCOPES = Object.freeze({
 /** Whether the server accepts `value` at `path` in a device style: a length or auto for the four sizes, else the surface's rule. */
 export function deviceAccepts(path, value) {
   if (RESPONSIVE_SCOPES.dimensions.includes(path)) return isMeasure(value, true);
+  if (path === 'typography.line_height') return value !== '' && acceptsDraft('lineHeight', value);
+  if (path === 'typography.letter_spacing') return value !== '' && acceptsDraft('letterSpacing', value);
   return path === 'typography.size' ? isMeasure(value, false) : surfaceAccepts(path, value);
 }
 

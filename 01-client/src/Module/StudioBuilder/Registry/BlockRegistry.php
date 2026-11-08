@@ -21,6 +21,10 @@ use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MarqueeRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MegaItemRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MegaMenuRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\NavChrome;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\LocalTimeRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MessageWidgetRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\TestimonialGridRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\QueryLoopRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\TabSetRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\VideoRenderer;
 use Slate\Module\StudioBuilder\Render\Html;
@@ -229,6 +233,10 @@ final class BlockRegistry
                 ['key' => 'icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Icon', 'required' => false, 'default' => 'none'],
                 ['key' => 'icon_position', 'type' => 'enum', 'label' => 'Icon Position', 'required' => false, 'allowed_values' => ['before', 'after'], 'default' => 'before'],
                 ['key' => 'icon_spacing', 'type' => 'number', 'label' => 'Icon Spacing', 'required' => false, 'default' => 8, 'min' => 0, 'max' => 50, 'integer_only' => true],
+                // Copy to clipboard: a click copies this text (an email address, a code) and the label says so for a moment;
+                // without script, or where copying is refused, the button's own link still works.
+                ['key' => 'copy_text', 'type' => 'string', 'label' => 'Copy this text when clicked', 'required' => false, 'default' => '', 'max_length' => 300],
+                ['key' => 'copied_label', 'type' => 'string', 'label' => 'Label once copied', 'required' => false, 'default' => 'Copied', 'max_length' => 60],
             ]),
             allowsChildren: false,
             allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
@@ -443,7 +451,8 @@ final class BlockRegistry
                 ['key' => 'author_id', 'type' => 'number', 'label' => 'Author ID', 'required' => false, 'default' => 0, 'integer_only' => true],
                 ['key' => 'order_by', 'type' => 'enum', 'label' => 'Order By', 'required' => false, 'allowed_values' => ['published_at', 'title', 'created_at'], 'default' => 'published_at'],
                 ['key' => 'order', 'type' => 'enum', 'label' => 'Order Direction', 'required' => false, 'allowed_values' => ['desc', 'asc'], 'default' => 'desc'],
-                ['key' => 'per_page', 'type' => 'number', 'label' => 'Posts Per Page', 'required' => false, 'default' => 6, 'min' => 1, 'max' => 24, 'integer_only' => true],
+                ['key' => 'per_page', 'type' => 'number', 'label' => 'Posts Per Page', 'required' => false, 'default' => 6, 'min' => 1, 'max' => 48, 'integer_only' => true],
+                ['key' => 'featured_only', 'type' => 'boolean', 'label' => 'Featured items only', 'required' => false, 'default' => false],
                 ['key' => 'columns', 'type' => 'number', 'label' => 'Grid Columns', 'required' => false, 'per_device' => true, 'default' => 3, 'min' => 1, 'max' => 6, 'integer_only' => true],
                 ['key' => 'gap', 'type' => 'enum', 'label' => 'Gap', 'required' => false, 'allowed_values' => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, 'default' => 'md'],
                 ['key' => 'card_variant', 'type' => 'enum', 'label' => 'Card Variant', 'required' => false, 'allowed_values' => ['card', 'minimal', 'horizontal'], 'default' => 'card'],
@@ -456,6 +465,11 @@ final class BlockRegistry
                 ['key' => 'show_excerpt', 'type' => 'boolean', 'label' => 'Show Excerpt', 'required' => false, 'default' => true],
                 ['key' => 'read_more_text', 'type' => 'string', 'label' => 'Button Text', 'required' => false, 'default' => 'Read More', 'max_length' => 80],
                 ['key' => 'enable_pagination', 'type' => 'boolean', 'label' => 'Pagination', 'required' => false, 'default' => true],
+                ['key' => 'pagination_style', 'type' => 'enum', 'label' => 'Pager', 'required' => false, 'allowed_values' => QueryLoopRenderer::PAGER_STYLES, 'default' => 'simple'],
+                ['key' => 'filter_field', 'type' => 'string', 'label' => 'Filter chips (a Taxonomy field key, or category)', 'required' => false, 'default' => '', 'max_length' => 64, 'pattern' => '/^$|^[a-z][a-z0-9_]{0,63}$/'],
+                ['key' => 'filter_all_label', 'type' => 'string', 'label' => 'First chip', 'required' => false, 'default' => 'All', 'max_length' => 40],
+                ['key' => 'filter_counts', 'type' => 'boolean', 'label' => 'Show counts on the chips', 'required' => false, 'default' => true],
+                ['key' => 'open_in', 'type' => 'enum', 'label' => 'Open items', 'required' => false, 'allowed_values' => QueryLoopRenderer::OPEN_IN, 'default' => 'page'],
                 ['key' => 'loop_template', 'type' => 'string', 'label' => 'Loop Item', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'loop_template', 'pattern' => '/^[a-z0-9-]{0,64}$/'],
                 ['key' => 'empty_message', 'type' => 'string', 'label' => 'Empty Message', 'required' => false, 'default' => 'No posts found.', 'max_length' => 200],
             ]),
@@ -534,6 +548,16 @@ final class BlockRegistry
                 ['key' => 'tag', 'type' => 'enum', 'label' => 'HTML tag', 'required' => false, 'allowed_values' => ['div', 'p', 'span', 'h2', 'h3', 'h4'], 'default' => 'div'],
                 ['key' => 'link_to_post', 'type' => 'boolean', 'label' => 'Link to the item', 'required' => false, 'default' => false],
                 ['key' => 'fit', 'type' => 'enum', 'label' => 'Image fit', 'required' => false, 'allowed_values' => ['auto', 'cover', 'contain'], 'default' => 'auto'],
+                ['key' => 'before', 'type' => 'string', 'label' => 'Text before the value', 'required' => false, 'default' => '', 'max_length' => 60],
+                ['key' => 'after', 'type' => 'string', 'label' => 'Text after the value', 'required' => false, 'default' => '', 'max_length' => 60],
+                ['key' => 'list_style', 'type' => 'enum', 'label' => 'A list shows as', 'required' => false, 'allowed_values' => ['list', 'chips', 'ticker'], 'default' => 'list'],
+                ['key' => 'ticker_speed', 'type' => 'number', 'label' => 'Ticker speed', 'required' => false, 'default' => 3, 'min' => 1, 'max' => 10, 'integer_only' => true],
+                ['key' => 'url_label', 'type' => 'enum', 'label' => 'A web address shows as', 'required' => false, 'allowed_values' => ['full', 'domain', 'text'], 'default' => 'full'],
+                ['key' => 'link_text', 'type' => 'string', 'label' => 'Link text', 'required' => false, 'default' => '', 'max_length' => 80],
+                ['key' => 'link_arrow', 'type' => 'boolean', 'label' => 'Arrow after the link', 'required' => false, 'default' => false],
+                ['key' => 'alt_field', 'type' => 'string', 'label' => 'Image description from field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
+                ['key' => 'priority', 'type' => 'boolean', 'label' => 'Load First (main picture)', 'required' => false, 'default' => false],
+                ['key' => 'bg_field', 'type' => 'string', 'label' => 'Background colour from field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
             ]),
             allowsChildren: false,
             allowedBindingProviders: [],
@@ -658,6 +682,8 @@ final class BlockRegistry
                 ['key' => 'title_field', 'type' => 'string', 'label' => 'Title sub-field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
                 ['key' => 'body_field', 'type' => 'string', 'label' => 'Text sub-field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
                 ['key' => 'allow_multiple', 'type' => 'boolean', 'label' => 'Allow several open', 'required' => false, 'default' => false],
+                ['key' => 'look', 'type' => 'enum', 'label' => 'Rows look', 'required' => false, 'allowed_values' => ['boxed', 'lines'], 'default' => 'boxed'],
+                ['key' => 'icon', 'type' => 'enum', 'label' => 'Open icon', 'required' => false, 'allowed_values' => ['chevron', 'plus'], 'default' => 'chevron'],
             ]),
             allowsChildren: true,
             allowedBindingProviders: [],
@@ -727,12 +753,14 @@ final class BlockRegistry
             schema: FieldSchema::define([
                 ['key' => 'drawer_id', 'type' => 'string', 'label' => 'Drawer ID', 'required' => false, 'default' => 'drawer-1', 'max_length' => 64],
                 ['key' => 'title', 'type' => 'string', 'label' => 'Drawer Title', 'required' => false, 'default' => 'Menu', 'max_length' => 255],
-                ['key' => 'position', 'type' => 'enum', 'label' => 'Drawer Position', 'required' => false, 'allowed_values' => ['left', 'right', 'top', 'bottom'], 'default' => 'right'],
+                ['key' => 'position', 'type' => 'enum', 'label' => 'Drawer Position', 'required' => false, 'allowed_values' => ['left', 'right', 'top', 'bottom', 'fullscreen'], 'default' => 'right'],
+                ['key' => 'close_text', 'type' => 'string', 'label' => 'Close button text', 'required' => false, 'default' => '', 'max_length' => 40],
                 ['key' => 'trigger_text', 'type' => 'string', 'label' => 'Trigger Button Text', 'required' => false, 'default' => 'Open Menu', 'max_length' => 100],
                 ['key' => 'trigger_variant', 'type' => 'enum', 'label' => 'Trigger Variant', 'required' => false, 'allowed_values' => ['primary', 'secondary', 'outline', 'ghost', 'plain'], 'default' => 'outline'],
                 ['key' => 'trigger_icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Trigger Icon', 'required' => false, 'default' => 'none'],
                 ['key' => 'trigger_icon_size', 'type' => 'number', 'label' => 'Trigger Icon Size', 'required' => false, 'default' => 24, 'min' => 12, 'max' => 64, 'integer_only' => true],
                 ['key' => 'trigger_show_text', 'type' => 'boolean', 'label' => 'Show the trigger text', 'required' => false, 'default' => true],
+                ['key' => 'trigger_text_mobile', 'type' => 'boolean', 'label' => 'Show the trigger text on phones', 'required' => false, 'default' => true],
             ]),
             allowsChildren: true,
         ));
@@ -961,6 +989,8 @@ final class BlockRegistry
             category: 'content',
             icon: 'list-check',
             schema: FieldSchema::define([
+                ['key' => 'look', 'type' => 'enum', 'label' => 'Rows look', 'required' => false, 'allowed_values' => ['boxed', 'lines'], 'default' => 'boxed'],
+                ['key' => 'icon', 'type' => 'enum', 'label' => 'Open icon', 'required' => false, 'allowed_values' => ['chevron', 'plus'], 'default' => 'chevron'],
                 [
                     'key'        => 'items',
                     'type'       => 'repeater',
@@ -1290,6 +1320,13 @@ final class BlockRegistry
                 ['key' => 'pointer_animation', 'type' => 'enum', 'label' => 'Pointer animation', 'required' => false, 'allowed_values' => ['none', 'fade', 'slide', 'grow'], 'default' => 'fade'],
                 ['key' => 'pointer_color', 'type' => 'token_ref', 'label' => 'Pointer colour', 'required' => false, 'default' => null],
                 ['key' => 'divider', 'type' => 'boolean', 'label' => 'Divider between items', 'required' => false, 'default' => false],
+                // A big menu, such as a full-screen one: numbers, a line under each link, columns and a picture of the hovered link.
+                ['key' => 'numbered', 'type' => 'boolean', 'label' => 'Number the links', 'required' => false, 'default' => false],
+                ['key' => 'descriptions', 'type' => 'boolean', 'label' => 'Show each link\'s description', 'required' => false, 'default' => false],
+                ['key' => 'arrow', 'type' => 'boolean', 'label' => 'Arrow on the hovered link', 'required' => false, 'default' => false],
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns (vertical menu)', 'required' => false, 'default' => 1, 'min' => 1, 'max' => 3, 'integer_only' => true],
+                ['key' => 'preview', 'type' => 'boolean', 'label' => 'Show the hovered link\'s image', 'required' => false, 'default' => false],
+                ['key' => 'reveal', 'type' => 'boolean', 'label' => 'Links rise in when the menu opens', 'required' => false, 'default' => false],
                 ...self::menuToggleFields('none'),
                 [
                     'key'         => 'items',
@@ -1301,6 +1338,8 @@ final class BlockRegistry
                     'item_schema' => FieldSchema::define([
                         ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => true, 'max_length' => 80],
                         ['key' => 'url', 'type' => 'url', 'label' => 'URL', 'required' => true, 'max_length' => 1000],
+                        ['key' => 'description', 'type' => 'string', 'label' => 'Description', 'required' => false, 'default' => '', 'max_length' => 160],
+                        ['key' => 'image', 'type' => 'media_ref', 'label' => 'Preview image', 'required' => false, 'default' => null],
                         [
                             'key'         => 'children',
                             'type'        => 'repeater',
@@ -1335,6 +1374,7 @@ final class BlockRegistry
                 ['key' => 'aria_label', 'type' => 'string', 'label' => 'Menu name (for screen readers)', 'required' => false, 'default' => 'Menu', 'max_length' => 80],
                 ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => NavChrome::ALIGNS, 'default' => 'left'],
                 ['key' => 'panel_width', 'type' => 'enum', 'label' => 'Panel content width', 'required' => false, 'allowed_values' => MegaMenuRenderer::WIDTHS, 'default' => 'content'],
+                ['key' => 'panel_look', 'type' => 'enum', 'label' => 'Panel look', 'required' => false, 'allowed_values' => MegaMenuRenderer::LOOKS, 'default' => 'solid'],
                 ['key' => 'pointer', 'type' => 'enum', 'label' => 'Hover pointer', 'required' => false, 'allowed_values' => NavChrome::POINTERS, 'default' => 'none'],
                 ['key' => 'pointer_animation', 'type' => 'enum', 'label' => 'Pointer animation', 'required' => false, 'allowed_values' => NavChrome::ANIMATIONS, 'default' => 'fade'],
                 ['key' => 'pointer_color', 'type' => 'token_ref', 'label' => 'Pointer colour', 'required' => false, 'default' => null],
@@ -1372,6 +1412,7 @@ final class BlockRegistry
             icon: 'grid-panes',
             schema: FieldSchema::define([
                 ['key' => 'position', 'type' => 'enum', 'label' => 'Tabs position', 'required' => false, 'allowed_values' => TabSetRenderer::POSITIONS, 'default' => 'top'],
+                ['key' => 'look', 'type' => 'enum', 'label' => 'Tabs look', 'required' => false, 'allowed_values' => TabSetRenderer::LOOKS, 'default' => 'tabs'],
                 ['key' => 'autoplay_ms', 'type' => 'number', 'label' => 'Turn by themselves every (ms, 0 = never)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => TabSetRenderer::MAX_AUTOPLAY, 'integer_only' => true],
                 ['key' => 'pause_on_hover', 'type' => 'boolean', 'label' => 'Pause while the pointer is over them', 'required' => false, 'default' => true],
                 ['key' => 'aria_label', 'type' => 'string', 'label' => 'Tabs name (for screen readers)', 'required' => false, 'default' => '', 'max_length' => 80],
@@ -1407,6 +1448,8 @@ final class BlockRegistry
             icon: 'list-check',
             schema: FieldSchema::define([
                 ['key' => 'allow_multiple', 'type' => 'boolean', 'label' => 'Allow several rows open at once', 'required' => false, 'default' => false],
+                ['key' => 'look', 'type' => 'enum', 'label' => 'Rows look', 'required' => false, 'allowed_values' => ['boxed', 'lines'], 'default' => 'boxed'],
+                ['key' => 'icon', 'type' => 'enum', 'label' => 'Open icon', 'required' => false, 'allowed_values' => ['chevron', 'plus'], 'default' => 'chevron'],
             ]),
             allowsChildren: true,
             allowedChildTypes: ['layout.accordion_item'],
@@ -1469,12 +1512,166 @@ final class BlockRegistry
                     'item_schema' => FieldSchema::define([
                         ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => true, 'max_length' => 120],
                         ['key' => 'value', 'type' => 'number', 'label' => 'Value (%)', 'required' => true, 'min' => 0, 'max' => 100],
+                        ['key' => 'note', 'type' => 'string', 'label' => 'Shown value (instead of the %)', 'required' => false, 'default' => '', 'max_length' => 20],
                     ]),
                 ],
                 ['key' => 'show_value', 'type' => 'boolean', 'label' => 'Show the value', 'required' => false, 'default' => true],
+                ['key' => 'layout', 'type' => 'enum', 'label' => 'Layout', 'required' => false, 'allowed_values' => ['stacked', 'inline'], 'default' => 'stacked'],
                 ['key' => 'bar_color', 'type' => 'string', 'label' => 'Bar colour', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
                 ['key' => 'track_color', 'type' => 'string', 'label' => 'Track colour', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
                 ['key' => 'height', 'type' => 'number', 'label' => 'Bar height (px)', 'required' => false, 'default' => 8, 'min' => 2, 'max' => 40, 'integer_only' => true],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 38j. core.circle_text — words set round a circle that turns slowly, with an optional icon in the middle.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.circle_text',
+            version: 1,
+            label: 'Circular text',
+            title: 'Circular text',
+            description: 'Words round a turning circle, a badge',
+            category: 'content',
+            icon: 'star',
+            schema: FieldSchema::define([
+                ['key' => 'text', 'type' => 'string', 'label' => 'Text round the circle', 'required' => true, 'default' => 'Free website audit • Free website audit • ', 'max_length' => 120],
+                ['key' => 'icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Icon in the middle', 'required' => false, 'default' => 'none'],
+                ['key' => 'size', 'type' => 'number', 'label' => 'Size (px)', 'required' => false, 'default' => 120, 'min' => 60, 'max' => 400, 'integer_only' => true],
+                ['key' => 'font_size', 'type' => 'number', 'label' => 'Letter size', 'required' => false, 'default' => 11, 'min' => 6, 'max' => 24, 'integer_only' => true],
+                ['key' => 'spin_seconds', 'type' => 'number', 'label' => 'Seconds per turn (0 = still)', 'required' => false, 'default' => 14, 'min' => 0, 'max' => 120, 'integer_only' => true],
+                ['key' => 'direction', 'type' => 'enum', 'label' => 'Turns', 'required' => false, 'allowed_values' => ['clockwise', 'anticlockwise'], 'default' => 'clockwise'],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 38l. core.message_widget — a floating "message me" button and panel: online status, topic chips, a Forms form.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.message_widget',
+            version: 1,
+            label: 'Message widget',
+            title: 'Message widget',
+            description: 'A floating message button with online status that sends through Forms',
+            category: 'forms',
+            icon: 'form',
+            schema: FieldSchema::define([
+                ['key' => 'launcher_label', 'type' => 'string', 'label' => 'Button text', 'required' => false, 'default' => 'Message me', 'max_length' => 40],
+                ['key' => 'launcher_icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Button icon', 'required' => false, 'default' => 'message-circle'],
+                ['key' => 'position', 'type' => 'enum', 'label' => 'Corner', 'required' => false, 'allowed_values' => MessageWidgetRenderer::POSITIONS, 'default' => 'right'],
+                ['key' => 'theme', 'type' => 'enum', 'label' => 'Theme', 'required' => false, 'allowed_values' => MessageWidgetRenderer::THEMES, 'default' => 'auto'],
+                ['key' => 'launcher_photo', 'type' => 'boolean', 'label' => 'Photo on the button', 'required' => false, 'default' => false],
+                ['key' => 'launcher_lines', 'type' => 'text', 'label' => 'Lines under the button text (one per line; {status} and {time} fill in)', 'required' => false, 'default' => '', 'max_length' => 400],
+                ['key' => 'compact_on_scroll', 'type' => 'boolean', 'label' => 'Shrink to the photo or icon while scrolling down', 'required' => false, 'default' => false],
+                ['key' => 'title', 'type' => 'string', 'label' => 'Panel title', 'required' => false, 'default' => 'Let’s talk', 'max_length' => 80],
+                ['key' => 'name', 'type' => 'string', 'label' => 'Who answers', 'required' => false, 'default' => '', 'max_length' => 60],
+                ['key' => 'avatar', 'type' => 'media_ref', 'label' => 'Photo', 'required' => false, 'default' => null],
+                ['key' => 'intro', 'type' => 'text', 'label' => 'Intro text', 'required' => false, 'default' => 'Tell me about your project. I usually reply the same day.', 'max_length' => 300],
+                ['key' => 'timezone', 'type' => 'string', 'label' => 'Time zone (e.g. Europe/Brussels)', 'required' => false, 'default' => '', 'max_length' => 60, 'pattern' => MessageWidgetRenderer::ZONE_PATTERN],
+                ['key' => 'hours_start', 'type' => 'string', 'label' => 'Online from (HH:MM)', 'required' => false, 'default' => '09:00', 'max_length' => 5, 'pattern' => '/^$|^([01]\d|2[0-3]):[0-5]\d$/'],
+                ['key' => 'hours_end', 'type' => 'string', 'label' => 'Online until (HH:MM)', 'required' => false, 'default' => '18:00', 'max_length' => 5, 'pattern' => '/^$|^([01]\d|2[0-3]):[0-5]\d$/'],
+                ['key' => 'days', 'type' => 'enum', 'label' => 'Online on', 'required' => false, 'allowed_values' => MessageWidgetRenderer::DAYS, 'default' => 'weekdays'],
+                ['key' => 'online_text', 'type' => 'string', 'label' => 'Online text', 'required' => false, 'default' => 'Online now', 'max_length' => 80],
+                ['key' => 'away_text', 'type' => 'string', 'label' => 'Away text', 'required' => false, 'default' => 'Away · I reply within a day', 'max_length' => 80],
+                ['key' => 'topics', 'type' => 'text', 'label' => 'Topic chips (one per line)', 'required' => false, 'default' => "New website\nRedesign\nSEO\nSomething else", 'max_length' => 600],
+                ['key' => 'topics_label', 'type' => 'string', 'label' => 'Topics heading', 'required' => false, 'default' => 'What is it about?', 'max_length' => 80],
+                ['key' => 'ask_name', 'type' => 'boolean', 'label' => 'Ask for a name', 'required' => false, 'default' => true],
+                ['key' => 'name_label', 'type' => 'string', 'label' => 'Name field label', 'required' => false, 'default' => 'Your name', 'max_length' => 60],
+                ['key' => 'email_label', 'type' => 'string', 'label' => 'Email field label', 'required' => false, 'default' => 'Your email', 'max_length' => 60],
+                ['key' => 'message_label', 'type' => 'string', 'label' => 'Message field label', 'required' => false, 'default' => 'Message', 'max_length' => 60],
+                ['key' => 'message_placeholder', 'type' => 'string', 'label' => 'Message placeholder', 'required' => false, 'default' => '', 'max_length' => 120],
+                ['key' => 'submit_text', 'type' => 'string', 'label' => 'Send button text', 'required' => false, 'default' => 'Send', 'max_length' => 40],
+                ['key' => 'success_message', 'type' => 'text', 'label' => 'Success Message', 'required' => false, 'default' => 'Thanks! I’ll get back to you soon.', 'max_length' => 500],
+                ['key' => 'notify_email', 'type' => 'string', 'label' => 'Email Submissions To', 'required' => false, 'default' => '', 'max_length' => 200],
+                ['key' => 'open_after_seconds', 'type' => 'number', 'label' => 'Open by itself after (seconds, 0 = never)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => MessageWidgetRenderer::MAX_DELAY, 'integer_only' => true],
+                ['key' => 'open_after_scroll', 'type' => 'number', 'label' => 'Open by itself after scrolling (% of the page, 0 = never)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => 100, 'integer_only' => true],
+                ['key' => 'remember_closed', 'type' => 'boolean', 'label' => 'Once closed, stop opening by itself', 'required' => false, 'default' => true],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 38m. core.local_time — the owner's local time, ticking ("Brussels 14:32").
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.local_time',
+            version: 1,
+            label: 'Local time',
+            title: 'Local time',
+            description: 'Your local time, ticking, for a footer',
+            category: 'content',
+            icon: 'timer',
+            schema: FieldSchema::define([
+                ['key' => 'label', 'type' => 'string', 'label' => 'Text before', 'required' => false, 'default' => 'Local time', 'max_length' => 60],
+                ['key' => 'city', 'type' => 'string', 'label' => 'City', 'required' => false, 'default' => '', 'max_length' => 60],
+                ['key' => 'timezone', 'type' => 'string', 'label' => 'Time zone (e.g. Europe/Brussels)', 'required' => false, 'default' => '', 'max_length' => 60, 'pattern' => MessageWidgetRenderer::ZONE_PATTERN],
+                ['key' => 'format', 'type' => 'enum', 'label' => 'Clock', 'required' => false, 'allowed_values' => LocalTimeRenderer::FORMATS, 'default' => '24h'],
+                ['key' => 'seconds', 'type' => 'boolean', 'label' => 'Show seconds', 'required' => false, 'default' => false],
+                ['key' => 'show_offset', 'type' => 'boolean', 'label' => 'Show the GMT offset', 'required' => false, 'default' => false],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 38n. core.testimonial_grid — testimonials in a grid that pages like a carousel: a count, numbered pages and arrows,
+        // cards with a quote mark, stars, clamped text with "read full review" in a dialog, and an initials avatar. The
+        // testimonials come from a content type (one item each, its fields mapped here) or are typed on the block.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.testimonial_grid',
+            version: 1,
+            label: 'Testimonial grid',
+            title: 'Testimonial grid',
+            description: 'Reviews in a grid that pages like a carousel, from a content type or typed in',
+            category: 'content',
+            icon: 'quotes',
+            schema: FieldSchema::define([
+                ['key' => 'source', 'type' => 'enum', 'label' => 'Testimonials from', 'required' => false, 'allowed_values' => ['items', 'content_type'], 'default' => 'items'],
+                ['key' => 'content_type', 'type' => 'string', 'label' => 'Content type', 'required' => false, 'default' => '', 'max_length' => 40, 'pattern' => '/^([a-z][a-z0-9_-]{0,39})?$/'],
+                ['key' => 'text_field', 'type' => 'string', 'label' => 'Review text field', 'required' => false, 'default' => 'text', 'max_length' => 64, 'pattern' => TestimonialGridRenderer::FIELD_PATTERN],
+                ['key' => 'rating_field', 'type' => 'string', 'label' => 'Rating field (0 to 5)', 'required' => false, 'default' => 'rating', 'max_length' => 64, 'pattern' => TestimonialGridRenderer::FIELD_PATTERN],
+                ['key' => 'meta_fields', 'type' => 'string', 'label' => 'Detail fields under the name (comma-separated)', 'required' => false, 'default' => 'country', 'max_length' => 200, 'pattern' => '/^[a-z0-9_, ]{0,200}$/'],
+                ['key' => 'date_field', 'type' => 'string', 'label' => 'Date field', 'required' => false, 'default' => '', 'max_length' => 64, 'pattern' => TestimonialGridRenderer::FIELD_PATTERN],
+                ['key' => 'photo_field', 'type' => 'string', 'label' => 'Photo field (initials without one)', 'required' => false, 'default' => '', 'max_length' => 64, 'pattern' => TestimonialGridRenderer::FIELD_PATTERN],
+                ['key' => 'order', 'type' => 'enum', 'label' => 'Order', 'required' => false, 'allowed_values' => TestimonialGridRenderer::ORDERS, 'default' => 'newest'],
+                ['key' => 'min_length', 'type' => 'number', 'label' => 'Only reviews at least this long (characters)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => 2000, 'integer_only' => true],
+                ['key' => 'max_length', 'type' => 'number', 'label' => 'Only reviews at most this long (characters, 0 = any)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => 2000, 'integer_only' => true],
+                ['key' => 'limit', 'type' => 'number', 'label' => 'Most reviews shown', 'required' => false, 'default' => 60, 'min' => 1, 'max' => TestimonialGridRenderer::MAX_ITEMS, 'integer_only' => true],
+                [
+                    'key'         => 'items',
+                    'type'        => 'repeater',
+                    'label'       => 'Testimonials (when typed in)',
+                    'required'    => false,
+                    'default'     => [
+                        ['name' => 'Jordan', 'text' => 'Clear, quick and easy to work with. The new site brings us calls every week.', 'rating' => 5, 'meta' => 'United States', 'date' => '2 months ago'],
+                        ['name' => 'Camille', 'text' => 'He understood what we needed at once and delivered ahead of time.', 'rating' => 5, 'meta' => 'Belgium', 'date' => '5 months ago'],
+                        ['name' => 'Sam', 'text' => 'Great communication from start to finish. I would hire him again.', 'rating' => 5, 'meta' => 'United Kingdom', 'date' => '1 year ago'],
+                    ],
+                    'max_items'   => 60,
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'name', 'type' => 'string', 'label' => 'Name', 'required' => true, 'max_length' => 80],
+                        ['key' => 'text', 'type' => 'text', 'label' => 'Review', 'required' => true, 'max_length' => 3000],
+                        ['key' => 'rating', 'type' => 'number', 'label' => 'Stars', 'required' => false, 'default' => 5, 'min' => 0, 'max' => 5],
+                        ['key' => 'meta', 'type' => 'string', 'label' => 'Details', 'required' => false, 'default' => '', 'max_length' => 120],
+                        ['key' => 'date', 'type' => 'string', 'label' => 'Date', 'required' => false, 'default' => '', 'max_length' => 40],
+                        ['key' => 'photo', 'type' => 'media_ref', 'label' => 'Photo', 'required' => false, 'default' => null],
+                    ]),
+                ],
+                ['key' => 'layout', 'type' => 'enum', 'label' => 'Layout', 'required' => false, 'allowed_values' => TestimonialGridRenderer::LAYOUTS, 'default' => 'grid'],
+                ['key' => 'ticker_rows', 'type' => 'number', 'label' => 'Ticker rows', 'required' => false, 'default' => 2, 'min' => 1, 'max' => 4, 'integer_only' => true],
+                ['key' => 'ticker_speed', 'type' => 'number', 'label' => 'Ticker speed', 'required' => false, 'default' => 3, 'min' => 1, 'max' => 10, 'integer_only' => true],
+                ['key' => 'per_page', 'type' => 'number', 'label' => 'Per page', 'required' => false, 'default' => 6, 'min' => 1, 'max' => 24, 'integer_only' => true],
+                ['key' => 'per_page_tablet', 'type' => 'number', 'label' => 'Per page on a tablet', 'required' => false, 'default' => 4, 'min' => 1, 'max' => 24, 'integer_only' => true],
+                ['key' => 'per_page_mobile', 'type' => 'number', 'label' => 'Per page on a phone', 'required' => false, 'default' => 3, 'min' => 1, 'max' => 24, 'integer_only' => true],
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'default' => 3, 'min' => 1, 'max' => 4, 'integer_only' => true],
+                ['key' => 'columns_tablet', 'type' => 'number', 'label' => 'Columns on a tablet', 'required' => false, 'default' => 2, 'min' => 1, 'max' => 4, 'integer_only' => true],
+                ['key' => 'columns_mobile', 'type' => 'number', 'label' => 'Columns on a phone', 'required' => false, 'default' => 1, 'min' => 1, 'max' => 2, 'integer_only' => true],
+                ['key' => 'clamp_lines', 'type' => 'number', 'label' => 'Lines before "read full review" (0 = all)', 'required' => false, 'default' => 6, 'min' => 0, 'max' => 20, 'integer_only' => true],
+                ['key' => 'count_label', 'type' => 'string', 'label' => 'Count text ({from}, {to} and {total} fill in)', 'required' => false, 'default' => '{from}–{to} of {total} reviews', 'max_length' => 80],
+                ['key' => 'read_more_label', 'type' => 'string', 'label' => 'Read more text', 'required' => false, 'default' => 'Read full review', 'max_length' => 40],
+                ['key' => 'source_note', 'type' => 'string', 'label' => 'Note after the name in the full review (e.g. on Fiverr)', 'required' => false, 'default' => '', 'max_length' => 60],
+                ['key' => 'show_quote', 'type' => 'boolean', 'label' => 'Quote mark', 'required' => false, 'default' => true],
+                ['key' => 'show_stars', 'type' => 'boolean', 'label' => 'Stars', 'required' => false, 'default' => true],
+                ['key' => 'show_avatar', 'type' => 'boolean', 'label' => 'Avatar', 'required' => false, 'default' => true],
+                ['key' => 'show_name', 'type' => 'boolean', 'label' => 'Name', 'required' => false, 'default' => true],
+                ['key' => 'show_meta', 'type' => 'boolean', 'label' => 'Details under the name', 'required' => false, 'default' => true],
+                ['key' => 'show_date', 'type' => 'boolean', 'label' => 'Date', 'required' => false, 'default' => true],
+                ['key' => 'show_progress', 'type' => 'boolean', 'label' => 'Progress line under the grid', 'required' => false, 'default' => true],
+                ['key' => 'highlight_first', 'type' => 'boolean', 'label' => 'First card of each page stands out', 'required' => false, 'default' => true],
             ]),
             allowsChildren: false,
         ));

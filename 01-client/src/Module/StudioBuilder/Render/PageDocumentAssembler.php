@@ -74,6 +74,8 @@ final class PageDocumentAssembler
             . WebFonts::tags($tenantId)
             . StructuredData::tags($context)
             . '<style>' . str_ireplace('</style', '<\/style', $css) . '</style>'
+            // Site & SEO › Scrolling: the page's scroll bar (thin, branded or hidden), not on the editor canvas.
+            . (($bar = $context->mode === RenderMode::Editor ? '' : SiteScrollbar::css($tenantId)) !== '' ? '<style>' . $bar . '</style>' : '')
             . $tenantCss
             . $signatureGuard
             . $analytics

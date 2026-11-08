@@ -20,6 +20,8 @@ use Slate\Module\StudioBuilder\Render\Html;
 final class TabSetRenderer implements BlockRendererInterface
 {
     public const POSITIONS = ['top', 'left'];
+    /** `tabs`: boxed tabs; `list`: numbered rows with an arrow, as a "which one fits you" picker. */
+    public const LOOKS = ['tabs', 'list'];
     public const MAX_AUTOPLAY = 30000;
     /** Below this a tab turns before anyone could read it: such a value turns autoplay off. */
     public const MIN_AUTOPLAY = 1500;
@@ -71,7 +73,8 @@ final class TabSetRenderer implements BlockRendererInterface
         }
         $name = trim($scope->string('aria_label'));
 
-        return '<div class="sb-tabset sb-tabset--' . $position . '" data-sb-tabs'
+        $look = in_array($scope->string('look', 'tabs'), self::LOOKS, true) ? $scope->string('look', 'tabs') : 'tabs';
+        return '<div class="sb-tabset sb-tabset--' . $position . ($look === 'list' ? ' sb-tabset--list' : '') . '" data-sb-tabs'
             . ($autoplay > 0 ? ' data-sb-tabs-autoplay="' . $autoplay . '"' . ($scope->bool('pause_on_hover', true) ? ' data-sb-tabs-pause' : '') : '') . '>'
             . '<div class="sb-tabset__list" role="tablist" aria-label="' . Html::e($name !== '' ? $name : Html::t('studio_tabs_label', 'Content tabs')) . '"'
             . ($position === 'left' ? ' aria-orientation="vertical"' : '') . '>' . $buttons . '</div>'

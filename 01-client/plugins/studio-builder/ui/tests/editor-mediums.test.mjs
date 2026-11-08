@@ -52,7 +52,7 @@ test('block Responsive: the older hide checkboxes show only for a stored value, 
 });
 
 test('Site settings: tokens nothing uses by default say so (DT-M7)', () => {
-  assert.deepEqual([...BLOCK_ONLY_TOKENS].sort(), ['surface.inverse', 'surface.muted', 'text.accent']);
+  assert.deepEqual([...BLOCK_ONLY_TOKENS].sort(), ['surface.muted', 'text.accent']);
   assert.equal(tokenUsedOnlyByBlocks('surface.muted'), true);
   assert.equal(tokenUsedOnlyByBlocks('surface.page'), false);
   assert.match(src('../src/components/SiteSettings.jsx'), /tokenUsedOnlyByBlocks\(tk\.ref\) && <p className="sbx-hint">\{t\('ss_tk_block_only'\)\}<\/p>/);

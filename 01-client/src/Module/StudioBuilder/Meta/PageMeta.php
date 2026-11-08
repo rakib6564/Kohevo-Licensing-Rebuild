@@ -326,6 +326,73 @@ final class PageMeta
         return $ids;
     }
 
+    /** Field types whose values are terms an item can be filtered by (a taxonomy). */
+    public const TERM_TYPES = ['terms', 'select', 'radio', 'multiselect', 'checkboxes'];
+
+    /** @return list<string> the terms a saved value holds (one choice, or several) */
+    public static function termsOf(mixed $value): array
+    {
+        $list = is_array($value) ? $value : [$value];
+        return array_values(array_unique(array_filter(array_map(static fn($v): string => is_scalar($v) ? trim((string) $v) : '', $list), static fn(string $v): bool => $v !== '')));
+    }
+
+    /**
+     * Every item's terms in one field, for filter chips (one query).
+     *
+     * @return array<int, list<string>> page id => terms
+     */
+    public static function termsByPage(int $tenantId, string $fieldKey): array
+    {
+        $rows = Database::all('SELECT setting_key, setting_value FROM settings WHERE tenant_id = ? AND setting_key LIKE ?', [$tenantId, self::SETTING_PREFIX . '%']);
+        $out = [];
+        foreach ($rows as $row) {
+            $values = self::json((string) $row['setting_value'])['values'] ?? null;
+            if (is_array($values) && array_key_exists($fieldKey, $values)) {
+                $terms = self::termsOf($values[$fieldKey]);
+                if ($terms !== []) {
+                    $out[(int) substr((string) $row['setting_key'], strlen(self::SETTING_PREFIX))] = $terms;
+                }
+            }
+        }
+        return $out;
+    }
+
+    /** @return list<int> ids of the items whose `$fieldKey` holds `$term` */
+    public static function pageIdsWithTerm(int $tenantId, string $fieldKey, string $term): array
+    {
+        $ids = [];
+        foreach (self::termsByPage($tenantId, $fieldKey) as $id => $terms) {
+            if (in_array($term, $terms, true)) {
+                $ids[] = $id;
+            }
+        }
+        return $ids;
+    }
+
+    /**
+     * A content type's taxonomy fields, which a Query Loop can filter by: key => [label, its terms in order, value => label].
+     *
+     * @return array<string, array{label: string, terms: array<string, string>}>
+     */
+    public static function taxonomies(int $tenantId, string $postType): array
+    {
+        $out = [];
+        foreach (self::fieldsFor($tenantId, $postType) as $f) {
+            if (in_array($f['type'] ?? '', self::TERM_TYPES, true) && is_string($f['key'] ?? null)) {
+                $choices = is_array($f['options']['choices'] ?? null) ? $f['options']['choices'] : [];
+                $terms = [];
+                foreach ($choices as $c) {
+                    $value = (string) ($c['value'] ?? '');
+                    if ($value !== '') {
+                        $terms[$value] = (string) ($c['label'] ?? $value) ?: $value;
+                    }
+                }
+                $out[$f['key']] = ['label' => (string) ($f['label'] ?? $f['key']), 'terms' => $terms];
+            }
+        }
+        return $out;
+    }
+
     /**
      * One posted value cleaned for one field.
      *
@@ -349,7 +416,7 @@ final class PageMeta
             default => $raw === null || $raw === '' || $raw === [],
         };
         if ($empty && $type !== 'boolean') {
-            return !empty($field['required']) ? $bad("{$label} is required.") : $ok(in_array($type, ['multiselect', 'checkboxes', 'gallery', 'list', 'relations', 'repeater'], true) ? [] : ($type === 'keyvalue' ? new \stdClass() : ''));
+            return !empty($field['required']) ? $bad("{$label} is required.") : $ok(in_array($type, ['multiselect', 'checkboxes', 'terms', 'gallery', 'list', 'relations', 'repeater'], true) ? [] : ($type === 'keyvalue' ? new \stdClass() : ''));
         }
 
         switch ($type) {
@@ -423,6 +490,7 @@ final class PageMeta
                 return in_array($v, $choices, true) ? $ok($v) : $bad("{$label}: choose one of the listed options.");
             case 'multiselect':
             case 'checkboxes':
+            case 'terms':
                 $v = $list($raw);
                 return array_diff($v, $choices) === [] ? $ok($v) : $bad("{$label}: choose from the listed options.");
             case 'boolean':

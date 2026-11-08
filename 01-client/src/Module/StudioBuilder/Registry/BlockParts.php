@@ -100,7 +100,7 @@ final class BlockParts
             'link'    => ['label' => 'Links', 'selectors' => ['.sb-nav__list>.sb-nav__item>.sb-nav__link']],
             // studio-runtime.js marks the link of the page being viewed (a header is rendered once for every page).
             // As specific as `link` and `sublink` and more, or their colour would win over this one.
-            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current="page"]', '.sb-nav__sub .sb-nav__item>.sb-nav__link[aria-current="page"]', '.sb-nav__list .sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
+            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current]', '.sb-nav__sub .sb-nav__item>.sb-nav__link[aria-current]', '.sb-nav__list .sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
             'submenu' => ['label' => 'Submenu', 'selectors' => ['.sb-nav__sub']],
             'sublink' => ['label' => 'Submenu links', 'selectors' => ['.sb-nav__sub .sb-nav__link']],
             'toggle'  => ['label' => 'Submenu arrow', 'selectors' => ['.sb-nav__caret', '.sb-nav__toggle']],
@@ -108,18 +108,41 @@ final class BlockParts
             // Only an open menu matches, so a panel's look never reaches the links shown in a row.
             'panel'   => ['label' => 'Open menu panel', 'selectors' => ['.sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list'], 'states' => false],
             'cta'     => ['label' => 'Open menu button', 'selectors' => ['.sb-nav__cta-link']],
+            'number'  => ['label' => 'Link numbers', 'selectors' => ['.sb-nav__num']],
+            'description' => ['label' => 'Link descriptions', 'selectors' => ['.sb-nav__desc']],
+            'arrow'   => ['label' => 'Link arrow', 'selectors' => ['.sb-nav__arrow']],
+            'preview' => ['label' => 'Preview image', 'selectors' => ['.sb-nav__preview']],
+            'caption' => ['label' => 'Preview caption', 'selectors' => ['.sb-nav__preview-caption']],
         ],
         // The menu's own links are named from the top of the menu: a panel can hold a Nav menu with parts of its own.
         'layout.mega_menu' => [
             'list'    => ['label' => 'Menu list', 'selectors' => ['.sb-nav--mega>.sb-nav__list']],
             'link'    => ['label' => 'Links', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)']],
-            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current="page"]', '.sb-nav--mega>.sb-nav__list>.sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
+            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current]', '.sb-nav--mega>.sb-nav__list>.sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
             'open'    => ['label' => 'Link of the open panel', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item:is(:hover,:focus-within,[data-open])>:is(.sb-nav__link,.sb-nav__parent)'], 'states' => false],
             'submenu' => ['label' => 'Panels', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__mega']],
             'grid'    => ['label' => 'Panel columns', 'selectors' => ['.sb-mega__grid']],
             'burger'  => ['label' => 'Menu button', 'selectors' => ['.sb-nav__burger']],
             'panel'   => ['label' => 'Open menu panel', 'selectors' => ['.sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list'], 'states' => false],
             'cta'     => ['label' => 'Open menu button', 'selectors' => ['.sb-nav__cta-link']],
+        ],
+        'core.testimonial_grid' => [
+            'count'    => ['label' => 'Count', 'selectors' => ['.sb-tgrid__count']],
+            'arrows'   => ['label' => 'Arrows', 'selectors' => ['.sb-tgrid__arrow']],
+            'pages'    => ['label' => 'Page numbers', 'selectors' => ['.sb-tgrid__page']],
+            'page_current' => ['label' => 'Current page number', 'selectors' => ['.sb-tgrid__page[aria-current="true"]'], 'states' => false],
+            'card'     => ['label' => 'Cards', 'selectors' => ['.sb-tgrid__card']],
+            'featured' => ['label' => 'Standout card', 'selectors' => ['.sb-tgrid__card.is-first']],
+            'quote'    => ['label' => 'Quote mark', 'selectors' => ['.sb-tgrid__quote']],
+            'stars'    => ['label' => 'Stars', 'selectors' => ['.sb-tgrid__stars']],
+            'text'     => ['label' => 'Review text', 'selectors' => ['.sb-tgrid__text']],
+            'more'     => ['label' => 'Read more', 'selectors' => ['.sb-tgrid__more']],
+            'footer'   => ['label' => 'Reviewer row', 'selectors' => ['.sb-tgrid__by']],
+            'avatar'   => ['label' => 'Avatar', 'selectors' => ['.sb-tgrid__avatar']],
+            'name'     => ['label' => 'Name', 'selectors' => ['.sb-tgrid__name']],
+            'meta'     => ['label' => 'Details', 'selectors' => ['.sb-tgrid__meta', '.sb-tgrid__date']],
+            'progress' => ['label' => 'Progress line', 'selectors' => ['.sb-tgrid__progress>i']],
+            'dialog'   => ['label' => 'Full review dialog', 'selectors' => ['.sb-tgrid__dialog'], 'states' => false],
         ],
         'core.carousel' => [
             'quote'  => ['label' => 'Quote', 'selectors' => ['.sb-carousel__quote']],
@@ -225,6 +248,11 @@ final class BlockParts
             'label'     => ['label' => 'Label', 'selectors' => ['.sb-field-value__label']],
             'paragraph' => ['label' => 'Paragraphs', 'selectors' => ['.sb-field-value p']],
             'list'      => ['label' => 'Lists', 'selectors' => ['.sb-field-value ul', '.sb-field-value ol']],
+            'chip'      => ['label' => 'Chips', 'selectors' => ['.sb-field-chips>li']],
+            'link'      => ['label' => 'Link', 'selectors' => ['.sb-field-value a']],
+            'image'     => ['label' => 'Image', 'selectors' => ['.sb-field-value img']],
+            // Under .sb-field-value, or a font-size rule for a block's children outweighs it.
+            'affix'     => ['label' => 'Text before and after', 'selectors' => ['.sb-field-value>.sb-field-value__before', '.sb-field-value>.sb-field-value__after']],
         ],
         'core.map' => [
             'frame' => ['label' => 'Map frame', 'selectors' => ['.sb-map']],

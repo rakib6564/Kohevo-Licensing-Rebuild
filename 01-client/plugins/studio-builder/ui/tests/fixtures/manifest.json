@@ -290,6 +290,7 @@
             "category": "content",
             "default_props": {
                 "allow_multiple": false,
+                "icon": "chevron",
                 "items": [
                     {
                         "body": "Pick a track, book a trial class, and we handle the rest.",
@@ -303,10 +304,33 @@
                         "body": "Comfortable clothes, water, and socks you can move in.",
                         "heading": "What should I bring?"
                     }
-                ]
+                ],
+                "look": "boxed"
             },
             "description": "Stacked rows that expand, ideal for FAQs",
             "field_schema": [
+                {
+                    "key": "look",
+                    "type": "enum",
+                    "label": "Rows look",
+                    "required": false,
+                    "default": "boxed",
+                    "allowed_values": [
+                        "boxed",
+                        "lines"
+                    ]
+                },
+                {
+                    "key": "icon",
+                    "type": "enum",
+                    "label": "Open icon",
+                    "required": false,
+                    "default": "chevron",
+                    "allowed_values": [
+                        "chevron",
+                        "plus"
+                    ]
+                },
                 {
                     "key": "items",
                     "type": "repeater",
@@ -536,6 +560,8 @@
             "binding_slots": [],
             "category": "content",
             "default_props": {
+                "copied_label": "Copied",
+                "copy_text": "",
                 "full_width": false,
                 "icon": "none",
                 "icon_position": "before",
@@ -614,6 +640,22 @@
                     "min": 0,
                     "max": 50,
                     "integer_only": true
+                },
+                {
+                    "key": "copy_text",
+                    "type": "string",
+                    "label": "Copy this text when clicked",
+                    "required": false,
+                    "default": "",
+                    "max_length": 300
+                },
+                {
+                    "key": "copied_label",
+                    "type": "string",
+                    "label": "Label once copied",
+                    "required": false,
+                    "default": "Copied",
+                    "max_length": 60
                 }
             ],
             "icon": "arrow-up-right",
@@ -942,6 +984,116 @@
             ],
             "title": "Carousel",
             "type": "core.carousel",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "direction": "clockwise",
+                "font_size": 11,
+                "icon": "none",
+                "size": 120,
+                "spin_seconds": 14,
+                "text": "Free website audit • Free website audit • "
+            },
+            "description": "Words round a turning circle, a badge",
+            "field_schema": [
+                {
+                    "key": "text",
+                    "type": "string",
+                    "label": "Text round the circle",
+                    "required": true,
+                    "default": "Free website audit • Free website audit • ",
+                    "max_length": 120
+                },
+                {
+                    "key": "icon",
+                    "type": "string",
+                    "label": "Icon in the middle",
+                    "required": false,
+                    "default": "none",
+                    "max_length": 40,
+                    "format": "icon"
+                },
+                {
+                    "key": "size",
+                    "type": "number",
+                    "label": "Size (px)",
+                    "required": false,
+                    "default": 120,
+                    "min": 60,
+                    "max": 400,
+                    "integer_only": true
+                },
+                {
+                    "key": "font_size",
+                    "type": "number",
+                    "label": "Letter size",
+                    "required": false,
+                    "default": 11,
+                    "min": 6,
+                    "max": 24,
+                    "integer_only": true
+                },
+                {
+                    "key": "spin_seconds",
+                    "type": "number",
+                    "label": "Seconds per turn (0 = still)",
+                    "required": false,
+                    "default": 14,
+                    "min": 0,
+                    "max": 120,
+                    "integer_only": true
+                },
+                {
+                    "key": "direction",
+                    "type": "enum",
+                    "label": "Turns",
+                    "required": false,
+                    "default": "clockwise",
+                    "allowed_values": [
+                        "clockwise",
+                        "anticlockwise"
+                    ]
+                }
+            ],
+            "icon": "star",
+            "inline_text": [],
+            "label": "Circular text",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Circular text",
+            "type": "core.circle_text",
             "version": 1
         },
         {
@@ -3768,6 +3920,107 @@
             "binding_slots": [],
             "category": "content",
             "default_props": {
+                "city": "",
+                "format": "24h",
+                "label": "Local time",
+                "seconds": false,
+                "show_offset": false,
+                "timezone": ""
+            },
+            "description": "Your local time, ticking, for a footer",
+            "field_schema": [
+                {
+                    "key": "label",
+                    "type": "string",
+                    "label": "Text before",
+                    "required": false,
+                    "default": "Local time",
+                    "max_length": 60
+                },
+                {
+                    "key": "city",
+                    "type": "string",
+                    "label": "City",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "timezone",
+                    "type": "string",
+                    "label": "Time zone (e.g. Europe/Brussels)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "format",
+                    "type": "enum",
+                    "label": "Clock",
+                    "required": false,
+                    "default": "24h",
+                    "allowed_values": [
+                        "24h",
+                        "12h"
+                    ]
+                },
+                {
+                    "key": "seconds",
+                    "type": "boolean",
+                    "label": "Show seconds",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "show_offset",
+                    "type": "boolean",
+                    "label": "Show the GMT offset",
+                    "required": false,
+                    "default": false
+                }
+            ],
+            "icon": "timer",
+            "inline_text": [],
+            "label": "Local time",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Local time",
+            "type": "core.local_time",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
                 "height": "md",
                 "latitude": 50.8503,
                 "longitude": 4.3517,
@@ -3959,6 +4212,333 @@
         {
             "allowed_binding_providers": [],
             "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "forms",
+            "default_props": {
+                "ask_name": true,
+                "avatar": null,
+                "away_text": "Away · I reply within a day",
+                "compact_on_scroll": false,
+                "days": "weekdays",
+                "email_label": "Your email",
+                "hours_end": "18:00",
+                "hours_start": "09:00",
+                "intro": "Tell me about your project. I usually reply the same day.",
+                "launcher_icon": "message-circle",
+                "launcher_label": "Message me",
+                "launcher_lines": "",
+                "launcher_photo": false,
+                "message_label": "Message",
+                "message_placeholder": "",
+                "name": "",
+                "name_label": "Your name",
+                "notify_email": "",
+                "online_text": "Online now",
+                "open_after_scroll": 0,
+                "open_after_seconds": 0,
+                "position": "right",
+                "remember_closed": true,
+                "submit_text": "Send",
+                "success_message": "Thanks! I’ll get back to you soon.",
+                "theme": "auto",
+                "timezone": "",
+                "title": "Let’s talk",
+                "topics": "New website\nRedesign\nSEO\nSomething else",
+                "topics_label": "What is it about?"
+            },
+            "description": "A floating message button with online status that sends through Forms",
+            "field_schema": [
+                {
+                    "key": "launcher_label",
+                    "type": "string",
+                    "label": "Button text",
+                    "required": false,
+                    "default": "Message me",
+                    "max_length": 40
+                },
+                {
+                    "key": "launcher_icon",
+                    "type": "string",
+                    "label": "Button icon",
+                    "required": false,
+                    "default": "message-circle",
+                    "max_length": 40,
+                    "format": "icon"
+                },
+                {
+                    "key": "position",
+                    "type": "enum",
+                    "label": "Corner",
+                    "required": false,
+                    "default": "right",
+                    "allowed_values": [
+                        "right",
+                        "left"
+                    ]
+                },
+                {
+                    "key": "theme",
+                    "type": "enum",
+                    "label": "Theme",
+                    "required": false,
+                    "default": "auto",
+                    "allowed_values": [
+                        "auto",
+                        "light",
+                        "dark"
+                    ]
+                },
+                {
+                    "key": "launcher_photo",
+                    "type": "boolean",
+                    "label": "Photo on the button",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "launcher_lines",
+                    "type": "text",
+                    "label": "Lines under the button text (one per line; {status} and {time} fill in)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 400
+                },
+                {
+                    "key": "compact_on_scroll",
+                    "type": "boolean",
+                    "label": "Shrink to the photo or icon while scrolling down",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "label": "Panel title",
+                    "required": false,
+                    "default": "Let’s talk",
+                    "max_length": 80
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "label": "Who answers",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "avatar",
+                    "type": "media_ref",
+                    "label": "Photo",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "intro",
+                    "type": "text",
+                    "label": "Intro text",
+                    "required": false,
+                    "default": "Tell me about your project. I usually reply the same day.",
+                    "max_length": 300
+                },
+                {
+                    "key": "timezone",
+                    "type": "string",
+                    "label": "Time zone (e.g. Europe/Brussels)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "hours_start",
+                    "type": "string",
+                    "label": "Online from (HH:MM)",
+                    "required": false,
+                    "default": "09:00",
+                    "max_length": 5
+                },
+                {
+                    "key": "hours_end",
+                    "type": "string",
+                    "label": "Online until (HH:MM)",
+                    "required": false,
+                    "default": "18:00",
+                    "max_length": 5
+                },
+                {
+                    "key": "days",
+                    "type": "enum",
+                    "label": "Online on",
+                    "required": false,
+                    "default": "weekdays",
+                    "allowed_values": [
+                        "weekdays",
+                        "mon_sat",
+                        "everyday"
+                    ]
+                },
+                {
+                    "key": "online_text",
+                    "type": "string",
+                    "label": "Online text",
+                    "required": false,
+                    "default": "Online now",
+                    "max_length": 80
+                },
+                {
+                    "key": "away_text",
+                    "type": "string",
+                    "label": "Away text",
+                    "required": false,
+                    "default": "Away · I reply within a day",
+                    "max_length": 80
+                },
+                {
+                    "key": "topics",
+                    "type": "text",
+                    "label": "Topic chips (one per line)",
+                    "required": false,
+                    "default": "New website\nRedesign\nSEO\nSomething else",
+                    "max_length": 600
+                },
+                {
+                    "key": "topics_label",
+                    "type": "string",
+                    "label": "Topics heading",
+                    "required": false,
+                    "default": "What is it about?",
+                    "max_length": 80
+                },
+                {
+                    "key": "ask_name",
+                    "type": "boolean",
+                    "label": "Ask for a name",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "name_label",
+                    "type": "string",
+                    "label": "Name field label",
+                    "required": false,
+                    "default": "Your name",
+                    "max_length": 60
+                },
+                {
+                    "key": "email_label",
+                    "type": "string",
+                    "label": "Email field label",
+                    "required": false,
+                    "default": "Your email",
+                    "max_length": 60
+                },
+                {
+                    "key": "message_label",
+                    "type": "string",
+                    "label": "Message field label",
+                    "required": false,
+                    "default": "Message",
+                    "max_length": 60
+                },
+                {
+                    "key": "message_placeholder",
+                    "type": "string",
+                    "label": "Message placeholder",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120
+                },
+                {
+                    "key": "submit_text",
+                    "type": "string",
+                    "label": "Send button text",
+                    "required": false,
+                    "default": "Send",
+                    "max_length": 40
+                },
+                {
+                    "key": "success_message",
+                    "type": "text",
+                    "label": "Success Message",
+                    "required": false,
+                    "default": "Thanks! I’ll get back to you soon.",
+                    "max_length": 500
+                },
+                {
+                    "key": "notify_email",
+                    "type": "string",
+                    "label": "Email Submissions To",
+                    "required": false,
+                    "default": "",
+                    "max_length": 200
+                },
+                {
+                    "key": "open_after_seconds",
+                    "type": "number",
+                    "label": "Open by itself after (seconds, 0 = never)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 600,
+                    "integer_only": true
+                },
+                {
+                    "key": "open_after_scroll",
+                    "type": "number",
+                    "label": "Open by itself after scrolling (% of the page, 0 = never)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 100,
+                    "integer_only": true
+                },
+                {
+                    "key": "remember_closed",
+                    "type": "boolean",
+                    "label": "Once closed, stop opening by itself",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "form",
+            "inline_text": [],
+            "label": "Message widget",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Message widget",
+            "type": "core.message_widget",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
             "allows_children": true,
             "binding_slots": [],
             "category": "advanced",
@@ -4066,6 +4646,9 @@
             "default_props": {
                 "align": "left",
                 "aria_label": "Menu",
+                "arrow": false,
+                "columns": 1,
+                "descriptions": false,
                 "divider": false,
                 "items": [
                     {
@@ -4083,9 +4666,12 @@
                 ],
                 "layout": "horizontal",
                 "menu": "",
+                "numbered": false,
                 "pointer": "none",
                 "pointer_animation": "fade",
                 "pointer_color": null,
+                "preview": false,
+                "reveal": false,
                 "style": "plain",
                 "toggle_align": "right",
                 "toggle_animation": "none",
@@ -4190,6 +4776,51 @@
                     "key": "divider",
                     "type": "boolean",
                     "label": "Divider between items",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "numbered",
+                    "type": "boolean",
+                    "label": "Number the links",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "descriptions",
+                    "type": "boolean",
+                    "label": "Show each link's description",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "arrow",
+                    "type": "boolean",
+                    "label": "Arrow on the hovered link",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Columns (vertical menu)",
+                    "required": false,
+                    "default": 1,
+                    "min": 1,
+                    "max": 3,
+                    "integer_only": true
+                },
+                {
+                    "key": "preview",
+                    "type": "boolean",
+                    "label": "Show the hovered link's image",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "reveal",
+                    "type": "boolean",
+                    "label": "Links rise in when the menu opens",
                     "required": false,
                     "default": false
                 },
@@ -4322,6 +4953,21 @@
                             "max_length": 1000
                         },
                         {
+                            "key": "description",
+                            "type": "string",
+                            "label": "Description",
+                            "required": false,
+                            "default": "",
+                            "max_length": 160
+                        },
+                        {
+                            "key": "image",
+                            "type": "media_ref",
+                            "label": "Preview image",
+                            "required": false,
+                            "default": null
+                        },
+                        {
                             "key": "children",
                             "type": "repeater",
                             "label": "Submenu links",
@@ -4428,6 +5074,26 @@
                 {
                     "key": "cta",
                     "label": "Open menu button"
+                },
+                {
+                    "key": "number",
+                    "label": "Link numbers"
+                },
+                {
+                    "key": "description",
+                    "label": "Link descriptions"
+                },
+                {
+                    "key": "arrow",
+                    "label": "Link arrow"
+                },
+                {
+                    "key": "preview",
+                    "label": "Preview image"
+                },
+                {
+                    "key": "caption",
+                    "label": "Preview caption"
                 }
             ],
             "title": "Nav menu",
@@ -4457,6 +5123,7 @@
                         "value": 70
                     }
                 ],
+                "layout": "stacked",
                 "show_value": true,
                 "track_color": ""
             },
@@ -4499,6 +5166,14 @@
                             "default": 0.0,
                             "min": 0,
                             "max": 100
+                        },
+                        {
+                            "key": "note",
+                            "type": "string",
+                            "label": "Shown value (instead of the %)",
+                            "required": false,
+                            "default": "",
+                            "max_length": 20
                         }
                     ]
                 },
@@ -4508,6 +5183,17 @@
                     "label": "Show the value",
                     "required": false,
                     "default": true
+                },
+                {
+                    "key": "layout",
+                    "type": "enum",
+                    "label": "Layout",
+                    "required": false,
+                    "default": "stacked",
+                    "allowed_values": [
+                        "stacked",
+                        "inline"
+                    ]
                 },
                 {
                     "key": "bar_color",
@@ -4596,10 +5282,16 @@
                 "content_type": "",
                 "empty_message": "No posts found.",
                 "enable_pagination": true,
+                "featured_only": false,
+                "filter_all_label": "All",
+                "filter_counts": true,
+                "filter_field": "",
                 "gap": "md",
                 "loop_template": "",
+                "open_in": "page",
                 "order": "desc",
                 "order_by": "published_at",
+                "pagination_style": "simple",
                 "per_page": 6,
                 "read_more_text": "Read More",
                 "show_author": true,
@@ -4688,8 +5380,15 @@
                     "required": false,
                     "default": 6,
                     "min": 1,
-                    "max": 24,
+                    "max": 48,
                     "integer_only": true
+                },
+                {
+                    "key": "featured_only",
+                    "type": "boolean",
+                    "label": "Featured items only",
+                    "required": false,
+                    "default": false
                 },
                 {
                     "key": "columns",
@@ -4793,6 +5492,51 @@
                     "label": "Pagination",
                     "required": false,
                     "default": true
+                },
+                {
+                    "key": "pagination_style",
+                    "type": "enum",
+                    "label": "Pager",
+                    "required": false,
+                    "default": "simple",
+                    "allowed_values": [
+                        "simple",
+                        "numbers"
+                    ]
+                },
+                {
+                    "key": "filter_field",
+                    "type": "string",
+                    "label": "Filter chips (a Taxonomy field key, or category)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64
+                },
+                {
+                    "key": "filter_all_label",
+                    "type": "string",
+                    "label": "First chip",
+                    "required": false,
+                    "default": "All",
+                    "max_length": 40
+                },
+                {
+                    "key": "filter_counts",
+                    "type": "boolean",
+                    "label": "Show counts on the chips",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "open_in",
+                    "type": "enum",
+                    "label": "Open items",
+                    "required": false,
+                    "default": "page",
+                    "allowed_values": [
+                        "page",
+                        "dialog"
+                    ]
                 },
                 {
                     "key": "loop_template",
@@ -5607,6 +6351,537 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "clamp_lines": 6,
+                "columns": 3,
+                "columns_mobile": 1,
+                "columns_tablet": 2,
+                "content_type": "",
+                "count_label": "{from}–{to} of {total} reviews",
+                "date_field": "",
+                "highlight_first": true,
+                "items": [
+                    {
+                        "date": "2 months ago",
+                        "meta": "United States",
+                        "name": "Jordan",
+                        "rating": 5,
+                        "text": "Clear, quick and easy to work with. The new site brings us calls every week."
+                    },
+                    {
+                        "date": "5 months ago",
+                        "meta": "Belgium",
+                        "name": "Camille",
+                        "rating": 5,
+                        "text": "He understood what we needed at once and delivered ahead of time."
+                    },
+                    {
+                        "date": "1 year ago",
+                        "meta": "United Kingdom",
+                        "name": "Sam",
+                        "rating": 5,
+                        "text": "Great communication from start to finish. I would hire him again."
+                    }
+                ],
+                "layout": "grid",
+                "limit": 60,
+                "max_length": 0,
+                "meta_fields": "country",
+                "min_length": 0,
+                "order": "newest",
+                "per_page": 6,
+                "per_page_mobile": 3,
+                "per_page_tablet": 4,
+                "photo_field": "",
+                "rating_field": "rating",
+                "read_more_label": "Read full review",
+                "show_avatar": true,
+                "show_date": true,
+                "show_meta": true,
+                "show_name": true,
+                "show_progress": true,
+                "show_quote": true,
+                "show_stars": true,
+                "source": "items",
+                "source_note": "",
+                "text_field": "text",
+                "ticker_rows": 2,
+                "ticker_speed": 3
+            },
+            "description": "Reviews in a grid that pages like a carousel, from a content type or typed in",
+            "field_schema": [
+                {
+                    "key": "source",
+                    "type": "enum",
+                    "label": "Testimonials from",
+                    "required": false,
+                    "default": "items",
+                    "allowed_values": [
+                        "items",
+                        "content_type"
+                    ]
+                },
+                {
+                    "key": "content_type",
+                    "type": "string",
+                    "label": "Content type",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40
+                },
+                {
+                    "key": "text_field",
+                    "type": "string",
+                    "label": "Review text field",
+                    "required": false,
+                    "default": "text",
+                    "max_length": 64
+                },
+                {
+                    "key": "rating_field",
+                    "type": "string",
+                    "label": "Rating field (0 to 5)",
+                    "required": false,
+                    "default": "rating",
+                    "max_length": 64
+                },
+                {
+                    "key": "meta_fields",
+                    "type": "string",
+                    "label": "Detail fields under the name (comma-separated)",
+                    "required": false,
+                    "default": "country",
+                    "max_length": 200
+                },
+                {
+                    "key": "date_field",
+                    "type": "string",
+                    "label": "Date field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64
+                },
+                {
+                    "key": "photo_field",
+                    "type": "string",
+                    "label": "Photo field (initials without one)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64
+                },
+                {
+                    "key": "order",
+                    "type": "enum",
+                    "label": "Order",
+                    "required": false,
+                    "default": "newest",
+                    "allowed_values": [
+                        "newest",
+                        "oldest",
+                        "title",
+                        "longest"
+                    ]
+                },
+                {
+                    "key": "min_length",
+                    "type": "number",
+                    "label": "Only reviews at least this long (characters)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2000,
+                    "integer_only": true
+                },
+                {
+                    "key": "max_length",
+                    "type": "number",
+                    "label": "Only reviews at most this long (characters, 0 = any)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2000,
+                    "integer_only": true
+                },
+                {
+                    "key": "limit",
+                    "type": "number",
+                    "label": "Most reviews shown",
+                    "required": false,
+                    "default": 60,
+                    "min": 1,
+                    "max": 200,
+                    "integer_only": true
+                },
+                {
+                    "key": "items",
+                    "type": "repeater",
+                    "label": "Testimonials (when typed in)",
+                    "required": false,
+                    "default": [
+                        {
+                            "name": "Jordan",
+                            "text": "Clear, quick and easy to work with. The new site brings us calls every week.",
+                            "rating": 5,
+                            "meta": "United States",
+                            "date": "2 months ago"
+                        },
+                        {
+                            "name": "Camille",
+                            "text": "He understood what we needed at once and delivered ahead of time.",
+                            "rating": 5,
+                            "meta": "Belgium",
+                            "date": "5 months ago"
+                        },
+                        {
+                            "name": "Sam",
+                            "text": "Great communication from start to finish. I would hire him again.",
+                            "rating": 5,
+                            "meta": "United Kingdom",
+                            "date": "1 year ago"
+                        }
+                    ],
+                    "max_items": 60,
+                    "item_schema": [
+                        {
+                            "key": "name",
+                            "type": "string",
+                            "label": "Name",
+                            "required": true,
+                            "default": "",
+                            "max_length": 80
+                        },
+                        {
+                            "key": "text",
+                            "type": "text",
+                            "label": "Review",
+                            "required": true,
+                            "default": "",
+                            "max_length": 3000
+                        },
+                        {
+                            "key": "rating",
+                            "type": "number",
+                            "label": "Stars",
+                            "required": false,
+                            "default": 5,
+                            "min": 0,
+                            "max": 5
+                        },
+                        {
+                            "key": "meta",
+                            "type": "string",
+                            "label": "Details",
+                            "required": false,
+                            "default": "",
+                            "max_length": 120
+                        },
+                        {
+                            "key": "date",
+                            "type": "string",
+                            "label": "Date",
+                            "required": false,
+                            "default": "",
+                            "max_length": 40
+                        },
+                        {
+                            "key": "photo",
+                            "type": "media_ref",
+                            "label": "Photo",
+                            "required": false,
+                            "default": null
+                        }
+                    ]
+                },
+                {
+                    "key": "layout",
+                    "type": "enum",
+                    "label": "Layout",
+                    "required": false,
+                    "default": "grid",
+                    "allowed_values": [
+                        "grid",
+                        "ticker"
+                    ]
+                },
+                {
+                    "key": "ticker_rows",
+                    "type": "number",
+                    "label": "Ticker rows",
+                    "required": false,
+                    "default": 2,
+                    "min": 1,
+                    "max": 4,
+                    "integer_only": true
+                },
+                {
+                    "key": "ticker_speed",
+                    "type": "number",
+                    "label": "Ticker speed",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 10,
+                    "integer_only": true
+                },
+                {
+                    "key": "per_page",
+                    "type": "number",
+                    "label": "Per page",
+                    "required": false,
+                    "default": 6,
+                    "min": 1,
+                    "max": 24,
+                    "integer_only": true
+                },
+                {
+                    "key": "per_page_tablet",
+                    "type": "number",
+                    "label": "Per page on a tablet",
+                    "required": false,
+                    "default": 4,
+                    "min": 1,
+                    "max": 24,
+                    "integer_only": true
+                },
+                {
+                    "key": "per_page_mobile",
+                    "type": "number",
+                    "label": "Per page on a phone",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 24,
+                    "integer_only": true
+                },
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Columns",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 4,
+                    "integer_only": true
+                },
+                {
+                    "key": "columns_tablet",
+                    "type": "number",
+                    "label": "Columns on a tablet",
+                    "required": false,
+                    "default": 2,
+                    "min": 1,
+                    "max": 4,
+                    "integer_only": true
+                },
+                {
+                    "key": "columns_mobile",
+                    "type": "number",
+                    "label": "Columns on a phone",
+                    "required": false,
+                    "default": 1,
+                    "min": 1,
+                    "max": 2,
+                    "integer_only": true
+                },
+                {
+                    "key": "clamp_lines",
+                    "type": "number",
+                    "label": "Lines before \"read full review\" (0 = all)",
+                    "required": false,
+                    "default": 6,
+                    "min": 0,
+                    "max": 20,
+                    "integer_only": true
+                },
+                {
+                    "key": "count_label",
+                    "type": "string",
+                    "label": "Count text ({from}, {to} and {total} fill in)",
+                    "required": false,
+                    "default": "{from}–{to} of {total} reviews",
+                    "max_length": 80
+                },
+                {
+                    "key": "read_more_label",
+                    "type": "string",
+                    "label": "Read more text",
+                    "required": false,
+                    "default": "Read full review",
+                    "max_length": 40
+                },
+                {
+                    "key": "source_note",
+                    "type": "string",
+                    "label": "Note after the name in the full review (e.g. on Fiverr)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "show_quote",
+                    "type": "boolean",
+                    "label": "Quote mark",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_stars",
+                    "type": "boolean",
+                    "label": "Stars",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_avatar",
+                    "type": "boolean",
+                    "label": "Avatar",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_name",
+                    "type": "boolean",
+                    "label": "Name",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_meta",
+                    "type": "boolean",
+                    "label": "Details under the name",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_date",
+                    "type": "boolean",
+                    "label": "Date",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_progress",
+                    "type": "boolean",
+                    "label": "Progress line under the grid",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "highlight_first",
+                    "type": "boolean",
+                    "label": "First card of each page stands out",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "quotes",
+            "inline_text": [],
+            "label": "Testimonial grid",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "count",
+                    "label": "Count"
+                },
+                {
+                    "key": "arrows",
+                    "label": "Arrows"
+                },
+                {
+                    "key": "pages",
+                    "label": "Page numbers"
+                },
+                {
+                    "key": "page_current",
+                    "label": "Current page number",
+                    "states": false
+                },
+                {
+                    "key": "card",
+                    "label": "Cards"
+                },
+                {
+                    "key": "featured",
+                    "label": "Standout card"
+                },
+                {
+                    "key": "quote",
+                    "label": "Quote mark"
+                },
+                {
+                    "key": "stars",
+                    "label": "Stars"
+                },
+                {
+                    "key": "text",
+                    "label": "Review text"
+                },
+                {
+                    "key": "more",
+                    "label": "Read more"
+                },
+                {
+                    "key": "footer",
+                    "label": "Reviewer row"
+                },
+                {
+                    "key": "avatar",
+                    "label": "Avatar"
+                },
+                {
+                    "key": "name",
+                    "label": "Name"
+                },
+                {
+                    "key": "meta",
+                    "label": "Details"
+                },
+                {
+                    "key": "progress",
+                    "label": "Progress line"
+                },
+                {
+                    "key": "dialog",
+                    "label": "Full review dialog",
+                    "states": false
+                }
+            ],
+            "title": "Testimonial grid",
+            "type": "core.testimonial_grid",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "content.posts",
                 "content.authors",
@@ -6164,7 +7439,9 @@
             "binding_slots": [],
             "category": "layout",
             "default_props": {
-                "allow_multiple": false
+                "allow_multiple": false,
+                "icon": "chevron",
+                "look": "boxed"
             },
             "description": "Rows that open and close, with any blocks inside",
             "field_schema": [
@@ -6174,6 +7451,28 @@
                     "label": "Allow several rows open at once",
                     "required": false,
                     "default": false
+                },
+                {
+                    "key": "look",
+                    "type": "enum",
+                    "label": "Rows look",
+                    "required": false,
+                    "default": "boxed",
+                    "allowed_values": [
+                        "boxed",
+                        "lines"
+                    ]
+                },
+                {
+                    "key": "icon",
+                    "type": "enum",
+                    "label": "Open icon",
+                    "required": false,
+                    "default": "chevron",
+                    "allowed_values": [
+                        "chevron",
+                        "plus"
+                    ]
                 }
             ],
             "icon": "list-check",
@@ -6658,6 +7957,7 @@
             "default_props": {
                 "align": "left",
                 "aria_label": "Menu",
+                "panel_look": "solid",
                 "panel_width": "content",
                 "pointer": "none",
                 "pointer_animation": "fade",
@@ -6703,6 +8003,17 @@
                     "allowed_values": [
                         "full",
                         "content"
+                    ]
+                },
+                {
+                    "key": "panel_look",
+                    "type": "enum",
+                    "label": "Panel look",
+                    "required": false,
+                    "default": "solid",
+                    "allowed_values": [
+                        "solid",
+                        "glass"
                     ]
                 },
                 {
@@ -6914,6 +8225,7 @@
             "binding_slots": [],
             "category": "layout",
             "default_props": {
+                "close_text": "",
                 "drawer_id": "drawer-1",
                 "position": "right",
                 "title": "Menu",
@@ -6921,6 +8233,7 @@
                 "trigger_icon_size": 24,
                 "trigger_show_text": true,
                 "trigger_text": "Open Menu",
+                "trigger_text_mobile": true,
                 "trigger_variant": "outline"
             },
             "description": "Slide-out navigation drawer",
@@ -6951,8 +8264,17 @@
                         "left",
                         "right",
                         "top",
-                        "bottom"
+                        "bottom",
+                        "fullscreen"
                     ]
+                },
+                {
+                    "key": "close_text",
+                    "type": "string",
+                    "label": "Close button text",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40
                 },
                 {
                     "key": "trigger_text",
@@ -6999,6 +8321,13 @@
                     "key": "trigger_show_text",
                     "type": "boolean",
                     "label": "Show the trigger text",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "trigger_text_mobile",
+                    "type": "boolean",
+                    "label": "Show the trigger text on phones",
                     "required": false,
                     "default": true
                 }
@@ -7138,6 +8467,7 @@
             "default_props": {
                 "aria_label": "",
                 "autoplay_ms": 0,
+                "look": "tabs",
                 "pause_on_hover": true,
                 "position": "top"
             },
@@ -7152,6 +8482,17 @@
                     "allowed_values": [
                         "top",
                         "left"
+                    ]
+                },
+                {
+                    "key": "look",
+                    "type": "enum",
+                    "label": "Tabs look",
+                    "required": false,
+                    "default": "tabs",
+                    "allowed_values": [
+                        "tabs",
+                        "list"
                     ]
                 },
                 {
@@ -9468,12 +10809,22 @@
             "binding_slots": [],
             "category": "theme",
             "default_props": {
+                "after": "",
+                "alt_field": "",
+                "before": "",
+                "bg_field": "",
                 "fallback": "",
                 "field": "",
                 "fit": "auto",
+                "link_arrow": false,
+                "link_text": "",
                 "link_to_post": false,
+                "list_style": "list",
+                "priority": false,
                 "show_label": false,
-                "tag": "div"
+                "tag": "div",
+                "ticker_speed": 3,
+                "url_label": "full"
             },
             "description": "A custom field of this page",
             "field_schema": [
@@ -9534,6 +10885,96 @@
                         "cover",
                         "contain"
                     ]
+                },
+                {
+                    "key": "before",
+                    "type": "string",
+                    "label": "Text before the value",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "after",
+                    "type": "string",
+                    "label": "Text after the value",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "list_style",
+                    "type": "enum",
+                    "label": "A list shows as",
+                    "required": false,
+                    "default": "list",
+                    "allowed_values": [
+                        "list",
+                        "chips",
+                        "ticker"
+                    ]
+                },
+                {
+                    "key": "ticker_speed",
+                    "type": "number",
+                    "label": "Ticker speed",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 10,
+                    "integer_only": true
+                },
+                {
+                    "key": "url_label",
+                    "type": "enum",
+                    "label": "A web address shows as",
+                    "required": false,
+                    "default": "full",
+                    "allowed_values": [
+                        "full",
+                        "domain",
+                        "text"
+                    ]
+                },
+                {
+                    "key": "link_text",
+                    "type": "string",
+                    "label": "Link text",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                },
+                {
+                    "key": "link_arrow",
+                    "type": "boolean",
+                    "label": "Arrow after the link",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "alt_field",
+                    "type": "string",
+                    "label": "Image description from field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
+                },
+                {
+                    "key": "priority",
+                    "type": "boolean",
+                    "label": "Load First (main picture)",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "bg_field",
+                    "type": "string",
+                    "label": "Background colour from field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
                 }
             ],
             "icon": "list-check",
@@ -9582,6 +11023,22 @@
                 {
                     "key": "list",
                     "label": "Lists"
+                },
+                {
+                    "key": "chip",
+                    "label": "Chips"
+                },
+                {
+                    "key": "link",
+                    "label": "Link"
+                },
+                {
+                    "key": "image",
+                    "label": "Image"
+                },
+                {
+                    "key": "affix",
+                    "label": "Text before and after"
                 }
             ],
             "title": "Field value",
@@ -9999,6 +11456,8 @@
                 "body_field": "",
                 "display": "list",
                 "field": "",
+                "icon": "chevron",
+                "look": "boxed",
                 "title_field": ""
             },
             "description": "The rows of a repeater field",
@@ -10047,6 +11506,28 @@
                     "label": "Allow several open",
                     "required": false,
                     "default": false
+                },
+                {
+                    "key": "look",
+                    "type": "enum",
+                    "label": "Rows look",
+                    "required": false,
+                    "default": "boxed",
+                    "allowed_values": [
+                        "boxed",
+                        "lines"
+                    ]
+                },
+                {
+                    "key": "icon",
+                    "type": "enum",
+                    "label": "Open icon",
+                    "required": false,
+                    "default": "chevron",
+                    "allowed_values": [
+                        "chevron",
+                        "plus"
+                    ]
                 }
             ],
             "icon": "list-check",

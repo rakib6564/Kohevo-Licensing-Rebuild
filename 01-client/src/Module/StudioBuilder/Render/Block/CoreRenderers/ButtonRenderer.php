@@ -58,7 +58,20 @@ final class ButtonRenderer implements BlockRendererInterface
         }
         $sizeClass = $size !== 'md' ? ' sb-button--' . $size : '';
         $class = 'sb-button sb-button--' . $variant . $sizeClass . ($scope->bool('full_width') ? ' sb-button--full' : '');
-        return '<p class="sb-button-row">' . Html::link($link, $class, $this->withIcon($scope, (string) ($link['label'] ?? ''))) . '</p>';
+        $label = $this->withIcon($scope, (string) ($link['label'] ?? ''));
+        $copy = trim($scope->string('copy_text'));
+        if ($copy !== '') {
+            // Copy to clipboard (studio-runtime.js): the button keeps its link, which is what a visitor without script gets.
+            $attrs = ' data-sb-copy="' . Html::e($copy) . '" data-sb-copied="' . Html::e(trim($scope->string('copied_label', 'Copied')) ?: 'Copied') . '"';
+            $html = Html::link($link, $class, $label);
+            if (str_starts_with($html, '<a ')) {
+                return '<p class="sb-button-row">' . '<a' . $attrs . substr($html, 2) . '</p>';
+            }
+            // No address: a real button, which only copies.
+            $text = $label ?? Html::e((string) ($link['label'] ?? ''));
+            return '<p class="sb-button-row"><button type="button" class="' . $class . '"' . $attrs . '>' . $text . '</button></p>';
+        }
+        return '<p class="sb-button-row">' . Html::link($link, $class, $label) . '</p>';
     }
 
     /** The label with its icon before or after it, `$spacing` px apart; null (the plain label) without an icon. */

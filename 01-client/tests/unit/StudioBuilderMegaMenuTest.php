@@ -96,3 +96,27 @@ unit('mega menu: the stylesheet, parts and runtime carry it', function (): void 
     assert_true(str_contains($js, "['megaMenus', initMegaMenus]"));
     assert_true(str_contains($js, "nav.classList.contains('sb-nav--menu-fullscreen')"), 'a full-screen menu holds focus like a side panel');
 });
+
+unit('mega menu: glass panels are see-through and blur what is behind them; solid is the default, and folded they are plain rows', function (): void {
+    assert_false(str_contains(sbmm_menu(['toggle_breakpoint' => 'none']), 'sb-nav--mega-glass'), 'solid unless chosen');
+    assert_true(str_contains(sbmm_menu(['toggle_breakpoint' => 'none', 'panel_look' => 'glass']), 'sb-nav--mega-glass'));
+    assert_false(str_contains(sbmm_menu(['panel_look' => 'frosted']), 'sb-nav--mega-glass'), 'an unknown look is solid');
+    assert_false(ModuleBlockDefinitions::studioRegistry()->get('layout.mega_menu')->validateProps(['panel_look' => 'frosted'])->isValid());
+    $css = StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-nav--mega-glass>.sb-nav__list>.sb-nav__item>.sb-nav__mega{background:var(--sb-mega-glass,'), 'the tint is a variable a site can change');
+    assert_true(str_contains($css, 'backdrop-filter:blur(24px)'));
+    assert_true(str_contains($css, '.sb-nav--mega-glass .sb-nav__list>.sb-nav__item>.sb-nav__mega{background:none;-webkit-backdrop-filter:none;backdrop-filter:none}'), 'folded rows are not glass');
+});
+
+unit('mega menu: the hover bridge under the row fills only the gap to the panel, so it never covers the other links', function (): void {
+    assert_true(str_contains(StudioStylesheet::css(), '.sb-nav--mega .sb-nav__mega::before{top:calc(-1 * var(--sb-mega-bridge,3rem));height:var(--sb-mega-bridge,3rem)}'));
+    $js = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/assets/public/studio-runtime.js');
+    assert_true(str_contains($js, "nav.style.setProperty('--sb-mega-bridge', Math.max(0, bottom - rect.bottom) + 'px')"));
+    assert_true(str_contains($js, "['--sb-mega-top', '--sb-mega-bridge', '--sb-mega-left', '--sb-mega-vw']"), 'removed again on teardown');
+});
+
+unit('images: a corner radius on an Image or Featured image block rounds the picture itself, not only the block box', function (): void {
+    $css = StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-block--core-image>.sb-image,.sb-block--core-image>.sb-image>img,.sb-block--core-image>.sb-image>.sb-image__link,.sb-block--core-image>.sb-image>.sb-image__link>img{border-radius:inherit}'));
+    assert_true(str_contains($css, '.sb-block--theme-post-image>.sb-post-image,.sb-block--theme-post-image>.sb-post-image>a,.sb-block--theme-post-image>.sb-post-image img{border-radius:inherit}'));
+});

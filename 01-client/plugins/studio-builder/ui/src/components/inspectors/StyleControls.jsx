@@ -459,23 +459,39 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
           )}
           {moreTypo && (
             <>
-            <DraftText
-              id={`${id}-lh`}
-              kind="lineHeight"
-              label={t('line_height')}
-              value={typo.line_height}
-              placeholder="1.5"
-              onCommit={(v) => patchNested('typography', 'line_height', v)}
-            />
-            <DraftText
-              id={`${id}-ls`}
-              kind="letterSpacing"
-              label={t('letter_spacing')}
-              value={typo.letter_spacing}
-              units={['px', 'em', 'rem']}
-              placeholder="-0.01em"
-              onCommit={(v) => patchNested('typography', 'letter_spacing', v)}
-            />
+            {deviceScope ? (
+              // Line height and letter spacing can differ per device too: a big heading needs looser tracking on a phone.
+              <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.tracking} label={t('line_height')}>
+                {(view) => (
+                  <>
+                    <DraftText id={`${id}-lh`} kind="lineHeight" label={t('line_height')} value={asObject(view.style.typography).line_height} placeholder="1.5"
+                      onCommit={(v) => view.onChange(setPath(view.style, 'typography.line_height', v))} />
+                    <DraftText id={`${id}-ls`} kind="letterSpacing" label={t('letter_spacing')} value={asObject(view.style.typography).letter_spacing} units={['px', 'em', 'rem']} placeholder="-0.01em"
+                      onCommit={(v) => view.onChange(setPath(view.style, 'typography.letter_spacing', v))} />
+                  </>
+                )}
+              </DeviceStyle>
+            ) : (
+              <>
+                <DraftText
+                  id={`${id}-lh`}
+                  kind="lineHeight"
+                  label={t('line_height')}
+                  value={typo.line_height}
+                  placeholder="1.5"
+                  onCommit={(v) => patchNested('typography', 'line_height', v)}
+                />
+                <DraftText
+                  id={`${id}-ls`}
+                  kind="letterSpacing"
+                  label={t('letter_spacing')}
+                  value={typo.letter_spacing}
+                  units={['px', 'em', 'rem']}
+                  placeholder="-0.01em"
+                  onCommit={(v) => patchNested('typography', 'letter_spacing', v)}
+                />
+              </>
+            )}
             <DraftText
               id={`${id}-ff`}
               kind="fontFamily"

@@ -62,6 +62,21 @@ final class AccordionRenderer implements BlockRendererInterface
      *
      * @param list<array{heading: string, body: string}> $items `body` is ready HTML
      */
+    /**
+     * The look an accordion widget asks for: `lines` (rows divided by a line, no box) and a `plus` that turns to a cross
+     * when open, instead of the boxed rows and the chevron. Shared by every accordion (Accordion, Accordion rows, a
+     * Repeater shown as an accordion).
+     *
+     * @return list<string>
+     */
+    public static function lookClasses(BlockRenderScope $scope): array
+    {
+        return array_values(array_filter([
+            $scope->string('look', 'boxed') === 'lines' ? 'sb-accordion-block--lines' : '',
+            $scope->string('icon', 'chevron') === 'plus' ? 'sb-accordion-block--plus' : '',
+        ]));
+    }
+
     public static function markup(BlockRenderScope $scope, array $items, bool $multiple): string
     {
         $rows = '';
@@ -107,7 +122,7 @@ final class AccordionRenderer implements BlockRendererInterface
         }
 
         return '<div'
-            . Html::classAttr(['sb-accordion-block'])
+            . Html::classAttr(['sb-accordion-block', ...self::lookClasses($scope)])
             . ' data-sb-accordion'
             . ($multiple ? ' data-sb-allow-multiple' : '')
             . '>'
