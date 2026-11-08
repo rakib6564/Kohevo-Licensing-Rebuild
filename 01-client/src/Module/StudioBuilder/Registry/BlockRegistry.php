@@ -739,7 +739,8 @@ final class BlockRegistry
             schema: FieldSchema::define([
                 ['key' => 'drawer_id', 'type' => 'string', 'label' => 'Drawer ID', 'required' => false, 'default' => 'drawer-1', 'max_length' => 64],
                 ['key' => 'title', 'type' => 'string', 'label' => 'Drawer Title', 'required' => false, 'default' => 'Menu', 'max_length' => 255],
-                ['key' => 'position', 'type' => 'enum', 'label' => 'Drawer Position', 'required' => false, 'allowed_values' => ['left', 'right', 'top', 'bottom'], 'default' => 'right'],
+                ['key' => 'position', 'type' => 'enum', 'label' => 'Drawer Position', 'required' => false, 'allowed_values' => ['left', 'right', 'top', 'bottom', 'fullscreen'], 'default' => 'right'],
+                ['key' => 'close_text', 'type' => 'string', 'label' => 'Close button text', 'required' => false, 'default' => '', 'max_length' => 40],
                 ['key' => 'trigger_text', 'type' => 'string', 'label' => 'Trigger Button Text', 'required' => false, 'default' => 'Open Menu', 'max_length' => 100],
                 ['key' => 'trigger_variant', 'type' => 'enum', 'label' => 'Trigger Variant', 'required' => false, 'allowed_values' => ['primary', 'secondary', 'outline', 'ghost', 'plain'], 'default' => 'outline'],
                 ['key' => 'trigger_icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Trigger Icon', 'required' => false, 'default' => 'none'],
@@ -1302,6 +1303,13 @@ final class BlockRegistry
                 ['key' => 'pointer_animation', 'type' => 'enum', 'label' => 'Pointer animation', 'required' => false, 'allowed_values' => ['none', 'fade', 'slide', 'grow'], 'default' => 'fade'],
                 ['key' => 'pointer_color', 'type' => 'token_ref', 'label' => 'Pointer colour', 'required' => false, 'default' => null],
                 ['key' => 'divider', 'type' => 'boolean', 'label' => 'Divider between items', 'required' => false, 'default' => false],
+                // A big menu, such as a full-screen one: numbers, a line under each link, columns and a picture of the hovered link.
+                ['key' => 'numbered', 'type' => 'boolean', 'label' => 'Number the links', 'required' => false, 'default' => false],
+                ['key' => 'descriptions', 'type' => 'boolean', 'label' => 'Show each link\'s description', 'required' => false, 'default' => false],
+                ['key' => 'arrow', 'type' => 'boolean', 'label' => 'Arrow on the hovered link', 'required' => false, 'default' => false],
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns (vertical menu)', 'required' => false, 'default' => 1, 'min' => 1, 'max' => 3, 'integer_only' => true],
+                ['key' => 'preview', 'type' => 'boolean', 'label' => 'Show the hovered link\'s image', 'required' => false, 'default' => false],
+                ['key' => 'reveal', 'type' => 'boolean', 'label' => 'Links rise in when the menu opens', 'required' => false, 'default' => false],
                 ...self::menuToggleFields('none'),
                 [
                     'key'         => 'items',
@@ -1313,6 +1321,8 @@ final class BlockRegistry
                     'item_schema' => FieldSchema::define([
                         ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => true, 'max_length' => 80],
                         ['key' => 'url', 'type' => 'url', 'label' => 'URL', 'required' => true, 'max_length' => 1000],
+                        ['key' => 'description', 'type' => 'string', 'label' => 'Description', 'required' => false, 'default' => '', 'max_length' => 160],
+                        ['key' => 'image', 'type' => 'media_ref', 'label' => 'Preview image', 'required' => false, 'default' => null],
                         [
                             'key'         => 'children',
                             'type'        => 'repeater',
@@ -1525,6 +1535,9 @@ final class BlockRegistry
                 ['key' => 'launcher_label', 'type' => 'string', 'label' => 'Button text', 'required' => false, 'default' => 'Message me', 'max_length' => 40],
                 ['key' => 'launcher_icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Button icon', 'required' => false, 'default' => 'message-circle'],
                 ['key' => 'position', 'type' => 'enum', 'label' => 'Corner', 'required' => false, 'allowed_values' => MessageWidgetRenderer::POSITIONS, 'default' => 'right'],
+                ['key' => 'launcher_photo', 'type' => 'boolean', 'label' => 'Photo on the button', 'required' => false, 'default' => false],
+                ['key' => 'launcher_lines', 'type' => 'text', 'label' => 'Lines under the button text (one per line; {status} and {time} fill in)', 'required' => false, 'default' => '', 'max_length' => 400],
+                ['key' => 'compact_on_scroll', 'type' => 'boolean', 'label' => 'Shrink to the photo or icon while scrolling down', 'required' => false, 'default' => false],
                 ['key' => 'title', 'type' => 'string', 'label' => 'Panel title', 'required' => false, 'default' => 'Let’s talk', 'max_length' => 80],
                 ['key' => 'name', 'type' => 'string', 'label' => 'Who answers', 'required' => false, 'default' => '', 'max_length' => 60],
                 ['key' => 'avatar', 'type' => 'media_ref', 'label' => 'Photo', 'required' => false, 'default' => null],

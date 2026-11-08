@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '73';
+    public const VERSION = '74';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -589,6 +589,16 @@ final class StudioStylesheet
             . '.sb-offcanvas__close{background:none;border:none;font-size:1.5rem;text-decoration:none;cursor:pointer;line-height:1;color:#6b7280}'
             . '.sb-offcanvas__body{padding:1.25rem;flex:1;overflow-y:auto}'
             . '.sb-offcanvas__header--bare{justify-content:flex-end;border-bottom:0;padding-bottom:0}'
+            // Full screen: the panel covers the window and fades in; its close button sits in the top corner, beside the
+            // first row of the drawer's own blocks (a logo, say), as a page's header would.
+            . '@keyframes sb-oc-fade{from{opacity:0}}'
+            . '.sb-offcanvas--fullscreen .sb-offcanvas__backdrop{display:none}'
+            . '.sb-offcanvas--fullscreen .sb-offcanvas__panel{inset:0;width:auto;max-width:none;box-shadow:none;animation:sb-oc-fade .3s ease}'
+            . '.sb-offcanvas--fullscreen .sb-offcanvas__header{position:absolute;top:0;right:0;z-index:1;border-bottom:0}'
+            . '.sb-offcanvas--fullscreen .sb-offcanvas__body{display:flex;flex-direction:column}'
+            . '.sb-offcanvas__close--text{display:inline-flex;align-items:center;gap:.5rem;font-size:.875rem;line-height:1;padding:.6rem 1rem;border-radius:999px;color:inherit}'
+            . '.sb-offcanvas__close--text svg{flex:none}'
+            . '@media (prefers-reduced-motion:reduce){.sb-offcanvas--fullscreen .sb-offcanvas__panel{animation:none}}'
             // The drawer trigger: an icon (a hamburger) with or without its text; `plain` drops the button chrome.
             . '.sb-offcanvas-trigger--icon{display:inline-flex;align-items:center;gap:.5rem;line-height:1}'
             . '.sb-offcanvas-trigger__icon{flex:none;display:block}'
@@ -860,6 +870,27 @@ final class StudioStylesheet
             . '.sb-nav--open-slide .sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list{animation:sb-nav-slide .25s ease}'
             . '@media (prefers-reduced-motion:reduce){[class*="sb-nav--open-"] .sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list{animation:none}}';
 
+        // A big menu (a full-screen one): numbers, descriptions, an arrow, columns, a preview picture, links that rise in.
+        $big = '.sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)';
+        $css .= $big . ':has(>.sb-nav__text){display:flex;align-items:center;gap:1rem}'
+            . '.sb-nav__text{display:flex;flex-direction:column;flex:1;min-width:0}'
+            . '.sb-nav__num{flex:none;min-width:1.75rem;font-size:.72rem;font-weight:500;letter-spacing:.08em;line-height:1;opacity:.55;font-variant-numeric:tabular-nums}'
+            . '.sb-nav__desc{margin-top:.45rem;font-size:.66rem;font-weight:500;letter-spacing:.14em;line-height:1.4;text-transform:uppercase;opacity:.55}'
+            . '.sb-nav__arrow{flex:none;margin-left:auto;font-size:.5em;line-height:1;opacity:0;translate:-.35em .35em;transition:opacity .25s ease,translate .25s ease}'
+            . $big . ':is(:hover,:focus-visible)>.sb-nav__arrow{opacity:1;translate:none}'
+            . '.sb-nav--vertical.sb-nav--cols-2 .sb-nav__list,.sb-nav--vertical.sb-nav--cols-3 .sb-nav__list{display:grid;column-gap:2.5rem}'
+            . '.sb-nav--vertical.sb-nav--cols-2 .sb-nav__list{grid-template-columns:repeat(2,minmax(0,1fr))}.sb-nav--vertical.sb-nav--cols-3 .sb-nav__list{grid-template-columns:repeat(3,minmax(0,1fr))}'
+            . '.sb-nav--preview{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:clamp(1.5rem,4vw,4rem);align-items:start}'
+            . '.sb-nav__preview{display:grid}'
+            . '.sb-nav__shot{grid-area:1/1;margin:0;opacity:0;transition:opacity .35s ease}.sb-nav__shot[data-on]{opacity:1}'
+            . '.sb-nav__shot img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:inherit}'
+            . '.sb-nav__preview{border-radius:14px}.sb-nav__shot{border-radius:inherit}'
+            . '.sb-nav__preview-caption{margin-top:.9rem;font-size:.7rem;font-weight:500;letter-spacing:.14em;text-transform:uppercase;opacity:.6}'
+            . '@media (max-width:767.98px){.sb-nav--vertical:is(.sb-nav--cols-2,.sb-nav--cols-3) .sb-nav__list{grid-template-columns:minmax(0,1fr)}.sb-nav--preview{display:block}.sb-nav__preview{display:none}}'
+            . '@keyframes sb-nav-rise{from{opacity:0;translate:0 1.2rem}}'
+            . ':is(.sb-offcanvas:target,.sb-offcanvas[data-sb-open]) .sb-nav--reveal .sb-nav__list>.sb-nav__item{animation:sb-nav-rise .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(.12s + var(--i,0)*50ms)}'
+            . '@media (prefers-reduced-motion:reduce){.sb-nav__arrow,.sb-nav__shot{transition:none}:is(.sb-offcanvas:target,.sb-offcanvas[data-sb-open]) .sb-nav--reveal .sb-nav__list>.sb-nav__item{animation:none}}';
+
         foreach (['always' => null, 'tablet' => '(max-width:1023.98px)', 'mobile' => '(max-width:767.98px)'] as $when => $query) {
             $rules = self::navFoldedCss('.sb-nav--toggle-' . $when);
             $css .= $query === null ? $rules : '@media ' . $query . '{' . $rules . '}';
@@ -1004,6 +1035,17 @@ final class StudioStylesheet
             . '.sb-msg--right{right:1.25rem}.sb-msg--left{left:1.25rem;align-items:flex-start}'
             . '.sb-msg__launcher{display:inline-flex;align-items:center;gap:.5rem;position:relative;padding:.75rem 1.1rem;border-radius:999px;background:var(--sb-color-accent,#111);color:var(--sb-text-inverse,#fff);text-decoration:none;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.18);transition:transform .2s ease}'
             . '.sb-msg__launcher:hover{transform:translateY(-2px)}'
+            // The button's text column: the label, and the lines that take turns under it (fading between them).
+            . '.sb-msg__launcher-text{display:flex;flex-direction:column;min-width:0;max-width:18rem;line-height:1.2;white-space:nowrap;overflow:hidden;transition:max-width .35s ease,opacity .25s ease}'
+            . '.sb-msg__launcher-sub{font-size:.72rem;font-weight:400;opacity:.65;transition:opacity .3s ease}.sb-msg__launcher-sub[data-fade]{opacity:0}'
+            . '.sb-msg__launcher--photo{padding:.35rem 1.1rem .35rem .35rem;gap:.7rem}'
+            . '.sb-msg__launcher-photo{position:relative;flex:none;display:block;width:44px;height:44px}'
+            . '.sb-msg__launcher-photo img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}'
+            . '.sb-msg__launcher-photo .sb-msg__dot{top:auto;bottom:1px;right:1px}'
+            // Shrunk while the visitor scrolls down: only the photo or icon is left, until they scroll up or open it.
+            . '.sb-msg.is-compact:not(.is-open) .sb-msg__launcher-text{max-width:0;opacity:0}'
+            . '.sb-msg.is-compact:not(.is-open) .sb-msg__launcher{gap:0}'
+            . '.sb-msg.is-compact:not(.is-open) .sb-msg__launcher--photo{padding:.35rem}'
             // The launcher and the close button are links: the site's link colour must not reach them.
             . '.sb-body .sb-msg .sb-msg__launcher[data-sb-msg-open]{color:var(--sb-text-inverse,#fff)}.sb-body .sb-msg .sb-msg__close[data-sb-msg-close]{color:inherit}'
             . '.sb-msg__dot,.sb-msg__status-dot{width:.55rem;height:.55rem;border-radius:50%;background:#9ca3af;flex:none}'
@@ -1055,14 +1097,15 @@ final class StudioStylesheet
             . '.sb-loop-dialog__body[aria-busy="true"]{opacity:.5}'
             . '.sb-local-time{margin:0;font-variant-numeric:tabular-nums}'
             . '.sb-local-time__zone{opacity:.6;font-size:.85em}'
-            . '@media (prefers-reduced-motion:reduce){.sb-msg__panel:not([hidden]){animation:none}.sb-msg__launcher{transition:none}[data-sb-wave-on] .sb-wave__l{animation:none!important}}';
+            . '@media (prefers-reduced-motion:reduce){.sb-msg__panel:not([hidden]){animation:none}.sb-msg__launcher,.sb-msg__launcher-text,.sb-msg__launcher-sub{transition:none}[data-sb-wave-on] .sb-wave__l{animation:none!important}}';
     }
 
     /**
      * The page-level motion of ScrollEffects; studio-runtime.js does the work and these rules only paint its results.
      *
      *  - Page colours: the runtime sets `--sb-paged-bg` / `--sb-paged-fg` (and the matching attribute) on <html> from the
-     *    section in the middle of the screen; the page blends to them. Text set in its own colour keeps it.
+     *    section in the middle of the screen; the page blends to them, and the theme's text, muted, border and accent
+     *    colours follow (pageTokens), so blocks left on theme colours stay readable. Text set in its own colour keeps it.
      *  - Adapt: a node (a header) takes the colours of the section beneath it, set inline by the runtime.
      *  - Progress bar: a span the runtime adds along the node's edge, scaled by `--sb-page-progress` (0 to 1).
      *  - Text: `data-sb-text="lines:…"` holds its text out of sight for at most 1.2s while the runtime splits it into
@@ -1075,13 +1118,36 @@ final class StudioStylesheet
      *  - Glow: a span the runtime adds behind the node's content, lit at the pointer.
      * Reduced motion: no blends, no held text, nothing waits; the runtime starts none of these.
      */
+    /**
+     * The theme colours a page colour stands in for, so a block left on theme colours follows the page:
+     * text sets the heading and body colours, muted the muted text, line the borders, accent the accent.
+     * `$from` is `page` (the section's own, before the runtime runs) or `paged` (the page's, set by the runtime).
+     */
+    private static function pageTokens(string $colour, string $from): string
+    {
+        $tokens = [
+            'fg'     => ['text-heading', 'text-body', 'text-primary'],
+            'muted'  => ['text-muted'],
+            'line'   => ['border-default'],
+            'accent' => ['color-accent', 'text-accent'],
+        ][$colour];
+        return implode(';', array_map(static fn(string $t): string => '--sb-' . $t . ':var(--sb-' . $from . '-' . $colour . ')', $tokens));
+    }
+
     public static function pageMotionCss(): string
     {
         return 'html[data-sb-page-colors] body.sb-body{transition:background-color .6s ease,color .6s ease}'
             // Until the runtime runs (or without it), each themed section paints its own colours, so its text stays readable.
-            . 'html:not([data-sb-ready]) [data-sb-page-colors]{background:var(--sb-page-bg);color:var(--sb-page-fg)}'
+            . 'html:not([data-sb-ready]) [data-sb-page-colors~="bg"]{background:var(--sb-page-bg)}'
+            . 'html:not([data-sb-ready]) [data-sb-page-colors~="fg"]{color:var(--sb-page-fg);' . self::pageTokens('fg', 'page') . '}'
+            . 'html:not([data-sb-ready]) [data-sb-page-colors~="muted"]{' . self::pageTokens('muted', 'page') . '}'
+            . 'html:not([data-sb-ready]) [data-sb-page-colors~="line"]{' . self::pageTokens('line', 'page') . '}'
+            . 'html:not([data-sb-ready]) [data-sb-page-colors~="accent"]{' . self::pageTokens('accent', 'page') . '}'
             . 'html[data-sb-paged-bg] body.sb-body{background:var(--sb-paged-bg)}'
-            . 'html[data-sb-paged-fg] body.sb-body{color:var(--sb-paged-fg);--sb-text-heading:var(--sb-paged-fg);--sb-text-body:var(--sb-paged-fg)}'
+            . 'html[data-sb-paged-fg] body.sb-body{color:var(--sb-paged-fg);' . self::pageTokens('fg', 'paged') . '}'
+            . 'html[data-sb-paged-muted] body.sb-body{' . self::pageTokens('muted', 'paged') . '}'
+            . 'html[data-sb-paged-line] body.sb-body{' . self::pageTokens('line', 'paged') . '}'
+            . 'html[data-sb-paged-accent] body.sb-body{' . self::pageTokens('accent', 'paged') . '}'
             . ':where(.sb-adapt){transition:background-color .4s ease,color .4s ease}'
             . '.sb-progress-bar{position:absolute;left:0;right:0;height:var(--sb-progress-h,3px);background:var(--sb-progress-color,var(--sb-color-accent,currentColor));transform-origin:0 50%;transform:scaleX(var(--sb-page-progress,0));pointer-events:none;z-index:2}'
             . '[data-sb-progress="top"]>.sb-progress-bar{top:0}[data-sb-progress="bottom"]>.sb-progress-bar{bottom:0}'

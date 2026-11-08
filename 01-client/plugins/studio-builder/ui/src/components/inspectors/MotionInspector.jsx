@@ -390,6 +390,9 @@ function PageEffectsGroup({ idPrefix, type, interactions, tokens, onChange }) {
           <SwitchSection id={`${idPrefix}-page-colors`} title={t('page_colors')} value={pageColors} onOff={() => set('page_colors', null)} testId="page-colors">
             <ThemeColor id={`${idPrefix}-page-bg`} label={t('page_colors_background')} value={pageColors && pageColors.background} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), background: v })} />
             <ThemeColor id={`${idPrefix}-page-fg`} label={t('page_colors_text')} value={pageColors && pageColors.text} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), text: v })} />
+            <ThemeColor id={`${idPrefix}-page-muted`} label={t('page_colors_muted')} value={pageColors && pageColors.muted} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), muted: v })} />
+            <ThemeColor id={`${idPrefix}-page-line`} label={t('page_colors_line')} value={pageColors && pageColors.line} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), line: v })} />
+            <ThemeColor id={`${idPrefix}-page-accent`} label={t('page_colors_accent')} value={pageColors && pageColors.accent} tokens={tokens} onChange={(v) => set('page_colors', { ...(pageColors || {}), accent: v })} />
             <p className="sbx-hint">{t('page_colors_hint')}</p>
           </SwitchSection>
           <Check label={t('adapt_colors')} checked={interactions.adapt === true} onChange={(e) => set('adapt', e.target.checked ? true : undefined)} />

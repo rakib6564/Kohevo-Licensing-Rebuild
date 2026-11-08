@@ -256,13 +256,16 @@ function whole(raw, range) {
   return Number.isFinite(n) ? Math.max(range.min, Math.min(range.max, n)) : undefined;
 }
 
-/** `interactions.page_colors`, or null when neither colour is set. */
+/** The colours a section can give the page: background and text, and the muted text, lines and accent that follow them. */
+export const PAGE_COLOUR_KEYS = ['background', 'text', 'muted', 'line', 'accent'];
+
+/** `interactions.page_colors`, or null when no colour is set. */
 export function normalizePageColors(raw) {
   if (!plainObject(raw)) return null;
   const out = {};
-  if (colour(raw.background)) out.background = colour(raw.background);
-  if (colour(raw.text)) out.text = colour(raw.text);
-  return Object.keys(out).length ? out : null;
+  for (const key of PAGE_COLOUR_KEYS) if (colour(raw[key])) out[key] = colour(raw[key]);
+  // The server wants a background or a text colour: muted, lines and accent only follow them.
+  return out.background || out.text ? out : null;
 }
 
 /** `interactions.progress`, or null when it is off (no edge). */

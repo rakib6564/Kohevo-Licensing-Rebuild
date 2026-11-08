@@ -14,7 +14,8 @@ use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
 
 final class OffcanvasRenderer implements BlockRendererInterface
 {
-    private const POSITIONS = ['left', 'right', 'top', 'bottom'];
+    /** `fullscreen` covers the whole window, as a full-screen menu does. */
+    private const POSITIONS = ['left', 'right', 'top', 'bottom', 'fullscreen'];
     private const VARIANTS = ['primary', 'secondary', 'outline', 'ghost', 'plain'];
 
     public function type(): string
@@ -49,7 +50,7 @@ final class OffcanvasRenderer implements BlockRendererInterface
             . '<aside class="sb-offcanvas__panel">'
             . '<header' . Html::classAttr(['sb-offcanvas__header', trim($title) === '' ? 'sb-offcanvas__header--bare' : '']) . '>'
             . (trim($title) !== '' ? '<h3 id="' . Html::e($drawerId) . '-title">' . Html::e($title) . '</h3>' : '')
-            . '<a href="#" class="sb-offcanvas__close" data-sb-offcanvas-close aria-label="' . Html::e(Html::t('studio_close', 'Close')) . '">&times;</a>'
+            . $this->close($scope)
             . '</header>'
             . '<div class="sb-offcanvas__body">'
             . $scope->childrenHtml()
@@ -58,6 +59,17 @@ final class OffcanvasRenderer implements BlockRendererInterface
             . '</div>';
 
         return $html;
+    }
+
+    /** The close button: a cross, or a word with a small cross when the drawer gives one ("Close"). */
+    private function close(BlockRenderScope $scope): string
+    {
+        $text = trim($scope->string('close_text', ''));
+        if ($text === '') {
+            return '<a href="#" class="sb-offcanvas__close" data-sb-offcanvas-close aria-label="' . Html::e(Html::t('studio_close', 'Close')) . '">&times;</a>';
+        }
+        return '<a href="#" class="sb-offcanvas__close sb-offcanvas__close--text" data-sb-offcanvas-close>' . Html::e($text)
+            . '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></a>';
     }
 
     /**

@@ -460,9 +460,10 @@
   }
 
 /* ── Feature: page colours ───────────────────────────────────────────────
-   * [data-sb-page-colors] (interactions.page_colors) carries `--sb-page-bg` / `--sb-page-fg`. The section crossing the
-   * middle of the screen gives the page its colours: they are set on <html> as `--sb-paged-bg` / `--sb-paged-fg` and the
-   * stylesheet blends the body to them. Above the first such section the page keeps its own colours; past one, it keeps
+   * [data-sb-page-colors="bg fg muted line accent"] (interactions.page_colors) carries `--sb-page-<name>` for the colours
+   * it lists. The section crossing the middle of the screen gives the page its colours: they are set on <html> as
+   * `--sb-paged-<name>` and the stylesheet blends the body to them and points the theme's text, muted, border and accent
+   * colours at them. Above the first such section the page keeps its own colours; past one, it keeps
    * the last until another takes over.
    * [data-sb-adapt] (interactions.adapt, a header) takes the colours of the section beneath its bottom edge, inline.
    */
@@ -470,9 +471,14 @@
     var sections = qsa(root, '[data-sb-page-colors]');
     if (!sections.length) return;
     var html = document.documentElement;
+    var NAMES = ['bg', 'fg', 'muted', 'line', 'accent'];
+    // Only the colours the section lists in its attribute: a custom property is inherited, so reading one it does not set would pick up an outer section's.
     function colours(el) {
       var cs = global.getComputedStyle(el);
-      return { bg: cs.getPropertyValue('--sb-page-bg').trim(), fg: cs.getPropertyValue('--sb-page-fg').trim() };
+      var own = (el.getAttribute('data-sb-page-colors') || 'bg fg').split(/\s+/);
+      var c = {};
+      NAMES.forEach(function (n) { c[n] = own.indexOf(n) >= 0 ? cs.getPropertyValue('--sb-page-' + n).trim() : ''; });
+      return c;
     }
     var list = sections.map(function (el) { return { el: el, c: colours(el) }; });
     var adapters = qsa(root, '[data-sb-adapt]').map(function (el) { return { el: el, hit: null }; });
@@ -503,8 +509,7 @@
       }
       if (hit !== current) {
         current = hit;
-        setVar('--sb-paged-bg', 'data-sb-paged-bg', hit && hit.c.bg);
-        setVar('--sb-paged-fg', 'data-sb-paged-fg', hit && hit.c.fg);
+        NAMES.forEach(function (n) { setVar('--sb-paged-' + n, 'data-sb-paged-' + n, hit && hit.c[n]); });
       }
       adapters.forEach(function (a) {
         var r = a.el.getBoundingClientRect();
@@ -526,8 +531,7 @@
     mount(function () {
       offs.forEach(function (off) { off(); });
       html.removeAttribute('data-sb-page-colors');
-      setVar('--sb-paged-bg', 'data-sb-paged-bg', '');
-      setVar('--sb-paged-fg', 'data-sb-paged-fg', '');
+      NAMES.forEach(function (n) { setVar('--sb-paged-' + n, 'data-sb-paged-' + n, ''); });
       adapters.forEach(function (a) { a.el.style.removeProperty('background-color'); a.el.style.removeProperty('color'); });
     });
   }
@@ -1618,6 +1622,46 @@
       };
       tick();
       timers.push(global.setInterval(tick, 60000));
+
+      // The button's lines take turns every few seconds; {status} follows the hours, {time} is the owner's clock.
+      var sub = qs(launcher, '[data-sb-msg-lines]');
+      var lines = [];
+      try { lines = sub ? JSON.parse(sub.getAttribute('data-sb-msg-lines') || '[]') : []; } catch (e) { lines = []; }
+      if (sub && lines.length) {
+        var first = sub.textContent;
+        var clock = null;
+        try { clock = new Intl.DateTimeFormat('en-US', { timeZone: zone || undefined, hour: 'numeric', minute: '2-digit', hour12: true }); } catch (e) { clock = null; }
+        var fill = function (line) {
+          var online = w.classList.contains('is-online');
+          return line.replace('{status}', sub.getAttribute(online ? 'data-sb-online' : 'data-sb-away') || '')
+            .replace('{time}', clock ? clock.format(new Date()) : '');
+        };
+        var at = 0;
+        sub.textContent = fill(lines[0]);
+        if (lines.length > 1 && !reducedMotion()) {
+          timers.push(global.setInterval(function () {
+            sub.setAttribute('data-fade', '');
+            timers.push(global.setTimeout(function () {
+              at = (at + 1) % lines.length;
+              sub.textContent = fill(lines[at]);
+              sub.removeAttribute('data-fade');
+            }, 300));
+          }, 4000));
+        }
+        offs.push(function () { sub.textContent = first; sub.removeAttribute('data-fade'); });
+      }
+
+      // Shrunk to the photo or icon while scrolling down; back on the way up and near the top.
+      if (w.hasAttribute('data-sb-msg-compact')) {
+        var lastY = global.scrollY;
+        offs.push(on(global, 'scroll', function () {
+          var y = global.scrollY;
+          if (y < 200 || y < lastY - 4) w.classList.remove('is-compact');
+          else if (y > lastY + 4) w.classList.add('is-compact');
+          lastY = y;
+        }, { passive: true }));
+        offs.push(function () { w.classList.remove('is-compact'); });
+      }
     });
     mount(function () {
       offs.forEach(function (off) { off(); });
@@ -1647,6 +1691,37 @@
     mount(function () { timers.forEach(function (t) { global.clearInterval(t); }); });
   }
 
+
+  /* ── Feature: nav menu preview ───────────────────────────────────────────
+   * A Nav menu with `preview` has a panel of pictures (`.sb-nav__shot[data-sb-preview=i]`) and its links carry the
+   * same index on their <li>. Hovering or focusing a link shows its picture; the last one shown stays until another
+   * link takes over. The server marks the first (`data-on`), so the panel is never empty without the runtime.
+   */
+
+  function initNavPreviews(root) {
+    var navs = qsa(root, '[data-sb-nav-preview]');
+    if (!navs.length) return;
+    var offs = [];
+    navs.forEach(function (nav) {
+      var shots = qsa(nav, '.sb-nav__shot[data-sb-preview]');
+      function show(e) {
+        var li = e.target && e.target.closest ? e.target.closest('li[data-sb-preview]') : null;
+        if (!li || !nav.contains(li)) return;
+        var i = li.getAttribute('data-sb-preview');
+        shots.forEach(function (f) { if (f.getAttribute('data-sb-preview') === i) f.setAttribute('data-on', ''); else f.removeAttribute('data-on'); });
+      }
+      offs.push(on(nav, 'pointerover', show), on(nav, 'focusin', show));
+      // The current page's picture first, once the current link is marked (currentLinks runs after this feature).
+      var t = global.setTimeout(function () {
+        var cur = nav.querySelector('li[data-sb-preview] > [aria-current]');
+        if (cur) show({ target: cur });
+      }, 0);
+      offs.push(function () { global.clearTimeout(t); });
+      // Back to the server's state: the first picture shown.
+      offs.push(function () { shots.forEach(function (f, n) { if (n === 0) f.setAttribute('data-on', ''); else f.removeAttribute('data-on'); }); });
+    });
+    mount(function () { offs.forEach(function (off) { off(); }); });
+  }
 
 /* ── Feature: click and scroll interaction triggers ──────────────────────
    * The renderer marks a block with `data-sb-interaction-trigger`.
@@ -3785,6 +3860,7 @@
     ['loopDialogs', initLoopDialogs],
     ['messageWidgets', initMessageWidgets],
     ['clocks', initClocks],
+    ['navPreviews', initNavPreviews],
     ['fragments', initFragments],
     ['variants', initVariants],
     ['shopGrid', initShopGrid],

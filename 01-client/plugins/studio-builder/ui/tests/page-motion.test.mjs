@@ -9,7 +9,9 @@ import {
 test('page colours: off with neither colour; blank colours dropped', () => {
   assert.equal(normalizePageColors(null), null);
   assert.equal(normalizePageColors({ background: ' ', text: '' }), null);
-  assert.deepEqual(normalizePageColors({ background: ' #0b0b0c ', accent: '#fff' }), { background: '#0b0b0c' });
+  assert.deepEqual(normalizePageColors({ background: ' #0b0b0c ', border: '#fff' }), { background: '#0b0b0c' });
+  assert.deepEqual(normalizePageColors({ background: '#ede8df', text: '#0b0b0c', muted: '#6b665e', line: ' ', accent: 'color.accent' }), { background: '#ede8df', text: '#0b0b0c', muted: '#6b665e', accent: 'color.accent' });
+  assert.equal(normalizePageColors({ muted: '#777', accent: '#f00' }), null, 'muted and accent follow a background or text colour');
   assert.deepEqual(normalizePageColors({ text: 'text.primary' }), { text: 'text.primary' });
 });
 

@@ -108,6 +108,11 @@ final class BlockParts
             // Only an open menu matches, so a panel's look never reaches the links shown in a row.
             'panel'   => ['label' => 'Open menu panel', 'selectors' => ['.sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list'], 'states' => false],
             'cta'     => ['label' => 'Open menu button', 'selectors' => ['.sb-nav__cta-link']],
+            'number'  => ['label' => 'Link numbers', 'selectors' => ['.sb-nav__num']],
+            'description' => ['label' => 'Link descriptions', 'selectors' => ['.sb-nav__desc']],
+            'arrow'   => ['label' => 'Link arrow', 'selectors' => ['.sb-nav__arrow']],
+            'preview' => ['label' => 'Preview image', 'selectors' => ['.sb-nav__preview']],
+            'caption' => ['label' => 'Preview caption', 'selectors' => ['.sb-nav__preview-caption']],
         ],
         // The menu's own links are named from the top of the menu: a panel can hold a Nav menu with parts of its own.
         'layout.mega_menu' => [

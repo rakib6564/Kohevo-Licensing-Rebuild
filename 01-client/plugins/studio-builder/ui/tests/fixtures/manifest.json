@@ -4195,6 +4195,7 @@
                 "ask_name": true,
                 "avatar": null,
                 "away_text": "Away · I reply within a day",
+                "compact_on_scroll": false,
                 "days": "weekdays",
                 "email_label": "Your email",
                 "hours_end": "18:00",
@@ -4202,6 +4203,8 @@
                 "intro": "Tell me about your project. I usually reply the same day.",
                 "launcher_icon": "message-circle",
                 "launcher_label": "Message me",
+                "launcher_lines": "",
+                "launcher_photo": false,
                 "message_label": "Message",
                 "message_placeholder": "",
                 "name": "",
@@ -4248,6 +4251,28 @@
                         "right",
                         "left"
                     ]
+                },
+                {
+                    "key": "launcher_photo",
+                    "type": "boolean",
+                    "label": "Photo on the button",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "launcher_lines",
+                    "type": "text",
+                    "label": "Lines under the button text (one per line; {status} and {time} fill in)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 400
+                },
+                {
+                    "key": "compact_on_scroll",
+                    "type": "boolean",
+                    "label": "Shrink to the photo or icon while scrolling down",
+                    "required": false,
+                    "default": false
                 },
                 {
                     "key": "title",
@@ -4584,6 +4609,9 @@
             "default_props": {
                 "align": "left",
                 "aria_label": "Menu",
+                "arrow": false,
+                "columns": 1,
+                "descriptions": false,
                 "divider": false,
                 "items": [
                     {
@@ -4601,9 +4629,12 @@
                 ],
                 "layout": "horizontal",
                 "menu": "",
+                "numbered": false,
                 "pointer": "none",
                 "pointer_animation": "fade",
                 "pointer_color": null,
+                "preview": false,
+                "reveal": false,
                 "style": "plain",
                 "toggle_align": "right",
                 "toggle_animation": "none",
@@ -4708,6 +4739,51 @@
                     "key": "divider",
                     "type": "boolean",
                     "label": "Divider between items",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "numbered",
+                    "type": "boolean",
+                    "label": "Number the links",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "descriptions",
+                    "type": "boolean",
+                    "label": "Show each link's description",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "arrow",
+                    "type": "boolean",
+                    "label": "Arrow on the hovered link",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Columns (vertical menu)",
+                    "required": false,
+                    "default": 1,
+                    "min": 1,
+                    "max": 3,
+                    "integer_only": true
+                },
+                {
+                    "key": "preview",
+                    "type": "boolean",
+                    "label": "Show the hovered link's image",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "reveal",
+                    "type": "boolean",
+                    "label": "Links rise in when the menu opens",
                     "required": false,
                     "default": false
                 },
@@ -4840,6 +4916,21 @@
                             "max_length": 1000
                         },
                         {
+                            "key": "description",
+                            "type": "string",
+                            "label": "Description",
+                            "required": false,
+                            "default": "",
+                            "max_length": 160
+                        },
+                        {
+                            "key": "image",
+                            "type": "media_ref",
+                            "label": "Preview image",
+                            "required": false,
+                            "default": null
+                        },
+                        {
                             "key": "children",
                             "type": "repeater",
                             "label": "Submenu links",
@@ -4946,6 +5037,26 @@
                 {
                     "key": "cta",
                     "label": "Open menu button"
+                },
+                {
+                    "key": "number",
+                    "label": "Link numbers"
+                },
+                {
+                    "key": "description",
+                    "label": "Link descriptions"
+                },
+                {
+                    "key": "arrow",
+                    "label": "Link arrow"
+                },
+                {
+                    "key": "preview",
+                    "label": "Preview image"
+                },
+                {
+                    "key": "caption",
+                    "label": "Preview caption"
                 }
             ],
             "title": "Nav menu",
@@ -7482,6 +7593,7 @@
             "binding_slots": [],
             "category": "layout",
             "default_props": {
+                "close_text": "",
                 "drawer_id": "drawer-1",
                 "position": "right",
                 "title": "Menu",
@@ -7519,8 +7631,17 @@
                         "left",
                         "right",
                         "top",
-                        "bottom"
+                        "bottom",
+                        "fullscreen"
                     ]
+                },
+                {
+                    "key": "close_text",
+                    "type": "string",
+                    "label": "Close button text",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40
                 },
                 {
                     "key": "trigger_text",

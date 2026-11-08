@@ -15,7 +15,9 @@
  * row carries its `depth`; `validate()` turns either shape into the stored tree, and an item without children stores
  * no `children` key, so a menu saved before submenus existed reads back unchanged.
  *
- * Each item may also carry a `class` (CSS class names for its `<li>`), stored only when set, like `children`.
+ * Each item may also carry a `class` (CSS class names for its `<li>`), a `description` (a line of plain text a Nav menu
+ * can show under the label) and an `image` (an address a Nav menu can show as the link's preview), each stored only when
+ * set, like `children`.
  *
  * Renaming: a menu remembers the keys it had before (`aliases`), and `find()` resolves an old key to it, so every Nav
  * menu block saved with the old key keeps showing the menu. A key a live menu now uses always wins over an alias.
@@ -48,6 +50,8 @@ final class StudioMenus
     public const MAX_URL         = 1000;
     /** Length of an item's CSS classes, all names together. */
     public const MAX_CLASS       = 120;
+    /** An item's description: one line of plain text. */
+    public const MAX_DESCRIPTION = 160;
     /** One CSS class name: a letter, `_` or `-` first, then letters, digits, `_` and `-`. */
     private const CLASS_NAME     = '/^-?[_a-zA-Z][_a-zA-Z0-9-]*$/';
     public const KEY_PATTERN     = '/^[a-z0-9][a-z0-9-]{0,62}$/';
@@ -187,7 +191,19 @@ final class StudioMenus
                 throw new \InvalidArgumentException('The link "' . $label . '" needs a web address, a path such as /about, or mailto:/tel:.');
             }
             $class = self::cleanClass((string) ($row['class'] ?? ''), $label);
-            $clean[] = ['label' => $label, 'url' => $url, 'new_tab' => !empty($row['new_tab'])] + ($class !== '' ? ['class' => $class] : []) + ['depth' => $depth];
+            $description = trim(preg_replace('/\s+/u', ' ', (string) ($row['description'] ?? '')) ?? '');
+            if (mb_strlen($description) > self::MAX_DESCRIPTION) {
+                throw new \InvalidArgumentException('The description of "' . $label . '" is too long (up to ' . self::MAX_DESCRIPTION . ' characters).');
+            }
+            $image = trim((string) ($row['image'] ?? ''));
+            if ($image !== '' && (strlen($image) > self::MAX_URL || !FieldSchema::isSafeUrl($image) || preg_match('#^(mailto|tel):#i', $image) === 1)) {
+                throw new \InvalidArgumentException('The image of "' . $label . '" needs a web address or a path such as /media/photo.jpg.');
+            }
+            $clean[] = ['label' => $label, 'url' => $url, 'new_tab' => !empty($row['new_tab'])]
+                + ($class !== '' ? ['class' => $class] : [])
+                + ($description !== '' ? ['description' => $description] : [])
+                + ($image !== '' ? ['image' => $image] : [])
+                + ['depth' => $depth];
             $previous = $depth;
         }
         $tree = self::tree($clean);
@@ -199,7 +215,7 @@ final class StudioMenus
      * A menu's items as the rows of the menu form: one row per link, in order, with its `depth` (0 = top level).
      *
      * @param array<int, mixed> $items stored items (with `children`) or form rows (with `depth`)
-     * @return list<array{label: string, url: string, new_tab: bool, class: string, depth: int}>
+     * @return list<array{label: string, url: string, new_tab: bool, class: string, description: string, image: string, depth: int}>
      */
     public static function flatten(array $items, int $depth = 0): array
     {
@@ -214,7 +230,8 @@ final class StudioMenus
             if ($label === '' && $url === '' && $children === []) {
                 continue; // an empty row is just a row the author did not use
             }
-            $rows[] = ['label' => $label, 'url' => $url, 'new_tab' => !empty($row['new_tab']), 'class' => trim((string) ($row['class'] ?? '')), 'depth' => $depth + max(0, (int) ($row['depth'] ?? 0))];
+            $rows[] = ['label' => $label, 'url' => $url, 'new_tab' => !empty($row['new_tab']), 'class' => trim((string) ($row['class'] ?? '')),
+                'description' => trim((string) ($row['description'] ?? '')), 'image' => trim((string) ($row['image'] ?? '')), 'depth' => $depth + max(0, (int) ($row['depth'] ?? 0))];
             if ($children !== [] && $depth < self::MAX_DEPTH + 1) {
                 array_push($rows, ...self::flatten($children, $depth + 1));
             }

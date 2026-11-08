@@ -221,5 +221,6 @@ unit('stylesheet: numeric font weights work, links never colour the message laun
     }
     assert_true(str_contains($css, '.sb-body .sb-msg .sb-msg__launcher[data-sb-msg-open]{color:var(--sb-text-inverse,#fff)}'), 'the launcher keeps its own colour');
     assert_true(str_contains($css, '.sb-body .sb-filter a.sb-filter__chip{color:inherit}'), 'chips are not link-coloured');
-    assert_true(str_contains($css, 'html:not([data-sb-ready]) [data-sb-page-colors]{background:var(--sb-page-bg);color:var(--sb-page-fg)}'), 'page colours without the runtime');
+    assert_true(str_contains($css, 'html:not([data-sb-ready]) [data-sb-page-colors~="bg"]{background:var(--sb-page-bg)}')
+        && str_contains($css, 'html:not([data-sb-ready]) [data-sb-page-colors~="fg"]{color:var(--sb-page-fg);'), 'page colours without the runtime');
 });
