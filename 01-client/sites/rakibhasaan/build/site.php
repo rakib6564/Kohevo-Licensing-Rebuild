@@ -31,6 +31,22 @@ Database::setSetting('studio_scrollbar', 'hidden', $tid);
 foreach (['site_name' => 'Rakib Hasan', 'brand_accent_color' => ORANGE] as $key => $value) { Database::setSetting($key, $value, $tid); }
 say('  + theme');
 
+// ── SEO ────────────────────────────────────────────────────────────────────────
+// Site & SEO: the description and share card any page without its own uses, the favicon, and the business behind the
+// site for search engines (schema.org). Share cards, the logo and the favicon come from build/og/make-og.cjs.
+// Search engines stay off this preview (studio_seo_robots noindex,nofollow, set at install) until it replaces the main site.
+Database::setSetting('studio_seo_description', 'Rakib Hasan, freelance WordPress designer and developer in Dhaka, Bangladesh. 250+ websites, custom plugins and SEO fixes for small businesses in 14 countries.', $tid);
+Database::setSetting('studio_seo_og_media_id', (string) MID('og-default.png'), $tid);
+Database::setSetting('brand_favicon_path', ltrim(MEDIA_DIR, '/') . 'rakib-favicon.png', $tid);
+\Slate\Module\StudioBuilder\Render\Seo\StructuredData::save($tid, [
+    'type' => 'ProfessionalService', 'name' => 'Rakib Hasan', 'alternate_name' => 'rakibhasaan.com',
+    'description' => 'Freelance WordPress designer and developer: websites, custom plugins and SEO fixes for small businesses in the US and Europe. 250+ sites in 14 countries, rated 5.0 from 101 reviews.',
+    'logo_media_id' => MID('rakib-logo.png'), 'founder' => 'Rakib Hasan',
+    'same_as' => ['https://www.fiverr.com/rakib_64', 'https://github.com/rakib6564'],
+    'email' => 'Support@rakibhasaan.com', 'locality' => 'Dhaka', 'country' => 'BD',
+]);
+say('  + seo');
+
 // ── Menus ──────────────────────────────────────────────────────────────────────
 $INDUSTRIES = [['Construction & trades', '/construction/'], ['Logistics & transport', '/work/'], ['Cleaning & sterilisation', '/work/'], ['Hospitality & rentals', '/work/'], ['Professional services', '/work/'], ['Creative & wellness', '/work/']];
 $SERVICES = [['WordPress & Elementor websites', '/wordpress-websites/'], ['Custom WordPress development', '/custom-development/'], ['SEO audits & fixes', '/seo/'], ['Web & mobile apps', '/apps/'], ['Shopify · Wix · Squarespace', '/platforms/'], ['Branding & video', '/branding/']];

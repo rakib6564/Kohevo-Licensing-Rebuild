@@ -538,5 +538,6 @@ foreach ($DATA['pages'] as $slug => $p) {
     if ($slug === 'work') { $side = ROW(array_map(static fn(array $x): array => VBOX([H($x[0], 'div', '48px', '36px', BONE), EYE($x[1], MUTED)], '4px', ['dimensions' => ['width' => 'auto']]), [['250+', 'Websites shipped'], ['25', 'Case studies'], ['14', 'Countries']]), '36px', [], ['justify' => 'end'], []); $below = true; }
     $intro = $p;
     if ($slug === 'free-audit') { $intro['intro'] = array_values(array_filter($p['intro'], static fn(array $b): bool => $b['k'] !== 'note')); }
-    build_page($slug, $p['name'], 'page', 'standalone', [HERO($intro, $crumbs, $side, $below, $photo), ...ITEMS($p['items'], $DATA['cases'], $DATA)], ['seo_title' => $p['seo_title'], 'seo_desc' => $p['meta']]);
+    // Its share card (og-<slug>.png from build/og/make-og.cjs), when there is one.
+    build_page($slug, $p['name'], 'page', 'standalone', [HERO($intro, $crumbs, $side, $below, $photo), ...ITEMS($p['items'], $DATA['cases'], $DATA)], ['seo_title' => $p['seo_title'], 'seo_desc' => $p['meta'], 'image' => 'og-' . $slug . '.png']);
 }

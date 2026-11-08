@@ -320,7 +320,7 @@ foreach (array_reverse(SERVICE_SLUGS) as $i => $slug) {
         'primary_label' => $btns[0]['label'] ?? '', 'primary_url' => $btns[0]['href'] ?? '', 'secondary_label' => $btns[1]['label'] ?? '', 'secondary_url' => $btns[1]['href'] ?? ''] + sv_fields($p, $plain);
     $fields = array_replace($fields, $CARD_COPY[$slug] ?? []);
     build_page($slug, $card['title'], 'page', 'standalone', [CTOP('Body', [P($card['summary'], BONE, '18px')], ['layout' => ['display' => 'flex', 'direction' => 'column']])], [
-        'seo_title' => $p['seo_title'], 'seo_desc' => $p['meta'], 'settings' => ['category' => $card['group'], 'excerpt' => $card['summary']],
+        'seo_title' => $p['seo_title'], 'seo_desc' => $p['meta'], 'image' => 'og-' . $slug . '.png', 'settings' => ['category' => $card['group'], 'excerpt' => $card['summary']],
         'date' => date('Y-m-d H:i:s', strtotime('2025-06-01') + $i * 3600), 'type' => 'service', 'fields' => $fields,
     ]);
 }

@@ -199,5 +199,5 @@ $audit = SEC('Free audit', [
 build_page('home', 'Home', 'page', 'homepage', [$hero, $manifesto, $gallery, $industries, $workSec, $rules, $about, $reviews, $world, $audit], [
     'seo_title' => 'Rakib Hasan: Built Different',
     'seo_desc' => 'Freelance WordPress designer and developer. 250+ websites for real businesses in 14 countries, each designed the way its industry actually wins work.',
-    'image' => $IMG['cdg'],
+    'image' => 'og-home.png',
 ]);
