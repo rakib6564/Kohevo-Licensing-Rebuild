@@ -231,7 +231,7 @@ $ft = CTOP('Footer', [
     B('core.message_widget', [
         'launcher_label' => 'Message Rakib', 'launcher_icon' => 'message-circle', 'position' => 'left', 'theme' => 'light',
         'launcher_photo' => true, 'launcher_lines' => "{status}\nIt's {time} in Dhaka", 'compact_on_scroll' => true,
-        'title' => 'Rakib Hasan', 'name' => '', 'avatar' => IMGREF('dc5af924d95ea0c65e0bccbd61ccba59.jpg', 'Rakib Hasan'),
+        'title' => 'Rakib Hasan', 'name' => '', 'avatar' => IMGREF('rakib-avatar.jpg', 'Rakib Hasan'),
         'intro' => '',
         'timezone' => 'Asia/Dhaka', 'hours_start' => '10:00', 'hours_end' => '23:00', 'days' => 'everyday',
         'online_text' => 'Online · replies in ~1 hour', 'away_text' => 'Away · replies in a few hours',

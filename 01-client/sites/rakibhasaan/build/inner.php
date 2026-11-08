@@ -195,14 +195,20 @@ function S_CTA(array $s, bool $form = false): array
         ], '40px', ['margin' => ['top' => '48px']], ['justify' => 'between', 'align' => 'center']),
     ], '150px', '130px', [], ['interactions' => THEME('orange')]);
 }
+// The photo bands' new pictures (2026-11-08), in place of the original site's: Services, Free audit, Process.
+const BAND_PHOTOS = [
+    '3b151369cc032d5100fef8a6c0373841' => 'rakib-band-studio.jpg',
+    '7f3bcf262879b443e5a37433f5a899ee' => 'rakib-band-workspace.jpg',
+    '3f8022fe20f01f0732100bca0089e37c' => 'rakib-band-office.jpg',
+];
 function S_BAND(array $s): array
 {
     return CTOP('Photo', [
         B('layout.flex', ['direction' => 'column', 'gap' => 'none'], [
-            PIC(MFILE($s['img']), $s['alt'], '620px', '360px', '24px'),
+            PIC(BAND_PHOTOS[$s['img']] ?? MFILE($s['img']), $s['alt'], '620px', '360px', '24px'),
             // The caption: a small frosted card on the photo's lower-left corner — the face, the name, the line under it.
             ROW([
-                B('core.image', ['media' => IMGREF(MFILE('dc5af924d95ea0c65e0bccbd61ccba59'), 'Rakib Hasan'), 'aspect_ratio' => '1:1', 'rounded' => false], [], ['dimensions' => ['width' => '44px'], 'border' => ['radius' => '12px']], ['classNames' => ['rk-band-face']]),
+                B('core.image', ['media' => IMGREF('rakib-avatar.jpg', 'Rakib Hasan'), 'aspect_ratio' => '1:1', 'rounded' => false], [], ['dimensions' => ['width' => '44px'], 'border' => ['radius' => '12px']], ['classNames' => ['rk-band-face']]),
                 VBOX([P('Rakib Hasan', BONE, '15px', ['weight' => '500', 'line_height' => '1.2']), EYE($s['cap'], '#BDB7AD')], '4px', ['dimensions' => ['width' => 'auto']]),
             ], '12px', ['background' => ['color' => 'rgba(11,11,12,0.62)'], 'border' => ['width' => '1px', 'style' => 'solid', 'color' => 'rgba(237,232,223,0.14)', 'radius' => '16px'], 'padding' => ['top' => '10px', 'right' => '18px', 'bottom' => '10px', 'left' => '10px'], 'dimensions' => ['width' => 'auto']], ['align' => 'center'], ['layout' => ['direction' => 'row', 'align' => 'center']], ['classNames' => ['rk-band-cap']]),
         ], ['position' => ['mode' => 'relative']], ['classNames' => ['rk-band'], 'interactions' => ['scroll' => ['scale' => 2, 'devices' => ['desktop']]]]),
@@ -299,7 +305,7 @@ function S_CONTACT(int $n): array
         'button' => ['background' => ['color' => ORANGE], 'color' => INK, 'border' => ['radius' => '999px', 'width' => '0px'], 'padding' => ['top' => '16px', 'right' => '28px', 'bottom' => '16px', 'left' => '28px'], 'typography' => ['size' => '16px', 'weight' => 'medium', 'family' => 'body']],
     ]]);
     return SEC('Send a message', [ROW([
-        W(VBOX([LABEL($n, $c), H2('Send a message', $c), ROW([B('core.image', ['media' => IMGREF(MFILE('dc5af924d95ea0c65e0bccbd61ccba59'), ''), 'aspect_ratio' => '1:1', 'rounded' => true], [], ['dimensions' => ['width' => '48px']]), VBOX([P('Rakib Hasan', INK, '16px'), EYE('Replies within about an hour', MUTED_BONE)], '2px')], '12px', ['margin' => ['top' => '12px']], ['align' => 'center'], [])], '18px'), '36%'),
+        W(VBOX([LABEL($n, $c), H2('Send a message', $c), ROW([B('core.image', ['media' => IMGREF('rakib-avatar.jpg', ''), 'aspect_ratio' => '1:1', 'rounded' => true], [], ['dimensions' => ['width' => '48px']]), VBOX([P('Rakib Hasan', INK, '16px'), EYE('Replies within about an hour', MUTED_BONE)], '2px')], '12px', ['margin' => ['top' => '12px']], ['align' => 'center'], [])], '18px'), '36%'),
         W(VBOX([$form, P('I\'ll only use your details to reply to you.', MUTED_BONE, '13px')], '10px'), '58%'),
     ], '48px', [], ['justify' => 'between'])], '120px', '120px', [], ['interactions' => THEME('bone')]);
 }
