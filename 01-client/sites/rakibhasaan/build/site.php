@@ -169,8 +169,10 @@ $hdr = CTOP('Header', [
     $nav,
     ROW([PILL('Free audit', '/free-audit/', ORANGE, INK, ['responsive' => ['mobile' => ['hide' => true]]]), $fullMenu], '8px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], []),
 ], ['padding' => ['top' => '16px', 'right' => '28px', 'bottom' => '16px', 'left' => '28px'], 'layout' => ['display' => 'flex', 'direction' => 'row', 'gap' => '24px', 'justify' => 'between', 'align' => 'center', 'content_width' => 'boxed', 'content_max' => '1440px']],
-    ['interactions' => ['adapt' => true, 'progress' => ['edge' => 'bottom', 'color' => ORANGE, 'height' => 2]], 'responsive' => ['mobile' => ['style' => ['padding' => ['top' => '12px', 'right' => '16px', 'bottom' => '12px', 'left' => '16px']]]]]);
-build_page('default', 'Header', 'header_partial', 'standalone', [$hdr], ['settings' => ['sticky_header' => ['edge' => 'top', 'hide_on_scroll' => true, 'background' => 'rgba(11,11,12,0.86)']]]);
+    ['interactions' => ['adapt' => 'text', 'progress' => ['edge' => 'bottom', 'color' => ORANGE, 'height' => 2]], 'responsive' => ['mobile' => ['style' => ['padding' => ['top' => '12px', 'right' => '16px', 'bottom' => '12px', 'left' => '16px']]]]]);
+// Transparent over the top of every page (each page's first section starts under it); frosted glass in the colour of
+// the section beneath once the page scrolls, and its words follow that section's colours throughout.
+build_page('default', 'Header', 'header_partial', 'standalone', [$hdr], ['settings' => ['sticky_header' => ['edge' => 'top', 'hide_on_scroll' => true, 'overlay' => true]]]);
 
 // ── Footer ─────────────────────────────────────────────────────────────────────
 $col = static fn(string $title, array $links): array => VBOX([EYE($title), VBOX(array_map(static fn(array $l): array => B('core.link', ['link' => L($l[0], $l[1]), 'style' => 'plain'], [], ['color' => BONE, 'typography' => ['size' => '15px', 'weight' => '400', 'line_height' => '1.5']]), $links), '10px')], '20px');
