@@ -9,7 +9,7 @@ $IMG = [
     'cdg' => 'e37702657907eb0bc2e36a82f2212ce8.jpg', 'redkey' => 'b131e2de14c018247fe2c08587aa79d2.webp', 'villa' => '3e90a1e3057c56feda9aa00c4dbcdd5f.webp',
     'b5ab' => 'b5ab7d08d5870755f32a3d0a43e7f82a.jpg', 'law' => '611fb132b1dbd5cec1b65c55e0a4ff7d.jpg', 'png' => '286bece3cd0f08b4ad4ec3f69420675b.png',
     'safi' => '8bad9500d3d698ebbeff8b1348d8df76.webp', '3694' => '3694c109ea579750e33aef9a769d2f94.webp', 'tatiana' => '3d7dd89fe2d5f85018e84b655abb7040.jpg',
-    '2535' => '25352af8e18f0bea31d93fe93145daa7.jpg', 'd3f8' => 'd3f8c1d570d1e654e963ed3ab3bad18f.webp', 'portrait' => '6fbbcd188e6864012d87c634f944c25d.jpg',
+    '2535' => '25352af8e18f0bea31d93fe93145daa7.jpg', 'd3f8' => 'd3f8c1d570d1e654e963ed3ab3bad18f.webp', 'portrait' => 'rakib-about-portrait.jpg',
 ];
 
 // ── 1. Hero ────────────────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ $about = SEC('About', [
     ROW([
         W(B('layout.flex', ['direction' => 'column', 'gap' => 'none'], [
             PIC($IMG['portrait'], 'Rakib Hasan, freelance WordPress designer and developer', '720px', '440px', '16px'),
-            B('core.circle_text', ['text' => 'Available December 2026 · Taking ', 'icon' => 'arrow-up-right', 'size' => 128, 'font_size' => 11, 'spin_seconds' => 16, 'direction' => 'clockwise'], [],
+            B('core.circle_text', ['text' => 'Available December 2026 · Taking new projects · ', 'icon' => 'arrow-up-right', 'size' => 128, 'font_size' => 9, 'spin_seconds' => 16, 'direction' => 'clockwise'], [],
                 ['color' => INK, 'background' => ['color' => ORANGE], 'border' => ['radius' => '999px'], 'position' => ['mode' => 'absolute', 'right' => '-34px', 'bottom' => '-34px']], ['classNames' => ['rk-badge']]),
         ], ['position' => ['mode' => 'relative']]), '42%'),
         W(VBOX([

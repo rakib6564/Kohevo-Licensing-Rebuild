@@ -226,3 +226,8 @@
 /* "Most chosen" on the featured package: an orange pill, readable on the dark featured card (it was dark text with no fill). */
 .rk-chip-on { align-self: flex-start; }
 .rk-chip-on p, p.rk-chip-on { display: inline-block; width: fit-content; background: #FF5A1F; color: #0B0B0C !important; padding: 5px 10px; border-radius: 999px; }
+
+/* Home "Who you'll work with" portrait: black and white, a touch of contrast; colour comes back on hover. */
+.sb-flex:has(> .rk-badge) img { filter: grayscale(1) contrast(1.12) brightness(.96); transition: filter .6s ease, transform .8s ease; object-position: 50% 20%; }
+.sb-flex:has(> .rk-badge):hover img { filter: grayscale(0) contrast(1) brightness(1); }
+@media (hover: none) { .sb-flex:has(> .rk-badge) img { filter: grayscale(1) contrast(1.12); } }
