@@ -67,7 +67,7 @@ $nav = B('core.nav_menu', ['menu' => 'header', 'items' => [], 'layout' => 'horiz
 // The full-screen menu: the brand where the header's is, two columns of numbered links with a line under each,
 // the hovered link's picture on the right, and a row of contact links along the bottom.
 $fsLinks = static fn(array $links): array => array_map(static fn(array $l): array => B('core.link', ['link' => L($l[0], $l[1]), 'style' => 'plain'], [], ['color' => BONE, 'typography' => ['size' => '14px']]), $links);
-$fullMenu = B('layout.offcanvas', ['drawer_id' => 'rk-menu', 'title' => '', 'position' => 'fullscreen', 'close_text' => 'Close', 'trigger_text' => 'Menu', 'trigger_variant' => 'plain', 'trigger_icon' => 'menu', 'trigger_icon_size' => 18, 'trigger_show_text' => true], [
+$fullMenu = B('layout.offcanvas', ['drawer_id' => 'rk-menu', 'title' => '', 'position' => 'fullscreen', 'close_text' => 'Close', 'trigger_text' => 'Menu', 'trigger_variant' => 'plain', 'trigger_icon' => 'menu', 'trigger_icon_size' => 18, 'trigger_show_text' => true, 'trigger_text_mobile' => false], [
     ROW([$brandRow()], '0px', ['padding' => ['top' => '20px', 'right' => '28px', 'bottom' => '20px', 'left' => '28px']], ['align' => 'center'], []),
     B('core.nav_menu', ['menu' => 'full', 'items' => [], 'layout' => 'vertical', 'align' => 'left', 'aria_label' => 'Full menu', 'toggle_breakpoint' => 'none',
         'numbered' => true, 'descriptions' => true, 'arrow' => true, 'columns' => 2, 'preview' => true, 'reveal' => true], [],
@@ -97,7 +97,7 @@ $fullMenu = B('layout.offcanvas', ['drawer_id' => 'rk-menu', 'title' => '', 'pos
 $hdr = CTOP('Header', [
     $brand,
     $nav,
-    ROW([PILL('Free audit', '/free-audit/'), $fullMenu], '8px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], []),
+    ROW([PILL('Free audit', '/free-audit/', ORANGE, INK, ['responsive' => ['mobile' => ['hide' => true]]]), $fullMenu], '8px', ['dimensions' => ['width' => 'auto']], ['align' => 'center'], []),
 ], ['padding' => ['top' => '16px', 'right' => '28px', 'bottom' => '16px', 'left' => '28px'], 'layout' => ['display' => 'flex', 'direction' => 'row', 'gap' => '24px', 'justify' => 'between', 'align' => 'center', 'content_width' => 'boxed', 'content_max' => '1440px']],
     ['interactions' => ['adapt' => true, 'progress' => ['edge' => 'bottom', 'color' => ORANGE, 'height' => 2]], 'responsive' => ['mobile' => ['style' => ['padding' => ['top' => '12px', 'right' => '16px', 'bottom' => '12px', 'left' => '16px']]]]]);
 build_page('default', 'Header', 'header_partial', 'standalone', [$hdr], ['settings' => ['sticky_header' => ['edge' => 'top', 'hide_on_scroll' => true, 'background' => 'rgba(11,11,12,0.86)']]]);
@@ -125,10 +125,10 @@ $ft = CTOP('Footer', [
             P('WordPress websites, custom plugins and SEO fixes for small businesses in the US and Europe. Based in Bangladesh, working worldwide.', MUTED, '15px'),
             ROW([$chip('★ 5.0 · 101 reviews'), $chip('Fiverr Level 2'), $chip('250+ sites · 14 countries')], '8px', [], ['wrap' => 'wrap'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap']]),
         ], '18px'), '30%'),
-        W($col('Services', [['WordPress websites', '/wordpress-websites/'], ['Custom development', '/custom-development/'], ['SEO audits', '/seo/'], ['Web & mobile apps', '/apps/'], ['Shopify, Wix & Squarespace', '/platforms/'], ['Branding & video', '/branding/']]), '22%'),
-        W($col('Site', [['Work', '/work/'], ['Construction', '/construction/'], ['Process', '/process/'], ['About', '/about/'], ['Reviews', '/reviews/'], ['FAQ', '/faq/']]), '22%'),
-        W($col('Contact', [['Free audit', '/free-audit/'], ['Contact', '/contact/'], ['Fiverr', 'https://fiverr.com/rakib_64/'], ['GitHub', 'https://github.com/rakib6564/']]), '18%'),
-    ], '32px', ['margin' => ['top' => '56px', 'bottom' => '40px']], ['justify' => 'between'], ['layout' => ['direction' => 'column', 'gap' => '40px']]),
+        W($col('Services', [['WordPress websites', '/wordpress-websites/'], ['Custom development', '/custom-development/'], ['SEO audits', '/seo/'], ['Web & mobile apps', '/apps/'], ['Shopify, Wix & Squarespace', '/platforms/'], ['Branding & video', '/branding/']]), '22%', true),
+        W($col('Site', [['Work', '/work/'], ['Construction', '/construction/'], ['Process', '/process/'], ['About', '/about/'], ['Reviews', '/reviews/'], ['FAQ', '/faq/']]), '22%', true),
+        W($col('Contact', [['Free audit', '/free-audit/'], ['Contact', '/contact/'], ['Fiverr', 'https://fiverr.com/rakib_64/'], ['GitHub', 'https://github.com/rakib6564/']]), '18%', true),
+    ], '32px', ['margin' => ['top' => '56px', 'bottom' => '40px']], ['justify' => 'between'], ['layout' => ['direction' => 'row', 'wrap' => 'wrap', 'gap' => '40px']]),
     B('core.divider', ['weight' => 'thin'], [], ['color' => LINE]),
     ROW([EYE('Designer + developer'), EYE('Est. 2018 · Dhaka, Bangladesh', MUTED, 'center'), EYE('250+ sites · 14 countries', MUTED, 'right')], '16px', ['padding' => ['top' => '18px', 'bottom' => '18px']], ['justify' => 'between'], ['layout' => ['direction' => 'column', 'gap' => '6px']]),
     B('core.divider', ['weight' => 'thin'], [], ['color' => LINE]),

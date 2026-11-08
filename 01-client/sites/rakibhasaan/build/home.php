@@ -60,7 +60,7 @@ $rows = [
 $industryRows = array_map(static fn(array $r): array => ROW([
     EYE($r[0]),
     B('core.heading', ['text' => $r[1], 'level' => 'h3', 'url' => $r[4]], [], ['color' => BONE, 'typography' => ['size' => '84px', 'font_family' => SANS, 'weight' => '200', 'line_height' => '1', 'letter_spacing' => '-5px'], 'dimensions' => ['width' => '100%']],
-        ['classNames' => ['rk-ind-name'], 'responsive' => ['mobile' => ['style' => ['typography' => ['size' => '40px']]]]]),
+        ['classNames' => ['rk-ind-name'], 'responsive' => ['mobile' => ['style' => ['typography' => ['size' => '36px']]]]]),
     PIC($r[3], $r[1] . ' website', '240px', '', '12px'),
     EYE($r[2] . ' sites', MUTED, 'right'),
     B('core.link', ['link' => L('↗', $r[4]), 'style' => 'plain'], [], ['color' => BONE, 'typography' => ['size' => '18px']], ['classNames' => ['rk-arrow']]),

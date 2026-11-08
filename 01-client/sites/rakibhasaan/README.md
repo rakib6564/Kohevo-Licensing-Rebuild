@@ -19,6 +19,14 @@ FAQ, Contact, Free audit (at `/free-audit/`: `/audit` is reserved by the platfor
 - Case studies are a **Project** content type (`/case-study/<slug>/`): an Industry taxonomy, fields for each part,
   a Single template with a "Next project" link (dynamic tags) and a card template. The Work page is a Query Loop with
   industry chips and items opening in a dialog.
+- Reviews are a **Review** content type with no pages of its own (fields: text, stars, country, price, when), one
+  item per Fiverr review (101). The Reviews page shows them with the **Testimonial grid** widget: reviews of 48
+  characters or more (66), the original's picked ones first, then longest first, newest first in the list; 6 per page
+  on a desktop, 4 on a tablet, 3 on a phone, with "Read full review" in a dialog. Add a review and it shows first.
+- Full-screen menu: the off-canvas widget's full-screen position with the Nav menu's numbers, captions and preview
+  pictures (set on each item of the "Full menu" on the Menus screen).
+- Phones: headings keep proportional tracking (per-device letter spacing), stacked rows line up left, the header
+  keeps the logo and an icon-only menu button, and the footer's link columns sit two across.
 
 ## Differences from the original
 
@@ -26,7 +34,7 @@ FAQ, Contact, Free audit (at `/free-audit/`: `/audit` is reserved by the platfor
 - Hero rotating word: one colour (periwinkle); the original gives each word its industry's colour.
 - Worldwide: the dotted client map is not rebuilt; the countries are listed as chips beside the live Dhaka time.
 - Header: the Industries and Services dropdowns are plain sub-menus, not the original's mega panel with a featured
-  case study; the full-screen menu is a side drawer.
+  case study.
 - In-page links (`#bd-audit`) go to the Free audit page instead.
 - Work: 24 projects per page (the Query Loop's limit), so the 25th is on page 2 and the chips reload the page.
 - Case studies are one page each instead of one page with a picker.

@@ -33,6 +33,10 @@ function MFILE(string $hash): string
 function NUM(int $n): string { return str_pad((string) $n, 2, '0', STR_PAD_LEFT); }
 function RICH(string $html, string $color, string $size = '18px', array $opt = [], string $weight = '400'): array
 {
+    $px = (float) $size;
+    if (str_ends_with($size, 'px') && $px >= 20 && !isset($opt['responsive']['mobile']['style']['typography']['size'])) {
+        $opt['responsive']['mobile']['style']['typography']['size'] = max(16, (int) round($px * 0.78)) . 'px';
+    }
     return B('core.rich_text', ['content' => $html], [], ['color' => $color, 'typography' => ['size' => $size, 'font_family' => SANS, 'weight' => $weight, 'line_height' => '1.6']], ['classNames' => ['rk-rich']] + $opt);
 }
 function CARD(array $kids, array $c, string $gap = '14px', array $more = []): array
@@ -319,20 +323,19 @@ function S_REVIEWS(array $reviews, array $featured): array
     $row = static fn(array $items, string $dir): array => B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'nowrap'], array_map($chip, array_slice($items, 0, 12)), ['layout' => ['display' => 'flex', 'direction' => 'row', 'gap' => '12px']], ['interactions' => ['marquee' => ['speed' => 3, 'direction' => $dir, 'scroll' => true, 'pause' => true]]]);
     $marquee = CTOP('Short reviews', [$row(array_slice($short, 0, $half), 'left'), $row(array_slice($short, $half), 'right')], ['padding' => ['top' => '70px', 'right' => '0px', 'bottom' => '40px', 'left' => '0px'], 'layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '14px', 'content_width' => 'full']], ['interactions' => THEME('bone')]);
 
-    $byN = [];
-    foreach ($reviews as $r) { $byN[(string) $r['n']] = $r; }
-    $cards = [];
-    foreach ($featured as $n) {
-        if (!isset($byN[$n])) { continue; }
-        $r = $byN[$n];
-        $t = trim((string) $r['text']);
-        if (mb_strlen($t) > 360) { $t = rtrim(mb_substr($t, 0, 340)); $t = mb_substr($t, 0, (int) mb_strrpos($t, ' ')) . '…'; }
-        $e = static fn(string $x): string => htmlspecialchars($x, ENT_QUOTES);
-        $cards[] = CARD([RICH('<p><em>' . str_repeat('★', (int) floor((float) $r['rating'])) . '</em> <span>' . $e((string) $r['when']) . '</span></p><p>' . $e($t) . '</p><p><strong>' . $e((string) $r['who']) . '</strong><br><span>' . $e($r['country'] . ' · ' . $r['price']) . '</span></p>', INK, '17px', ['classNames' => ['rk-rich', 'rk-rv']])], TC('bone'), '0px');
-    }
     $grid = SEC('In their own words', [
         ROW([W(VBOX([EYE('Client reviews', MUTED_BONE), H2('In their own words', TC('bone'))], '14px'), '50%'), W(RICH('<p>Copied exactly as they appear on Fiverr, typos and all. <a href="https://fiverr.com/rakib_64/">Read all 101 on Fiverr</a>.</p>', MUTED_BONE, '17px'), '40%')], '40px', ['margin' => ['bottom' => '40px']], ['justify' => 'between', 'align' => 'end']),
-        GRID($cards, 3, '16px'),
+        B('core.testimonial_grid', [
+            'source' => 'content_type', 'content_type' => 'review', 'text_field' => 'text', 'rating_field' => 'rating', 'meta_fields' => 'country, price', 'date_field' => 'when', 'photo_field' => '',
+            'order' => 'newest', 'min_length' => 48, 'limit' => 120, 'items' => [],
+            'per_page' => 6, 'per_page_tablet' => 4, 'per_page_mobile' => 3, 'columns' => 3, 'columns_tablet' => 2, 'columns_mobile' => 1, 'clamp_lines' => 6,
+            'count_label' => '{from}–{to} of {total} reviews', 'read_more_label' => 'Read full review', 'source_note' => 'on Fiverr',
+            'show_quote' => true, 'show_stars' => true, 'show_progress' => true, 'highlight_first' => true,
+        ], [], ['typography' => ['font_family' => SANS]], ['classNames' => ['rk-tgrid'], 'style_parts' => [
+            'card' => ['background' => ['color' => 'rgba(255,255,255,0.45)']],
+            'featured' => ['background' => ['color' => INK], 'color' => BONE],
+            'avatar' => ['background' => ['color' => INK], 'color' => ORANGE],
+        ]]),
     ], '90px', '120px', [], ['interactions' => THEME('bone')]);
     return [$stats, $marquee, $grid];
 }
@@ -467,6 +470,37 @@ foreach (array_reverse($DATA['cases']) as $i => $p) {
     ]);
 }
 say('  + ' . count($DATA['cases']) . ' projects');
+
+// ── Reviews: a content type with no pages of its own; the Testimonial grid reads its items ──
+PageMeta::savePostTypes($tid, array_replace(PageMeta::postTypes($tid), ['review' => [
+    'key' => 'review', 'singular' => 'Review', 'plural' => 'Reviews', 'route' => '', 'is_system' => false, 'description' => 'Client reviews, copied from Fiverr', 'show_in_menu' => true,
+    'public' => false, 'publicly_queryable' => false, 'rewrite' => false, 'has_archive' => false, 'exclude_from_search' => true, 'show_in_nav_menus' => false,
+    'hide_field_names' => false, 'edit_link' => true, 'menu_icon' => 'star', 'menu_position' => 2,
+    'columns' => [['label' => 'Country', 'source' => 'country', 'prefix' => '', 'suffix' => '', 'sortable' => true], ['label' => 'Stars', 'source' => 'rating', 'prefix' => '', 'suffix' => '', 'sortable' => true]],
+    'filters' => [],
+]]));
+$rfield = static fn(string $key, string $label, string $kind = 'text'): array => ['id' => 'f_' . substr(md5('review' . $key), 0, 8), 'post_type' => 'review', 'label' => $label, 'key' => $key, 'type' => $kind, 'required' => $key === 'text', 'placeholder' => '', 'help' => '', 'options' => []];
+$others = array_values(array_filter(PageMeta::allFields($tid), static fn(array $f): bool => ($f['post_type'] ?? '') !== 'review'));
+PageMeta::saveFields($tid, array_merge($others, [
+    $rfield('text', 'Review', 'textarea'), $rfield('rating', 'Stars', 'number'), $rfield('country', 'Country'), $rfield('price', 'Price'), $rfield('when', 'When'),
+]));
+PageRoutes::forget($tid);
+// The list order is the original's: its picked reviews first, then the rest longest first. Newest first, so the
+// first is published last; a review added later shows first.
+$byN = [];
+foreach ($DATA['reviews'] as $r) { $byN[(string) $r['n']] = $r; }
+$picked = array_values(array_filter(array_map(static fn($n) => $byN[(string) $n] ?? null, $DATA['featured'])));
+$pickedN = array_map(static fn(array $r): string => (string) $r['n'], $picked);
+$rest = array_values(array_filter($DATA['reviews'], static fn(array $r): bool => !in_array((string) $r['n'], $pickedN, true)));
+usort($rest, static fn(array $a, array $b): int => mb_strlen(trim((string) $b['text'])) <=> mb_strlen(trim((string) $a['text'])));
+$ordered = array_merge($picked, $rest);
+foreach (array_reverse($ordered) as $i => $r) {
+    build_page('review-' . $r['n'], (string) $r['who'], 'page', 'standalone', [CTOP('Body', [P(trim((string) $r['text']), BONE, '18px')], ['layout' => ['display' => 'flex', 'direction' => 'column']])], [
+        'date' => date('Y-m-d H:i:s', strtotime('2025-01-01') + $i * 3600),
+        'type' => 'review', 'fields' => ['text' => trim((string) $r['text']), 'rating' => (string) $r['rating'], 'country' => (string) $r['country'], 'price' => (string) $r['price'], 'when' => (string) $r['when']],
+    ]);
+}
+say('  + ' . count($ordered) . ' reviews');
 
 function LOOP(array $props): array
 {

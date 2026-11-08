@@ -53,6 +53,25 @@ function B(string $type, array $props = [], array $children = [], array $style =
     ];
     foreach (['responsive', 'style_parts', 'classNames', 'style_states', 'interactions', 'animation', 'dynamic'] as $k) { if (!empty($opt[$k])) { $b[$k] = $opt[$k]; } }
     if (!empty($opt['devices'])) { $b['visibility']['devices'] = $opt['devices']; }
+    return scale_tracking($b);
+}
+
+/**
+ * Tight tracking written in px suits the desktop size only: a device that sets its own font size gets the same
+ * tracking in proportion (-5px at 96px is -2.7px at 52px), unless it sets one itself.
+ */
+function scale_tracking(array $b): array
+{
+    $t = $b['style']['typography'] ?? null;
+    if (!is_array($t) || !preg_match('/^(-?[\d.]+)px$/', (string) ($t['letter_spacing'] ?? ''), $ls) || !preg_match('/^([\d.]+)px$/', (string) ($t['size'] ?? ''), $sz) || (float) $sz[1] <= 0) {
+        return $b;
+    }
+    foreach (['tablet', 'mobile'] as $d) {
+        $dt = $b['responsive'][$d]['style']['typography'] ?? null;
+        if (is_array($dt) && isset($dt['size']) && !isset($dt['letter_spacing']) && preg_match('/^([\d.]+)px$/', (string) $dt['size'], $m)) {
+            $b['responsive'][$d]['style']['typography']['letter_spacing'] = round((float) $ls[1] * (float) $m[1] / (float) $sz[1], 2) . 'px';
+        }
+    }
     return $b;
 }
 
@@ -153,10 +172,19 @@ function VBOX(array $kids, string $gap = '0px', array $style = [], array $opt = 
 /** A row of blocks that stacks on a phone. */
 function ROW(array $kids, string $gap = '0px', array $style = [], array $layout = [], array $mobile = ['layout' => ['direction' => 'column']], array $opt = []): array
 {
+    // Stacked on a phone, a row's items line up on the left, as the original's do: a column would otherwise carry the
+    // row's own alignment (centre, end) across, and text set right in the row reads left once stacked.
+    if (($mobile['layout']['direction'] ?? '') === 'column') {
+        $mobile['layout'] += ['align' => 'start'];
+        foreach ($kids as $i => $k) {
+            $a = $k['style']['align']['base'] ?? 'left';
+            if (is_array($k) && $a !== 'left' && !isset($k['responsive']['mobile']['align'])) { $kids[$i]['responsive']['mobile']['align'] = 'left'; }
+        }
+    }
     return B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'nowrap', 'align' => 'stretch'], $kids, ['layout' => ['display' => 'flex', 'direction' => 'row', 'gap' => $gap] + $layout] + $style, ($mobile ? ['responsive' => ['mobile' => ['style' => $mobile]]] : []) + $opt);
 }
 /** A width inside a row; a phone gives it the full width. */
-function W(array $b, string $w): array { $b['style']['dimensions']['width'] = $w; $b['responsive']['mobile']['style']['dimensions']['width'] = '100%'; return $b; }
+function W(array $b, string $w, bool $halfOnPhone = false): array { $b['style']['dimensions']['width'] = $w; $b['responsive']['mobile']['style']['dimensions']['width'] = $halfOnPhone ? 'calc(50% - 20px)' : '100%'; return $b; }
 
 /** The small mono label ("01 — The idea"). */
 function EYE(string $text, string $color = MUTED, string $align = 'left'): array
@@ -171,6 +199,11 @@ function H(string $text, string $level, string $size, string $msize, string $col
 }
 function P(string $text, string $color = BONE, string $size = '18px', array $more = [], array $opt = []): array
 {
+    // Lead text over 18px reads at about four fifths of its size on a phone, as the original's does.
+    $px = (float) $size;
+    if (str_ends_with($size, 'px') && $px >= 20 && !isset($opt['responsive']['mobile']['style']['typography']['size'])) {
+        $opt['responsive']['mobile']['style']['typography']['size'] = max(16, (int) round($px * 0.78)) . 'px';
+    }
     return B('core.text', ['content' => $text, 'size' => 'inherit'], [], ['color' => $color, 'typography' => ['size' => $size, 'font_family' => SANS, 'weight' => '400', 'line_height' => '1.55'] + $more], $opt);
 }
 /** A pill button. */
@@ -183,7 +216,7 @@ function PIC(string $file, string $alt, string $h, string $mh = '', string $radi
     return B('core.image', ['media' => IMGREF($file, $alt), 'aspect_ratio' => 'auto', 'rounded' => false], [], ['dimensions' => ['width' => '100%', 'height' => $h, 'object_fit' => 'cover'], 'border' => ['radius' => $radius]], $mh !== '' ? ['responsive' => ['mobile' => ['style' => ['dimensions' => ['height' => $mh]]]]] : []);
 }
 /** Section padding: 28px gutters, boxed at 1440px. */
-function SEC(string $label, array $kids, string $top, string $bottom, array $more = [], array $extra = [], string $mtop = '96px', string $mbottom = '96px'): array
+function SEC(string $label, array $kids, string $top, string $bottom, array $more = [], array $extra = [], string $mtop = '72px', string $mbottom = '72px'): array
 {
     $style = ['padding' => ['top' => $top, 'right' => '28px', 'bottom' => $bottom, 'left' => '28px'], 'layout' => ['display' => 'flex', 'direction' => 'column', 'gap' => '0px', 'content_width' => 'boxed', 'content_max' => '1440px']];
     $style = array_replace_recursive($style, $more);
