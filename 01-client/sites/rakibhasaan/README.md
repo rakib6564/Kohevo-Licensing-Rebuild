@@ -11,7 +11,14 @@ A rebuild of the "Built Different" static site (github.com/rakib6564/rakibhasaan
 
 ## Done
 
-Home page, header and footer.
+Every page: home, header, footer, Work, Services and its six service pages, Construction, Process, About, Reviews,
+FAQ, Contact, Free audit (at `/free-audit/`: `/audit` is reserved by the platform), and the 25 case studies.
+
+- `build/export.py <rakibhasaan-site checkout>` rewrites `data/pages.json` from the original's `copy.md` with the
+  original generator's own parser; run it when the copy changes, then the build.
+- Case studies are a **Project** content type (`/case-study/<slug>/`): an Industry taxonomy, fields for each part,
+  a Single template with a "Next project" link (dynamic tags) and a card template. The Work page is a Query Loop with
+  industry chips and items opening in a dialog.
 
 ## Differences from the original
 
@@ -21,6 +28,8 @@ Home page, header and footer.
 - Header: the Industries and Services dropdowns are plain sub-menus, not the original's mega panel with a featured
   case study; the full-screen menu is a side drawer.
 - In-page links (`#bd-audit`) go to the Free audit page instead.
+- Work: 24 projects per page (the Query Loop's limit), so the 25th is on page 2 and the chips reload the page.
+- Case studies are one page each instead of one page with a picker.
 
 ## Placeholder content to replace before launch
 
