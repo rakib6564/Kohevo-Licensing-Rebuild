@@ -44,12 +44,15 @@ function CARD(array $kids, array $c, string $gap = '14px', array $more = []): ar
 {
     return VBOX($kids, $gap, array_replace_recursive(['background' => ['color' => $c['card']], 'border' => ['width' => '1px', 'style' => 'solid', 'color' => $c['line'], 'radius' => '20px'], 'padding' => ['top' => '26px', 'right' => '26px', 'bottom' => '26px', 'left' => '26px']], $more));
 }
-/** Cards in rows of up to `$per`, wrapping; a phone stacks them. */
+/**
+ * Cards in a grid of up to `$per` columns that wraps to fewer as the space narrows: each column is at least a card's
+ * readable width, so a narrow column (a two-column section on a laptop) never squeezes a title out of its card.
+ */
 function GRID(array $cards, int $per, string $gap = '16px'): array
 {
-    $w = 'calc(' . round(100 / $per, 3) . '% - ' . $gap . ')';
-    return B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap', 'align' => 'stretch'], array_map(static fn(array $c): array => W($c, $w), $cards),
-        ['layout' => ['display' => 'flex', 'direction' => 'row', 'wrap' => 'wrap', 'gap' => $gap]], ['classNames' => ['rk-grid', 'rk-grid-' . $per], 'responsive' => ['mobile' => ['style' => ['layout' => ['direction' => 'column']]]]]);
+    $min = [1 => 320, 2 => 280, 3 => 220, 4 => 200][min(4, max(1, $per))] ?? 220;
+    return B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap', 'align' => 'stretch'], $cards,
+        ['layout' => ['display' => 'grid', 'tracks' => 'repeat(auto-fit, minmax(' . $min . 'px, 1fr))', 'gap' => $gap]], ['classNames' => ['rk-grid', 'rk-grid-' . $per]]);
 }
 function BTNS(array $items, array $c): array
 {
@@ -79,7 +82,7 @@ function BLK(array $b, array $c, bool $lead = false): array
             return B('layout.accordion', ['allow_multiple' => false, 'look' => 'lines', 'icon' => 'plus'], array_map(static fn(array $f): array => B('layout.accordion_item', ['title' => $f['q'], 'open' => false], [RICH('<p>' . $f['a'] . '</p>', $c['muted'], '16px')]), $b['items']),
                 ['color' => $c['fg'], 'typography' => ['size' => '19px', 'font_family' => SANS, 'weight' => '400']], ['classNames' => ['rk-faq']]);
         case 'tiles':
-            return GRID(array_map(static fn(array $t, int $i): array => CARD([EYE(NUM($i + 1), $c['muted']), P($t['h'], $c['fg'], '21px', ['weight' => '500', 'line_height' => '1.25']), RICH('<p>' . $t['html'] . '</p>', $c['muted'], '15px')], $c, '10px'), $b['items'], array_keys($b['items'])), count($b['items']) % 3 === 0 ? 3 : 2);
+            return GRID(array_map(static fn(array $t, int $i): array => CARD([EYE(NUM($i + 1), $c['accent']), P($t['h'], $c['fg'], '21px', ['weight' => '500', 'line_height' => '1.25']), RICH('<p>' . $t['html'] . '</p>', $c['muted'], '15px')], $c, '10px'), $b['items'], array_keys($b['items'])), count($b['items']) % 3 === 0 ? 3 : 2);
         case 'checks':
             return VBOX(array_map(static fn(string $h, int $i): array => ROW([
                 P('✓', $c['accent'], '15px', ['weight' => '600'], ['classNames' => ['rk-tick']]),
